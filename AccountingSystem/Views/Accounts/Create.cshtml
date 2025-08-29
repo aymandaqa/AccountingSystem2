@@ -23,7 +23,8 @@
                 <form asp-action="Create" method="post">
                     <div class="card-body">
                         <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
-                        
+                        <input asp-for="Classification" type="hidden" id="Classification" />
+
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
@@ -52,17 +53,17 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label asp-for="ParentAccountId" class="form-label">الحساب الأب</label>
-                                    <select asp-for="ParentAccountId" asp-items="Model.ParentAccounts" class="form-select">
+                                    <label asp-for="ParentId" class="form-label">الحساب الأب</label>
+                                    <select asp-for="ParentId" asp-items="Model.ParentAccounts" class="form-select">
                                         <option value="">-- اختر الحساب الأب --</option>
                                     </select>
-                                    <span asp-validation-for="ParentAccountId" class="text-danger"></span>
+                                    <span asp-validation-for="ParentId" class="text-danger"></span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="row">
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label asp-for="AccountType" class="form-label">نوع الحساب <span class="text-danger">*</span></label>
                                     <select asp-for="AccountType" class="form-select" id="accountTypeSelect">
@@ -76,16 +77,7 @@
                                     <span asp-validation-for="AccountType" class="text-danger"></span>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="form-group mb-3">
-                                    <label asp-for="SubClassification" class="form-label">التصنيف الفرعي <span class="text-danger">*</span></label>
-                                    <select asp-for="SubClassification" class="form-select" id="subClassificationSelect">
-                                        <option value="">-- اختر التصنيف الفرعي --</option>
-                                    </select>
-                                    <span asp-validation-for="SubClassification" class="text-danger"></span>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label asp-for="Nature" class="form-label">طبيعة الحساب <span class="text-danger">*</span></label>
                                     <select asp-for="Nature" class="form-select" id="natureSelect">
@@ -99,51 +91,27 @@
                         </div>
 
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-12">
                                 <div class="form-group mb-3">
                                     <label asp-for="OpeningBalance" class="form-label">الرصيد الافتتاحي</label>
                                     <input asp-for="OpeningBalance" class="form-control" type="number" step="0.01" placeholder="0.00" />
                                     <span asp-validation-for="OpeningBalance" class="text-danger"></span>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="row">
                             <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label asp-for="Level" class="form-label">المستوى</label>
-                                    <input asp-for="Level" class="form-control" type="number" readonly />
-                                    <span asp-validation-for="Level" class="text-danger"></span>
-                                    <small class="form-text text-muted">يتم حساب المستوى تلقائياً</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="form-group mb-3">
-                                    <label asp-for="Description" class="form-label">الوصف</label>
-                                    <textarea asp-for="Description" class="form-control" rows="3" placeholder="أدخل وصف الحساب"></textarea>
-                                    <span asp-validation-for="Description" class="text-danger"></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-4">
                                 <div class="form-check mb-3">
                                     <input asp-for="IsActive" class="form-check-input" type="checkbox" checked />
                                     <label asp-for="IsActive" class="form-check-label">نشط</label>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <div class="form-check mb-3">
                                     <input asp-for="CanPostTransactions" class="form-check-input" type="checkbox" />
                                     <label asp-for="CanPostTransactions" class="form-check-label">قابل للترحيل</label>
                                     <small class="form-text text-muted">الحسابات الفرعية فقط قابلة للترحيل</small>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-check mb-3">
-                                    <input asp-for="RequiresCostCenter" class="form-check-input" type="checkbox" />
-                                    <label asp-for="RequiresCostCenter" class="form-check-label">يتطلب مركز تكلفة</label>
                                 </div>
                             </div>
                         </div>
@@ -169,79 +137,26 @@
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     <script>
         $(document).ready(function() {
-            // تحديث التصنيف الفرعي عند تغيير نوع الحساب
             $('#accountTypeSelect').change(function() {
                 var accountType = $(this).val();
-                var subClassificationSelect = $('#subClassificationSelect');
-                var natureSelect = $('#natureSelect');
-                
-                subClassificationSelect.empty().append('<option value="">-- اختر التصنيف الفرعي --</option>');
-                
-                if (accountType) {
-                    var options = getSubClassificationOptions(accountType);
-                    $.each(options, function(value, text) {
-                        subClassificationSelect.append('<option value="' + value + '">' + text + '</option>');
-                    });
-                    
-                    // تعيين الطبيعة الافتراضية
-                    var defaultNature = getDefaultNature(accountType);
-                    natureSelect.val(defaultNature);
-                }
-            });
-
-            // تحديث المستوى عند تغيير الحساب الأب
-            $('#ParentAccountId').change(function() {
-                var parentId = $(this).val();
-                if (parentId) {
-                    $.get('@Url.Action("GetAccountLevel")', { parentId: parentId }, function(level) {
-                        $('#Level').val(level + 1);
-                    });
-                } else {
-                    $('#Level').val(1);
-                }
-            });
+                var defaultNature = getDefaultNature(accountType);
+                $('#natureSelect').val(defaultNature);
+                $('#Classification').val(getClassification(accountType));
+            }).change();
         });
 
-        function getSubClassificationOptions(accountType) {
-            var options = {};
-            
+        function getClassification(accountType) {
             switch(accountType) {
                 case 'Assets':
-                    options = {
-                        'CurrentAssets': 'الأصول المتداولة',
-                        'FixedAssets': 'الأصول الثابتة',
-                        'IntangibleAssets': 'الأصول غير الملموسة'
-                    };
-                    break;
                 case 'Liabilities':
-                    options = {
-                        'CurrentLiabilities': 'الخصوم المتداولة',
-                        'LongTermLiabilities': 'الخصوم طويلة الأجل'
-                    };
-                    break;
                 case 'Equity':
-                    options = {
-                        'Capital': 'رأس المال',
-                        'RetainedEarnings': 'الأرباح المحتجزة',
-                        'Reserves': 'الاحتياطيات'
-                    };
-                    break;
+                    return 'BalanceSheet';
                 case 'Revenue':
-                    options = {
-                        'OperatingRevenue': 'الإيرادات التشغيلية',
-                        'NonOperatingRevenue': 'الإيرادات غير التشغيلية'
-                    };
-                    break;
                 case 'Expenses':
-                    options = {
-                        'OperatingExpenses': 'المصروفات التشغيلية',
-                        'AdministrativeExpenses': 'المصروفات الإدارية',
-                        'FinancialExpenses': 'المصروفات المالية'
-                    };
-                    break;
+                    return 'IncomeStatement';
+                default:
+                    return '';
             }
-            
-            return options;
         }
 
         function getDefaultNature(accountType) {
@@ -260,7 +175,7 @@
 
         function generateCode() {
             var accountType = $('#accountTypeSelect').val();
-            var parentId = $('#ParentAccountId').val();
+            var parentId = $('#ParentId').val();
             
             if (!accountType) {
                 alert('يرجى اختيار نوع الحساب أولاً');
