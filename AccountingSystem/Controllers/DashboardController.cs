@@ -21,10 +21,26 @@ namespace AccountingSystem.Controllers
 
         public async Task<IActionResult> Index(int? branchId = null)
         {
+            var accounts = await _context.Accounts
+                .Where(a => a.CanPostTransactions)
+                .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
+                .ToListAsync();
+
             var viewModel = new DashboardViewModel
             {
-                SelectedBranchId = branchId
+                SelectedBranchId = branchId,
+                TotalAssets = accounts
+                    .Where(a => a.AccountType == AccountType.Assets)
+                    .Sum(a => a.CurrentBalance),
+                TotalRevenues = accounts
+                    .Where(a => a.AccountType == AccountType.Revenue)
+                    .Sum(a => a.CurrentBalance),
+                TotalExpenses = accounts
+                    .Where(a => a.AccountType == AccountType.Expenses)
+                    .Sum(a => a.CurrentBalance)
             };
+
+            viewModel.NetIncome = viewModel.TotalRevenues - viewModel.TotalExpenses;
 
             ViewBag.Branches = await _context.Branches
                 .Where(b => b.IsActive)

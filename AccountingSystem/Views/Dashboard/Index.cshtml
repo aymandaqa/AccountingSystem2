@@ -47,7 +47,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="card-title">إجمالي الأصول</h6>
-                            <h4 class="mb-0">0 </h4>
+                            <h4 class="mb-0">@Model.TotalAssets.ToString("N0")</h4>
                         </div>
                         <div class="align-self-center">
                             <i class="fas fa-chart-line fa-2x"></i>
@@ -63,7 +63,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="card-title">إجمالي الإيرادات</h6>
-                            <h4 class="mb-0">0 </h4>
+                            <h4 class="mb-0">@Model.TotalRevenues.ToString("N0")</h4>
                         </div>
                         <div class="align-self-center">
                             <i class="fas fa-dollar-sign fa-2x"></i>
@@ -79,7 +79,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="card-title">إجمالي المصروفات</h6>
-                            <h4 class="mb-0">0 </h4>
+                            <h4 class="mb-0">@Model.TotalExpenses.ToString("N0")</h4>
                         </div>
                         <div class="align-self-center">
                             <i class="fas fa-shopping-cart fa-2x"></i>
@@ -95,7 +95,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="card-title">صافي الربح</h6>
-                            <h4 class="mb-0">0 </h4>
+                            <h4 class="mb-0">@Model.NetIncome.ToString("N0")</h4>
                         </div>
                         <div class="align-self-center">
                             <i class="fas fa-chart-pie fa-2x"></i>
