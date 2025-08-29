@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using AccountingSystem.Models;
 using System.Linq;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AccountingSystem.Data
 {
@@ -81,8 +82,12 @@ namespace AccountingSystem.Data
                 new Permission { Name = "journal.approve", DisplayName = "اعتماد القيود", Category = "القيود المالية" },
                 new Permission { Name = "reports.view", DisplayName = "عرض التقارير", Category = "التقارير" },
                 new Permission { Name = "reports.export", DisplayName = "تصدير التقارير", Category = "التقارير" },
-                new Permission { Name = "dashboard.view", DisplayName = "عرض لوحة التحكم", Category = "لوحة التحكم" }
+                new Permission { Name = "dashboard.view", DisplayName = "عرض لوحة التحكم", Category = "لوحة التحكم" },
+                new Permission { Name = "dashboard.widget.stats", DisplayName = "عرض لوحة التحكم stats", Category = "لوحة التحكم" },
+                new Permission { Name = "dashboard.widget.accounts", DisplayName = " accountsعرض لوحة التحكم", Category = "لوحة التحكم" },
+                new Permission { Name = "dashboard.widget.links", DisplayName = " linksعرض لوحة التحكم", Category = "لوحة التحكم" }
             };
+
 
             foreach (var perm in permissions)
             {
