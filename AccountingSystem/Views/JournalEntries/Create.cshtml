@@ -3,6 +3,10 @@
     ViewData["Title"] = "إنشاء قيد مالي جديد";
 }
 
+@section Styles {
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+}
+
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
@@ -119,80 +123,84 @@
     </div>
 </div>
 
-<script>
-let lineIndex = 0;
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+    let lineIndex = 0;
 
-function addJournalLine() {
-    const tbody = document.getElementById('journalLinesBody');
-    const row = document.createElement('tr');
-    row.innerHTML = `
-        <td>
-            <select name="Lines[${lineIndex}].AccountId" class="form-select" required>
-                <option value="">اختر الحساب</option>
-                @if (Model?.Accounts != null)
-                {
-                    @foreach (var account in Model.Accounts)
+    function addJournalLine() {
+        const tbody = document.getElementById('journalLinesBody');
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>
+                <select name="Lines[${lineIndex}].AccountId" class="form-select account-select" required>
+                    <option value="">اختر الحساب</option>
+                    @if (Model?.Accounts != null)
                     {
-                        <option value="@account.Value">@account.Text</option>
+                        @foreach (var account in Model.Accounts)
+                        {
+                            <option value="@account.Value">@account.Text</option>
+                        }
                     }
-                }
-            </select>
-        </td>
-        <td>
-            <input name="Lines[${lineIndex}].Description" type="text" class="form-control" placeholder="بيان البند" />
-        </td>
-        <td>
-            <input name="Lines[${lineIndex}].DebitAmount" type="number" step="0.01" min="0" class="form-control debit-amount" onchange="calculateTotals()" />
-        </td>
-        <td>
-            <input name="Lines[${lineIndex}].CreditAmount" type="number" step="0.01" min="0" class="form-control credit-amount" onchange="calculateTotals()" />
-        </td>
-        <td>
-            <button type="button" class="btn btn-sm btn-danger" onclick="removeJournalLine(this)">
-                <i class="fas fa-trash"></i>
-            </button>
-        </td>
-    `;
-    tbody.appendChild(row);
-    lineIndex++;
-    calculateTotals();
-}
-
-function removeJournalLine(button) {
-    button.closest('tr').remove();
-    calculateTotals();
-}
-
-function calculateTotals() {
-    let totalDebit = 0;
-    let totalCredit = 0;
-    
-    document.querySelectorAll('.debit-amount').forEach(input => {
-        totalDebit += parseFloat(input.value) || 0;
-    });
-    
-    document.querySelectorAll('.credit-amount').forEach(input => {
-        totalCredit += parseFloat(input.value) || 0;
-    });
-    
-    document.getElementById('totalDebit').textContent = totalDebit.toFixed(2);
-    document.getElementById('totalCredit').textContent = totalCredit.toFixed(2);
-    
-    const balanceAlert = document.getElementById('balanceAlert');
-    const saveButton = document.getElementById('saveButton');
-    
-    if (Math.abs(totalDebit - totalCredit) > 0.01) {
-        balanceAlert.classList.remove('d-none');
-        saveButton.disabled = true;
-    } else {
-        balanceAlert.classList.add('d-none');
-        saveButton.disabled = false;
+                </select>
+            </td>
+            <td>
+                <input name="Lines[${lineIndex}].Description" type="text" class="form-control" placeholder="بيان البند" />
+            </td>
+            <td>
+                <input name="Lines[${lineIndex}].DebitAmount" type="number" step="0.01" min="0" class="form-control debit-amount" onchange="calculateTotals()" />
+            </td>
+            <td>
+                <input name="Lines[${lineIndex}].CreditAmount" type="number" step="0.01" min="0" class="form-control credit-amount" onchange="calculateTotals()" />
+            </td>
+            <td>
+                <button type="button" class="btn btn-sm btn-danger" onclick="removeJournalLine(this)">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+        $(row).find('.account-select').select2({ width: '100%' });
+        lineIndex++;
+        calculateTotals();
     }
-}
 
-// إضافة بند افتراضي عند تحميل الصفحة
-document.addEventListener('DOMContentLoaded', function() {
-    addJournalLine();
-    addJournalLine();
-});
-</script>
+    function removeJournalLine(button) {
+        button.closest('tr').remove();
+        calculateTotals();
+    }
+
+    function calculateTotals() {
+        let totalDebit = 0;
+        let totalCredit = 0;
+
+        document.querySelectorAll('.debit-amount').forEach(input => {
+            totalDebit += parseFloat(input.value) || 0;
+        });
+
+        document.querySelectorAll('.credit-amount').forEach(input => {
+            totalCredit += parseFloat(input.value) || 0;
+        });
+
+        document.getElementById('totalDebit').textContent = totalDebit.toFixed(2);
+        document.getElementById('totalCredit').textContent = totalCredit.toFixed(2);
+
+        const balanceAlert = document.getElementById('balanceAlert');
+        const saveButton = document.getElementById('saveButton');
+
+        if (Math.abs(totalDebit - totalCredit) > 0.01) {
+            balanceAlert.classList.remove('d-none');
+            saveButton.disabled = true;
+        } else {
+            balanceAlert.classList.add('d-none');
+            saveButton.disabled = false;
+        }
+    }
+
+    // إضافة بند افتراضي عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', function() {
+        addJournalLine();
+        addJournalLine();
+    });
+    </script>
+}
