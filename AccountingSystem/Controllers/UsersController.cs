@@ -24,10 +24,10 @@ namespace AccountingSystem.Controllers
         }
 
 
- 
+
 
         [Authorize(Policy = "users.view")]
- 
+
 
         public async Task<IActionResult> Index()
         {
