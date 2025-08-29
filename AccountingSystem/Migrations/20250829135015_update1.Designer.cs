@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AccountingSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250827231637_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20250829135015_update1")]
+    partial class update1
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -47,6 +47,9 @@ namespace AccountingSystem.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("CurrentBalance")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
@@ -233,6 +236,10 @@ namespace AccountingSystem.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Reference")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
@@ -345,7 +352,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 1,
                             Category = "المستخدمين",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(6857),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "عرض المستخدمين",
                             IsActive = true,
                             Name = "users.view"
@@ -354,7 +361,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 2,
                             Category = "المستخدمين",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8077),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "إنشاء المستخدمين",
                             IsActive = true,
                             Name = "users.create"
@@ -363,7 +370,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 3,
                             Category = "المستخدمين",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8079),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "تعديل المستخدمين",
                             IsActive = true,
                             Name = "users.edit"
@@ -372,7 +379,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 4,
                             Category = "المستخدمين",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8081),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "حذف المستخدمين",
                             IsActive = true,
                             Name = "users.delete"
@@ -381,7 +388,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 5,
                             Category = "الفروع",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8082),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "عرض الفروع",
                             IsActive = true,
                             Name = "branches.view"
@@ -390,7 +397,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 6,
                             Category = "الفروع",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8084),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "إنشاء الفروع",
                             IsActive = true,
                             Name = "branches.create"
@@ -399,7 +406,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 7,
                             Category = "الفروع",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8085),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "تعديل الفروع",
                             IsActive = true,
                             Name = "branches.edit"
@@ -408,7 +415,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 8,
                             Category = "الفروع",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8086),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "حذف الفروع",
                             IsActive = true,
                             Name = "branches.delete"
@@ -417,7 +424,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 9,
                             Category = "مراكز التكلفة",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8088),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "عرض مراكز التكلفة",
                             IsActive = true,
                             Name = "costcenters.view"
@@ -426,7 +433,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 10,
                             Category = "مراكز التكلفة",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8089),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "إنشاء مراكز التكلفة",
                             IsActive = true,
                             Name = "costcenters.create"
@@ -435,7 +442,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 11,
                             Category = "مراكز التكلفة",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8090),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "تعديل مراكز التكلفة",
                             IsActive = true,
                             Name = "costcenters.edit"
@@ -444,7 +451,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 12,
                             Category = "مراكز التكلفة",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8092),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "حذف مراكز التكلفة",
                             IsActive = true,
                             Name = "costcenters.delete"
@@ -453,7 +460,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 13,
                             Category = "الحسابات",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8093),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "عرض الحسابات",
                             IsActive = true,
                             Name = "accounts.view"
@@ -462,7 +469,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 14,
                             Category = "الحسابات",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8095),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "إنشاء الحسابات",
                             IsActive = true,
                             Name = "accounts.create"
@@ -471,7 +478,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 15,
                             Category = "الحسابات",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8096),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "تعديل الحسابات",
                             IsActive = true,
                             Name = "accounts.edit"
@@ -480,7 +487,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 16,
                             Category = "الحسابات",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8097),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "حذف الحسابات",
                             IsActive = true,
                             Name = "accounts.delete"
@@ -489,7 +496,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 17,
                             Category = "القيود المالية",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8099),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "عرض القيود",
                             IsActive = true,
                             Name = "journal.view"
@@ -498,7 +505,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 18,
                             Category = "القيود المالية",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8100),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "إنشاء القيود",
                             IsActive = true,
                             Name = "journal.create"
@@ -507,7 +514,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 19,
                             Category = "القيود المالية",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8101),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "تعديل القيود",
                             IsActive = true,
                             Name = "journal.edit"
@@ -516,7 +523,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 20,
                             Category = "القيود المالية",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8103),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "حذف القيود",
                             IsActive = true,
                             Name = "journal.delete"
@@ -525,7 +532,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 21,
                             Category = "القيود المالية",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8104),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "اعتماد القيود",
                             IsActive = true,
                             Name = "journal.approve"
@@ -534,7 +541,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 22,
                             Category = "التقارير",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8106),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "عرض التقارير",
                             IsActive = true,
                             Name = "reports.view"
@@ -543,7 +550,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 23,
                             Category = "التقارير",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8107),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "تصدير التقارير",
                             IsActive = true,
                             Name = "reports.export"
@@ -552,7 +559,7 @@ namespace AccountingSystem.Migrations
                         {
                             Id = 24,
                             Category = "لوحة التحكم",
-                            CreatedAt = new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8108),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayName = "عرض لوحة التحكم",
                             IsActive = true,
                             Name = "dashboard.view"

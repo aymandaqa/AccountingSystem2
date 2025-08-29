@@ -1,0 +1,291 @@
+@model AccountingSystem.ViewModels.AccountDetailsViewModel
+
+@{
+    ViewData["Title"] = "تفاصيل الحساب";
+    Layout = "_AccountingLayout";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title">تفاصيل الحساب: @Model.NameAr</h3>
+                    <div class="btn-group">
+                        <a href="@Url.Action("Edit", new { id = Model.Id })" class="btn btn-warning">
+                            <i class="fas fa-edit"></i> تعديل
+                        </a>
+                        @if (Model.CanPostTransactions)
+                        {
+                            <a href="@Url.Action("AccountStatement", "Reports", new { accountId = Model.Id })" class="btn btn-success">
+                                <i class="fas fa-file-alt"></i> كشف الحساب
+                            </a>
+                        }
+                        <a href="@Url.Action("Create", new { parentId = Model.Id })" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> إضافة حساب فرعي
+                        </a>
+                        <a href="@Url.Action("Index")" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right"></i> العودة للقائمة
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="30%">الكود:</th>
+                                    <td><strong class="account-code">@Model.Code</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>الاسم العربي:</th>
+                                    <td>@Model.NameAr</td>
+                                </tr>
+                                <tr>
+                                    <th>الاسم الإنجليزي:</th>
+                                    <td>@Model.NameEn</td>
+                                </tr>
+                                <tr>
+                                    <th>نوع الحساب:</th>
+                                    <td>
+                                        <span class="badge bg-primary">@Model.AccountType.ToString()</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>التصنيف الفرعي:</th>
+                                    <td>
+                                        <span class="badge bg-secondary">@Model.SubClassification.ToString()</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>طبيعة الحساب:</th>
+                                    <td>
+                                        @if (Model.Nature == AccountingSystem.Models.AccountNature.Debit)
+                                        {
+                                            <span class="badge bg-success">مدين</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-info">دائن</span>
+                                        }
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="30%">المستوى:</th>
+                                    <td><span class="badge bg-warning">@Model.Level</span></td>
+                                </tr>
+                                <tr>
+                                    <th>الحساب الأب:</th>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(Model.ParentAccountName))
+                                        {
+                                            <a href="@Url.Action("Details", new { id = Model.ParentAccountId })">
+                                                @Model.ParentAccountName
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">حساب رئيسي</span>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>الرصيد الافتتاحي:</th>
+                                    <td><strong>@Model.OpeningBalance.ToString("N0")</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>الرصيد الحالي:</th>
+                                    <td>
+                                        <strong class="@(Model.CurrentBalance >= 0 ? "text-success" : "text-danger")">
+                                            @Model.CurrentBalance.ToString("N0")
+                                        </strong>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>الحالة:</th>
+                                    <td>
+                                        @if (Model.IsActive)
+                                        {
+                                            <span class="badge bg-success">نشط</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">غير نشط</span>
+                                        }
+                                        @if (Model.CanPostTransactions)
+                                        {
+                                            <span class="badge bg-warning">قابل للترحيل</span>
+                                        }
+                                        @if (Model.RequiresCostCenter)
+                                        {
+                                            <span class="badge bg-info">يتطلب مركز تكلفة</span>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>تاريخ الإنشاء:</th>
+                                    <td>@Model.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.Description))
+                    {
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <h5>الوصف:</h5>
+                                <p class="text-muted">@Model.Description</p>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- الحسابات الفرعية -->
+                    @if (Model.ChildAccounts.Any())
+                    {
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h5>الحسابات الفرعية:</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>الكود</th>
+                                                <th>اسم الحساب</th>
+                                                <th>النوع</th>
+                                                <th>الرصيد الحالي</th>
+                                                <th>الحالة</th>
+                                                <th>الإجراءات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var child in Model.ChildAccounts)
+                                            {
+                                                <tr>
+                                                    <td><strong>@child.Code</strong></td>
+                                                    <td>@child.NameAr</td>
+                                                    <td>
+                                                        <span class="badge bg-secondary">@child.SubClassification.ToString()</span>
+                                                    </td>
+                                                    <td>@child.CurrentBalance.ToString("N0")</td>
+                                                    <td>
+                                                        @if (child.IsActive)
+                                                        {
+                                                            <span class="badge bg-success">نشط</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-danger">غير نشط</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group" role="group">
+                                                            <a href="@Url.Action("Details", new { id = child.Id })" 
+                                                               class="btn btn-info btn-sm" title="التفاصيل">
+                                                                <i class="fas fa-eye"></i>
+                                                            </a>
+                                                            <a href="@Url.Action("Edit", new { id = child.Id })" 
+                                                               class="btn btn-warning btn-sm" title="تعديل">
+                                                                <i class="fas fa-edit"></i>
+                                                            </a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- المعاملات الأخيرة -->
+                    @if (Model.CanPostTransactions && Model.RecentTransactions.Any())
+                    {
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h5>المعاملات الأخيرة:</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>رقم القيد</th>
+                                                <th>التاريخ</th>
+                                                <th>الوصف</th>
+                                                <th>مدين</th>
+                                                <th>دائن</th>
+                                                <th>الرصيد</th>
+                                                <th>مركز التكلفة</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var transaction in Model.RecentTransactions.Take(10))
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <a href="@Url.Action("Details", "JournalEntries", new { id = transaction.JournalEntryId })">
+                                                            @transaction.JournalEntryNumber
+                                                        </a>
+                                                    </td>
+                                                    <td>@transaction.Date.ToString("yyyy-MM-dd")</td>
+                                                    <td>@transaction.Description</td>
+                                                    <td>@(transaction.DebitAmount > 0 ? transaction.DebitAmount.ToString("N0") : "-")</td>
+                                                    <td>@(transaction.CreditAmount > 0 ? transaction.CreditAmount.ToString("N0") : "-")</td>
+                                                    <td>@transaction.RunningBalance.ToString("N0")</td>
+                                                    <td>@transaction.CostCenterName</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                                @if (Model.RecentTransactions.Count > 10)
+                                {
+                                    <p class="text-muted">
+                                        عرض 10 من أصل @Model.RecentTransactions.Count معاملة. 
+                                        <a href="@Url.Action("AccountStatement", "Reports", new { accountId = Model.Id })">عرض كشف الحساب الكامل</a>
+                                    </p>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <!-- إحصائيات الحساب -->
+                    @if (Model.CanPostTransactions)
+                    {
+                        <div class="row mt-4">
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <h5>إجمالي المدين</h5>
+                                    <h3 class="text-success">@Model.TotalDebit.ToString("N0")</h3>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <h5>إجمالي الدائن</h5>
+                                    <h3 class="text-danger">@Model.TotalCredit.ToString("N0")</h3>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <h5>عدد المعاملات</h5>
+                                    <h3 class="text-info">@Model.TransactionCount</h3>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <h5>متوسط المعاملة</h5>
+                                    <h3 class="text-warning">@Model.AverageTransactionAmount.ToString("N0")</h3>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

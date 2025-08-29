@@ -1,0 +1,76 @@
+@model List<AccountingSystem.ViewModels.AccountTreeNodeViewModel>
+
+@foreach (var node in Model)
+{
+    <div class="tree-node level-@node.Level" data-level="@node.Level">
+        <div class="tree-node-content">
+            <div class="tree-node-info">
+                @if (node.Children.Any())
+                {
+                    <button class="toggle-btn" type="button">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                }
+                else
+                {
+                    <span style="width: 20px; display: inline-block;"></span>
+                }
+                
+                <span class="account-code">@node.Code</span>
+                <span class="account-name">@node.NameAr</span>
+                
+                <span class="account-type badge bg-secondary">@node.AccountType.ToString()</span>
+                
+                @if (node.CanPostTransactions)
+                {
+                    <span class="badge bg-success">قابل للترحيل</span>
+                }
+                else
+                {
+                    <span class="badge bg-warning">غير قابل للترحيل</span>
+                }
+                
+                @if (!node.IsActive)
+                {
+                    <span class="badge bg-danger">غير نشط</span>
+                }
+            </div>
+            
+            <div class="tree-node-actions">
+                <div class="btn-group btn-group-sm">
+                    <a href="@Url.Action("Details", new { id = node.Id })" 
+                       class="btn btn-outline-info" title="التفاصيل">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                    <a href="@Url.Action("Edit", new { id = node.Id })" 
+                       class="btn btn-outline-warning" title="تعديل">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    <a href="@Url.Action("Create", new { parentId = node.Id })" 
+                       class="btn btn-outline-primary" title="إضافة حساب فرعي">
+                        <i class="fas fa-plus"></i>
+                    </a>
+                    @if (node.CanPostTransactions)
+                    {
+                        <a href="@Url.Action("AccountStatement", "Reports", new { accountId = node.Id })" 
+                           class="btn btn-outline-success" title="كشف الحساب">
+                            <i class="fas fa-file-alt"></i>
+                        </a>
+                    }
+                    <button type="button" class="btn btn-outline-danger" 
+                            onclick="deleteAccount(@node.Id)" title="حذف">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        @if (node.Children.Any())
+        {
+            <div class="tree-children">
+                @await Html.PartialAsync("_AccountTreeNode", node.Children)
+            </div>
+        }
+    </div>
+}
+

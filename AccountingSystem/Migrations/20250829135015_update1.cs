@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace AccountingSystem.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class update1 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -246,6 +246,7 @@ namespace AccountingSystem.Migrations
                     Classification = table.Column<int>(type: "INTEGER", nullable: false),
                     SubClassification = table.Column<int>(type: "INTEGER", nullable: false),
                     OpeningBalance = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    CurrentBalance = table.Column<decimal>(type: "TEXT", nullable: false),
                     IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
                     CanHaveChildren = table.Column<bool>(type: "INTEGER", nullable: false),
                     CanPostTransactions = table.Column<bool>(type: "INTEGER", nullable: false),
@@ -279,6 +280,7 @@ namespace AccountingSystem.Migrations
                     Number = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
                     Date = table.Column<DateTime>(type: "TEXT", nullable: false),
                     Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
+                    Reference = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
                     Notes = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
                     TotalDebit = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     TotalCredit = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
@@ -408,30 +410,30 @@ namespace AccountingSystem.Migrations
                 columns: new[] { "Id", "Category", "CreatedAt", "Description", "DisplayName", "IsActive", "Name" },
                 values: new object[,]
                 {
-                    { 1, "المستخدمين", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(6857), null, "عرض المستخدمين", true, "users.view" },
-                    { 2, "المستخدمين", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8077), null, "إنشاء المستخدمين", true, "users.create" },
-                    { 3, "المستخدمين", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8079), null, "تعديل المستخدمين", true, "users.edit" },
-                    { 4, "المستخدمين", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8081), null, "حذف المستخدمين", true, "users.delete" },
-                    { 5, "الفروع", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8082), null, "عرض الفروع", true, "branches.view" },
-                    { 6, "الفروع", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8084), null, "إنشاء الفروع", true, "branches.create" },
-                    { 7, "الفروع", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8085), null, "تعديل الفروع", true, "branches.edit" },
-                    { 8, "الفروع", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8086), null, "حذف الفروع", true, "branches.delete" },
-                    { 9, "مراكز التكلفة", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8088), null, "عرض مراكز التكلفة", true, "costcenters.view" },
-                    { 10, "مراكز التكلفة", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8089), null, "إنشاء مراكز التكلفة", true, "costcenters.create" },
-                    { 11, "مراكز التكلفة", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8090), null, "تعديل مراكز التكلفة", true, "costcenters.edit" },
-                    { 12, "مراكز التكلفة", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8092), null, "حذف مراكز التكلفة", true, "costcenters.delete" },
-                    { 13, "الحسابات", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8093), null, "عرض الحسابات", true, "accounts.view" },
-                    { 14, "الحسابات", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8095), null, "إنشاء الحسابات", true, "accounts.create" },
-                    { 15, "الحسابات", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8096), null, "تعديل الحسابات", true, "accounts.edit" },
-                    { 16, "الحسابات", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8097), null, "حذف الحسابات", true, "accounts.delete" },
-                    { 17, "القيود المالية", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8099), null, "عرض القيود", true, "journal.view" },
-                    { 18, "القيود المالية", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8100), null, "إنشاء القيود", true, "journal.create" },
-                    { 19, "القيود المالية", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8101), null, "تعديل القيود", true, "journal.edit" },
-                    { 20, "القيود المالية", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8103), null, "حذف القيود", true, "journal.delete" },
-                    { 21, "القيود المالية", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8104), null, "اعتماد القيود", true, "journal.approve" },
-                    { 22, "التقارير", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8106), null, "عرض التقارير", true, "reports.view" },
-                    { 23, "التقارير", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8107), null, "تصدير التقارير", true, "reports.export" },
-                    { 24, "لوحة التحكم", new DateTime(2025, 8, 27, 23, 16, 36, 345, DateTimeKind.Utc).AddTicks(8108), null, "عرض لوحة التحكم", true, "dashboard.view" }
+                    { 1, "المستخدمين", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض المستخدمين", true, "users.view" },
+                    { 2, "المستخدمين", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "إنشاء المستخدمين", true, "users.create" },
+                    { 3, "المستخدمين", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "تعديل المستخدمين", true, "users.edit" },
+                    { 4, "المستخدمين", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "حذف المستخدمين", true, "users.delete" },
+                    { 5, "الفروع", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض الفروع", true, "branches.view" },
+                    { 6, "الفروع", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "إنشاء الفروع", true, "branches.create" },
+                    { 7, "الفروع", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "تعديل الفروع", true, "branches.edit" },
+                    { 8, "الفروع", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "حذف الفروع", true, "branches.delete" },
+                    { 9, "مراكز التكلفة", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض مراكز التكلفة", true, "costcenters.view" },
+                    { 10, "مراكز التكلفة", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "إنشاء مراكز التكلفة", true, "costcenters.create" },
+                    { 11, "مراكز التكلفة", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "تعديل مراكز التكلفة", true, "costcenters.edit" },
+                    { 12, "مراكز التكلفة", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "حذف مراكز التكلفة", true, "costcenters.delete" },
+                    { 13, "الحسابات", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض الحسابات", true, "accounts.view" },
+                    { 14, "الحسابات", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "إنشاء الحسابات", true, "accounts.create" },
+                    { 15, "الحسابات", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "تعديل الحسابات", true, "accounts.edit" },
+                    { 16, "الحسابات", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "حذف الحسابات", true, "accounts.delete" },
+                    { 17, "القيود المالية", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض القيود", true, "journal.view" },
+                    { 18, "القيود المالية", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "إنشاء القيود", true, "journal.create" },
+                    { 19, "القيود المالية", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "تعديل القيود", true, "journal.edit" },
+                    { 20, "القيود المالية", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "حذف القيود", true, "journal.delete" },
+                    { 21, "القيود المالية", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "اعتماد القيود", true, "journal.approve" },
+                    { 22, "التقارير", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض التقارير", true, "reports.view" },
+                    { 23, "التقارير", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "تصدير التقارير", true, "reports.export" },
+                    { 24, "لوحة التحكم", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض لوحة التحكم", true, "dashboard.view" }
                 });
 
             migrationBuilder.CreateIndex(

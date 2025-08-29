@@ -1,0 +1,283 @@
+@model AccountingSystem.ViewModels.CreateAccountViewModel
+
+@{
+    ViewData["Title"] = "إضافة حساب جديد";
+    Layout = "_AccountingLayout";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">إضافة حساب جديد</h3>
+                    <div class="card-tools">
+                        <a href="@Url.Action("Index")" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right"></i> العودة للقائمة
+                        </a>
+                        <a href="@Url.Action("Tree")" class="btn btn-success">
+                            <i class="fas fa-sitemap"></i> عرض الشجرة
+                        </a>
+                    </div>
+                </div>
+                <form asp-action="Create" method="post">
+                    <div class="card-body">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="Code" class="form-label">كود الحساب <span class="text-danger">*</span></label>
+                                    <input asp-for="Code" class="form-control" placeholder="أدخل كود الحساب" />
+                                    <span asp-validation-for="Code" class="text-danger"></span>
+                                    <small class="form-text text-muted">يجب أن يكون الكود فريداً ومتسلسلاً</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="NameAr" class="form-label">الاسم العربي <span class="text-danger">*</span></label>
+                                    <input asp-for="NameAr" class="form-control" placeholder="أدخل الاسم العربي للحساب" />
+                                    <span asp-validation-for="NameAr" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="NameEn" class="form-label">الاسم الإنجليزي</label>
+                                    <input asp-for="NameEn" class="form-control" placeholder="أدخل الاسم الإنجليزي للحساب" />
+                                    <span asp-validation-for="NameEn" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="ParentAccountId" class="form-label">الحساب الأب</label>
+                                    <select asp-for="ParentAccountId" asp-items="Model.ParentAccounts" class="form-select">
+                                        <option value="">-- اختر الحساب الأب --</option>
+                                    </select>
+                                    <span asp-validation-for="ParentAccountId" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label asp-for="AccountType" class="form-label">نوع الحساب <span class="text-danger">*</span></label>
+                                    <select asp-for="AccountType" class="form-select" id="accountTypeSelect">
+                                        <option value="">-- اختر نوع الحساب --</option>
+                                        <option value="Assets">الأصول</option>
+                                        <option value="Liabilities">الخصوم</option>
+                                        <option value="Equity">حقوق الملكية</option>
+                                        <option value="Revenue">الإيرادات</option>
+                                        <option value="Expenses">المصروفات</option>
+                                    </select>
+                                    <span asp-validation-for="AccountType" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label asp-for="SubClassification" class="form-label">التصنيف الفرعي <span class="text-danger">*</span></label>
+                                    <select asp-for="SubClassification" class="form-select" id="subClassificationSelect">
+                                        <option value="">-- اختر التصنيف الفرعي --</option>
+                                    </select>
+                                    <span asp-validation-for="SubClassification" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label asp-for="Nature" class="form-label">طبيعة الحساب <span class="text-danger">*</span></label>
+                                    <select asp-for="Nature" class="form-select" id="natureSelect">
+                                        <option value="">-- اختر طبيعة الحساب --</option>
+                                        <option value="Debit">مدين</option>
+                                        <option value="Credit">دائن</option>
+                                    </select>
+                                    <span asp-validation-for="Nature" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="OpeningBalance" class="form-label">الرصيد الافتتاحي</label>
+                                    <input asp-for="OpeningBalance" class="form-control" type="number" step="0.01" placeholder="0.00" />
+                                    <span asp-validation-for="OpeningBalance" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="Level" class="form-label">المستوى</label>
+                                    <input asp-for="Level" class="form-control" type="number" readonly />
+                                    <span asp-validation-for="Level" class="text-danger"></span>
+                                    <small class="form-text text-muted">يتم حساب المستوى تلقائياً</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group mb-3">
+                                    <label asp-for="Description" class="form-label">الوصف</label>
+                                    <textarea asp-for="Description" class="form-control" rows="3" placeholder="أدخل وصف الحساب"></textarea>
+                                    <span asp-validation-for="Description" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-check mb-3">
+                                    <input asp-for="IsActive" class="form-check-input" type="checkbox" checked />
+                                    <label asp-for="IsActive" class="form-check-label">نشط</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check mb-3">
+                                    <input asp-for="CanPostTransactions" class="form-check-input" type="checkbox" />
+                                    <label asp-for="CanPostTransactions" class="form-check-label">قابل للترحيل</label>
+                                    <small class="form-text text-muted">الحسابات الفرعية فقط قابلة للترحيل</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check mb-3">
+                                    <input asp-for="RequiresCostCenter" class="form-check-input" type="checkbox" />
+                                    <label asp-for="RequiresCostCenter" class="form-check-label">يتطلب مركز تكلفة</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> حفظ الحساب
+                        </button>
+                        <a href="@Url.Action("Index")" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> إلغاء
+                        </a>
+                        <button type="button" class="btn btn-info" onclick="generateCode()">
+                            <i class="fas fa-magic"></i> توليد كود تلقائي
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        $(document).ready(function() {
+            // تحديث التصنيف الفرعي عند تغيير نوع الحساب
+            $('#accountTypeSelect').change(function() {
+                var accountType = $(this).val();
+                var subClassificationSelect = $('#subClassificationSelect');
+                var natureSelect = $('#natureSelect');
+                
+                subClassificationSelect.empty().append('<option value="">-- اختر التصنيف الفرعي --</option>');
+                
+                if (accountType) {
+                    var options = getSubClassificationOptions(accountType);
+                    $.each(options, function(value, text) {
+                        subClassificationSelect.append('<option value="' + value + '">' + text + '</option>');
+                    });
+                    
+                    // تعيين الطبيعة الافتراضية
+                    var defaultNature = getDefaultNature(accountType);
+                    natureSelect.val(defaultNature);
+                }
+            });
+
+            // تحديث المستوى عند تغيير الحساب الأب
+            $('#ParentAccountId').change(function() {
+                var parentId = $(this).val();
+                if (parentId) {
+                    $.get('@Url.Action("GetAccountLevel")', { parentId: parentId }, function(level) {
+                        $('#Level').val(level + 1);
+                    });
+                } else {
+                    $('#Level').val(1);
+                }
+            });
+        });
+
+        function getSubClassificationOptions(accountType) {
+            var options = {};
+            
+            switch(accountType) {
+                case 'Assets':
+                    options = {
+                        'CurrentAssets': 'الأصول المتداولة',
+                        'FixedAssets': 'الأصول الثابتة',
+                        'IntangibleAssets': 'الأصول غير الملموسة'
+                    };
+                    break;
+                case 'Liabilities':
+                    options = {
+                        'CurrentLiabilities': 'الخصوم المتداولة',
+                        'LongTermLiabilities': 'الخصوم طويلة الأجل'
+                    };
+                    break;
+                case 'Equity':
+                    options = {
+                        'Capital': 'رأس المال',
+                        'RetainedEarnings': 'الأرباح المحتجزة',
+                        'Reserves': 'الاحتياطيات'
+                    };
+                    break;
+                case 'Revenue':
+                    options = {
+                        'OperatingRevenue': 'الإيرادات التشغيلية',
+                        'NonOperatingRevenue': 'الإيرادات غير التشغيلية'
+                    };
+                    break;
+                case 'Expenses':
+                    options = {
+                        'OperatingExpenses': 'المصروفات التشغيلية',
+                        'AdministrativeExpenses': 'المصروفات الإدارية',
+                        'FinancialExpenses': 'المصروفات المالية'
+                    };
+                    break;
+            }
+            
+            return options;
+        }
+
+        function getDefaultNature(accountType) {
+            switch(accountType) {
+                case 'Assets':
+                case 'Expenses':
+                    return 'Debit';
+                case 'Liabilities':
+                case 'Equity':
+                case 'Revenue':
+                    return 'Credit';
+                default:
+                    return '';
+            }
+        }
+
+        function generateCode() {
+            var accountType = $('#accountTypeSelect').val();
+            var parentId = $('#ParentAccountId').val();
+            
+            if (!accountType) {
+                alert('يرجى اختيار نوع الحساب أولاً');
+                return;
+            }
+            
+            $.post('@Url.Action("GenerateAccountCode")', { 
+                accountType: accountType, 
+                parentId: parentId 
+            }, function(result) {
+                if (result.success) {
+                    $('#Code').val(result.code);
+                } else {
+                    alert(result.message || 'حدث خطأ في توليد الكود');
+                }
+            });
+        }
+    </script>
+}
+
