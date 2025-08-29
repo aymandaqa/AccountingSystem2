@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc.Rendering;
 using AccountingSystem.Models;
+using System.ComponentModel.DataAnnotations;
 
 namespace AccountingSystem.ViewModels
 {
@@ -10,6 +11,7 @@ namespace AccountingSystem.ViewModels
         public DateTime Date { get; set; } = DateTime.Now;
         public string Description { get; set; } = string.Empty;
         public string? Reference { get; set; }
+        [Range(1, int.MaxValue, ErrorMessage = "يجب اختيار الفرع")]
         public int BranchId { get; set; }
         public int? CostCenterId { get; set; }
         public List<JournalEntryLineViewModel> Lines { get; set; } = new List<JournalEntryLineViewModel>();
@@ -41,7 +43,7 @@ namespace AccountingSystem.ViewModels
         public bool IsActive { get; set; } = true;
         public bool CanPostTransactions { get; set; } = true;
         public int? ParentId { get; set; }
-        public int BranchId { get; set; }
+        public int? BranchId { get; set; }
         public int? CostCenterId { get; set; }
         public List<SelectListItem> ParentAccounts { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
@@ -61,7 +63,7 @@ namespace AccountingSystem.ViewModels
         public bool IsActive { get; set; }
         public bool CanPostTransactions { get; set; }
         public int? ParentId { get; set; }
-        public int BranchId { get; set; }
+        public int? BranchId { get; set; }
         public int? CostCenterId { get; set; }
         public List<SelectListItem> ParentAccounts { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
@@ -83,7 +85,7 @@ namespace AccountingSystem.ViewModels
         public bool CanPostTransactions { get; set; }
         public int? ParentId { get; set; }
         public string ParentAccountName { get; set; } = string.Empty;
-        public int BranchId { get; set; }
+        public int? BranchId { get; set; }
         public string BranchName { get; set; } = string.Empty;
         public int? CostCenterId { get; set; }
         public string CostCenterName { get; set; } = string.Empty;

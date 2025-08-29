@@ -42,7 +42,7 @@ namespace AccountingSystem.Controllers
                 CanPostTransactions = a.CanPostTransactions,
                 ParentId = a.ParentId,
                 ParentAccountName = a.Parent?.NameAr ?? "",
-                BranchId = a.BranchId ?? 0,
+                BranchId = a.BranchId,
                 BranchName = a.Branch?.NameAr ?? "",
                 Level = a.Level,
                 HasChildren = _context.Accounts.Any(x => x.ParentId == a.Id),
@@ -104,9 +104,12 @@ namespace AccountingSystem.Controllers
 
         // GET: Accounts/Create
         [Authorize(Policy = "accounts.create")]
-        public async Task<IActionResult> Create()
+        public async Task<IActionResult> Create(int? parentId = null)
         {
-            var viewModel = new CreateAccountViewModel();
+            var viewModel = new CreateAccountViewModel
+            {
+                ParentId = parentId
+            };
             await PopulateDropdowns(viewModel);
             return View(viewModel);
         }
@@ -132,8 +135,8 @@ namespace AccountingSystem.Controllers
                     IsActive = model.IsActive,
                     CanPostTransactions = model.CanPostTransactions,
                     ParentId = model.ParentId,
-                    BranchId = model.BranchId,
-                    Level = model.ParentId.HasValue ? 
+                    BranchId = model.BranchId > 0 ? model.BranchId : null,
+                    Level = model.ParentId.HasValue ?
                         (_context.Accounts.Find(model.ParentId.Value)?.Level ?? 0) + 1 : 1
                 };
 
@@ -169,6 +172,99 @@ namespace AccountingSystem.Controllers
                     Value = c.Id.ToString(),
                     Text = c.NameAr
                 }).ToListAsync();
+        }
+
+        private async Task PopulateDropdowns(EditAccountViewModel model)
+        {
+            model.ParentAccounts = await _context.Accounts
+                .Where(a => a.CanPostTransactions == false)
+                .Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = $"{a.Code} - {a.NameAr}"
+                }).ToListAsync();
+
+            model.Branches = await _context.Branches
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = b.NameAr
+                }).ToListAsync();
+
+            model.CostCenters = await _context.CostCenters
+                .Select(c => new SelectListItem
+                {
+                    Value = c.Id.ToString(),
+                    Text = c.NameAr
+                }).ToListAsync();
+        }
+
+        // GET: Accounts/Edit/5
+        [Authorize(Policy = "accounts.edit")]
+        public async Task<IActionResult> Edit(int id)
+        {
+            var account = await _context.Accounts.FindAsync(id);
+            if (account == null)
+            {
+                return NotFound();
+            }
+
+            var model = new EditAccountViewModel
+            {
+                Id = account.Id,
+                Code = account.Code,
+                NameAr = account.NameAr,
+                NameEn = account.NameEn,
+                AccountType = account.AccountType,
+                Nature = account.Nature,
+                Classification = account.Classification,
+                OpeningBalance = account.OpeningBalance,
+                IsActive = account.IsActive,
+                CanPostTransactions = account.CanPostTransactions,
+                ParentId = account.ParentId,
+                BranchId = account.BranchId,
+                CostCenterId = account.CostCenterId
+            };
+
+            await PopulateDropdowns(model);
+            return View(model);
+        }
+
+        // POST: Accounts/Edit/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "accounts.edit")]
+        public async Task<IActionResult> Edit(EditAccountViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                await PopulateDropdowns(model);
+                return View(model);
+            }
+
+            var account = await _context.Accounts.FindAsync(model.Id);
+            if (account == null)
+            {
+                return NotFound();
+            }
+
+            account.Code = model.Code;
+            account.NameAr = model.NameAr;
+            account.NameEn = model.NameEn;
+            account.AccountType = model.AccountType;
+            account.Nature = model.Nature;
+            account.Classification = model.Classification;
+            account.OpeningBalance = model.OpeningBalance;
+            account.IsActive = model.IsActive;
+            account.CanPostTransactions = model.CanPostTransactions;
+            account.ParentId = model.ParentId;
+            account.BranchId = model.BranchId > 0 ? model.BranchId : null;
+            account.CostCenterId = model.CostCenterId > 0 ? model.CostCenterId : null;
+            account.Level = model.ParentId.HasValue ?
+                (_context.Accounts.Find(model.ParentId.Value)?.Level ?? 0) + 1 : 1;
+
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
         }
     }
 }
