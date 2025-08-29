@@ -244,7 +244,12 @@ namespace AccountingSystem.Data
                 new Permission { Id = 24, Name = "dashboard.view", DisplayName = "عرض لوحة التحكم", Category = "لوحة التحكم", CreatedAt = createdAt },
                 new Permission { Id = 25, Name = "dashboard.widget.stats", DisplayName = "عرض إحصائيات لوحة التحكم", Category = "لوحة التحكم", CreatedAt = createdAt },
                 new Permission { Id = 26, Name = "dashboard.widget.accounts", DisplayName = "عرض أرصدة الحسابات بلوحة التحكم", Category = "لوحة التحكم", CreatedAt = createdAt },
-                new Permission { Id = 27, Name = "dashboard.widget.links", DisplayName = "عرض الروابط السريعة بلوحة التحكم", Category = "لوحة التحكم", CreatedAt = createdAt }
+                new Permission { Id = 27, Name = "dashboard.widget.links", DisplayName = "عرض الروابط السريعة بلوحة التحكم", Category = "لوحة التحكم", CreatedAt = createdAt },
+                new Permission { Id = 28, Name = "expenses.view", DisplayName = "عرض المصاريف", Category = "المصاريف", CreatedAt = createdAt },
+                new Permission { Id = 29, Name = "expenses.create", DisplayName = "إنشاء المصاريف", Category = "المصاريف", CreatedAt = createdAt },
+                new Permission { Id = 30, Name = "expenses.edit", DisplayName = "تعديل المصاريف", Category = "المصاريف", CreatedAt = createdAt },
+                new Permission { Id = 31, Name = "expenses.delete", DisplayName = "حذف المصاريف", Category = "المصاريف", CreatedAt = createdAt },
+                new Permission { Id = 32, Name = "expenses.approve", DisplayName = "اعتماد المصاريف", Category = "المصاريف", CreatedAt = createdAt }
             );
         }
     }

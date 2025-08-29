@@ -15,6 +15,11 @@ namespace AccountingSystem.ViewModels
         public string BranchName { get; set; } = string.Empty;
     }
 
+    public class EditExpenseViewModel : CreateExpenseViewModel
+    {
+        public int Id { get; set; }
+    }
+
     public class ExpenseViewModel
     {
         public int Id { get; set; }
