@@ -15,8 +15,8 @@ namespace AccountingSystem.Data
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
             var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-            // Ensure database is created
-            await context.Database.EnsureCreatedAsync();
+            // Apply migrations to ensure the schema is up to date
+            await context.Database.MigrateAsync();
 
             // Seed roles
             await SeedRolesAsync(roleManager);
