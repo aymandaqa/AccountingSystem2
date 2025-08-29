@@ -26,7 +26,7 @@
                                 {
                                     @foreach (var branch in ViewBag.Branches)
                                     {
-                                        <option value="@branch.Id" @(Model.SelectedBranchId == branch.Id ? "selected" : "")>
+                                        <option value="@branch.Id" selected="@(Model.SelectedBranchId == branch.Id ? "selected" : null)">
                                             @branch.NameAr
                                         </option>
                                     }
@@ -142,6 +142,34 @@
         </div>
     </div>
 
+    <!-- أرصدة الحسابات -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-sitemap me-2"></i>
+                        أرصدة الحسابات حسب النوع
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.AccountTypeTrees.Any())
+                    {
+                        <div class="tree-container">
+                            @await Html.PartialAsync("_AccountBalanceTreeNode", Model.AccountTypeTrees)
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info text-center">
+                            لا توجد بيانات لعرضها
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- الروابط السريعة -->
     <div class="row mb-4">
         <div class="col-12">
@@ -197,6 +225,64 @@
     </div>
 </div>
 
+@section Styles {
+    <style>
+        .tree-container {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .tree-node {
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 5px;
+        }
+
+        .tree-node-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .tree-node-info {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+        }
+
+        .tree-children {
+            margin-right: 25px;
+            border-right: 2px solid #e9ecef;
+            padding-right: 15px;
+        }
+
+        .account-code {
+            font-weight: bold;
+            color: #495057;
+            margin-left: 10px;
+        }
+
+        .account-name {
+            color: #212529;
+            margin-left: 10px;
+        }
+
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 0;
+            margin-left: 5px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .toggle-btn:hover {
+            color: #495057;
+        }
+    </style>
+}
+
 <script>
     function applyFilters() {
         const branchId = document.getElementById('branchFilter').value;
@@ -214,5 +300,19 @@
         }
         window.location.href = url.toString();
     }
+
+    $(function () {
+        $('.toggle-btn').on('click', function () {
+            var $this = $(this);
+            var $children = $this.closest('.tree-node').find('> .tree-children');
+            if ($children.is(':visible')) {
+                $children.hide();
+                $this.html('<i class="fas fa-plus"></i>');
+            } else {
+                $children.show();
+                $this.html('<i class="fas fa-minus"></i>');
+            }
+        });
+    });
 </script>
 

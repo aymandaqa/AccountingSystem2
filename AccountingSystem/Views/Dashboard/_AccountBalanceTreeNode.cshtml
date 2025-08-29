@@ -1,0 +1,39 @@
+@model List<AccountingSystem.ViewModels.AccountTreeNodeViewModel>
+
+@foreach (var node in Model)
+{
+    <div class="tree-node level-@node.Level" data-level="@node.Level">
+        <div class="tree-node-content">
+            <div class="tree-node-info">
+                @if (node.Children.Any())
+                {
+                    <button class="toggle-btn" type="button">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                }
+                else
+                {
+                    <span style="width: 20px; display: inline-block;"></span>
+                }
+
+                @if (node.Id == 0)
+                {
+                    <span class="account-name">@node.NameAr</span>
+                }
+                else
+                {
+                    <span class="account-code">@node.Code</span>
+                    <span class="account-name">@node.NameAr</span>
+                }
+                <span class="ms-auto">@node.Balance.ToString("N2")</span>
+            </div>
+        </div>
+
+        @if (node.Children.Any())
+        {
+            <div class="tree-children">
+                @await Html.PartialAsync("_AccountBalanceTreeNode", node.Children)
+            </div>
+        }
+    </div>
+}
