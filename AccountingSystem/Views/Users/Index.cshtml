@@ -14,6 +14,7 @@
             <th>البريد الإلكتروني</th>
             <th>الاسم</th>
             <th>نشط</th>
+            <th>آخر تسجيل دخول</th>
             <th></th>
         </tr>
     </thead>
@@ -24,11 +25,20 @@
             <td>@user.Email</td>
             <td>@user.FullName</td>
             <td>@(user.IsActive ? "نعم" : "لا")</td>
+            <td>@(user.LastLoginAt?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
             <td>
                 <a class="btn btn-sm btn-warning" asp-action="Edit" asp-route-id="@user.Id"><i class="fas fa-edit"></i></a>
                 <a class="btn btn-sm btn-primary" asp-action="ManagePermissions" asp-route-id="@user.Id">
                     <i class="fas fa-key"></i> الصلاحيات
                 </a>
+                <a class="btn btn-sm btn-secondary" asp-action="ResetPassword" asp-route-id="@user.Id">
+                    <i class="fas fa-lock"></i> كلمة مرور جديدة
+                </a>
+                <form asp-action="ToggleActive" asp-route-id="@user.Id" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-sm @(user.IsActive ? "btn-danger" : "btn-success")">
+                        <i class="fas @(user.IsActive ? "fa-user-slash" : "fa-user")"></i> @(user.IsActive ? "إيقاف" : "تفعيل")
+                    </button>
+                </form>
             </td>
         </tr>
     }

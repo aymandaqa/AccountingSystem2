@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
 
@@ -128,6 +129,56 @@ namespace AccountingSystem.Controllers
                 }
             }
 
+            return View(model);
+        }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> Profile()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return NotFound();
+
+            var model = new ProfileViewModel
+            {
+                Email = user.Email ?? string.Empty,
+                FullName = user.FullName ?? string.Empty,
+                LastLoginAt = user.LastLoginAt
+            };
+            return View(model);
+        }
+
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Profile(ProfileViewModel model)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return NotFound();
+
+            if (!ModelState.IsValid)
+            {
+                model.Email = user.Email ?? string.Empty;
+                model.FullName = user.FullName ?? string.Empty;
+                model.LastLoginAt = user.LastLoginAt;
+                return View(model);
+            }
+
+            var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+            if (result.Succeeded)
+            {
+                TempData["SuccessMessage"] = "تم تحديث كلمة المرور بنجاح.";
+                return RedirectToAction(nameof(Profile));
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            model.Email = user.Email ?? string.Empty;
+            model.FullName = user.FullName ?? string.Empty;
+            model.LastLoginAt = user.LastLoginAt;
             return View(model);
         }
     }

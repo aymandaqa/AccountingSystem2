@@ -37,7 +37,8 @@ namespace AccountingSystem.Controllers
                     Id = u.Id,
                     Email = u.Email ?? string.Empty,
                     FullName = u.FullName ?? string.Empty,
-                    IsActive = u.IsActive
+                    IsActive = u.IsActive,
+                    LastLoginAt = u.LastLoginAt
                 }).ToListAsync();
 
             return View(users);
@@ -308,6 +309,57 @@ namespace AccountingSystem.Controllers
             await _context.SaveChangesAsync();
             TempData["SuccessMessage"] = "تم تحديث صلاحيات المستخدم بنجاح.";
             return RedirectToAction(nameof(Index));
+        }
+
+        [Authorize(Policy = "users.edit")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleActive(string id)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null) return NotFound();
+
+            user.IsActive = !user.IsActive;
+            await _userManager.UpdateAsync(user);
+            return RedirectToAction(nameof(Index));
+        }
+
+        [Authorize(Policy = "users.edit")]
+        public async Task<IActionResult> ResetPassword(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return NotFound();
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null) return NotFound();
+
+            var model = new ResetUserPasswordViewModel { Id = user.Id };
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "users.edit")]
+        public async Task<IActionResult> ResetPassword(ResetUserPasswordViewModel model)
+        {
+            var user = await _userManager.FindByIdAsync(model.Id);
+            if (user == null) return NotFound();
+
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
+            if (result.Succeeded)
+            {
+                TempData["SuccessMessage"] = "تم تحديث كلمة المرور بنجاح.";
+                return RedirectToAction(nameof(Index));
+            }
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+            return View(model);
         }
     }
 }
