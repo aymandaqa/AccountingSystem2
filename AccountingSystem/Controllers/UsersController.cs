@@ -42,6 +42,84 @@ namespace AccountingSystem.Controllers
             return View(users);
         }
 
+        [Authorize(Policy = "users.create")]
+        public IActionResult Create()
+        {
+            return View(new CreateUserViewModel());
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "users.create")]
+        public async Task<IActionResult> Create(CreateUserViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var user = new User
+                {
+                    UserName = model.Email,
+                    Email = model.Email,
+                    FirstName = model.FirstName,
+                    LastName = model.LastName,
+                    IsActive = model.IsActive
+                };
+
+                var result = await _userManager.CreateAsync(user, model.Password);
+                if (result.Succeeded)
+                    return RedirectToAction(nameof(Index));
+
+                foreach (var error in result.Errors)
+                    ModelState.AddModelError(string.Empty, error.Description);
+            }
+            return View(model);
+        }
+
+        [Authorize(Policy = "users.edit")]
+        public async Task<IActionResult> Edit(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return NotFound();
+
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null) return NotFound();
+
+            var model = new EditUserViewModel
+            {
+                Id = user.Id,
+                Email = user.Email ?? string.Empty,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                IsActive = user.IsActive
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "users.edit")]
+        public async Task<IActionResult> Edit(EditUserViewModel model)
+        {
+            if (!ModelState.IsValid) return View(model);
+
+            var user = await _userManager.FindByIdAsync(model.Id);
+            if (user == null) return NotFound();
+
+            user.Email = model.Email;
+            user.UserName = model.Email;
+            user.FirstName = model.FirstName;
+            user.LastName = model.LastName;
+            user.IsActive = model.IsActive;
+
+            var result = await _userManager.UpdateAsync(user);
+            if (result.Succeeded)
+                return RedirectToAction(nameof(Index));
+
+            foreach (var error in result.Errors)
+                ModelState.AddModelError(string.Empty, error.Description);
+
+            return View(model);
+        }
+
         [Authorize(Policy = "users.edit")]
         public async Task<IActionResult> ManagePermissions(string id)
         {

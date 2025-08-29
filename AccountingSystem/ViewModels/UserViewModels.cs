@@ -24,4 +24,46 @@ namespace AccountingSystem.ViewModels
         public string UserName { get; set; } = string.Empty;
         public List<PermissionSelectionViewModel> Permissions { get; set; } = new List<PermissionSelectionViewModel>();
     }
+
+    public class CreateUserViewModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100)]
+        public string FirstName { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100)]
+        public string LastName { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100, MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = string.Empty;
+
+        public bool IsActive { get; set; } = true;
+    }
+
+    public class EditUserViewModel
+    {
+        [Required]
+        public string Id { get; set; } = string.Empty;
+
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100)]
+        public string FirstName { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100)]
+        public string LastName { get; set; } = string.Empty;
+
+        public bool IsActive { get; set; } = true;
+    }
 }

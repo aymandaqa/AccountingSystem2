@@ -55,13 +55,30 @@ namespace AccountingSystem.Controllers
         // GET: Accounts/Tree
         public async Task<IActionResult> Tree()
         {
-            var accounts = await _context.Accounts
+            var rootAccounts = await _context.Accounts
                 .Include(a => a.Children)
+                    .ThenInclude(c => c.Children)
+                        .ThenInclude(c => c.Children)
+                            .ThenInclude(c => c.Children)
                 .Where(a => a.ParentId == null)
                 .OrderBy(a => a.Code)
                 .ToListAsync();
 
-            var treeNodes = accounts.Select(a => MapToTreeNode(a)).ToList();
+            var grouped = rootAccounts.GroupBy(a => a.AccountType);
+
+            var treeNodes = grouped.Select(g => new AccountTreeNodeViewModel
+            {
+                Id = 0,
+                Code = string.Empty,
+                NameAr = g.Key.ToString(),
+                AccountType = g.Key,
+                Level = 0,
+                CanPostTransactions = false,
+                IsActive = true,
+                HasChildren = g.Any(),
+                Children = g.Select(a => MapToTreeNode(a)).ToList()
+            }).ToList();
+
             return View(treeNodes);
         }
 
