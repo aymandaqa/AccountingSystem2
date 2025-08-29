@@ -9,6 +9,7 @@ namespace AccountingSystem.ViewModels
         public string Email { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+        public DateTime? LastLoginAt { get; set; }
     }
 
     public class PermissionSelectionViewModel
@@ -82,5 +83,42 @@ namespace AccountingSystem.ViewModels
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> PaymentBranches { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> PaymentAccounts { get; set; } = new List<SelectListItem>();
+    }
+
+    public class ResetUserPasswordViewModel
+    {
+        [Required]
+        public string Id { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100, MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        public string NewPassword { get; set; } = string.Empty;
+
+        [Required]
+        [DataType(DataType.Password)]
+        [Compare("NewPassword", ErrorMessage = "كلمتا المرور غير متطابقتين")] 
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+
+    public class ProfileViewModel
+    {
+        public string Email { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public DateTime? LastLoginAt { get; set; }
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string CurrentPassword { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100, MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        public string NewPassword { get; set; } = string.Empty;
+
+        [Required]
+        [DataType(DataType.Password)]
+        [Compare("NewPassword", ErrorMessage = "كلمتا المرور غير متطابقتين")] 
+        public string ConfirmPassword { get; set; } = string.Empty;
     }
 }

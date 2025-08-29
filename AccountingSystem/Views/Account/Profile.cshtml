@@ -1,0 +1,42 @@
+@model AccountingSystem.ViewModels.ProfileViewModel
+@{
+    ViewData["Title"] = "الملف الشخصي";
+}
+
+<h1 class="mb-4">الملف الشخصي</h1>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+
+<div class="mb-3">
+    <p><strong>البريد الإلكتروني:</strong> @Model.Email</p>
+    <p><strong>الاسم:</strong> @Model.FullName</p>
+    <p><strong>آخر تسجيل دخول:</strong> @(Model.LastLoginAt?.ToString("yyyy-MM-dd HH:mm") ?? "-")</p>
+</div>
+
+<h3>تغيير كلمة المرور</h3>
+<form asp-action="Profile" method="post">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <div class="mb-3">
+        <label asp-for="CurrentPassword" class="form-label"></label>
+        <input asp-for="CurrentPassword" class="form-control" />
+        <span asp-validation-for="CurrentPassword" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="NewPassword" class="form-label"></label>
+        <input asp-for="NewPassword" class="form-control" />
+        <span asp-validation-for="NewPassword" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="ConfirmPassword" class="form-label"></label>
+        <input asp-for="ConfirmPassword" class="form-control" />
+        <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">تحديث كلمة المرور</button>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
