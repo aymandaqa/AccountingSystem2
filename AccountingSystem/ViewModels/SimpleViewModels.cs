@@ -224,42 +224,6 @@ namespace AccountingSystem.ViewModels
         public decimal CreditAmount { get; set; }
     }
 
-    // User Management ViewModels
-    public class CreateUserViewModel
-    {
-        public string Email { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
-        public string ConfirmPassword { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-        public bool IsActive { get; set; } = true;
-        public List<int> SelectedBranches { get; set; } = new List<int>();
-        public List<int> SelectedPermissions { get; set; } = new List<int>();
-        public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
-        public List<SelectListItem> Permissions { get; set; } = new List<SelectListItem>();
-    }
-
-    public class EditUserViewModel
-    {
-        public string Id { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-        public bool IsActive { get; set; }
-        public List<int> SelectedBranches { get; set; } = new List<int>();
-        public List<int> SelectedPermissions { get; set; } = new List<int>();
-        public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
-        public List<SelectListItem> Permissions { get; set; } = new List<SelectListItem>();
-    }
-
-    public class UserDetailsViewModel
-    {
-        public string Id { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-        public bool IsActive { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public List<string> Branches { get; set; } = new List<string>();
-        public List<string> Permissions { get; set; } = new List<string>();
-    }
 
     // Dashboard ViewModels
     public class DashboardViewModel

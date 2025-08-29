@@ -5,6 +5,7 @@ using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Security.Claims;
 
 namespace AccountingSystem.Controllers
 {
@@ -59,6 +60,53 @@ namespace AccountingSystem.Controllers
 
             await PopulateDropdowns(viewModel);
             return View(viewModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "journal.create")]
+        public async Task<IActionResult> Create(CreateJournalEntryViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                await PopulateDropdowns(model);
+                return View(model);
+            }
+
+            if (model.Lines == null || model.Lines.Count == 0 ||
+                Math.Round(model.Lines.Sum(l => l.DebitAmount), 2) != Math.Round(model.Lines.Sum(l => l.CreditAmount), 2))
+            {
+                ModelState.AddModelError(string.Empty, "القيد غير متوازن");
+                await PopulateDropdowns(model);
+                return View(model);
+            }
+
+            var entry = new JournalEntry
+            {
+                Number = model.Number,
+                Date = model.Date,
+                Description = model.Description,
+                Reference = model.Reference,
+                BranchId = model.BranchId,
+                CreatedById = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty,
+                TotalDebit = model.Lines.Sum(l => l.DebitAmount),
+                TotalCredit = model.Lines.Sum(l => l.CreditAmount)
+            };
+
+            foreach (var line in model.Lines)
+            {
+                entry.Lines.Add(new JournalEntryLine
+                {
+                    AccountId = line.AccountId,
+                    Description = line.Description,
+                    DebitAmount = line.DebitAmount,
+                    CreditAmount = line.CreditAmount
+                });
+            }
+
+            _context.JournalEntries.Add(entry);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
         }
 
         private async Task<string> GenerateJournalEntryNumber()
