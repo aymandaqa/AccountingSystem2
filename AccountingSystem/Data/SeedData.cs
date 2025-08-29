@@ -20,6 +20,9 @@ namespace AccountingSystem.Data
             // Seed roles
             await SeedRolesAsync(roleManager);
 
+            // Seed permissions
+            await SeedPermissionsAsync(context);
+
             // Seed default admin user
             var adminUser = await SeedAdminUserAsync(userManager);
 
@@ -51,6 +54,48 @@ namespace AccountingSystem.Data
             }
         }
 
+ 
+        private static async Task SeedPermissionsAsync(ApplicationDbContext context)
+        {
+            var permissions = new List<Permission>
+            {
+                new Permission { Name = "users.view", DisplayName = "عرض المستخدمين", Category = "المستخدمين" },
+                new Permission { Name = "users.create", DisplayName = "إنشاء المستخدمين", Category = "المستخدمين" },
+                new Permission { Name = "users.edit", DisplayName = "تعديل المستخدمين", Category = "المستخدمين" },
+                new Permission { Name = "users.delete", DisplayName = "حذف المستخدمين", Category = "المستخدمين" },
+                new Permission { Name = "branches.view", DisplayName = "عرض الفروع", Category = "الفروع" },
+                new Permission { Name = "branches.create", DisplayName = "إنشاء الفروع", Category = "الفروع" },
+                new Permission { Name = "branches.edit", DisplayName = "تعديل الفروع", Category = "الفروع" },
+                new Permission { Name = "branches.delete", DisplayName = "حذف الفروع", Category = "الفروع" },
+                new Permission { Name = "costcenters.view", DisplayName = "عرض مراكز التكلفة", Category = "مراكز التكلفة" },
+                new Permission { Name = "costcenters.create", DisplayName = "إنشاء مراكز التكلفة", Category = "مراكز التكلفة" },
+                new Permission { Name = "costcenters.edit", DisplayName = "تعديل مراكز التكلفة", Category = "مراكز التكلفة" },
+                new Permission { Name = "costcenters.delete", DisplayName = "حذف مراكز التكلفة", Category = "مراكز التكلفة" },
+                new Permission { Name = "accounts.view", DisplayName = "عرض الحسابات", Category = "الحسابات" },
+                new Permission { Name = "accounts.create", DisplayName = "إنشاء الحسابات", Category = "الحسابات" },
+                new Permission { Name = "accounts.edit", DisplayName = "تعديل الحسابات", Category = "الحسابات" },
+                new Permission { Name = "accounts.delete", DisplayName = "حذف الحسابات", Category = "الحسابات" },
+                new Permission { Name = "journal.view", DisplayName = "عرض القيود", Category = "القيود المالية" },
+                new Permission { Name = "journal.create", DisplayName = "إنشاء القيود", Category = "القيود المالية" },
+                new Permission { Name = "journal.edit", DisplayName = "تعديل القيود", Category = "القيود المالية" },
+                new Permission { Name = "journal.delete", DisplayName = "حذف القيود", Category = "القيود المالية" },
+                new Permission { Name = "journal.approve", DisplayName = "اعتماد القيود", Category = "القيود المالية" },
+                new Permission { Name = "reports.view", DisplayName = "عرض التقارير", Category = "التقارير" },
+                new Permission { Name = "reports.export", DisplayName = "تصدير التقارير", Category = "التقارير" },
+                new Permission { Name = "dashboard.view", DisplayName = "عرض لوحة التحكم", Category = "لوحة التحكم" }
+            };
+
+            foreach (var perm in permissions)
+            {
+                if (!await context.Permissions.AnyAsync(p => p.Name == perm.Name))
+                {
+                    context.Permissions.Add(perm);
+                }
+            }
+
+            await context.SaveChangesAsync();
+        }
+ 
         private static async Task<User?> SeedAdminUserAsync(UserManager<User> userManager)
         {
             var adminEmail = "admin@accounting.com";
