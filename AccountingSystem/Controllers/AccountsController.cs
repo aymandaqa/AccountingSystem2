@@ -161,6 +161,64 @@ namespace AccountingSystem.Controllers
             return View(model);
         }
 
+        [HttpPost]
+        [Authorize(Policy = "accounts.create")]
+        public async Task<IActionResult> GenerateAccountCode(AccountType accountType, int? parentId)
+        {
+            if (parentId.HasValue)
+            {
+                var parent = await _context.Accounts
+                    .Include(a => a.Children)
+                    .FirstOrDefaultAsync(a => a.Id == parentId.Value);
+                if (parent == null)
+                    return Json(new { success = false, message = "الحساب الأب غير موجود" });
+
+                var lastChildCode = parent.Children
+                    .OrderByDescending(c => c.Code)
+                    .Select(c => c.Code)
+                    .FirstOrDefault();
+
+                var newCode = GenerateChildCode(parent.Code, lastChildCode);
+                return Json(new { success = true, code = newCode });
+            }
+
+            var baseCode = ((int)accountType).ToString();
+            var lastRootCode = await _context.Accounts
+                .Where(a => a.ParentId == null && a.AccountType == accountType)
+                .OrderByDescending(a => a.Code)
+                .Select(a => a.Code)
+                .FirstOrDefaultAsync();
+
+            string generatedCode;
+            if (string.IsNullOrEmpty(lastRootCode))
+            {
+                generatedCode = baseCode;
+            }
+            else if (int.TryParse(lastRootCode, out var rootNumber))
+            {
+                generatedCode = (rootNumber + 1).ToString();
+            }
+            else
+            {
+                generatedCode = baseCode + "1";
+            }
+
+            return Json(new { success = true, code = generatedCode });
+        }
+
+        private static string GenerateChildCode(string parentCode, string? lastChildCode)
+        {
+            var segmentLength = parentCode.Length == 1 ? 1 : 2;
+            if (string.IsNullOrEmpty(lastChildCode))
+                return parentCode + (segmentLength == 1 ? "1" : "01");
+
+            var suffix = lastChildCode.Substring(parentCode.Length);
+            if (!int.TryParse(suffix, out var number))
+                number = 0;
+
+            return parentCode + (number + 1).ToString(segmentLength == 1 ? "D1" : "D2");
+        }
+
         private async Task PopulateDropdowns(CreateAccountViewModel model)
         {
             model.ParentAccounts = await _context.Accounts

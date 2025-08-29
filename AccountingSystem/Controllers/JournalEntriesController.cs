@@ -153,6 +153,121 @@ namespace AccountingSystem.Controllers
         }
 
         [Authorize(Policy = "journal.view")]
+        public async Task<IActionResult> Details(int id)
+        {
+            var entry = await _context.JournalEntries
+                .Include(j => j.Branch)
+                .Include(j => j.Lines)
+                    .ThenInclude(l => l.Account)
+                .FirstOrDefaultAsync(j => j.Id == id);
+
+            if (entry == null)
+                return NotFound();
+
+            var model = new JournalEntryDetailsViewModel
+            {
+                Id = entry.Id,
+                Number = entry.Number,
+                Date = entry.Date,
+                Description = entry.Description,
+                Reference = entry.Reference,
+                Status = entry.Status.ToString(),
+                BranchName = entry.Branch.NameAr,
+                Lines = entry.Lines.Select(l => new JournalEntryLineViewModel
+                {
+                    AccountId = l.AccountId,
+                    AccountCode = l.Account.Code,
+                    AccountName = l.Account.NameAr,
+                    Description = l.Description ?? string.Empty,
+                    DebitAmount = l.DebitAmount,
+                    CreditAmount = l.CreditAmount
+                }).ToList(),
+                TotalDebit = entry.Lines.Sum(l => l.DebitAmount),
+                TotalCredit = entry.Lines.Sum(l => l.CreditAmount)
+            };
+
+            return View(model);
+        }
+
+        // GET: JournalEntries/Edit/5
+        [Authorize(Policy = "journal.edit")]
+        public async Task<IActionResult> Edit(int id)
+        {
+            var entry = await _context.JournalEntries
+                .Include(j => j.Lines)
+                .FirstOrDefaultAsync(j => j.Id == id);
+
+            if (entry == null)
+                return NotFound();
+
+            var model = new CreateJournalEntryViewModel
+            {
+                Id = entry.Id,
+                Number = entry.Number,
+                Date = entry.Date,
+                Description = entry.Description,
+                Reference = entry.Reference,
+                BranchId = entry.BranchId,
+                Lines = entry.Lines.Select(l => new JournalEntryLineViewModel
+                {
+                    AccountId = l.AccountId,
+                    Description = l.Description ?? string.Empty,
+                    DebitAmount = l.DebitAmount,
+                    CreditAmount = l.CreditAmount
+                }).ToList()
+            };
+
+            await PopulateDropdowns(model);
+            return View(model);
+        }
+
+        // POST: JournalEntries/Edit/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "journal.edit")]
+        public async Task<IActionResult> Edit(int id, CreateJournalEntryViewModel model)
+        {
+            if (id != model.Id)
+                return NotFound();
+
+            if (!ModelState.IsValid || model.Lines == null || model.Lines.Count == 0 ||
+                Math.Round(model.Lines.Sum(l => l.DebitAmount), 2) != Math.Round(model.Lines.Sum(l => l.CreditAmount), 2))
+            {
+                if (Math.Round(model.Lines?.Sum(l => l.DebitAmount) ?? 0, 2) != Math.Round(model.Lines?.Sum(l => l.CreditAmount) ?? 0, 2))
+                    ModelState.AddModelError(string.Empty, "القيد غير متوازن");
+
+                await PopulateDropdowns(model);
+                return View(model);
+            }
+
+            var entry = await _context.JournalEntries
+                .Include(j => j.Lines)
+                .FirstOrDefaultAsync(j => j.Id == id);
+            if (entry == null)
+                return NotFound();
+
+            entry.Date = model.Date;
+            entry.Description = model.Description;
+            entry.Reference = model.Reference;
+            entry.BranchId = model.BranchId;
+            entry.TotalDebit = model.Lines.Sum(l => l.DebitAmount);
+            entry.TotalCredit = model.Lines.Sum(l => l.CreditAmount);
+            entry.UpdatedAt = DateTime.UtcNow;
+
+            _context.JournalEntryLines.RemoveRange(entry.Lines);
+            entry.Lines = model.Lines.Select(l => new JournalEntryLine
+            {
+                AccountId = l.AccountId,
+                Description = l.Description,
+                DebitAmount = l.DebitAmount,
+                CreditAmount = l.CreditAmount
+            }).ToList();
+
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+
+        [Authorize(Policy = "journal.view")]
         public async Task<IActionResult> Draft()
         {
             return await GetEntriesByStatus(JournalEntryStatus.Draft, "Draft");
