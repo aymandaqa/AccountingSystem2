@@ -30,7 +30,7 @@ namespace AccountingSystem.Controllers
             var accounts = await _context.Accounts
                 .Include(a => a.Branch)
                 .Where(a => a.CanPostTransactions)
-                .Where(a => !branchId.HasValue || a.BranchId == branchId)
+                .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
                 .OrderBy(a => a.Code)
                 .ToListAsync();
 
@@ -61,7 +61,7 @@ namespace AccountingSystem.Controllers
             var accounts = await _context.Accounts
                 .Include(a => a.Branch)
                 .Where(a => a.CanPostTransactions)
-                .Where(a => !branchId.HasValue || a.BranchId == branchId)
+                .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
                 .OrderBy(a => a.Code)
                 .ToListAsync();
 
@@ -103,7 +103,7 @@ namespace AccountingSystem.Controllers
             var accounts = await _context.Accounts
                 .Include(a => a.Branch)
                 .Where(a => a.CanPostTransactions)
-                .Where(a => !branchId.HasValue || a.BranchId == branchId)
+                .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
                 .OrderBy(a => a.Code)
                 .ToListAsync();
 
