@@ -48,8 +48,11 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    context.Database.EnsureCreated();
-    
+    // Apply pending migrations and create the database if it doesn't exist.
+    // EnsureCreated() bypasses migrations which can lead to missing columns
+    // like ExpenseLimit when the schema evolves.
+    context.Database.Migrate();
+
     // Seed initial data
     await SeedData.InitializeAsync(app.Services);
 }
