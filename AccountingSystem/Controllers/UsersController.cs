@@ -10,7 +10,7 @@ using System.Linq;
 namespace AccountingSystem.Controllers
 {
     [Authorize(Policy = "users.view")]
- 
+
     public class UsersController : Controller
     {
         private readonly UserManager<User> _userManager;
@@ -22,10 +22,12 @@ namespace AccountingSystem.Controllers
             _context = context;
         }
 
+
  
 
         [Authorize(Policy = "users.view")]
  
+
         public async Task<IActionResult> Index()
         {
             var users = await _userManager.Users

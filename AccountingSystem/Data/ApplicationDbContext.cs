@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using AccountingSystem.Models;
+using System;
 
 namespace AccountingSystem.Data
 {
@@ -161,38 +162,40 @@ namespace AccountingSystem.Data
 
         private void SeedData(ModelBuilder builder)
         {
-            // Seed default permissions
+            // Seed default permissions with deterministic CreatedAt values to avoid
+            // model changes between builds.
+            var createdAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             builder.Entity<Permission>().HasData(
-                new Permission { Id = 1, Name = "users.view", DisplayName = "عرض المستخدمين", Category = "المستخدمين" },
-                new Permission { Id = 2, Name = "users.create", DisplayName = "إنشاء المستخدمين", Category = "المستخدمين" },
-                new Permission { Id = 3, Name = "users.edit", DisplayName = "تعديل المستخدمين", Category = "المستخدمين" },
-                new Permission { Id = 4, Name = "users.delete", DisplayName = "حذف المستخدمين", Category = "المستخدمين" },
-                
-                new Permission { Id = 5, Name = "branches.view", DisplayName = "عرض الفروع", Category = "الفروع" },
-                new Permission { Id = 6, Name = "branches.create", DisplayName = "إنشاء الفروع", Category = "الفروع" },
-                new Permission { Id = 7, Name = "branches.edit", DisplayName = "تعديل الفروع", Category = "الفروع" },
-                new Permission { Id = 8, Name = "branches.delete", DisplayName = "حذف الفروع", Category = "الفروع" },
-                
-                new Permission { Id = 9, Name = "costcenters.view", DisplayName = "عرض مراكز التكلفة", Category = "مراكز التكلفة" },
-                new Permission { Id = 10, Name = "costcenters.create", DisplayName = "إنشاء مراكز التكلفة", Category = "مراكز التكلفة" },
-                new Permission { Id = 11, Name = "costcenters.edit", DisplayName = "تعديل مراكز التكلفة", Category = "مراكز التكلفة" },
-                new Permission { Id = 12, Name = "costcenters.delete", DisplayName = "حذف مراكز التكلفة", Category = "مراكز التكلفة" },
-                
-                new Permission { Id = 13, Name = "accounts.view", DisplayName = "عرض الحسابات", Category = "الحسابات" },
-                new Permission { Id = 14, Name = "accounts.create", DisplayName = "إنشاء الحسابات", Category = "الحسابات" },
-                new Permission { Id = 15, Name = "accounts.edit", DisplayName = "تعديل الحسابات", Category = "الحسابات" },
-                new Permission { Id = 16, Name = "accounts.delete", DisplayName = "حذف الحسابات", Category = "الحسابات" },
-                
-                new Permission { Id = 17, Name = "journal.view", DisplayName = "عرض القيود", Category = "القيود المالية" },
-                new Permission { Id = 18, Name = "journal.create", DisplayName = "إنشاء القيود", Category = "القيود المالية" },
-                new Permission { Id = 19, Name = "journal.edit", DisplayName = "تعديل القيود", Category = "القيود المالية" },
-                new Permission { Id = 20, Name = "journal.delete", DisplayName = "حذف القيود", Category = "القيود المالية" },
-                new Permission { Id = 21, Name = "journal.approve", DisplayName = "اعتماد القيود", Category = "القيود المالية" },
-                
-                new Permission { Id = 22, Name = "reports.view", DisplayName = "عرض التقارير", Category = "التقارير" },
-                new Permission { Id = 23, Name = "reports.export", DisplayName = "تصدير التقارير", Category = "التقارير" },
-                
-                new Permission { Id = 24, Name = "dashboard.view", DisplayName = "عرض لوحة التحكم", Category = "لوحة التحكم" }
+                new Permission { Id = 1, Name = "users.view", DisplayName = "عرض المستخدمين", Category = "المستخدمين", CreatedAt = createdAt },
+                new Permission { Id = 2, Name = "users.create", DisplayName = "إنشاء المستخدمين", Category = "المستخدمين", CreatedAt = createdAt },
+                new Permission { Id = 3, Name = "users.edit", DisplayName = "تعديل المستخدمين", Category = "المستخدمين", CreatedAt = createdAt },
+                new Permission { Id = 4, Name = "users.delete", DisplayName = "حذف المستخدمين", Category = "المستخدمين", CreatedAt = createdAt },
+
+                new Permission { Id = 5, Name = "branches.view", DisplayName = "عرض الفروع", Category = "الفروع", CreatedAt = createdAt },
+                new Permission { Id = 6, Name = "branches.create", DisplayName = "إنشاء الفروع", Category = "الفروع", CreatedAt = createdAt },
+                new Permission { Id = 7, Name = "branches.edit", DisplayName = "تعديل الفروع", Category = "الفروع", CreatedAt = createdAt },
+                new Permission { Id = 8, Name = "branches.delete", DisplayName = "حذف الفروع", Category = "الفروع", CreatedAt = createdAt },
+
+                new Permission { Id = 9, Name = "costcenters.view", DisplayName = "عرض مراكز التكلفة", Category = "مراكز التكلفة", CreatedAt = createdAt },
+                new Permission { Id = 10, Name = "costcenters.create", DisplayName = "إنشاء مراكز التكلفة", Category = "مراكز التكلفة", CreatedAt = createdAt },
+                new Permission { Id = 11, Name = "costcenters.edit", DisplayName = "تعديل مراكز التكلفة", Category = "مراكز التكلفة", CreatedAt = createdAt },
+                new Permission { Id = 12, Name = "costcenters.delete", DisplayName = "حذف مراكز التكلفة", Category = "مراكز التكلفة", CreatedAt = createdAt },
+
+                new Permission { Id = 13, Name = "accounts.view", DisplayName = "عرض الحسابات", Category = "الحسابات", CreatedAt = createdAt },
+                new Permission { Id = 14, Name = "accounts.create", DisplayName = "إنشاء الحسابات", Category = "الحسابات", CreatedAt = createdAt },
+                new Permission { Id = 15, Name = "accounts.edit", DisplayName = "تعديل الحسابات", Category = "الحسابات", CreatedAt = createdAt },
+                new Permission { Id = 16, Name = "accounts.delete", DisplayName = "حذف الحسابات", Category = "الحسابات", CreatedAt = createdAt },
+
+                new Permission { Id = 17, Name = "journal.view", DisplayName = "عرض القيود", Category = "القيود المالية", CreatedAt = createdAt },
+                new Permission { Id = 18, Name = "journal.create", DisplayName = "إنشاء القيود", Category = "القيود المالية", CreatedAt = createdAt },
+                new Permission { Id = 19, Name = "journal.edit", DisplayName = "تعديل القيود", Category = "القيود المالية", CreatedAt = createdAt },
+                new Permission { Id = 20, Name = "journal.delete", DisplayName = "حذف القيود", Category = "القيود المالية", CreatedAt = createdAt },
+                new Permission { Id = 21, Name = "journal.approve", DisplayName = "اعتماد القيود", Category = "القيود المالية", CreatedAt = createdAt },
+
+                new Permission { Id = 22, Name = "reports.view", DisplayName = "عرض التقارير", Category = "التقارير", CreatedAt = createdAt },
+                new Permission { Id = 23, Name = "reports.export", DisplayName = "تصدير التقارير", Category = "التقارير", CreatedAt = createdAt },
+
+                new Permission { Id = 24, Name = "dashboard.view", DisplayName = "عرض لوحة التحكم", Category = "لوحة التحكم", CreatedAt = createdAt }
             );
         }
     }
