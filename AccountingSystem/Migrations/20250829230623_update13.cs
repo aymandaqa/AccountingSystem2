@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace AccountingSystem.Migrations
 {
     /// <inheritdoc />
-    public partial class update1 : Migration
+    public partial class update13 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -25,36 +25,6 @@ namespace AccountingSystem.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetRoles", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AspNetUsers",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "TEXT", nullable: false),
-                    FirstName = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    LastName = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    LastLoginAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    UserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    NormalizedUserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    Email = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    NormalizedEmail = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    EmailConfirmed = table.Column<bool>(type: "INTEGER", nullable: false),
-                    PasswordHash = table.Column<string>(type: "TEXT", nullable: true),
-                    SecurityStamp = table.Column<string>(type: "TEXT", nullable: true),
-                    ConcurrencyStamp = table.Column<string>(type: "TEXT", nullable: true),
-                    PhoneNumber = table.Column<string>(type: "TEXT", nullable: true),
-                    PhoneNumberConfirmed = table.Column<bool>(type: "INTEGER", nullable: false),
-                    TwoFactorEnabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                    LockoutEnd = table.Column<DateTimeOffset>(type: "TEXT", nullable: true),
-                    LockoutEnabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                    AccessFailedCount = table.Column<int>(type: "INTEGER", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AspNetUsers", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -145,6 +115,93 @@ namespace AccountingSystem.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Accounts",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Code = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                    NameAr = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    NameEn = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
+                    Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
+                    ParentId = table.Column<int>(type: "INTEGER", nullable: true),
+                    Level = table.Column<int>(type: "INTEGER", nullable: false),
+                    AccountType = table.Column<int>(type: "INTEGER", nullable: false),
+                    Nature = table.Column<int>(type: "INTEGER", nullable: false),
+                    Classification = table.Column<int>(type: "INTEGER", nullable: false),
+                    SubClassification = table.Column<int>(type: "INTEGER", nullable: false),
+                    OpeningBalance = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    CurrentBalance = table.Column<decimal>(type: "TEXT", nullable: false),
+                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
+                    CanHaveChildren = table.Column<bool>(type: "INTEGER", nullable: false),
+                    CanPostTransactions = table.Column<bool>(type: "INTEGER", nullable: false),
+                    BranchId = table.Column<int>(type: "INTEGER", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Accounts", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Accounts_Accounts_ParentId",
+                        column: x => x.ParentId,
+                        principalTable: "Accounts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Accounts_Branches_BranchId",
+                        column: x => x.BranchId,
+                        principalTable: "Branches",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUsers",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "TEXT", nullable: false),
+                    FirstName = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    LastName = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    LastLoginAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    PaymentAccountId = table.Column<int>(type: "INTEGER", nullable: true),
+                    PaymentBranchId = table.Column<int>(type: "INTEGER", nullable: true),
+                    ExpenseLimit = table.Column<decimal>(type: "TEXT", nullable: false),
+                    UserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    NormalizedUserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    Email = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    NormalizedEmail = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    EmailConfirmed = table.Column<bool>(type: "INTEGER", nullable: false),
+                    PasswordHash = table.Column<string>(type: "TEXT", nullable: true),
+                    SecurityStamp = table.Column<string>(type: "TEXT", nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "TEXT", nullable: true),
+                    PhoneNumber = table.Column<string>(type: "TEXT", nullable: true),
+                    PhoneNumberConfirmed = table.Column<bool>(type: "INTEGER", nullable: false),
+                    TwoFactorEnabled = table.Column<bool>(type: "INTEGER", nullable: false),
+                    LockoutEnd = table.Column<DateTimeOffset>(type: "TEXT", nullable: true),
+                    LockoutEnabled = table.Column<bool>(type: "INTEGER", nullable: false),
+                    AccessFailedCount = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUsers", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_AspNetUsers_Accounts_PaymentAccountId",
+                        column: x => x.PaymentAccountId,
+                        principalTable: "Accounts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_AspNetUsers_Branches_PaymentBranchId",
+                        column: x => x.PaymentBranchId,
+                        principalTable: "Branches",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AspNetUserClaims",
                 columns: table => new
                 {
@@ -227,48 +284,6 @@ namespace AccountingSystem.Migrations
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Accounts",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Code = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    NameAr = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    NameEn = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    ParentId = table.Column<int>(type: "INTEGER", nullable: true),
-                    Level = table.Column<int>(type: "INTEGER", nullable: false),
-                    AccountType = table.Column<int>(type: "INTEGER", nullable: false),
-                    Nature = table.Column<int>(type: "INTEGER", nullable: false),
-                    Classification = table.Column<int>(type: "INTEGER", nullable: false),
-                    SubClassification = table.Column<int>(type: "INTEGER", nullable: false),
-                    OpeningBalance = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    CurrentBalance = table.Column<decimal>(type: "TEXT", nullable: false),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
-                    CanHaveChildren = table.Column<bool>(type: "INTEGER", nullable: false),
-                    CanPostTransactions = table.Column<bool>(type: "INTEGER", nullable: false),
-                    BranchId = table.Column<int>(type: "INTEGER", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Accounts", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Accounts_Accounts_ParentId",
-                        column: x => x.ParentId,
-                        principalTable: "Accounts",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Accounts_Branches_BranchId",
-                        column: x => x.BranchId,
-                        principalTable: "Branches",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -365,6 +380,57 @@ namespace AccountingSystem.Migrations
                         principalTable: "Permissions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Expenses",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    UserId = table.Column<string>(type: "TEXT", nullable: false),
+                    PaymentAccountId = table.Column<int>(type: "INTEGER", nullable: false),
+                    BranchId = table.Column<int>(type: "INTEGER", nullable: false),
+                    ExpenseAccountId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Notes = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    IsApproved = table.Column<bool>(type: "INTEGER", nullable: false),
+                    JournalEntryId = table.Column<int>(type: "INTEGER", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Expenses", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Expenses_Accounts_ExpenseAccountId",
+                        column: x => x.ExpenseAccountId,
+                        principalTable: "Accounts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Expenses_Accounts_PaymentAccountId",
+                        column: x => x.PaymentAccountId,
+                        principalTable: "Accounts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Expenses_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Expenses_Branches_BranchId",
+                        column: x => x.BranchId,
+                        principalTable: "Branches",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Expenses_JournalEntries_JournalEntryId",
+                        column: x => x.JournalEntryId,
+                        principalTable: "JournalEntries",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -487,6 +553,16 @@ namespace AccountingSystem.Migrations
                 column: "NormalizedEmail");
 
             migrationBuilder.CreateIndex(
+                name: "IX_AspNetUsers_PaymentAccountId",
+                table: "AspNetUsers",
+                column: "PaymentAccountId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AspNetUsers_PaymentBranchId",
+                table: "AspNetUsers",
+                column: "PaymentBranchId");
+
+            migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
                 table: "AspNetUsers",
                 column: "NormalizedUserName",
@@ -508,6 +584,31 @@ namespace AccountingSystem.Migrations
                 name: "IX_CostCenters_ParentId",
                 table: "CostCenters",
                 column: "ParentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Expenses_BranchId",
+                table: "Expenses",
+                column: "BranchId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Expenses_ExpenseAccountId",
+                table: "Expenses",
+                column: "ExpenseAccountId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Expenses_JournalEntryId",
+                table: "Expenses",
+                column: "JournalEntryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Expenses_PaymentAccountId",
+                table: "Expenses",
+                column: "PaymentAccountId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Expenses_UserId",
+                table: "Expenses",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_JournalEntries_ApprovedById",
@@ -581,6 +682,9 @@ namespace AccountingSystem.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
+                name: "Expenses");
+
+            migrationBuilder.DropTable(
                 name: "JournalEntryLines");
 
             migrationBuilder.DropTable(
@@ -593,9 +697,6 @@ namespace AccountingSystem.Migrations
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "Accounts");
-
-            migrationBuilder.DropTable(
                 name: "CostCenters");
 
             migrationBuilder.DropTable(
@@ -606,6 +707,9 @@ namespace AccountingSystem.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
+
+            migrationBuilder.DropTable(
+                name: "Accounts");
 
             migrationBuilder.DropTable(
                 name: "Branches");

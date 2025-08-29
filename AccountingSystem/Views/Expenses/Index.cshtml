@@ -18,6 +18,7 @@
         <thead>
             <tr>
                 <th>المستخدم</th>
+                <th>الفرع</th>
                 <th>حساب الدفع</th>
                 <th>حساب المصروف</th>
                 <th>القيمة</th>
@@ -27,18 +28,19 @@
             </tr>
         </thead>
         <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@item.UserName</td>
-                <td>@item.PaymentAccountName</td>
-                <td>@item.ExpenseAccountName</td>
-                <td>@item.Amount</td>
-                <td>@item.Notes</td>
-                <td>@(item.IsApproved ? "نعم" : "لا")</td>
-                <td>@item.CreatedAt.ToString("yyyy-MM-dd")</td>
-            </tr>
-        }
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.UserName</td>
+                    <td>@item.Branch</td>
+                    <td>@item.PaymentAccountName</td>
+                    <td>@item.ExpenseAccountName</td>
+                    <td>@item.Amount</td>
+                    <td>@item.Notes</td>
+                    <td>@(item.IsApproved ? "نعم" : "لا")</td>
+                    <td>@item.CreatedAt.ToString("yyyy-MM-dd")</td>
+                </tr>
+            }
         </tbody>
     </table>
 </div>

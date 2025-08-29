@@ -24,6 +24,8 @@ namespace AccountingSystem.Controllers
 
         public async Task<IActionResult> Index()
         {
+
+            var brn = await _context.Branches.ToListAsync();
             var expenses = await _context.Expenses
                 .Include(e => e.User)
                 .Include(e => e.PaymentAccount)
@@ -35,6 +37,7 @@ namespace AccountingSystem.Controllers
             {
                 Id = e.Id,
                 UserName = e.User.FullName ?? e.User.Email ?? string.Empty,
+                Branch = brn.FirstOrDefault(x => x.Id == e.User.PaymentBranchId).NameAr,
                 PaymentAccountName = e.PaymentAccount.NameAr,
                 ExpenseAccountName = e.ExpenseAccount.NameAr,
                 Amount = e.Amount,
@@ -51,15 +54,18 @@ namespace AccountingSystem.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var expenses = await _context.Expenses
                 .Where(e => e.UserId == userId)
+                 .Include(e => e.User)
                 .Include(e => e.PaymentAccount)
                 .Include(e => e.ExpenseAccount)
                 .OrderByDescending(e => e.CreatedAt)
                 .ToListAsync();
+            var brn = await _context.Branches.ToListAsync();
 
             var model = expenses.Select(e => new ExpenseViewModel
             {
                 Id = e.Id,
-                UserName = string.Empty,
+                UserName = e.User.FullName ?? e.User.Email ?? string.Empty,
+                Branch = brn.FirstOrDefault(x => x.Id == e.User.PaymentBranchId).NameAr,
                 PaymentAccountName = e.PaymentAccount.NameAr,
                 ExpenseAccountName = e.ExpenseAccount.NameAr,
                 Amount = e.Amount,

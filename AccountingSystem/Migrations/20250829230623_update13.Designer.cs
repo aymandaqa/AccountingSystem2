@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AccountingSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250829135015_update1")]
-    partial class update1
+    [Migration("20250829230623_update13")]
+    partial class update13
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -195,6 +195,56 @@ namespace AccountingSystem.Migrations
                     b.HasIndex("ParentId");
 
                     b.ToTable("CostCenters");
+                });
+
+            modelBuilder.Entity("AccountingSystem.Models.Expense", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ExpenseAccountId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("JournalEntryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PaymentAccountId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("ExpenseAccountId");
+
+                    b.HasIndex("JournalEntryId");
+
+                    b.HasIndex("PaymentAccountId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Expenses");
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.JournalEntry", b =>
@@ -563,6 +613,33 @@ namespace AccountingSystem.Migrations
                             DisplayName = "عرض لوحة التحكم",
                             IsActive = true,
                             Name = "dashboard.view"
+                        },
+                        new
+                        {
+                            Id = 25,
+                            Category = "لوحة التحكم",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض إحصائيات لوحة التحكم",
+                            IsActive = true,
+                            Name = "dashboard.widget.stats"
+                        },
+                        new
+                        {
+                            Id = 26,
+                            Category = "لوحة التحكم",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض أرصدة الحسابات بلوحة التحكم",
+                            IsActive = true,
+                            Name = "dashboard.widget.accounts"
+                        },
+                        new
+                        {
+                            Id = 27,
+                            Category = "لوحة التحكم",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض الروابط السريعة بلوحة التحكم",
+                            IsActive = true,
+                            Name = "dashboard.widget.links"
                         });
                 });
 
@@ -587,6 +664,9 @@ namespace AccountingSystem.Migrations
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("ExpenseLimit")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
@@ -621,6 +701,12 @@ namespace AccountingSystem.Migrations
                     b.Property<string>("PasswordHash")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("PaymentAccountId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("PaymentBranchId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("PhoneNumber")
                         .HasColumnType("TEXT");
 
@@ -645,6 +731,10 @@ namespace AccountingSystem.Migrations
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
+
+                    b.HasIndex("PaymentAccountId");
+
+                    b.HasIndex("PaymentBranchId");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -849,6 +939,48 @@ namespace AccountingSystem.Migrations
                     b.Navigation("Parent");
                 });
 
+            modelBuilder.Entity("AccountingSystem.Models.Expense", b =>
+                {
+                    b.HasOne("AccountingSystem.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AccountingSystem.Models.Account", "ExpenseAccount")
+                        .WithMany()
+                        .HasForeignKey("ExpenseAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AccountingSystem.Models.JournalEntry", "JournalEntry")
+                        .WithMany()
+                        .HasForeignKey("JournalEntryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("AccountingSystem.Models.Account", "PaymentAccount")
+                        .WithMany()
+                        .HasForeignKey("PaymentAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AccountingSystem.Models.User", "User")
+                        .WithMany("Expenses")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("ExpenseAccount");
+
+                    b.Navigation("JournalEntry");
+
+                    b.Navigation("PaymentAccount");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("AccountingSystem.Models.JournalEntry", b =>
                 {
                     b.HasOne("AccountingSystem.Models.User", "ApprovedBy")
@@ -898,6 +1030,23 @@ namespace AccountingSystem.Migrations
                     b.Navigation("CostCenter");
 
                     b.Navigation("JournalEntry");
+                });
+
+            modelBuilder.Entity("AccountingSystem.Models.User", b =>
+                {
+                    b.HasOne("AccountingSystem.Models.Account", "PaymentAccount")
+                        .WithMany()
+                        .HasForeignKey("PaymentAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("AccountingSystem.Models.Branch", "PaymentBranch")
+                        .WithMany()
+                        .HasForeignKey("PaymentBranchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("PaymentAccount");
+
+                    b.Navigation("PaymentBranch");
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.UserBranch", b =>
@@ -1025,6 +1174,8 @@ namespace AccountingSystem.Migrations
             modelBuilder.Entity("AccountingSystem.Models.User", b =>
                 {
                     b.Navigation("CreatedJournalEntries");
+
+                    b.Navigation("Expenses");
 
                     b.Navigation("UserBranches");
 
