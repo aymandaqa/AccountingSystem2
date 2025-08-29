@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
-using System.Globalization;
 using System.Linq;
 using System.Collections.Generic;
+using System.Security.Claims;
 
 namespace AccountingSystem.Controllers
 {
@@ -22,19 +22,27 @@ namespace AccountingSystem.Controllers
             _logger = logger;
         }
 
-        public async Task<IActionResult> Index(int? branchId = null, string? month = null)
+        public async Task<IActionResult> Index(int? branchId = null, DateTime? fromDate = null, DateTime? toDate = null)
         {
-            DateTime selectedMonth;
-            if (string.IsNullOrEmpty(month) || !DateTime.TryParseExact(month + "-01", "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out selectedMonth))
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userBranchIds = await _context.UserBranches
+                .Where(ub => ub.UserId == userId)
+                .Select(ub => ub.BranchId)
+                .ToListAsync();
+
+            if (branchId.HasValue && !userBranchIds.Contains(branchId.Value))
             {
-                var today = DateTime.Today;
-                selectedMonth = new DateTime(today.Year, today.Month, 1);
+                branchId = null;
             }
 
-            var monthEnd = selectedMonth.AddMonths(1).AddTicks(-1);
+            var allowedBranchIds = branchId.HasValue ? new List<int> { branchId.Value } : userBranchIds;
+
+            var startDate = fromDate?.Date ?? DateTime.Today;
+            var endDate = toDate?.Date ?? DateTime.Today;
+            endDate = endDate.Date.AddDays(1).AddTicks(-1);
 
             var accounts = await _context.Accounts
-                .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
+                .Where(a => !allowedBranchIds.Any() || a.BranchId == null || allowedBranchIds.Contains(a.BranchId.Value))
                 .Include(a => a.JournalEntryLines)
                     .ThenInclude(l => l.JournalEntry)
                 .AsNoTracking()
@@ -42,7 +50,7 @@ namespace AccountingSystem.Controllers
 
             var accountBalances = accounts.ToDictionary(a => a.Id, a =>
                 a.OpeningBalance + a.JournalEntryLines
-                    .Where(l => l.JournalEntry.Date <= monthEnd && (!branchId.HasValue || l.JournalEntry.BranchId == branchId))
+                    .Where(l => l.JournalEntry.Date >= startDate && l.JournalEntry.Date <= endDate && allowedBranchIds.Contains(l.JournalEntry.BranchId))
                     .Sum(l => l.DebitAmount - l.CreditAmount));
 
             var nodes = accounts.Select(a => new AccountTreeNodeViewModel
@@ -104,7 +112,8 @@ namespace AccountingSystem.Controllers
             var viewModel = new DashboardViewModel
             {
                 SelectedBranchId = branchId,
-                SelectedMonth = selectedMonth,
+                FromDate = startDate,
+                ToDate = endDate,
                 TotalAssets = totals.ContainsKey(AccountType.Assets) ? totals[AccountType.Assets] : 0,
                 TotalLiabilities = totals.ContainsKey(AccountType.Liabilities) ? totals[AccountType.Liabilities] : 0,
                 TotalEquity = totals.ContainsKey(AccountType.Equity) ? totals[AccountType.Equity] : 0,
@@ -116,7 +125,7 @@ namespace AccountingSystem.Controllers
             viewModel.NetIncome = viewModel.TotalRevenues - viewModel.TotalExpenses;
 
             ViewBag.Branches = await _context.Branches
-                .Where(b => b.IsActive)
+                .Where(b => b.IsActive && userBranchIds.Contains(b.Id))
                 .Select(b => new { b.Id, b.NameAr })
                 .ToListAsync();
 
@@ -126,9 +135,10 @@ namespace AccountingSystem.Controllers
         [HttpGet]
         public async Task<IActionResult> GetBranches()
         {
-            var branches = await _context.Branches
-                .Where(b => b.IsActive)
-                .Select(b => new { id = b.Id, nameAr = b.NameAr })
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var branches = await _context.UserBranches
+                .Where(ub => ub.UserId == userId && ub.Branch.IsActive)
+                .Select(ub => new { id = ub.BranchId, nameAr = ub.Branch.NameAr })
                 .ToListAsync();
 
             return Json(branches);

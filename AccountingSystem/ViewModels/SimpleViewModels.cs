@@ -282,7 +282,8 @@ namespace AccountingSystem.ViewModels
         public decimal TotalExpenses { get; set; }
         public decimal NetIncome { get; set; }
         public int? SelectedBranchId { get; set; }
-        public DateTime SelectedMonth { get; set; } = DateTime.Today;
+        public DateTime FromDate { get; set; } = DateTime.Today;
+        public DateTime ToDate { get; set; } = DateTime.Today;
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
         public List<AccountTreeNodeViewModel> AccountTypeTrees { get; set; } = new List<AccountTreeNodeViewModel>();
     }

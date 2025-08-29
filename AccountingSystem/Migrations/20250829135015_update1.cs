@@ -433,7 +433,10 @@ namespace AccountingSystem.Migrations
                     { 21, "القيود المالية", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "اعتماد القيود", true, "journal.approve" },
                     { 22, "التقارير", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض التقارير", true, "reports.view" },
                     { 23, "التقارير", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "تصدير التقارير", true, "reports.export" },
-                    { 24, "لوحة التحكم", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض لوحة التحكم", true, "dashboard.view" }
+                    { 24, "لوحة التحكم", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض لوحة التحكم", true, "dashboard.view" },
+                    { 25, "لوحة التحكم", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض إحصائيات لوحة التحكم", true, "dashboard.widget.stats" },
+                    { 26, "لوحة التحكم", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض أرصدة الحسابات بلوحة التحكم", true, "dashboard.widget.accounts" },
+                    { 27, "لوحة التحكم", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض الروابط السريعة بلوحة التحكم", true, "dashboard.widget.links" }
                 });
 
             migrationBuilder.CreateIndex(
