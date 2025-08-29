@@ -72,8 +72,8 @@
                                         <small class="text-muted">رقم الحساب: @Model.AccountCode</small>
                                     </div>
                                     <div class="col-md-6 text-end">
-                                        <h6 class="mb-0">الرصيد الافتتاحي: <span class="badge bg-secondary">@Model.OpeningBalance.ToString("N2") ريال</span></h6>
-                                        <h6 class="mb-0">الرصيد الختامي: <span class="badge bg-primary">@Model.ClosingBalance.ToString("N2") ريال</span></h6>
+                                        <h6 class="mb-0">الرصيد الافتتاحي: <span class="badge bg-secondary">@Model.OpeningBalance.ToString("N2") </span></h6>
+                                        <h6 class="mb-0">الرصيد الختامي: <span class="badge bg-primary">@Model.ClosingBalance.ToString("N2") </span></h6>
                                     </div>
                                 </div>
                             </div>
@@ -147,7 +147,7 @@
                                 <div class="card border-success">
                                     <div class="card-body text-center">
                                         <h6 class="card-title">إجمالي المدين</h6>
-                                        <h4 class="text-success">@Model.TotalDebit.ToString("N2") ريال</h4>
+                                        <h4 class="text-success">@Model.TotalDebit.ToString("N2") </h4>
                                     </div>
                                 </div>
                             </div>
@@ -155,7 +155,7 @@
                                 <div class="card border-danger">
                                     <div class="card-body text-center">
                                         <h6 class="card-title">إجمالي الدائن</h6>
-                                        <h4 class="text-danger">@Model.TotalCredit.ToString("N2") ريال</h4>
+                                        <h4 class="text-danger">@Model.TotalCredit.ToString("N2") </h4>
                                     </div>
                                 </div>
                             </div>
@@ -163,7 +163,7 @@
                                 <div class="card border-primary">
                                     <div class="card-body text-center">
                                         <h6 class="card-title">صافي الحركة</h6>
-                                        <h4 class="text-primary">@((Model.TotalDebit - Model.TotalCredit).ToString("N2")) ريال</h4>
+                                        <h4 class="text-primary">@((Model.TotalDebit - Model.TotalCredit).ToString("N2")) </h4>
                                     </div>
                                 </div>
                             </div>
