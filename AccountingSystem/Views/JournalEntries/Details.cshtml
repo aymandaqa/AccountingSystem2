@@ -1,0 +1,101 @@
+@model AccountingSystem.ViewModels.JournalEntryDetailsViewModel
+@{
+    ViewData["Title"] = "تفاصيل القيد المالي";
+    Layout = "~/Views/Shared/_AccountingLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-eye me-2"></i>
+                        تفاصيل القيد المالي: @Model.Number
+                    </h3>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="fas fa-arrow-right"></i> العودة للقائمة
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <strong>رقم القيد:</strong> @Model.Number
+                        </div>
+                        <div class="col-md-3">
+                            <strong>التاريخ:</strong> @Model.Date.ToString("yyyy-MM-dd")
+                        </div>
+                        <div class="col-md-3">
+                            <strong>الفرع:</strong> @Model.BranchName
+                        </div>
+                        <div class="col-md-3">
+                            <strong>الحالة:</strong>
+                            @switch (Model.Status)
+                            {
+                                case "Draft":
+                                    <span class="badge bg-secondary">مسودة</span>
+                                    break;
+                                case "Posted":
+                                    <span class="badge bg-success">مرحل</span>
+                                    break;
+                                case "Approved":
+                                    <span class="badge bg-primary">معتمد</span>
+                                    break;
+                                case "Cancelled":
+                                    <span class="badge bg-danger">ملغي</span>
+                                    break;
+                                default:
+                                    <span class="badge bg-secondary">@Model.Status</span>
+                                    break;
+                            }
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>البيان:</strong>
+                            <p>@Model.Description</p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>المرجع:</strong>
+                            <p>@Model.Reference</p>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>الكود</th>
+                                    <th>اسم الحساب</th>
+                                    <th>البيان</th>
+                                    <th>مدين</th>
+                                    <th>دائن</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var line in Model.Lines)
+                                {
+                                    <tr>
+                                        <td>@line.AccountCode</td>
+                                        <td>@line.AccountName</td>
+                                        <td>@line.Description</td>
+                                        <td>@line.DebitAmount.ToString("N2")</td>
+                                        <td>@line.CreditAmount.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-info">
+                                    <td colspan="3"><strong>الإجمالي:</strong></td>
+                                    <td><strong>@Model.TotalDebit.ToString("N2")</strong></td>
+                                    <td><strong>@Model.TotalCredit.ToString("N2")</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
