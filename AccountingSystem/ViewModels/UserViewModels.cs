@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace AccountingSystem.ViewModels
 {
@@ -45,6 +46,9 @@ namespace AccountingSystem.ViewModels
         public string Password { get; set; } = string.Empty;
 
         public bool IsActive { get; set; } = true;
+        [MinLength(1, ErrorMessage = "يجب اختيار فرع واحد على الأقل")]
+        public List<int> BranchIds { get; set; } = new List<int>();
+        public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
     }
 
     public class EditUserViewModel
@@ -65,5 +69,8 @@ namespace AccountingSystem.ViewModels
         public string LastName { get; set; } = string.Empty;
 
         public bool IsActive { get; set; } = true;
+        [MinLength(1, ErrorMessage = "يجب اختيار فرع واحد على الأقل")]
+        public List<int> BranchIds { get; set; } = new List<int>();
+        public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
     }
 }

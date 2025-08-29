@@ -123,12 +123,17 @@
 }
 
 @section Scripts {
+    <div class="modal fade" id="accountModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content"></div>
+        </div>
+    </div>
     <script>
-        $(document).ready(function() {
-            $('.toggle-btn').click(function() {
+        $(document).ready(function () {
+            $('.toggle-btn').click(function () {
                 var $this = $(this);
                 var $children = $this.closest('.tree-node').find('> .tree-children');
-                
+
                 if ($children.is(':visible')) {
                     $children.hide();
                     $this.html('<i class="fas fa-plus"></i>');
@@ -137,14 +142,39 @@
                     $this.html('<i class="fas fa-minus"></i>');
                 }
             });
-            
-            // Expand first level by default
+
             $('.tree-node[data-level="0"] .toggle-btn').click();
+
+            $(document).on('click', '.ajax-modal', function (e) {
+                e.preventDefault();
+                var url = $(this).attr('href');
+                $('#accountModal .modal-content').load(url, function () {
+                    $('#accountModal').modal('show');
+                });
+            });
+
+            $(document).on('submit', '#accountModal form', function (e) {
+                e.preventDefault();
+                var form = $(this);
+                $.ajax({
+                    url: form.attr('action'),
+                    method: form.attr('method'),
+                    data: form.serialize(),
+                    success: function (result) {
+                        if (result.success) {
+                            $('#accountModal').modal('hide');
+                            location.reload();
+                        } else {
+                            $('#accountModal .modal-content').html(result);
+                        }
+                    }
+                });
+            });
         });
-        
+
         function deleteAccount(id) {
             if (confirm('هل أنت متأكد من حذف هذا الحساب؟')) {
-                $.post('@Url.Action("Delete")', { id: id }, function(result) {
+                $.post('@Url.Action("Delete")', { id: id }, function (result) {
                     if (result.success) {
                         location.reload();
                     } else {

@@ -111,6 +111,11 @@ namespace AccountingSystem.Controllers
                 ParentId = parentId
             };
             await PopulateDropdowns(viewModel);
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                ViewData["IsModal"] = true;
+                return PartialView(viewModel);
+            }
             return View(viewModel);
         }
 
@@ -142,10 +147,17 @@ namespace AccountingSystem.Controllers
 
                 _context.Accounts.Add(account);
                 await _context.SaveChangesAsync();
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    return Json(new { success = true });
                 return RedirectToAction(nameof(Index));
             }
 
             await PopulateDropdowns(model);
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                ViewData["IsModal"] = true;
+                return PartialView(model);
+            }
             return View(model);
         }
 
@@ -165,13 +177,6 @@ namespace AccountingSystem.Controllers
                     Value = b.Id.ToString(),
                     Text = b.NameAr
                 }).ToListAsync();
-
-            model.CostCenters = await _context.CostCenters
-                .Select(c => new SelectListItem
-                {
-                    Value = c.Id.ToString(),
-                    Text = c.NameAr
-                }).ToListAsync();
         }
 
         private async Task PopulateDropdowns(EditAccountViewModel model)
@@ -189,13 +194,6 @@ namespace AccountingSystem.Controllers
                 {
                     Value = b.Id.ToString(),
                     Text = b.NameAr
-                }).ToListAsync();
-
-            model.CostCenters = await _context.CostCenters
-                .Select(c => new SelectListItem
-                {
-                    Value = c.Id.ToString(),
-                    Text = c.NameAr
                 }).ToListAsync();
         }
 
@@ -222,11 +220,15 @@ namespace AccountingSystem.Controllers
                 IsActive = account.IsActive,
                 CanPostTransactions = account.CanPostTransactions,
                 ParentId = account.ParentId,
-                BranchId = account.BranchId,
-                CostCenterId = account.CostCenterId
+                BranchId = account.BranchId
             };
 
             await PopulateDropdowns(model);
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                ViewData["IsModal"] = true;
+                return PartialView(model);
+            }
             return View(model);
         }
 
@@ -239,6 +241,11 @@ namespace AccountingSystem.Controllers
             if (!ModelState.IsValid)
             {
                 await PopulateDropdowns(model);
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    ViewData["IsModal"] = true;
+                    return PartialView(model);
+                }
                 return View(model);
             }
 
@@ -259,12 +266,56 @@ namespace AccountingSystem.Controllers
             account.CanPostTransactions = model.CanPostTransactions;
             account.ParentId = model.ParentId;
             account.BranchId = model.BranchId > 0 ? model.BranchId : null;
-            account.CostCenterId = model.CostCenterId > 0 ? model.CostCenterId : null;
             account.Level = model.ParentId.HasValue ?
                 (_context.Accounts.Find(model.ParentId.Value)?.Level ?? 0) + 1 : 1;
 
             await _context.SaveChangesAsync();
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                return Json(new { success = true });
             return RedirectToAction(nameof(Index));
+        }
+
+        [Authorize(Policy = "accounts.view")]
+        public async Task<IActionResult> Details(int id)
+        {
+            var account = await _context.Accounts
+                .Include(a => a.Parent)
+                .Include(a => a.Children)
+                .FirstOrDefaultAsync(a => a.Id == id);
+            if (account == null)
+                return NotFound();
+
+            var model = new AccountDetailsViewModel
+            {
+                Id = account.Id,
+                Code = account.Code,
+                NameAr = account.NameAr,
+                NameEn = account.NameEn ?? string.Empty,
+                AccountType = account.AccountType,
+                Nature = account.Nature,
+                SubClassification = account.SubClassification,
+                OpeningBalance = account.OpeningBalance,
+                CurrentBalance = account.CurrentBalance,
+                IsActive = account.IsActive,
+                CanPostTransactions = account.CanPostTransactions,
+                RequiresCostCenter = false,
+                Level = account.Level,
+                ParentAccountId = account.ParentId,
+                ParentAccountName = account.Parent?.NameAr ?? string.Empty,
+                Description = account.Description ?? string.Empty,
+                CreatedAt = account.CreatedAt,
+                ChildAccounts = account.Children.Select(c => new AccountDetailsChildViewModel
+                {
+                    Id = c.Id,
+                    Code = c.Code,
+                    NameAr = c.NameAr,
+                    SubClassification = c.SubClassification,
+                    CurrentBalance = c.CurrentBalance,
+                    IsActive = c.IsActive
+                }).ToList()
+            };
+
+            return View(model);
         }
     }
 }

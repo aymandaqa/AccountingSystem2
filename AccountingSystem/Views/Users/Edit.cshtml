@@ -23,6 +23,11 @@
             <input asp-for="LastName" class="form-control" />
             <span asp-validation-for="LastName" class="text-danger"></span>
         </div>
+        <div class="mb-3">
+            <label class="form-label">الفروع</label>
+            <select asp-for="BranchIds" asp-items="Model.Branches" class="form-select" multiple></select>
+            <span asp-validation-for="BranchIds" class="text-danger"></span>
+        </div>
         <div class="form-check mb-3">
             <input asp-for="IsActive" class="form-check-input" />
             <label asp-for="IsActive" class="form-check-label"></label>

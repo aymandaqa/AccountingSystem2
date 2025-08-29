@@ -44,10 +44,8 @@ namespace AccountingSystem.ViewModels
         public bool CanPostTransactions { get; set; } = true;
         public int? ParentId { get; set; }
         public int? BranchId { get; set; }
-        public int? CostCenterId { get; set; }
         public List<SelectListItem> ParentAccounts { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
-        public List<SelectListItem> CostCenters { get; set; } = new List<SelectListItem>();
     }
 
     public class EditAccountViewModel
@@ -64,10 +62,8 @@ namespace AccountingSystem.ViewModels
         public bool CanPostTransactions { get; set; }
         public int? ParentId { get; set; }
         public int? BranchId { get; set; }
-        public int? CostCenterId { get; set; }
         public List<SelectListItem> ParentAccounts { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
-        public List<SelectListItem> CostCenters { get; set; } = new List<SelectListItem>();
     }
 
     public class AccountViewModel
@@ -87,11 +83,41 @@ namespace AccountingSystem.ViewModels
         public string ParentAccountName { get; set; } = string.Empty;
         public int? BranchId { get; set; }
         public string BranchName { get; set; } = string.Empty;
-        public int? CostCenterId { get; set; }
-        public string CostCenterName { get; set; } = string.Empty;
         public int Level { get; set; }
         public bool HasChildren { get; set; }
         public bool HasTransactions { get; set; }
+    }
+
+    public class AccountDetailsViewModel
+    {
+        public int Id { get; set; }
+        public string Code { get; set; } = string.Empty;
+        public string NameAr { get; set; } = string.Empty;
+        public string NameEn { get; set; } = string.Empty;
+        public AccountType AccountType { get; set; }
+        public AccountNature Nature { get; set; }
+        public AccountSubClassification SubClassification { get; set; }
+        public decimal OpeningBalance { get; set; }
+        public decimal CurrentBalance { get; set; }
+        public bool IsActive { get; set; }
+        public bool CanPostTransactions { get; set; }
+        public bool RequiresCostCenter { get; set; }
+        public int Level { get; set; }
+        public int? ParentAccountId { get; set; }
+        public string ParentAccountName { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public List<AccountDetailsChildViewModel> ChildAccounts { get; set; } = new List<AccountDetailsChildViewModel>();
+    }
+
+    public class AccountDetailsChildViewModel
+    {
+        public int Id { get; set; }
+        public string Code { get; set; } = string.Empty;
+        public string NameAr { get; set; } = string.Empty;
+        public AccountSubClassification SubClassification { get; set; }
+        public decimal CurrentBalance { get; set; }
+        public bool IsActive { get; set; }
     }
 
     // Report ViewModels
