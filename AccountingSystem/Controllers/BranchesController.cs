@@ -7,7 +7,7 @@ using AccountingSystem.ViewModels;
 
 namespace AccountingSystem.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = "branches.view")]
     public class BranchesController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -90,6 +90,7 @@ namespace AccountingSystem.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = "branches.create")]
         public IActionResult Create()
         {
             return View(new CreateBranchViewModel());
@@ -97,6 +98,7 @@ namespace AccountingSystem.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "branches.create")]
         public async Task<IActionResult> Create(CreateBranchViewModel model)
         {
             if (ModelState.IsValid)
@@ -130,6 +132,7 @@ namespace AccountingSystem.Controllers
             return View(model);
         }
 
+        [Authorize(Policy = "branches.edit")]
         public async Task<IActionResult> Edit(int id)
         {
             var branch = await _context.Branches.FindAsync(id);
@@ -156,6 +159,7 @@ namespace AccountingSystem.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "branches.edit")]
         public async Task<IActionResult> Edit(EditBranchViewModel model)
         {
             if (ModelState.IsValid)
@@ -194,6 +198,7 @@ namespace AccountingSystem.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "branches.delete")]
         public async Task<IActionResult> Delete(int id)
         {
             var branch = await _context.Branches
@@ -222,6 +227,7 @@ namespace AccountingSystem.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [Authorize(Policy = "branches.edit")]
         public async Task<IActionResult> ManageUsers(int id)
         {
             var branch = await _context.Branches
@@ -254,6 +260,7 @@ namespace AccountingSystem.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "branches.edit")]
         public async Task<IActionResult> ManageUsers(ManageBranchUsersViewModel model)
         {
             var branch = await _context.Branches

@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using AccountingSystem.Models;
+using System.Linq;
 
 namespace AccountingSystem.Data
 {
@@ -19,13 +21,19 @@ namespace AccountingSystem.Data
             await SeedRolesAsync(roleManager);
 
             // Seed default admin user
-            await SeedAdminUserAsync(userManager);
+            var adminUser = await SeedAdminUserAsync(userManager);
 
             // Seed default branch
             await SeedDefaultBranchAsync(context);
 
             // Seed chart of accounts
             await SeedChartOfAccountsAsync(context);
+
+            // Grant all permissions to admin
+            if (adminUser != null)
+            {
+                await SeedAdminPermissionsAsync(context, adminUser);
+            }
 
             await context.SaveChangesAsync();
         }
@@ -43,11 +51,12 @@ namespace AccountingSystem.Data
             }
         }
 
-        private static async Task SeedAdminUserAsync(UserManager<User> userManager)
+        private static async Task<User?> SeedAdminUserAsync(UserManager<User> userManager)
         {
             var adminEmail = "admin@accounting.com";
-            
-            if (await userManager.FindByEmailAsync(adminEmail) == null)
+
+            var existing = await userManager.FindByEmailAsync(adminEmail);
+            if (existing == null)
             {
                 var adminUser = new User
                 {
@@ -60,12 +69,19 @@ namespace AccountingSystem.Data
                 };
 
                 var result = await userManager.CreateAsync(adminUser, "Admin123!");
-                
+
                 if (result.Succeeded)
                 {
                     await userManager.AddToRoleAsync(adminUser, "Admin");
+                    return adminUser;
                 }
             }
+            else
+            {
+                return existing;
+            }
+
+            return null;
         }
 
         private static async Task SeedDefaultBranchAsync(ApplicationDbContext context)
@@ -180,6 +196,28 @@ namespace AccountingSystem.Data
                 context.Accounts.AddRange(accounts);
                 await context.SaveChangesAsync();
             }
+        }
+
+        private static async Task SeedAdminPermissionsAsync(ApplicationDbContext context, User adminUser)
+        {
+            var allPermissions = await context.Permissions.Select(p => p.Id).ToListAsync();
+            var existing = await context.UserPermissions
+                .Where(up => up.UserId == adminUser.Id)
+                .Select(up => up.PermissionId)
+                .ToListAsync();
+
+            var toAdd = allPermissions.Except(existing);
+            foreach (var pid in toAdd)
+            {
+                context.UserPermissions.Add(new UserPermission
+                {
+                    UserId = adminUser.Id,
+                    PermissionId = pid,
+                    IsGranted = true
+                });
+            }
+
+            await context.SaveChangesAsync();
         }
     }
 }
