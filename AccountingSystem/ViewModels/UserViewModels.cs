@@ -48,7 +48,12 @@ namespace AccountingSystem.ViewModels
         public bool IsActive { get; set; } = true;
         [MinLength(1, ErrorMessage = "يجب اختيار فرع واحد على الأقل")]
         public List<int> BranchIds { get; set; } = new List<int>();
+        public int? PaymentAccountId { get; set; }
+        public int? PaymentBranchId { get; set; }
+        public decimal ExpenseLimit { get; set; }
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> PaymentBranches { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> PaymentAccounts { get; set; } = new List<SelectListItem>();
     }
 
     public class EditUserViewModel
@@ -71,6 +76,11 @@ namespace AccountingSystem.ViewModels
         public bool IsActive { get; set; } = true;
         [MinLength(1, ErrorMessage = "يجب اختيار فرع واحد على الأقل")]
         public List<int> BranchIds { get; set; } = new List<int>();
+        public int? PaymentAccountId { get; set; }
+        public int? PaymentBranchId { get; set; }
+        public decimal ExpenseLimit { get; set; }
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> PaymentBranches { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> PaymentAccounts { get; set; } = new List<SelectListItem>();
     }
 }

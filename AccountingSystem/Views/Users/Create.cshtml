@@ -32,6 +32,25 @@
             <select asp-for="BranchIds" asp-items="Model.Branches" class="form-select" multiple></select>
             <span asp-validation-for="BranchIds" class="text-danger"></span>
         </div>
+        <div class="mb-3">
+            <label asp-for="PaymentBranchId" class="form-label"></label>
+            <select asp-for="PaymentBranchId" asp-items="Model.PaymentBranches" class="form-select">
+                <option value="">-- اختر فرع الدفع --</option>
+            </select>
+            <span asp-validation-for="PaymentBranchId" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="PaymentAccountId" class="form-label"></label>
+            <select asp-for="PaymentAccountId" asp-items="Model.PaymentAccounts" class="form-select">
+                <option value="">-- اختر حساب الدفع --</option>
+            </select>
+            <span asp-validation-for="PaymentAccountId" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="ExpenseLimit" class="form-label"></label>
+            <input asp-for="ExpenseLimit" class="form-control" />
+            <span asp-validation-for="ExpenseLimit" class="text-danger"></span>
+        </div>
         <div class="form-check mb-3">
             <input asp-for="IsActive" class="form-check-input" />
             <label asp-for="IsActive" class="form-check-label"></label>

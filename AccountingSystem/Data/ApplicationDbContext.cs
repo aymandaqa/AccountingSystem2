@@ -20,6 +20,7 @@ namespace AccountingSystem.Data
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<UserBranch> UserBranches { get; set; }
         public DbSet<UserPermission> UserPermissions { get; set; }
+        public DbSet<Expense> Expenses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -112,6 +113,51 @@ namespace AccountingSystem.Data
                 entity.HasOne(e => e.CostCenter)
                     .WithMany(e => e.JournalEntryLines)
                     .HasForeignKey(e => e.CostCenterId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // Expense configuration
+            builder.Entity<Expense>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+
+                entity.HasOne(e => e.User)
+                    .WithMany(u => u.Expenses)
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.PaymentAccount)
+                    .WithMany()
+                    .HasForeignKey(e => e.PaymentAccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.ExpenseAccount)
+                    .WithMany()
+                    .HasForeignKey(e => e.ExpenseAccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Branch)
+                    .WithMany()
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.JournalEntry)
+                    .WithMany()
+                    .HasForeignKey(e => e.JournalEntryId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<User>(entity =>
+            {
+                entity.HasOne(u => u.PaymentAccount)
+                    .WithMany()
+                    .HasForeignKey(u => u.PaymentAccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(u => u.PaymentBranch)
+                    .WithMany()
+                    .HasForeignKey(u => u.PaymentBranchId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 

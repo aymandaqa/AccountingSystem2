@@ -22,10 +22,17 @@ namespace AccountingSystem.Models
 
         public DateTime? LastLoginAt { get; set; }
 
+        public int? PaymentAccountId { get; set; }
+        public int? PaymentBranchId { get; set; }
+        public decimal ExpenseLimit { get; set; } = 0;
+
         // Navigation properties
         public virtual ICollection<UserBranch> UserBranches { get; set; } = new List<UserBranch>();
         public virtual ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
         public virtual ICollection<JournalEntry> CreatedJournalEntries { get; set; } = new List<JournalEntry>();
+        public virtual Account? PaymentAccount { get; set; }
+        public virtual Branch? PaymentBranch { get; set; }
+        public virtual ICollection<Expense> Expenses { get; set; } = new List<Expense>();
     }
 }
 
