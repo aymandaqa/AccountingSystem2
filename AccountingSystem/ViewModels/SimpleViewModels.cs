@@ -7,6 +7,7 @@ namespace AccountingSystem.ViewModels
     // Journal Entry ViewModels
     public class CreateJournalEntryViewModel
     {
+        public int Id { get; set; }
         public string Number { get; set; } = string.Empty;
         public DateTime Date { get; set; } = DateTime.Now;
         public string Description { get; set; } = string.Empty;
@@ -28,6 +29,20 @@ namespace AccountingSystem.ViewModels
         public decimal DebitAmount { get; set; }
         public decimal CreditAmount { get; set; }
         public string Description { get; set; } = string.Empty;
+    }
+
+    public class JournalEntryDetailsViewModel
+    {
+        public int Id { get; set; }
+        public string Number { get; set; } = string.Empty;
+        public DateTime Date { get; set; }
+        public string Description { get; set; } = string.Empty;
+        public string? Reference { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string BranchName { get; set; } = string.Empty;
+        public List<JournalEntryLineViewModel> Lines { get; set; } = new List<JournalEntryLineViewModel>();
+        public decimal TotalDebit { get; set; }
+        public decimal TotalCredit { get; set; }
     }
 
     // Account ViewModels

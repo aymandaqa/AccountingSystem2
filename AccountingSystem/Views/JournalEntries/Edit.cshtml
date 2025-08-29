@@ -1,0 +1,204 @@
+@model AccountingSystem.ViewModels.CreateJournalEntryViewModel
+@{
+    ViewData["Title"] = "تعديل قيد مالي";
+    Layout = "~/Views/Shared/_AccountingLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-warning">
+                    <h4 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>
+                        تعديل قيد مالي
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Edit" method="post" id="journalEntryForm">
+                        <input type="hidden" asp-for="Id" />
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label asp-for="Number" class="form-label">رقم القيد:</label>
+                                <input asp-for="Number" class="form-control" readonly />
+                                <span asp-validation-for="Number" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-3">
+                                <label asp-for="Date" class="form-label">التاريخ:</label>
+                                <input asp-for="Date" type="date" class="form-control" />
+                                <span asp-validation-for="Date" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-3">
+                                <label asp-for="BranchId" class="form-label">الفرع:</label>
+                                <select asp-for="BranchId" asp-items="Model.Branches" class="form-select"></select>
+                                <span asp-validation-for="BranchId" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-3">
+                                <label asp-for="Reference" class="form-label">المرجع:</label>
+                                <input asp-for="Reference" class="form-control" />
+                                <span asp-validation-for="Reference" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label asp-for="Description" class="form-label">البيان:</label>
+                                <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+                                <span asp-validation-for="Description" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="card border-secondary mb-3">
+                            <div class="card-header bg-light">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">بنود القيد</h6>
+                                    <button type="button" class="btn btn-sm btn-success" onclick="addJournalLine()">
+                                        <i class="fas fa-plus me-1"></i>
+                                        إضافة بند
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered" id="journalLinesTable">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th style="width: 40%">الحساب</th>
+                                                <th style="width: 25%">البيان</th>
+                                                <th style="width: 15%">مدين</th>
+                                                <th style="width: 15%">دائن</th>
+                                                <th style="width: 5%">حذف</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="journalLinesBody">
+                                            @for (int i = 0; i < Model.Lines.Count; i++)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <select asp-for="Lines[@i].AccountId" asp-items="Model.Accounts" class="form-select" required></select>
+                                                    </td>
+                                                    <td>
+                                                        <input name="Lines[@i].Description" class="form-control" value="@Model.Lines[i].Description" />
+                                                    </td>
+                                                    <td>
+                                                        <input name="Lines[@i].DebitAmount" type="number" step="0.01" min="0" class="form-control debit-amount" value="@Model.Lines[i].DebitAmount" onchange="calculateTotals()" />
+                                                    </td>
+                                                    <td>
+                                                        <input name="Lines[@i].CreditAmount" type="number" step="0.01" min="0" class="form-control credit-amount" value="@Model.Lines[i].CreditAmount" onchange="calculateTotals()" />
+                                                    </td>
+                                                    <td>
+                                                        <button type="button" class="btn btn-sm btn-danger" onclick="removeJournalLine(this)">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                        <tfoot>
+                                            <tr class="table-info">
+                                                <td colspan="2"><strong>الإجمالي:</strong></td>
+                                                <td><strong id="totalDebit">0.00</strong></td>
+                                                <td><strong id="totalCredit">0.00</strong></td>
+                                                <td></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                                <div id="balanceAlert" class="alert alert-warning d-none">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    القيد غير متوازن! يجب أن يكون إجمالي المدين مساوياً لإجمالي الدائن.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-warning me-2" id="saveButton">
+                                    <i class="fas fa-save me-1"></i>
+                                    حفظ التعديلات
+                                </button>
+                                <a asp-action="Index" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left me-1"></i>
+                                    العودة للقائمة
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let lineIndex = @Model.Lines.Count;
+
+function addJournalLine() {
+    const tbody = document.getElementById('journalLinesBody');
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td>
+            <select name="Lines[${lineIndex}].AccountId" class="form-select" required>
+                <option value="">اختر الحساب</option>
+                @foreach (var account in Model.Accounts)
+                {
+                    <option value="@account.Value">@account.Text</option>
+                }
+            </select>
+        </td>
+        <td>
+            <input name="Lines[${lineIndex}].Description" type="text" class="form-control" />
+        </td>
+        <td>
+            <input name="Lines[${lineIndex}].DebitAmount" type="number" step="0.01" min="0" class="form-control debit-amount" onchange="calculateTotals()" />
+        </td>
+        <td>
+            <input name="Lines[${lineIndex}].CreditAmount" type="number" step="0.01" min="0" class="form-control credit-amount" onchange="calculateTotals()" />
+        </td>
+        <td>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeJournalLine(this)">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    `;
+    tbody.appendChild(row);
+    lineIndex++;
+    calculateTotals();
+}
+
+function removeJournalLine(button) {
+    button.closest('tr').remove();
+    calculateTotals();
+}
+
+function calculateTotals() {
+    let totalDebit = 0;
+    let totalCredit = 0;
+
+    document.querySelectorAll('.debit-amount').forEach(input => {
+        totalDebit += parseFloat(input.value) || 0;
+    });
+
+    document.querySelectorAll('.credit-amount').forEach(input => {
+        totalCredit += parseFloat(input.value) || 0;
+    });
+
+    document.getElementById('totalDebit').textContent = totalDebit.toFixed(2);
+    document.getElementById('totalCredit').textContent = totalCredit.toFixed(2);
+
+    const balanceAlert = document.getElementById('balanceAlert');
+    const saveButton = document.getElementById('saveButton');
+
+    if (Math.abs(totalDebit - totalCredit) > 0.01) {
+        balanceAlert.classList.remove('d-none');
+        saveButton.disabled = true;
+    } else {
+        balanceAlert.classList.add('d-none');
+        saveButton.disabled = false;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    calculateTotals();
+});
+</script>
