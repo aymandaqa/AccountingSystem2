@@ -90,7 +90,8 @@ namespace AccountingSystem.Controllers
                 BranchId = model.BranchId,
                 CreatedById = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty,
                 TotalDebit = model.Lines.Sum(l => l.DebitAmount),
-                TotalCredit = model.Lines.Sum(l => l.CreditAmount)
+                TotalCredit = model.Lines.Sum(l => l.CreditAmount),
+
             };
 
             foreach (var line in model.Lines)
@@ -100,7 +101,8 @@ namespace AccountingSystem.Controllers
                     AccountId = line.AccountId,
                     Description = line.Description,
                     DebitAmount = line.DebitAmount,
-                    CreditAmount = line.CreditAmount
+                    CreditAmount = line.CreditAmount,
+
                 });
             }
 
