@@ -20,18 +20,22 @@
                     <div class="row">
                         <div class="col-md-3 mb-3">
                             <label for="branchFilter" class="form-label">فلتر حسب الفرع:</label>
-                            <select id="branchFilter" class="form-select" onchange="filterByBranch()">
+                            <select id="branchFilter" class="form-select" onchange="applyFilters()">
                                 <option value="">جميع الفروع</option>
                                 @if (ViewBag.Branches != null)
                                 {
                                     @foreach (var branch in ViewBag.Branches)
                                     {
-                                        <option value="@branch.Id">
+                                        <option value="@branch.Id" @(Model.SelectedBranchId == branch.Id ? "selected" : "")>
                                             @branch.NameAr
                                         </option>
                                     }
                                 }
                             </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="monthFilter" class="form-label">فلتر حسب الشهر:</label>
+                            <input type="month" id="monthFilter" class="form-control" value="@Model.SelectedMonth.ToString("yyyy-MM")" onchange="applyFilters()" />
                         </div>
                     </div>
                 </div>
@@ -41,7 +45,7 @@
 
     <!-- إحصائيات سريعة -->
     <div class="row mb-4">
-        <div class="col-lg-3 col-md-6 mb-3">
+        <div class="col-lg-2 col-md-4 mb-3">
             <div class="card bg-primary text-white">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
@@ -57,7 +61,39 @@
             </div>
         </div>
 
-        <div class="col-lg-3 col-md-6 mb-3">
+        <div class="col-lg-2 col-md-4 mb-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">إجمالي الخصوم</h6>
+                            <h4 class="mb-0">@Model.TotalLiabilities.ToString("N0")</h4>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-balance-scale fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-2 col-md-4 mb-3">
+            <div class="card bg-secondary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">إجمالي حقوق الملكية</h6>
+                            <h4 class="mb-0">@Model.TotalEquity.ToString("N0")</h4>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-university fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-2 col-md-4 mb-3">
             <div class="card bg-success text-white">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
@@ -73,7 +109,7 @@
             </div>
         </div>
 
-        <div class="col-lg-3 col-md-6 mb-3">
+        <div class="col-lg-2 col-md-4 mb-3">
             <div class="card bg-warning text-white">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
@@ -89,7 +125,7 @@
             </div>
         </div>
 
-        <div class="col-lg-3 col-md-6 mb-3">
+        <div class="col-lg-2 col-md-4 mb-3">
             <div class="card bg-info text-white">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
@@ -162,13 +198,19 @@
 </div>
 
 <script>
-    function filterByBranch() {
+    function applyFilters() {
         const branchId = document.getElementById('branchFilter').value;
+        const month = document.getElementById('monthFilter').value;
         const url = new URL(window.location);
         if (branchId) {
             url.searchParams.set('branchId', branchId);
         } else {
             url.searchParams.delete('branchId');
+        }
+        if (month) {
+            url.searchParams.set('month', month);
+        } else {
+            url.searchParams.delete('month');
         }
         window.location.href = url.toString();
     }

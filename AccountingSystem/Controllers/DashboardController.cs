@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
+using System.Globalization;
 
 namespace AccountingSystem.Controllers
 {
@@ -19,25 +20,45 @@ namespace AccountingSystem.Controllers
             _logger = logger;
         }
 
-        public async Task<IActionResult> Index(int? branchId = null)
+        public async Task<IActionResult> Index(int? branchId = null, string? month = null)
         {
+            DateTime selectedMonth;
+            if (string.IsNullOrEmpty(month) || !DateTime.TryParseExact(month + "-01", "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out selectedMonth))
+            {
+                var today = DateTime.Today;
+                selectedMonth = new DateTime(today.Year, today.Month, 1);
+            }
+
+            var monthEnd = selectedMonth.AddMonths(1).AddTicks(-1);
+
             var accounts = await _context.Accounts
                 .Where(a => a.CanPostTransactions)
                 .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
+                .Include(a => a.JournalEntryLines)
+                    .ThenInclude(l => l.JournalEntry)
                 .ToListAsync();
+
+            var accountBalances = accounts.Select(a => new
+            {
+                a.AccountType,
+                Balance = a.OpeningBalance + a.JournalEntryLines
+                    .Where(l => l.JournalEntry.Date <= monthEnd && (!branchId.HasValue || l.JournalEntry.BranchId == branchId))
+                    .Sum(l => l.DebitAmount - l.CreditAmount)
+            });
+
+            var totals = accountBalances
+                .GroupBy(a => a.AccountType)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Balance));
 
             var viewModel = new DashboardViewModel
             {
                 SelectedBranchId = branchId,
-                TotalAssets = accounts
-                    .Where(a => a.AccountType == AccountType.Assets)
-                    .Sum(a => a.CurrentBalance),
-                TotalRevenues = accounts
-                    .Where(a => a.AccountType == AccountType.Revenue)
-                    .Sum(a => a.CurrentBalance),
-                TotalExpenses = accounts
-                    .Where(a => a.AccountType == AccountType.Expenses)
-                    .Sum(a => a.CurrentBalance)
+                SelectedMonth = selectedMonth,
+                TotalAssets = totals.ContainsKey(AccountType.Assets) ? totals[AccountType.Assets] : 0,
+                TotalLiabilities = totals.ContainsKey(AccountType.Liabilities) ? totals[AccountType.Liabilities] : 0,
+                TotalEquity = totals.ContainsKey(AccountType.Equity) ? totals[AccountType.Equity] : 0,
+                TotalRevenues = totals.ContainsKey(AccountType.Revenue) ? totals[AccountType.Revenue] : 0,
+                TotalExpenses = totals.ContainsKey(AccountType.Expenses) ? totals[AccountType.Expenses] : 0
             };
 
             viewModel.NetIncome = viewModel.TotalRevenues - viewModel.TotalExpenses;
