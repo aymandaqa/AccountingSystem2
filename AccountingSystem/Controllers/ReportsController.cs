@@ -165,6 +165,7 @@ namespace AccountingSystem.Controllers
                         .Include(l => l.JournalEntry)
                         .Where(l => l.AccountId == accountId.Value)
                         .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
+                        .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
                         .Where(l => l.JournalEntry.Date >= viewModel.FromDate && l.JournalEntry.Date <= viewModel.ToDate)
                         .OrderBy(l => l.JournalEntry.Date)
                         .ThenBy(l => l.JournalEntry.Number)
@@ -173,7 +174,9 @@ namespace AccountingSystem.Controllers
                     decimal running = account.OpeningBalance;
                     foreach (var line in lines)
                     {
-                        running += line.DebitAmount - line.CreditAmount;
+                        running += account.Nature == AccountNature.Debit
+                            ? line.DebitAmount - line.CreditAmount
+                            : line.CreditAmount - line.DebitAmount;
                         viewModel.Transactions.Add(new AccountTransactionViewModel
                         {
                             Date = line.JournalEntry.Date,
@@ -204,6 +207,7 @@ namespace AccountingSystem.Controllers
             var lines = await _context.JournalEntryLines
                 .Include(l => l.JournalEntry)
                 .Include(l => l.Account)
+                .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
                 .Where(l => l.JournalEntry.Date >= from && l.JournalEntry.Date <= to)
                 .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
                 .Where(l => !accountId.HasValue || l.AccountId == accountId)

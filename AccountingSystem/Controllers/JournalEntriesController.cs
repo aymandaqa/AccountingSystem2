@@ -274,17 +274,34 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "journal.edit")]
         public async Task<IActionResult> Post(int id)
         {
-            var entry = await _context.JournalEntries.FindAsync(id);
+            var entry = await _context.JournalEntries
+                .Include(j => j.Lines)
+                    .ThenInclude(l => l.Account)
+                .FirstOrDefaultAsync(j => j.Id == id);
+
             if (entry == null)
                 return NotFound();
 
             if (entry.Status != JournalEntryStatus.Draft)
                 return BadRequest();
 
+            if (!entry.IsBalanced)
+                return BadRequest("القيد غير متوازن");
+
+            foreach (var line in entry.Lines)
+            {
+                var account = line.Account;
+                var netAmount = account.Nature == AccountNature.Debit
+                    ? line.DebitAmount - line.CreditAmount
+                    : line.CreditAmount - line.DebitAmount;
+
+                account.CurrentBalance += netAmount;
+                account.UpdatedAt = DateTime.UtcNow;
+            }
+
             entry.Status = JournalEntryStatus.Posted;
             entry.UpdatedAt = DateTime.UtcNow;
 
-            _context.Update(entry);
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Index));
