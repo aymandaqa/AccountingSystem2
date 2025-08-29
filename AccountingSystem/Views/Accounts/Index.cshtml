@@ -61,7 +61,7 @@
                                         <th>الكود</th>
                                         <th>اسم الحساب</th>
                                         <th>نوع الحساب</th>
-                                        <th>التصنيف الفرعي</th>
+                                        <th>التصنيف</th>
                                         <th>الطبيعة</th>
                                         <th>الرصيد الافتتاحي</th>
                                         <th>الرصيد الحالي</th>
@@ -82,7 +82,7 @@
                                                 <span class="badge bg-primary">@account.AccountType.ToString()</span>
                                             </td>
                                             <td>
-                                                <span class="badge bg-secondary">@account.SubClassification.ToString()</span>
+                                                <span class="badge bg-secondary">@account.Classification.ToString()</span>
                                             </td>
                                             <td>
                                                 @if (account.Nature == AccountingSystem.Models.AccountNature.Debit)
