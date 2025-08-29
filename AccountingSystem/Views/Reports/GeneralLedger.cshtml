@@ -18,7 +18,9 @@
                                 <option value="">جميع الحسابات</option>
                                 @foreach (var acc in Model.AccountOptions)
                                 {
+ 
                                     <option value="@acc.Value" selected="@(Model.AccountId?.ToString() == acc.Value)">@acc.Text</option>
+ 
                                 }
                             </select>
                         </div>
@@ -28,7 +30,9 @@
                                 <option value="">جميع الفروع</option>
                                 @foreach (var branch in Model.Branches)
                                 {
+ 
                                     <option value="@branch.Value" selected="@(Model.BranchId?.ToString() == branch.Value)">@branch.Text</option>
+ 
                                 }
                             </select>
                         </div>

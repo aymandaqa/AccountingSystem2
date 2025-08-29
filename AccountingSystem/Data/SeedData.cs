@@ -54,6 +54,7 @@ namespace AccountingSystem.Data
             }
         }
 
+ 
         private static async Task SeedPermissionsAsync(ApplicationDbContext context)
         {
             var permissions = new List<Permission>
@@ -94,7 +95,7 @@ namespace AccountingSystem.Data
 
             await context.SaveChangesAsync();
         }
-
+ 
         private static async Task<User?> SeedAdminUserAsync(UserManager<User> userManager)
         {
             var adminEmail = "admin@accounting.com";
