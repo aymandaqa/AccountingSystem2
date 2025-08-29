@@ -37,7 +37,7 @@ namespace AccountingSystem.Controllers
             {
                 Id = e.Id,
                 UserName = e.User.FullName ?? e.User.Email ?? string.Empty,
-                Branch = brn.FirstOrDefault(x => x.Id == e.User.PaymentBranchId).NameAr,
+                Branch = brn.FirstOrDefault(x => x.Id == e.User.PaymentBranchId)?.NameAr,
                 PaymentAccountName = e.PaymentAccount.NameAr,
                 ExpenseAccountName = e.ExpenseAccount.NameAr,
                 Amount = e.Amount,

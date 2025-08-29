@@ -29,28 +29,29 @@
             </tr>
         </thead>
         <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@item.UserName</td>
-                <td>@item.PaymentAccountName</td>
-                <td>@item.ExpenseAccountName</td>
-                <td>@item.Amount</td>
-                <td>@item.Notes</td>
-                <td>@(item.IsApproved ? "نعم" : "لا")</td>
-                <td>@item.CreatedAt.ToString("yyyy-MM-dd")</td>
-                <td>
-                    @if (!item.IsApproved)
-                    {
-                        <a class="btn btn-sm btn-primary" asp-action="Edit" asp-route-id="@item.Id">تعديل</a>
-                        <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline">
-                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('هل أنت متأكد من الحذف؟');">حذف</button>
-                        </form>
-                        <a class="btn btn-sm btn-success" asp-action="Approve" asp-route-id="@item.Id">اعتماد</a>
-                    }
-                </td>
-            </tr>
-        }
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.UserName</td>
+                    <td>@item.Branch</td>
+                    <td>@item.PaymentAccountName</td>
+                    <td>@item.ExpenseAccountName</td>
+                    <td>@item.Amount</td>
+                    <td>@item.Notes</td>
+                    <td>@(item.IsApproved ? "نعم" : "لا")</td>
+                    <td>@item.CreatedAt.ToString("yyyy-MM-dd")</td>
+                    <td>
+                        @if (!item.IsApproved)
+                        {
+                            <a class="btn btn-sm btn-primary" asp-action="Edit" asp-route-id="@item.Id">تعديل</a>
+                            <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('هل أنت متأكد من الحذف؟');">حذف</button>
+                            </form>
+                            <a class="btn btn-sm btn-success" asp-action="Approve" asp-route-id="@item.Id">اعتماد</a>
+                        }
+                    </td>
+                </tr>
+            }
         </tbody>
     </table>
 </div>
