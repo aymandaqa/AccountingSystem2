@@ -77,6 +77,11 @@
                                                     <a asp-action="Edit" asp-route-id="@entry.Id" class="btn btn-sm btn-outline-warning">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
+                                                    <form asp-action="Post" asp-route-id="@entry.Id" method="post" class="d-inline">
+                                                        <button type="submit" class="btn btn-sm btn-outline-success">
+                                                            <i class="fas fa-share"></i>
+                                                        </button>
+                                                    </form>
                                                 }
                                             </div>
                                         </td>
