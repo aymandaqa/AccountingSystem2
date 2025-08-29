@@ -284,6 +284,7 @@ namespace AccountingSystem.ViewModels
         public int? SelectedBranchId { get; set; }
         public DateTime SelectedMonth { get; set; } = DateTime.Today;
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
+        public List<AccountTreeNodeViewModel> AccountTypeTrees { get; set; } = new List<AccountTreeNodeViewModel>();
     }
 
     // Additional ViewModels

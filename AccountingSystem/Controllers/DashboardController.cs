@@ -5,6 +5,8 @@ using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
 using System.Globalization;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace AccountingSystem.Controllers
 {
@@ -32,23 +34,72 @@ namespace AccountingSystem.Controllers
             var monthEnd = selectedMonth.AddMonths(1).AddTicks(-1);
 
             var accounts = await _context.Accounts
-                .Where(a => a.CanPostTransactions)
                 .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
                 .Include(a => a.JournalEntryLines)
                     .ThenInclude(l => l.JournalEntry)
+                .AsNoTracking()
                 .ToListAsync();
 
-            var accountBalances = accounts.Select(a => new
-            {
-                a.AccountType,
-                Balance = a.OpeningBalance + a.JournalEntryLines
+            var accountBalances = accounts.ToDictionary(a => a.Id, a =>
+                a.OpeningBalance + a.JournalEntryLines
                     .Where(l => l.JournalEntry.Date <= monthEnd && (!branchId.HasValue || l.JournalEntry.BranchId == branchId))
-                    .Sum(l => l.DebitAmount - l.CreditAmount)
-            });
+                    .Sum(l => l.DebitAmount - l.CreditAmount));
 
-            var totals = accountBalances
-                .GroupBy(a => a.AccountType)
-                .ToDictionary(g => g.Key, g => g.Sum(x => x.Balance));
+            var nodes = accounts.Select(a => new AccountTreeNodeViewModel
+            {
+                Id = a.Id,
+                Code = a.Code,
+                NameAr = a.NameAr,
+                AccountType = a.AccountType,
+                Nature = a.Nature,
+                OpeningBalance = a.OpeningBalance,
+                Balance = accountBalances[a.Id],
+                IsActive = a.IsActive,
+                CanPostTransactions = a.CanPostTransactions,
+                ParentId = a.ParentId,
+                Level = a.Level,
+                Children = new List<AccountTreeNodeViewModel>(),
+                HasChildren = false
+            }).ToDictionary(n => n.Id);
+
+            foreach (var node in nodes.Values)
+            {
+                if (node.ParentId.HasValue && nodes.TryGetValue(node.ParentId.Value, out var parent))
+                {
+                    parent.Children.Add(node);
+                    parent.HasChildren = true;
+                }
+            }
+
+            decimal ComputeBalance(AccountTreeNodeViewModel node)
+            {
+                if (node.Children.Any())
+                {
+                    node.Balance = node.Children.Sum(ComputeBalance);
+                }
+                return node.Balance;
+            }
+
+            var rootNodes = nodes.Values.Where(n => n.ParentId == null).ToList();
+            foreach (var root in rootNodes)
+            {
+                ComputeBalance(root);
+            }
+
+            var accountTypeTrees = rootNodes
+                .GroupBy(n => n.AccountType)
+                .Select(g => new AccountTreeNodeViewModel
+                {
+                    Id = 0,
+                    NameAr = g.Key.ToString(),
+                    AccountType = g.Key,
+                    Level = 0,
+                    Balance = g.Sum(n => n.Balance),
+                    Children = g.OrderBy(n => n.Code).ToList(),
+                    HasChildren = g.Any()
+                }).ToList();
+
+            var totals = accountTypeTrees.ToDictionary(n => n.AccountType, n => n.Balance);
 
             var viewModel = new DashboardViewModel
             {
@@ -58,7 +109,8 @@ namespace AccountingSystem.Controllers
                 TotalLiabilities = totals.ContainsKey(AccountType.Liabilities) ? totals[AccountType.Liabilities] : 0,
                 TotalEquity = totals.ContainsKey(AccountType.Equity) ? totals[AccountType.Equity] : 0,
                 TotalRevenues = totals.ContainsKey(AccountType.Revenue) ? totals[AccountType.Revenue] : 0,
-                TotalExpenses = totals.ContainsKey(AccountType.Expenses) ? totals[AccountType.Expenses] : 0
+                TotalExpenses = totals.ContainsKey(AccountType.Expenses) ? totals[AccountType.Expenses] : 0,
+                AccountTypeTrees = accountTypeTrees
             };
 
             viewModel.NetIncome = viewModel.TotalRevenues - viewModel.TotalExpenses;
