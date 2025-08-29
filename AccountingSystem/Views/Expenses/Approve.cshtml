@@ -1,0 +1,33 @@
+@model AccountingSystem.ViewModels.ExpenseViewModel
+@{
+    ViewData["Title"] = "اعتماد مصروف";
+    Layout = "_AccountingLayout";
+}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">اعتماد مصروف</h3>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">المستخدم</dt>
+                <dd class="col-sm-9">@Model.UserName</dd>
+                <dt class="col-sm-3">حساب الدفع</dt>
+                <dd class="col-sm-9">@Model.PaymentAccountName</dd>
+                <dt class="col-sm-3">حساب المصروف</dt>
+                <dd class="col-sm-9">@Model.ExpenseAccountName</dd>
+                <dt class="col-sm-3">القيمة</dt>
+                <dd class="col-sm-9">@Model.Amount</dd>
+                <dt class="col-sm-3">ملاحظات</dt>
+                <dd class="col-sm-9">@Model.Notes</dd>
+            </dl>
+        </div>
+        <div class="card-footer">
+            <form asp-action="Approve" method="post">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <button type="submit" class="btn btn-success">اعتماد</button>
+                <a href="@Url.Action("Index")" class="btn btn-secondary">إلغاء</a>
+            </form>
+        </div>
+    </div>
+</div>
