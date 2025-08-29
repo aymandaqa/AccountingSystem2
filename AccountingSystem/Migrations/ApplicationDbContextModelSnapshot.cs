@@ -651,6 +651,15 @@ namespace AccountingSystem.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("INTEGER");
 
+                    b.Property<decimal>("ExpenseLimit")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("PaymentAccountId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("PaymentBranchId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("TEXT");
 
@@ -670,7 +679,61 @@ namespace AccountingSystem.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
 
+                    b.HasIndex("PaymentAccountId");
+
+                    b.HasIndex("PaymentBranchId");
+
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("AccountingSystem.Models.Expense", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ExpenseAccountId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("JournalEntryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PaymentAccountId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("ExpenseAccountId");
+
+                    b.HasIndex("JournalEntryId");
+
+                    b.HasIndex("PaymentAccountId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Expenses");
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.UserBranch", b =>
@@ -922,6 +985,67 @@ namespace AccountingSystem.Migrations
                     b.Navigation("CostCenter");
 
                     b.Navigation("JournalEntry");
+                });
+
+            modelBuilder.Entity("AccountingSystem.Models.Expense", b =>
+                {
+                    b.HasOne("AccountingSystem.Models.Account", "ExpenseAccount")
+                        .WithMany()
+                        .HasForeignKey("ExpenseAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AccountingSystem.Models.Account", "PaymentAccount")
+                        .WithMany()
+                        .HasForeignKey("PaymentAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AccountingSystem.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AccountingSystem.Models.JournalEntry", "JournalEntry")
+                        .WithMany()
+                        .HasForeignKey("JournalEntryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("AccountingSystem.Models.User", "User")
+                        .WithMany("Expenses")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("ExpenseAccount");
+
+                    b.Navigation("JournalEntry");
+
+                    b.Navigation("PaymentAccount");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("AccountingSystem.Models.User", b =>
+                {
+                    b.HasOne("AccountingSystem.Models.Account", "PaymentAccount")
+                        .WithMany()
+                        .HasForeignKey("PaymentAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("AccountingSystem.Models.Branch", "PaymentBranch")
+                        .WithMany()
+                        .HasForeignKey("PaymentBranchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("PaymentAccount");
+
+                    b.Navigation("PaymentBranch");
+
+                    b.Navigation("Expenses");
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.UserBranch", b =>

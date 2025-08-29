@@ -53,6 +53,19 @@ namespace AccountingSystem.Controllers
                     Value = b.Id.ToString(),
                     Text = b.NameAr
                 }).ToListAsync();
+            model.PaymentBranches = await _context.Branches
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = b.NameAr
+                }).ToListAsync();
+            model.PaymentAccounts = await _context.Accounts
+                .Where(a => a.CanPostTransactions)
+                .Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = $"{a.Code} - {a.NameAr}"
+                }).ToListAsync();
             return View(model);
         }
 
@@ -69,7 +82,10 @@ namespace AccountingSystem.Controllers
                     Email = model.Email,
                     FirstName = model.FirstName,
                     LastName = model.LastName,
-                    IsActive = model.IsActive
+                    IsActive = model.IsActive,
+                    PaymentAccountId = model.PaymentAccountId,
+                    PaymentBranchId = model.PaymentBranchId,
+                    ExpenseLimit = model.ExpenseLimit
                 };
 
                 var result = await _userManager.CreateAsync(user, model.Password);
@@ -97,6 +113,19 @@ namespace AccountingSystem.Controllers
                     Value = b.Id.ToString(),
                     Text = b.NameAr
                 }).ToListAsync();
+            model.PaymentBranches = await _context.Branches
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = b.NameAr
+                }).ToListAsync();
+            model.PaymentAccounts = await _context.Accounts
+                .Where(a => a.CanPostTransactions)
+                .Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = $"{a.Code} - {a.NameAr}"
+                }).ToListAsync();
             return View(model);
         }
 
@@ -118,7 +147,10 @@ namespace AccountingSystem.Controllers
                 BranchIds = await _context.UserBranches
                     .Where(ub => ub.UserId == id)
                     .Select(ub => ub.BranchId)
-                    .ToListAsync()
+                    .ToListAsync(),
+                PaymentAccountId = user.PaymentAccountId,
+                PaymentBranchId = user.PaymentBranchId,
+                ExpenseLimit = user.ExpenseLimit
             };
 
             model.Branches = await _context.Branches
@@ -127,6 +159,21 @@ namespace AccountingSystem.Controllers
                     Value = b.Id.ToString(),
                     Text = b.NameAr,
                     Selected = model.BranchIds.Contains(b.Id)
+                }).ToListAsync();
+            model.PaymentBranches = await _context.Branches
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = b.NameAr,
+                    Selected = b.Id == model.PaymentBranchId
+                }).ToListAsync();
+            model.PaymentAccounts = await _context.Accounts
+                .Where(a => a.CanPostTransactions)
+                .Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = $"{a.Code} - {a.NameAr}",
+                    Selected = a.Id == model.PaymentAccountId
                 }).ToListAsync();
 
             return View(model);
@@ -147,6 +194,9 @@ namespace AccountingSystem.Controllers
             user.FirstName = model.FirstName;
             user.LastName = model.LastName;
             user.IsActive = model.IsActive;
+            user.PaymentAccountId = model.PaymentAccountId;
+            user.PaymentBranchId = model.PaymentBranchId;
+            user.ExpenseLimit = model.ExpenseLimit;
 
             var result = await _userManager.UpdateAsync(user);
             if (result.Succeeded)
@@ -178,6 +228,21 @@ namespace AccountingSystem.Controllers
                     Value = b.Id.ToString(),
                     Text = b.NameAr,
                     Selected = model.BranchIds.Contains(b.Id)
+                }).ToListAsync();
+            model.PaymentBranches = await _context.Branches
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = b.NameAr,
+                    Selected = b.Id == model.PaymentBranchId
+                }).ToListAsync();
+            model.PaymentAccounts = await _context.Accounts
+                .Where(a => a.CanPostTransactions)
+                .Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = $"{a.Code} - {a.NameAr}",
+                    Selected = a.Id == model.PaymentAccountId
                 }).ToListAsync();
             return View(model);
         }

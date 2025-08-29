@@ -1,0 +1,44 @@
+@model IEnumerable<AccountingSystem.ViewModels.ExpenseViewModel>
+@{
+    ViewData["Title"] = "المصاريف";
+    Layout = "_AccountingLayout";
+}
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <a href="@Url.Action("Create")" class="btn btn-primary">
+                <i class="fas fa-plus"></i> إضافة مصروف
+            </a>
+            <a href="@Url.Action("My")" class="btn btn-secondary ms-2">
+                <i class="fas fa-user"></i> مصاريفي
+            </a>
+        </div>
+    </div>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>المستخدم</th>
+                <th>حساب الدفع</th>
+                <th>حساب المصروف</th>
+                <th>القيمة</th>
+                <th>ملاحظات</th>
+                <th>معتمد</th>
+                <th>التاريخ</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.UserName</td>
+                <td>@item.PaymentAccountName</td>
+                <td>@item.ExpenseAccountName</td>
+                <td>@item.Amount</td>
+                <td>@item.Notes</td>
+                <td>@(item.IsApproved ? "نعم" : "لا")</td>
+                <td>@item.CreatedAt.ToString("yyyy-MM-dd")</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
