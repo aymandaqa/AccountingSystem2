@@ -2,7 +2,8 @@
 
 @{
     ViewData["Title"] = "تعديل الحساب";
-    Layout = "_AccountingLayout";
+    var isModal = ViewData["IsModal"] as bool? ?? false;
+    Layout = isModal ? null : "_AccountingLayout";
 }
 
 <div class="container-fluid">

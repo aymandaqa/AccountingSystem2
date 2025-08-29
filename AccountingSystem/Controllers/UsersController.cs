@@ -6,6 +6,7 @@ using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
 using System.Linq;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace AccountingSystem.Controllers
 {
@@ -43,9 +44,16 @@ namespace AccountingSystem.Controllers
         }
 
         [Authorize(Policy = "users.create")]
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
-            return View(new CreateUserViewModel());
+            var model = new CreateUserViewModel();
+            model.Branches = await _context.Branches
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = b.NameAr
+                }).ToListAsync();
+            return View(model);
         }
 
         [HttpPost]
@@ -66,11 +74,29 @@ namespace AccountingSystem.Controllers
 
                 var result = await _userManager.CreateAsync(user, model.Password);
                 if (result.Succeeded)
+                {
+                    foreach (var branchId in model.BranchIds)
+                    {
+                        _context.UserBranches.Add(new UserBranch
+                        {
+                            UserId = user.Id,
+                            BranchId = branchId,
+                            IsDefault = branchId == model.BranchIds.FirstOrDefault()
+                        });
+                    }
+                    await _context.SaveChangesAsync();
                     return RedirectToAction(nameof(Index));
+                }
 
                 foreach (var error in result.Errors)
                     ModelState.AddModelError(string.Empty, error.Description);
             }
+            model.Branches = await _context.Branches
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = b.NameAr
+                }).ToListAsync();
             return View(model);
         }
 
@@ -88,8 +114,20 @@ namespace AccountingSystem.Controllers
                 Email = user.Email ?? string.Empty,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                IsActive = user.IsActive
+                IsActive = user.IsActive,
+                BranchIds = await _context.UserBranches
+                    .Where(ub => ub.UserId == id)
+                    .Select(ub => ub.BranchId)
+                    .ToListAsync()
             };
+
+            model.Branches = await _context.Branches
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = b.NameAr,
+                    Selected = model.BranchIds.Contains(b.Id)
+                }).ToListAsync();
 
             return View(model);
         }
@@ -112,11 +150,35 @@ namespace AccountingSystem.Controllers
 
             var result = await _userManager.UpdateAsync(user);
             if (result.Succeeded)
+            {
+                var existing = await _context.UserBranches
+                    .Where(ub => ub.UserId == user.Id)
+                    .ToListAsync();
+                _context.UserBranches.RemoveRange(existing);
+
+                foreach (var branchId in model.BranchIds)
+                {
+                    _context.UserBranches.Add(new UserBranch
+                    {
+                        UserId = user.Id,
+                        BranchId = branchId,
+                        IsDefault = branchId == model.BranchIds.FirstOrDefault()
+                    });
+                }
+                await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
+            }
 
             foreach (var error in result.Errors)
                 ModelState.AddModelError(string.Empty, error.Description);
 
+            model.Branches = await _context.Branches
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = b.NameAr,
+                    Selected = model.BranchIds.Contains(b.Id)
+                }).ToListAsync();
             return View(model);
         }
 

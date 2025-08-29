@@ -51,11 +51,11 @@
                             <i class="fas fa-eye"></i>
                         </a>
                         <a href="@Url.Action("Edit", new { id = node.Id })"
-                           class="btn btn-outline-warning" title="تعديل">
+                           class="btn btn-outline-warning ajax-modal" title="تعديل">
                             <i class="fas fa-edit"></i>
                         </a>
                         <a href="@Url.Action("Create", new { parentId = node.Id })"
-                           class="btn btn-outline-primary" title="إضافة حساب فرعي">
+                           class="btn btn-outline-primary ajax-modal" title="إضافة حساب فرعي">
                             <i class="fas fa-plus"></i>
                         </a>
                         @if (node.CanPostTransactions)
