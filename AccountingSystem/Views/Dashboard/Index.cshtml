@@ -277,9 +277,9 @@
             text-align: center;
         }
 
-        .toggle-btn:hover {
-            color: #495057;
-        }
+            .toggle-btn:hover {
+                color: #495057;
+            }
     </style>
 }
 
@@ -315,6 +315,9 @@
                 }
             });
         });
+        $(document).ready(function () {
+                    $('.tree-node[data-level="0"] .toggle-btn').click();
+                      });
     </script>
 }
 
