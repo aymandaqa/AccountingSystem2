@@ -10,7 +10,7 @@ using System.Security.Claims;
 
 namespace AccountingSystem.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = "expenses.view")]
     public class ExpensesController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -71,6 +71,7 @@ namespace AccountingSystem.Controllers
             return View("Index", model);
         }
 
+        [Authorize(Policy = "expenses.create")]
         public async Task<IActionResult> Create()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -98,6 +99,7 @@ namespace AccountingSystem.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "expenses.create")]
         public async Task<IActionResult> Create(CreateExpenseViewModel model)
         {
             var user = await _userManager.GetUserAsync(User);
@@ -160,6 +162,181 @@ namespace AccountingSystem.Controllers
             }
 
             _context.Expenses.Add(expense);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+
+        [Authorize(Policy = "expenses.edit")]
+        public async Task<IActionResult> Edit(int id)
+        {
+            var expense = await _context.Expenses
+                .Include(e => e.PaymentAccount)
+                .Include(e => e.Branch)
+                .FirstOrDefaultAsync(e => e.Id == id);
+            if (expense == null || expense.IsApproved)
+                return NotFound();
+
+            var model = new EditExpenseViewModel
+            {
+                Id = expense.Id,
+                ExpenseAccountId = expense.ExpenseAccountId,
+                Amount = expense.Amount,
+                Notes = expense.Notes,
+                PaymentAccountName = expense.PaymentAccount.NameAr,
+                BranchName = expense.Branch.NameAr
+            };
+
+            model.ExpenseAccounts = await _context.Accounts
+                .Where(a => a.AccountType == AccountType.Expenses && a.CanPostTransactions)
+                .Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = $"{a.Code} - {a.NameAr}"
+                }).ToListAsync();
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "expenses.edit")]
+        public async Task<IActionResult> Edit(EditExpenseViewModel model)
+        {
+            var expense = await _context.Expenses.FindAsync(model.Id);
+            var user = await _userManager.GetUserAsync(User);
+            if (expense == null || expense.IsApproved || user == null)
+                return NotFound();
+
+            if (!ModelState.IsValid)
+            {
+                model.PaymentAccountName = (await _context.Accounts.FindAsync(expense.PaymentAccountId))?.NameAr ?? string.Empty;
+                model.BranchName = (await _context.Branches.FindAsync(expense.BranchId))?.NameAr ?? string.Empty;
+                model.ExpenseAccounts = await _context.Accounts
+                    .Where(a => a.AccountType == AccountType.Expenses && a.CanPostTransactions)
+                    .Select(a => new SelectListItem
+                    {
+                        Value = a.Id.ToString(),
+                        Text = $"{a.Code} - {a.NameAr}"
+                    }).ToListAsync();
+                return View(model);
+            }
+
+            expense.ExpenseAccountId = model.ExpenseAccountId;
+            expense.Amount = model.Amount;
+            expense.Notes = model.Notes;
+            expense.IsApproved = model.Amount <= user.ExpenseLimit;
+
+            if (expense.IsApproved && expense.JournalEntryId == null)
+            {
+                var number = await GenerateJournalEntryNumber();
+                var entry = new JournalEntry
+                {
+                    Number = number,
+                    Date = DateTime.Now,
+                    Description = expense.Notes ?? "مصروف",
+                    BranchId = expense.BranchId,
+                    CreatedById = user.Id,
+                    TotalDebit = expense.Amount,
+                    TotalCredit = expense.Amount,
+                    Status = JournalEntryStatus.Posted
+                };
+                entry.Lines.Add(new JournalEntryLine
+                {
+                    AccountId = expense.ExpenseAccountId,
+                    DebitAmount = expense.Amount
+                });
+                entry.Lines.Add(new JournalEntryLine
+                {
+                    AccountId = expense.PaymentAccountId,
+                    CreditAmount = expense.Amount
+                });
+
+                _context.JournalEntries.Add(entry);
+                await _context.SaveChangesAsync();
+                expense.JournalEntryId = entry.Id;
+            }
+
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "expenses.delete")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var expense = await _context.Expenses.FindAsync(id);
+            if (expense == null || expense.IsApproved)
+                return NotFound();
+
+            _context.Expenses.Remove(expense);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+
+        [Authorize(Policy = "expenses.approve")]
+        public async Task<IActionResult> Approve(int id)
+        {
+            var expense = await _context.Expenses
+                .Include(e => e.User)
+                .Include(e => e.PaymentAccount)
+                .Include(e => e.ExpenseAccount)
+                .FirstOrDefaultAsync(e => e.Id == id);
+            if (expense == null || expense.IsApproved)
+                return NotFound();
+
+            var model = new ExpenseViewModel
+            {
+                Id = expense.Id,
+                UserName = expense.User.FullName ?? expense.User.Email ?? string.Empty,
+                PaymentAccountName = expense.PaymentAccount.NameAr,
+                ExpenseAccountName = expense.ExpenseAccount.NameAr,
+                Amount = expense.Amount,
+                Notes = expense.Notes,
+                IsApproved = expense.IsApproved,
+                CreatedAt = expense.CreatedAt
+            };
+
+            return View(model);
+        }
+
+        [HttpPost, ActionName("Approve")]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "expenses.approve")]
+        public async Task<IActionResult> ApproveConfirmed(int id)
+        {
+            var expense = await _context.Expenses.FindAsync(id);
+            var user = await _userManager.GetUserAsync(User);
+            if (expense == null || expense.IsApproved || user == null)
+                return NotFound();
+
+            var number = await GenerateJournalEntryNumber();
+            var entry = new JournalEntry
+            {
+                Number = number,
+                Date = DateTime.Now,
+                Description = expense.Notes ?? "مصروف",
+                BranchId = expense.BranchId,
+                CreatedById = user.Id,
+                TotalDebit = expense.Amount,
+                TotalCredit = expense.Amount,
+                Status = JournalEntryStatus.Posted
+            };
+            entry.Lines.Add(new JournalEntryLine
+            {
+                AccountId = expense.ExpenseAccountId,
+                DebitAmount = expense.Amount
+            });
+            entry.Lines.Add(new JournalEntryLine
+            {
+                AccountId = expense.PaymentAccountId,
+                CreditAmount = expense.Amount
+            });
+
+            _context.JournalEntries.Add(entry);
+            await _context.SaveChangesAsync();
+            expense.IsApproved = true;
+            expense.JournalEntryId = entry.Id;
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }

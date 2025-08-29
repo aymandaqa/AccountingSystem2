@@ -5,7 +5,7 @@ namespace AccountingSystem.ViewModels
 {
     public class CreateExpenseViewModel
     {
-        [Range(0.01, double.MaxValue, ErrorMessage = "يجب إدخال قيمة للمصروف")] 
+        [Range(0.01, double.MaxValue, ErrorMessage = "يجب إدخال قيمة للمصروف")]
         public decimal Amount { get; set; }
         public string? Notes { get; set; }
         [Range(1, int.MaxValue, ErrorMessage = "يجب اختيار حساب المصروف")] 
@@ -13,6 +13,11 @@ namespace AccountingSystem.ViewModels
         public List<SelectListItem> ExpenseAccounts { get; set; } = new List<SelectListItem>();
         public string PaymentAccountName { get; set; } = string.Empty;
         public string BranchName { get; set; } = string.Empty;
+    }
+
+    public class EditExpenseViewModel : CreateExpenseViewModel
+    {
+        public int Id { get; set; }
     }
 
     public class ExpenseViewModel
