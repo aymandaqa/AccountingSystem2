@@ -163,6 +163,7 @@ namespace AccountingSystem.Controllers
                 });
 
                 _context.JournalEntries.Add(entry);
+                await UpdateAccountBalances(entry);
                 await _context.SaveChangesAsync();
                 expense.JournalEntryId = entry.Id;
             }
@@ -258,6 +259,7 @@ namespace AccountingSystem.Controllers
                 });
 
                 _context.JournalEntries.Add(entry);
+                await UpdateAccountBalances(entry);
                 await _context.SaveChangesAsync();
                 expense.JournalEntryId = entry.Id;
             }
@@ -340,11 +342,28 @@ namespace AccountingSystem.Controllers
             });
 
             _context.JournalEntries.Add(entry);
+            await UpdateAccountBalances(entry);
             await _context.SaveChangesAsync();
             expense.IsApproved = true;
             expense.JournalEntryId = entry.Id;
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
+        }
+
+        private async Task UpdateAccountBalances(JournalEntry entry)
+        {
+            foreach (var line in entry.Lines)
+            {
+                var account = await _context.Accounts.FindAsync(line.AccountId);
+                if (account == null) continue;
+
+                var netAmount = account.Nature == AccountNature.Debit
+                    ? line.DebitAmount - line.CreditAmount
+                    : line.CreditAmount - line.DebitAmount;
+
+                account.CurrentBalance += netAmount;
+                account.UpdatedAt = DateTime.UtcNow;
+            }
         }
 
         private async Task<string> GenerateJournalEntryNumber()
