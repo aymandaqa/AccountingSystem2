@@ -283,36 +283,38 @@
     </style>
 }
 
-<script>
-    function applyFilters() {
-        const branchId = document.getElementById('branchFilter').value;
-        const month = document.getElementById('monthFilter').value;
-        const url = new URL(window.location);
-        if (branchId) {
-            url.searchParams.set('branchId', branchId);
-        } else {
-            url.searchParams.delete('branchId');
-        }
-        if (month) {
-            url.searchParams.set('month', month);
-        } else {
-            url.searchParams.delete('month');
-        }
-        window.location.href = url.toString();
-    }
-
-    $(function () {
-        $('.toggle-btn').on('click', function () {
-            var $this = $(this);
-            var $children = $this.closest('.tree-node').find('> .tree-children');
-            if ($children.is(':visible')) {
-                $children.hide();
-                $this.html('<i class="fas fa-plus"></i>');
+@section Scripts {
+    <script>
+        function applyFilters() {
+            const branchId = document.getElementById('branchFilter').value;
+            const month = document.getElementById('monthFilter').value;
+            const url = new URL(window.location);
+            if (branchId) {
+                url.searchParams.set('branchId', branchId);
             } else {
-                $children.show();
-                $this.html('<i class="fas fa-minus"></i>');
+                url.searchParams.delete('branchId');
             }
+            if (month) {
+                url.searchParams.set('month', month);
+            } else {
+                url.searchParams.delete('month');
+            }
+            window.location.href = url.toString();
+        }
+
+        $(function () {
+            $('.toggle-btn').on('click', function () {
+                var $this = $(this);
+                var $children = $this.closest('.tree-node').find('> .tree-children');
+                if ($children.is(':visible')) {
+                    $children.hide();
+                    $this.html('<i class="fas fa-plus"></i>');
+                } else {
+                    $children.show();
+                    $this.html('<i class="fas fa-minus"></i>');
+                }
+            });
         });
-    });
-</script>
+    </script>
+}
 
