@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace AccountingSystem.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = "journal.view")]
     public class JournalEntriesController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -19,6 +19,7 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: JournalEntries
+        [Authorize(Policy = "journal.view")]
         public async Task<IActionResult> Index()
         {
             var journalEntries = await _context.JournalEntries
@@ -47,6 +48,7 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: JournalEntries/Create
+        [Authorize(Policy = "journal.create")]
         public async Task<IActionResult> Create()
         {
             var viewModel = new CreateJournalEntryViewModel
@@ -100,6 +102,46 @@ namespace AccountingSystem.Controllers
                     Value = a.Id.ToString(),
                     Text = $"{a.Code} - {a.NameAr}"
                 }).ToListAsync();
+        }
+
+        [Authorize(Policy = "journal.view")]
+        public async Task<IActionResult> Draft()
+        {
+            return await GetEntriesByStatus(JournalEntryStatus.Draft, "Draft");
+        }
+
+        [Authorize(Policy = "journal.view")]
+        public async Task<IActionResult> Posted()
+        {
+            return await GetEntriesByStatus(JournalEntryStatus.Posted, "Posted");
+        }
+
+        private async Task<IActionResult> GetEntriesByStatus(JournalEntryStatus status, string viewName)
+        {
+            var journalEntries = await _context.JournalEntries
+                .Include(j => j.Branch)
+                .Include(j => j.Lines)
+                .Where(j => j.Status == status)
+                .OrderByDescending(j => j.Date)
+                .ToListAsync();
+
+            var viewModel = new JournalEntriesIndexViewModel
+            {
+                JournalEntries = journalEntries.Select(j => new JournalEntryViewModel
+                {
+                    Id = j.Id,
+                    Number = j.Number,
+                    Date = j.Date,
+                    Description = j.Description,
+                    Reference = j.Reference,
+                    Status = j.Status.ToString(),
+                    BranchName = j.Branch.NameAr,
+                    TotalAmount = j.Lines.Sum(l => l.DebitAmount),
+                    LinesCount = j.Lines.Count
+                }).ToList()
+            };
+
+            return View(viewName, viewModel);
         }
     }
 }
