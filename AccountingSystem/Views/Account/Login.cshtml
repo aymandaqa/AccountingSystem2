@@ -1,0 +1,46 @@
+@model AccountingSystem.ViewModels.LoginViewModel
+@{
+    ViewData["Title"] = "تسجيل الدخول";
+    Layout = "_AuthLayout";
+}
+
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <h2>نظام المحاسبة</h2>
+            <p>تسجيل الدخول إلى حسابك</p>
+        </div>
+
+        <form asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post" class="login-form">
+            <div asp-validation-summary="All" class="text-danger"></div>
+            
+            <div class="form-group">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" placeholder="أدخل البريد الإلكتروني" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Password" class="form-label"></label>
+                <input asp-for="Password" class="form-control" placeholder="أدخل كلمة المرور" />
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+
+            <div class="form-group form-check">
+                <input asp-for="RememberMe" class="form-check-input" />
+                <label asp-for="RememberMe" class="form-check-label"></label>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">تسجيل الدخول</button>
+        </form>
+
+        <div class="login-footer">
+            <p>ليس لديك حساب؟ <a asp-action="Register">إنشاء حساب جديد</a></p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+

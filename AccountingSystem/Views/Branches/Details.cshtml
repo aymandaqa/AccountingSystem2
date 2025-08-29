@@ -1,0 +1,169 @@
+@model AccountingSystem.ViewModels.BranchDetailsViewModel
+
+@{
+    ViewData["Title"] = "تفاصيل الفرع";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title">تفاصيل الفرع: @Model.NameAr</h3>
+                    <div class="btn-group">
+                        <a href="@Url.Action("Edit", new { id = Model.Id })" class="btn btn-warning">
+                            <i class="fas fa-edit"></i> تعديل
+                        </a>
+                        <a href="@Url.Action("Index")" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right"></i> العودة للقائمة
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="30%">الكود:</th>
+                                    <td><strong>@Model.Code</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>الاسم العربي:</th>
+                                    <td>@Model.NameAr</td>
+                                </tr>
+                                <tr>
+                                    <th>الاسم الإنجليزي:</th>
+                                    <td>@Model.NameEn</td>
+                                </tr>
+                                <tr>
+                                    <th>الهاتف:</th>
+                                    <td>@Model.Phone</td>
+                                </tr>
+                                <tr>
+                                    <th>البريد الإلكتروني:</th>
+                                    <td>@Model.Email</td>
+                                </tr>
+                                <tr>
+                                    <th>الحالة:</th>
+                                    <td>
+                                        @if (Model.IsActive)
+                                        {
+                                            <span class="badge bg-success">نشط</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">غير نشط</span>
+                                        }
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="30%">تاريخ الإنشاء:</th>
+                                    <td>@Model.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                </tr>
+                                @if (Model.UpdatedAt.HasValue)
+                                {
+                                    <tr>
+                                        <th>تاريخ التحديث:</th>
+                                        <td>@Model.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm")</td>
+                                    </tr>
+                                }
+                                <tr>
+                                    <th>العنوان:</th>
+                                    <td>@Model.Address</td>
+                                </tr>
+                                <tr>
+                                    <th>الوصف:</th>
+                                    <td>@Model.Description</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.Description))
+                    {
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <h5>الوصف:</h5>
+                                <p class="text-muted">@Model.Description</p>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- المستخدمون المرتبطون بالفرع -->
+                    @if (Model.Users.Any())
+                    {
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h5>المستخدمون المرتبطون بالفرع:</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>اسم المستخدم</th>
+                                                <th>الفرع الافتراضي</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var user in Model.Users)
+                                            {
+                                                <tr>
+                                                    <td>@user.UserName</td>
+                                                    <td>
+                                                        @if (user.IsDefault)
+                                                        {
+                                                            <span class="badge bg-primary">افتراضي</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-secondary">إضافي</span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- الحسابات المرتبطة بالفرع -->
+                    @if (Model.Accounts.Any())
+                    {
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h5>الحسابات المرتبطة بالفرع:</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>كود الحساب</th>
+                                                <th>اسم الحساب</th>
+                                                <th>نوع الحساب</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var account in Model.Accounts)
+                                            {
+                                                <tr>
+                                                    <td><strong>@account.AccountCode</strong></td>
+                                                    <td>@account.AccountName</td>
+                                                    <td>@account.AccountType</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

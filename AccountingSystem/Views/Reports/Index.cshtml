@@ -1,0 +1,64 @@
+@{
+    ViewData["Title"] = "التقارير المالية";
+    Layout = "~/Views/Shared/_AccountingLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        التقارير المالية
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-primary">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-balance-scale fa-3x text-primary mb-3"></i>
+                                    <h5 class="card-title">ميزان المراجعة</h5>
+                                    <p class="card-text">عرض أرصدة جميع الحسابات في فترة محددة</p>
+                                    <a asp-action="TrialBalance" class="btn btn-primary">
+                                        <i class="fas fa-eye me-1"></i>
+                                        عرض التقرير
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-success">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-chart-pie fa-3x text-success mb-3"></i>
+                                    <h5 class="card-title">الميزانية العمومية</h5>
+                                    <p class="card-text">عرض الأصول والخصوم وحقوق الملكية</p>
+                                    <a asp-action="BalanceSheet" class="btn btn-success">
+                                        <i class="fas fa-eye me-1"></i>
+                                        عرض التقرير
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-info">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-chart-line fa-3x text-info mb-3"></i>
+                                    <h5 class="card-title">قائمة الدخل</h5>
+                                    <p class="card-text">عرض الإيرادات والمصاريف وصافي الدخل</p>
+                                    <a asp-action="IncomeStatement" class="btn btn-info">
+                                        <i class="fas fa-eye me-1"></i>
+                                        عرض التقرير
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

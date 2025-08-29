@@ -1,0 +1,460 @@
+/* نظام المحاسبة - ملف الأنماط المخصص */
+
+/* الخطوط العربية */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap');
+
+body {
+    font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+    line-height: 1.6;
+}
+
+/* تحسين الشكل العام */
+.container-fluid {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* تحسين البطاقات */
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px 10px 0 0 !important;
+    border: none;
+    padding: 1rem 1.5rem;
+}
+
+.card-header h3,
+.card-header h4,
+.card-header h5 {
+    margin: 0;
+    font-weight: 600;
+}
+
+/* تحسين الأزرار */
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    transform: translateY(-1px);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+    border: none;
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border: none;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+    border: none;
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    border: none;
+}
+
+/* تحسين الجداول */
+.table {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.table thead th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    font-weight: 600;
+    padding: 1rem;
+}
+
+.table tbody tr {
+    transition: background-color 0.2s;
+}
+
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.table td {
+    padding: 0.75rem 1rem;
+    vertical-align: middle;
+}
+
+/* تحسين النماذج */
+.form-control {
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    padding: 0.75rem 1rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+/* تحسين التنبيهات */
+.alert {
+    border: none;
+    border-radius: 10px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.alert-success {
+    background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+    color: white;
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+    color: white;
+}
+
+.alert-info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+}
+
+.alert-warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+/* تحسين الشارات */
+.badge {
+    font-size: 0.8em;
+    padding: 0.4em 0.8em;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+/* تحسين شريط التنقل */
+.navbar-dark {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%) !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.5rem;
+}
+
+.nav-link {
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.nav-link:hover {
+    color: #f8f9fa !important;
+}
+
+/* تحسين القوائم المنسدلة */
+.dropdown-menu {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 0.5rem 0;
+}
+
+.dropdown-item {
+    padding: 0.75rem 1.5rem;
+    transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+/* تحسين مؤشر التحميل */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.loading-spinner {
+    text-align: center;
+    color: white;
+}
+
+/* تحسين شجرة الحسابات */
+.tree-container {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+}
+
+.tree-node {
+    margin: 0.5rem 0;
+    padding: 0.75rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+    border-left: 4px solid transparent;
+}
+
+.tree-node:hover {
+    background: #f8f9fa;
+    border-left-color: #667eea;
+}
+
+.tree-node-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.tree-node-info {
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+}
+
+.tree-node-actions {
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.tree-node:hover .tree-node-actions {
+    opacity: 1;
+}
+
+.tree-children {
+    margin-right: 2rem;
+    border-right: 2px solid #e9ecef;
+    padding-right: 1rem;
+    margin-top: 0.5rem;
+}
+
+.account-code {
+    font-weight: 700;
+    color: #495057;
+    background: #e9ecef;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    margin-left: 0.5rem;
+}
+
+.account-name {
+    color: #212529;
+    font-weight: 500;
+    margin-left: 0.5rem;
+}
+
+.toggle-btn {
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 0.25rem;
+    margin-left: 0.5rem;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.toggle-btn:hover {
+    background: #e9ecef;
+    color: #495057;
+}
+
+/* تحسين لوحة التحكم */
+.dashboard-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.dashboard-card h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.dashboard-card h4 {
+    font-weight: 500;
+    opacity: 0.9;
+}
+
+/* تحسين الإحصائيات */
+.stat-card {
+    text-align: center;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.stat-card h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0.5rem 0;
+}
+
+.stat-card h5 {
+    color: #6c757d;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+/* تحسين التقارير */
+.report-filters {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.report-content {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* تحسين التنقل التفصيلي */
+.breadcrumb {
+    background: white;
+    border-radius: 10px;
+    padding: 0.75rem 1.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.breadcrumb-item a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.breadcrumb-item a:hover {
+    color: #5a6fd8;
+}
+
+/* تحسين القوائم */
+.list-group-item {
+    border: none;
+    padding: 1rem 1.5rem;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s;
+}
+
+.list-group-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+/* تحسين الأيقونات */
+.fas, .far {
+    margin-left: 0.5rem;
+}
+
+/* تحسين المساحات */
+.py-4 {
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+}
+
+.mb-4 {
+    margin-bottom: 2rem !important;
+}
+
+/* تحسين الاستجابة */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding: 0 1rem;
+    }
+    
+    .card-header {
+        padding: 1rem;
+    }
+    
+    .tree-children {
+        margin-right: 1rem;
+        padding-right: 0.5rem;
+    }
+    
+    .table-responsive {
+        border-radius: 10px;
+    }
+    
+    .btn-group .btn {
+        margin-bottom: 0.25rem;
+    }
+}
+
+/* تحسين الطباعة */
+@media print {
+    .navbar,
+    .breadcrumb,
+    .card-header .btn,
+    .tree-node-actions,
+    .btn-group {
+        display: none !important;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid #dee2e6;
+    }
+    
+    .table {
+        box-shadow: none;
+    }
+}
+

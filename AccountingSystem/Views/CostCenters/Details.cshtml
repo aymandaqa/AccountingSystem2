@@ -1,0 +1,189 @@
+@model AccountingSystem.ViewModels.CostCenterDetailsViewModel
+
+@{
+    ViewData["Title"] = "تفاصيل مركز التكلفة";
+    Layout = "_AccountingLayout";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title">تفاصيل مركز التكلفة: @Model.NameAr</h3>
+                    <div class="btn-group">
+                        <a href="@Url.Action("Edit", new { id = Model.Id })" class="btn btn-warning">
+                            <i class="fas fa-edit"></i> تعديل
+                        </a>
+                        <a href="@Url.Action("GetCostCenterReport", new { id = Model.Id })" class="btn btn-success">
+                            <i class="fas fa-chart-bar"></i> التقرير
+                        </a>
+                        <a href="@Url.Action("Index")" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right"></i> العودة للقائمة
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="30%">الكود:</th>
+                                    <td><strong>@Model.Code</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>الاسم العربي:</th>
+                                    <td>@Model.NameAr</td>
+                                </tr>
+                                <tr>
+                                    <th>الاسم الإنجليزي:</th>
+                                    <td>@Model.NameEn</td>
+                                </tr>
+                                <tr>
+                                    <th>الحالة:</th>
+                                    <td>
+                                        @if (Model.IsActive)
+                                        {
+                                            <span class="badge bg-success">نشط</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">غير نشط</span>
+                                        }
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="30%">تاريخ الإنشاء:</th>
+                                    <td>@Model.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                </tr>
+                                @if (Model.UpdatedAt.HasValue)
+                                {
+                                    <tr>
+                                        <th>تاريخ التحديث:</th>
+                                        <td>@Model.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm")</td>
+                                    </tr>
+                                }
+                                <tr>
+                                    <th>عدد المعاملات:</th>
+                                    <td><span class="badge bg-info">@Model.TransactionCount</span></td>
+                                </tr>
+                                <tr>
+                                    <th>إجمالي المبلغ:</th>
+                                    <td><strong>@Model.TotalAmount.ToString("N0")</strong></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.Description))
+                    {
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <h5>الوصف:</h5>
+                                <p class="text-muted">@Model.Description</p>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- المعاملات المرتبطة بمركز التكلفة -->
+                    @if (Model.Transactions.Any())
+                    {
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h5>المعاملات المرتبطة بمركز التكلفة:</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>رقم القيد</th>
+                                                <th>التاريخ</th>
+                                                <th>الوصف</th>
+                                                <th>الحساب</th>
+                                                <th>مدين</th>
+                                                <th>دائن</th>
+                                                <th>الفرع</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var transaction in Model.Transactions.Take(10))
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <a href="@Url.Action("Details", "JournalEntries", new { id = transaction.JournalEntryId })">
+                                                            @transaction.JournalEntryNumber
+                                                        </a>
+                                                    </td>
+                                                    <td>@transaction.Date.ToString("yyyy-MM-dd")</td>
+                                                    <td>@transaction.Description</td>
+                                                    <td>
+                                                        <strong>@transaction.AccountCode</strong> - @transaction.AccountName
+                                                    </td>
+                                                    <td>@(transaction.DebitAmount > 0 ? transaction.DebitAmount.ToString("N0") : "-")</td>
+                                                    <td>@(transaction.CreditAmount > 0 ? transaction.CreditAmount.ToString("N0") : "-")</td>
+                                                    <td>@transaction.BranchName</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                                @if (Model.Transactions.Count > 10)
+                                {
+                                    <p class="text-muted">
+                                        عرض 10 من أصل @Model.Transactions.Count معاملة. 
+                                        <a href="@Url.Action("GetCostCenterReport", new { id = Model.Id })">عرض التقرير الكامل</a>
+                                    </p>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="alert alert-info text-center">
+                                    <i class="fas fa-info-circle"></i>
+                                    لا توجد معاملات مرتبطة بمركز التكلفة هذا
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- إحصائيات مركز التكلفة -->
+                    <div class="row mt-4">
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <h5>إجمالي المدين</h5>
+                                <h3 class="text-success">@Model.TotalDebit.ToString("N0")</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <h5>إجمالي الدائن</h5>
+                                <h3 class="text-danger">@Model.TotalCredit.ToString("N0")</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <h5>الرصيد</h5>
+                                <h3 class="@(Model.Balance >= 0 ? "text-success" : "text-danger")">
+                                    @Model.Balance.ToString("N0")
+                                </h3>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <h5>عدد المعاملات</h5>
+                                <h3 class="text-info">@Model.TransactionCount</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

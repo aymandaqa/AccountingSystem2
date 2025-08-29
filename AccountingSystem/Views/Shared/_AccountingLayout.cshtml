@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - نظام المحاسبة</title>
+    
+    <!-- Bootstrap RTL -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="~/css/accounting.css" asp-append-version="true" />
+    
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <!-- Top Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="@Url.Action("Index", "Dashboard")">
+                <i class="fas fa-calculator"></i> نظام المحاسبة
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="@Url.Action("Index", "Dashboard")">
+                            <i class="fas fa-tachometer-alt"></i> لوحة التحكم
+                        </a>
+                    </li>
+                    
+                    <!-- Accounts Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-list-alt"></i> الحسابات
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="@Url.Action("Tree", "Accounts")">
+                                <i class="fas fa-sitemap"></i> شجرة الحسابات
+                            </a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Index", "Accounts")">
+                                <i class="fas fa-list"></i> قائمة الحسابات
+                            </a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Create", "Accounts")">
+                                <i class="fas fa-plus"></i> إضافة حساب جديد
+                            </a></li>
+                        </ul>
+                    </li>
+                    
+                    <!-- Journal Entries Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-file-invoice"></i> القيود المالية
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="@Url.Action("Index", "JournalEntries")">
+                                <i class="fas fa-list"></i> قائمة القيود
+                            </a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Create", "JournalEntries")">
+                                <i class="fas fa-plus"></i> إضافة قيد جديد
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Draft", "JournalEntries")">
+                                <i class="fas fa-edit"></i> المسودات
+                            </a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Posted", "JournalEntries")">
+                                <i class="fas fa-check"></i> المرحلة
+                            </a></li>
+                        </ul>
+                    </li>
+                    
+                    <!-- Reports Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-chart-bar"></i> التقارير
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="@Url.Action("TrialBalance", "Reports")">
+                                <i class="fas fa-balance-scale"></i> ميزان المراجعة
+                            </a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("BalanceSheet", "Reports")">
+                                <i class="fas fa-chart-pie"></i> الميزانية العمومية
+                            </a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("IncomeStatement", "Reports")">
+                                <i class="fas fa-chart-line"></i> قائمة الدخل
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="@Url.Action("GeneralLedger", "Reports")">
+                                <i class="fas fa-book"></i> دفتر الأستاذ العام
+                            </a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("AccountStatement", "Reports")">
+                                <i class="fas fa-file-alt"></i> كشف حساب
+                            </a></li>
+                        </ul>
+                    </li>
+                    
+                    <!-- Settings Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-cog"></i> الإعدادات
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="@Url.Action("Index", "Branches")">
+                                <i class="fas fa-building"></i> الفروع
+                            </a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Index", "CostCenters")">
+                                <i class="fas fa-bullseye"></i> مراكز التكلفة
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Index", "Users")">
+                                <i class="fas fa-users"></i> المستخدمون
+                            </a></li>
+                        </ul>
+                    </li>
+                </ul>
+                
+                <!-- User Menu -->
+                <ul class="navbar-nav">
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user"></i> @User.Identity.Name
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="@Url.Action("Profile", "Account")">
+                                    <i class="fas fa-user-edit"></i> الملف الشخصي
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link" href="@Url.Action("Login", "Account")">
+                                <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container-fluid py-4">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="@Url.Action("Index", "Dashboard")">الرئيسية</a>
+                </li>
+                @if (ViewData["Breadcrumb"] != null)
+                {
+                    @Html.Raw(ViewData["Breadcrumb"])
+                }
+                else
+                {
+                    <li class="breadcrumb-item active">@ViewData["Title"]</li>
+                }
+            </ol>
+        </nav>
+
+        <!-- Alerts -->
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle"></i> @TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        
+        @if (TempData["InfoMessage"] != null)
+        {
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <i class="fas fa-info-circle"></i> @TempData["InfoMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        @RenderBody()
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-light text-center py-3 mt-5">
+        <div class="container">
+            <p class="text-muted mb-0">
+                &copy; @DateTime.Now.Year - نظام المحاسبة - جميع الحقوق محفوظة
+            </p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin fa-3x"></i>
+            <p class="mt-3">جاري التحميل...</p>
+        </div>
+    </div>
+
+    @await RenderSectionAsync("Scripts", required: false)
+    
+    <script>
+        // Global functions
+        function showLoading() {
+            $('#loadingOverlay').show();
+        }
+        
+        function hideLoading() {
+            $('#loadingOverlay').hide();
+        }
+        
+        // Auto-hide alerts after 5 seconds
+        setTimeout(function() {
+            $('.alert').fadeOut();
+        }, 5000);
+        
+        // AJAX setup for CSRF token
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (settings.type === 'POST' || settings.type === 'PUT' || settings.type === 'DELETE') {
+                    xhr.setRequestHeader("RequestVerificationToken", 
+                        $('input[name="__RequestVerificationToken"]').val());
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+

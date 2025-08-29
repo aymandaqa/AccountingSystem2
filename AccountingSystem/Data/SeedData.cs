@@ -1,0 +1,186 @@
+using Microsoft.AspNetCore.Identity;
+using AccountingSystem.Models;
+
+namespace AccountingSystem.Data
+{
+    public static class SeedData
+    {
+        public static async Task InitializeAsync(IServiceProvider serviceProvider)
+        {
+            using var scope = serviceProvider.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+            // Ensure database is created
+            await context.Database.EnsureCreatedAsync();
+
+            // Seed roles
+            await SeedRolesAsync(roleManager);
+
+            // Seed default admin user
+            await SeedAdminUserAsync(userManager);
+
+            // Seed default branch
+            await SeedDefaultBranchAsync(context);
+
+            // Seed chart of accounts
+            await SeedChartOfAccountsAsync(context);
+
+            await context.SaveChangesAsync();
+        }
+
+        private static async Task SeedRolesAsync(RoleManager<IdentityRole> roleManager)
+        {
+            string[] roles = { "Admin", "Manager", "Accountant", "User" };
+
+            foreach (var role in roles)
+            {
+                if (!await roleManager.RoleExistsAsync(role))
+                {
+                    await roleManager.CreateAsync(new IdentityRole(role));
+                }
+            }
+        }
+
+        private static async Task SeedAdminUserAsync(UserManager<User> userManager)
+        {
+            var adminEmail = "admin@accounting.com";
+            
+            if (await userManager.FindByEmailAsync(adminEmail) == null)
+            {
+                var adminUser = new User
+                {
+                    UserName = adminEmail,
+                    Email = adminEmail,
+                    FirstName = "مدير",
+                    LastName = "النظام",
+                    EmailConfirmed = true,
+                    IsActive = true
+                };
+
+                var result = await userManager.CreateAsync(adminUser, "Admin123!");
+                
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(adminUser, "Admin");
+                }
+            }
+        }
+
+        private static async Task SeedDefaultBranchAsync(ApplicationDbContext context)
+        {
+            if (!context.Branches.Any())
+            {
+                var defaultBranch = new Branch
+                {
+                    Code = "001",
+                    NameAr = "الفرع الرئيسي",
+                    NameEn = "Main Branch",
+                    Description = "الفرع الرئيسي للشركة",
+                    IsActive = true
+                };
+
+                context.Branches.Add(defaultBranch);
+                await context.SaveChangesAsync();
+            }
+        }
+
+        private static async Task SeedChartOfAccountsAsync(ApplicationDbContext context)
+        {
+            if (!context.Accounts.Any())
+            {
+                var accounts = new List<Account>
+                {
+                    // الأصول - Assets (Level 1)
+                    new Account { Code = "1", NameAr = "الأصول", NameEn = "Assets", Level = 1, AccountType = AccountType.Assets, Nature = AccountNature.Debit, Classification = AccountClassification.BalanceSheet, SubClassification = AccountSubClassification.Assets, CanPostTransactions = false, OpeningBalance = 0 },
+                    
+                    // الأصول المتداولة - Current Assets (Level 2)
+                    new Account { Code = "11", NameAr = "الأصول المتداولة", NameEn = "Current Assets", Level = 2, AccountType = AccountType.Assets, Nature = AccountNature.Debit, Classification = AccountClassification.BalanceSheet, SubClassification = AccountSubClassification.Assets, CanPostTransactions = false, OpeningBalance = 0 },
+                    
+                    // الصندوق - Cash Fund (Level 3)
+                    new Account { Code = "1101", NameAr = "الصندوق", NameEn = "Cash Fund", Level = 3, AccountType = AccountType.Assets, Nature = AccountNature.Debit, Classification = AccountClassification.BalanceSheet, SubClassification = AccountSubClassification.Assets, CanPostTransactions = true, OpeningBalance = 10000 },
+                    
+                    // البنوك - Banks (Level 3)
+                    new Account { Code = "1102", NameAr = "البنوك", NameEn = "Banks", Level = 3, AccountType = AccountType.Assets, Nature = AccountNature.Debit, Classification = AccountClassification.BalanceSheet, SubClassification = AccountSubClassification.Assets, CanPostTransactions = true, OpeningBalance = 50000 },
+                    
+                    // الذمم المدينة - Account Receivables (Level 3)
+                    new Account { Code = "1103", NameAr = "الذمم المدينة", NameEn = "Account Receivables", Level = 3, AccountType = AccountType.Assets, Nature = AccountNature.Debit, Classification = AccountClassification.BalanceSheet, SubClassification = AccountSubClassification.Assets, CanPostTransactions = true, OpeningBalance = 25000 },
+                    
+                    // المدفوع مقدماً - Advance Payments (Level 3)
+                    new Account { Code = "1104", NameAr = "المدفوع مقدماً", NameEn = "Advance Payments", Level = 3, AccountType = AccountType.Assets, Nature = AccountNature.Debit, Classification = AccountClassification.BalanceSheet, SubClassification = AccountSubClassification.Assets, CanPostTransactions = true, OpeningBalance = 5000 },
+                    
+                    // الأصول الثابتة - Fixed Assets (Level 2)
+                    new Account { Code = "12", NameAr = "الأصول الثابتة", NameEn = "Fixed Assets", Level = 2, AccountType = AccountType.Assets, Nature = AccountNature.Debit, Classification = AccountClassification.BalanceSheet, SubClassification = AccountSubClassification.Assets, CanPostTransactions = false, OpeningBalance = 0 },
+                    
+                    // المشاريع - Projects (Level 3)
+                    new Account { Code = "1207", NameAr = "المشاريع", NameEn = "Projects", Level = 3, AccountType = AccountType.Assets, Nature = AccountNature.Debit, Classification = AccountClassification.BalanceSheet, SubClassification = AccountSubClassification.Assets, CanPostTransactions = true, OpeningBalance = 100000 },
+                    
+                    // الالتزامات - Liabilities (Level 1)
+                    new Account { Code = "2", NameAr = "الالتزامات", NameEn = "Liabilities", Level = 1, AccountType = AccountType.Liabilities, Nature = AccountNature.Credit, Classification = AccountClassification.BalanceSheet, SubClassification = AccountSubClassification.Liabilities, CanPostTransactions = false, OpeningBalance = 0 },
+                    
+                    // الالتزامات المتداولة - Current Liabilities (Level 2)
+                    new Account { Code = "21", NameAr = "الالتزامات المتداولة", NameEn = "Current Liabilities", Level = 2, AccountType = AccountType.Liabilities, Nature = AccountNature.Credit, Classification = AccountClassification.BalanceSheet, SubClassification = AccountSubClassification.Liabilities, CanPostTransactions = false, OpeningBalance = 0 },
+                    
+                    // الذمم الدائنة - Account Payables (Level 3)
+                    new Account { Code = "2101", NameAr = "الذمم الدائنة", NameEn = "Account Payables", Level = 3, AccountType = AccountType.Liabilities, Nature = AccountNature.Credit, Classification = AccountClassification.BalanceSheet, SubClassification = AccountSubClassification.Liabilities, CanPostTransactions = true, OpeningBalance = 15000 },
+                    
+                    // المستحق الدفع - Accrued Payables (Level 3)
+                    new Account { Code = "2102", NameAr = "المستحق الدفع", NameEn = "Accrued Payables", Level = 3, AccountType = AccountType.Liabilities, Nature = AccountNature.Credit, Classification = AccountClassification.BalanceSheet, SubClassification = AccountSubClassification.Liabilities, CanPostTransactions = true, OpeningBalance = 8000 },
+                    
+                    // حقوق الملكية - Equity (Level 1)
+                    new Account { Code = "3", NameAr = "حقوق الملكية", NameEn = "Equity", Level = 1, AccountType = AccountType.Equity, Nature = AccountNature.Credit, Classification = AccountClassification.BalanceSheet, SubClassification = AccountSubClassification.OwnerEquity, CanPostTransactions = false, OpeningBalance = 0 },
+                    
+                    // رأس المال - Capital (Level 2)
+                    new Account { Code = "31", NameAr = "رأس المال", NameEn = "Capital", Level = 2, AccountType = AccountType.Equity, Nature = AccountNature.Credit, Classification = AccountClassification.BalanceSheet, SubClassification = AccountSubClassification.OwnerEquity, CanPostTransactions = true, OpeningBalance = 150000 },
+                    
+                    // الأرباح المحتجزة - Retained Earnings (Level 2)
+                    new Account { Code = "32", NameAr = "الأرباح المحتجزة", NameEn = "Retained Earnings", Level = 2, AccountType = AccountType.Equity, Nature = AccountNature.Credit, Classification = AccountClassification.BalanceSheet, SubClassification = AccountSubClassification.OwnerEquity, CanPostTransactions = true, OpeningBalance = 17000 },
+                    
+                    // الإيرادات - Revenue (Level 1)
+                    new Account { Code = "4", NameAr = "الإيرادات", NameEn = "Revenue", Level = 1, AccountType = AccountType.Revenue, Nature = AccountNature.Credit, Classification = AccountClassification.IncomeStatement, SubClassification = AccountSubClassification.Revenue, CanPostTransactions = false, OpeningBalance = 0 },
+                    
+                    // إيرادات المبيعات - Sales Revenue (Level 2)
+                    new Account { Code = "41", NameAr = "إيرادات المبيعات", NameEn = "Sales Revenue", Level = 2, AccountType = AccountType.Revenue, Nature = AccountNature.Credit, Classification = AccountClassification.IncomeStatement, SubClassification = AccountSubClassification.Revenue, CanPostTransactions = true, OpeningBalance = 0 },
+                    
+                    // إيرادات الخدمات - Service Revenue (Level 2)
+                    new Account { Code = "42", NameAr = "إيرادات الخدمات", NameEn = "Service Revenue", Level = 2, AccountType = AccountType.Revenue, Nature = AccountNature.Credit, Classification = AccountClassification.IncomeStatement, SubClassification = AccountSubClassification.Revenue, CanPostTransactions = true, OpeningBalance = 0 },
+                    
+                    // إيرادات أخرى - Other Revenue (Level 2)
+                    new Account { Code = "43", NameAr = "إيرادات أخرى", NameEn = "Other Revenue", Level = 2, AccountType = AccountType.Revenue, Nature = AccountNature.Credit, Classification = AccountClassification.IncomeStatement, SubClassification = AccountSubClassification.Revenue, CanPostTransactions = true, OpeningBalance = 0 },
+                    
+                    // المصاريف - Expenses (Level 1)
+                    new Account { Code = "5", NameAr = "المصاريف", NameEn = "Expenses", Level = 1, AccountType = AccountType.Expenses, Nature = AccountNature.Debit, Classification = AccountClassification.IncomeStatement, SubClassification = AccountSubClassification.Expense, CanPostTransactions = false, OpeningBalance = 0 },
+                    
+                    // مصاريف التشغيل - Operating Expenses (Level 2)
+                    new Account { Code = "51", NameAr = "مصاريف التشغيل", NameEn = "Operating Expenses", Level = 2, AccountType = AccountType.Expenses, Nature = AccountNature.Debit, Classification = AccountClassification.IncomeStatement, SubClassification = AccountSubClassification.Expense, CanPostTransactions = false, OpeningBalance = 0 },
+                    
+                    // الرواتب والأجور - Salaries and Wages (Level 3)
+                    new Account { Code = "5101", NameAr = "الرواتب والأجور", NameEn = "Salaries and Wages", Level = 3, AccountType = AccountType.Expenses, Nature = AccountNature.Debit, Classification = AccountClassification.IncomeStatement, SubClassification = AccountSubClassification.Expense, CanPostTransactions = true, OpeningBalance = 0 },
+                    
+                    // الإيجار - Rent Expense (Level 3)
+                    new Account { Code = "5102", NameAr = "الإيجار", NameEn = "Rent Expense", Level = 3, AccountType = AccountType.Expenses, Nature = AccountNature.Debit, Classification = AccountClassification.IncomeStatement, SubClassification = AccountSubClassification.Expense, CanPostTransactions = true, OpeningBalance = 0 },
+                    
+                    // الكهرباء والماء - Utilities (Level 3)
+                    new Account { Code = "5103", NameAr = "الكهرباء والماء", NameEn = "Utilities", Level = 3, AccountType = AccountType.Expenses, Nature = AccountNature.Debit, Classification = AccountClassification.IncomeStatement, SubClassification = AccountSubClassification.Expense, CanPostTransactions = true, OpeningBalance = 0 },
+                    
+                    // مصاريف الصيانة - Maintenance Expenses (Level 3)
+                    new Account { Code = "5104", NameAr = "مصاريف الصيانة", NameEn = "Maintenance Expenses", Level = 3, AccountType = AccountType.Expenses, Nature = AccountNature.Debit, Classification = AccountClassification.IncomeStatement, SubClassification = AccountSubClassification.Expense, CanPostTransactions = true, OpeningBalance = 0 },
+                    
+                    // مصاريف إدارية - Administrative Expenses (Level 2)
+                    new Account { Code = "52", NameAr = "مصاريف إدارية", NameEn = "Administrative Expenses", Level = 2, AccountType = AccountType.Expenses, Nature = AccountNature.Debit, Classification = AccountClassification.IncomeStatement, SubClassification = AccountSubClassification.Expense, CanPostTransactions = false, OpeningBalance = 0 },
+                    
+                    // القرطاسية - Office Supplies (Level 3)
+                    new Account { Code = "5201", NameAr = "القرطاسية", NameEn = "Office Supplies", Level = 3, AccountType = AccountType.Expenses, Nature = AccountNature.Debit, Classification = AccountClassification.IncomeStatement, SubClassification = AccountSubClassification.Expense, CanPostTransactions = true, OpeningBalance = 0 },
+                    
+                    // الاتصالات - Communications (Level 3)
+                    new Account { Code = "5202", NameAr = "الاتصالات", NameEn = "Communications", Level = 3, AccountType = AccountType.Expenses, Nature = AccountNature.Debit, Classification = AccountClassification.IncomeStatement, SubClassification = AccountSubClassification.Expense, CanPostTransactions = true, OpeningBalance = 0 }
+                };
+
+                context.Accounts.AddRange(accounts);
+                await context.SaveChangesAsync();
+            }
+        }
+    }
+}
+

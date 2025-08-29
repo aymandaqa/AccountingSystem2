@@ -1,0 +1,184 @@
+@model AccountingSystem.ViewModels.AccountStatementViewModel
+@{
+    ViewData["Title"] = "كشف الحساب";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-file-alt me-2"></i>
+                        كشف الحساب
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- فلاتر التقرير -->
+                    <form method="get" class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label for="accountId" class="form-label">الحساب:</label>
+                            <select name="accountId" id="accountId" class="form-select" required>
+                                <option value="">اختر الحساب</option>
+                                @if (Model?.Accounts != null)
+                                {
+                                    @foreach (var account in Model.Accounts)
+                                    {
+                                        <option value="@account.Value">@account.Text</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="branchId" class="form-label">الفرع:</label>
+                            <select name="branchId" id="branchId" class="form-select">
+                                <option value="">جميع الفروع</option>
+                                @if (Model?.Branches != null)
+                                {
+                                    @foreach (var branch in Model.Branches)
+                                    {
+                                        <option value="@branch.Value">@branch.Text</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="fromDate" class="form-label">من تاريخ:</label>
+                            <input type="date" name="fromDate" id="fromDate" class="form-control" value="@DateTime.Now.AddMonths(-1).ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-md-2">
+                            <label for="toDate" class="form-label">إلى تاريخ:</label>
+                            <input type="date" name="toDate" id="toDate" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div>
+                                <button type="submit" class="btn btn-info">
+                                    <i class="fas fa-search me-1"></i>
+                                    عرض الكشف
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    @if (Model?.AccountName != null)
+                    {
+                        <!-- معلومات الحساب -->
+                        <div class="card border-info mb-4">
+                            <div class="card-header bg-light">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h5 class="mb-0">@Model.AccountName</h5>
+                                        <small class="text-muted">رقم الحساب: @Model.AccountCode</small>
+                                    </div>
+                                    <div class="col-md-6 text-end">
+                                        <h6 class="mb-0">الرصيد الافتتاحي: <span class="badge bg-secondary">@Model.OpeningBalance.ToString("N2") ريال</span></h6>
+                                        <h6 class="mb-0">الرصيد الختامي: <span class="badge bg-primary">@Model.ClosingBalance.ToString("N2") ريال</span></h6>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- جدول الحركات -->
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>التاريخ</th>
+                                        <th>رقم القيد</th>
+                                        <th>البيان</th>
+                                        <th>مدين</th>
+                                        <th>دائن</th>
+                                        <th>الرصيد</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (Model.Transactions != null && Model.Transactions.Any())
+                                    {
+                                        @foreach (var transaction in Model.Transactions)
+                                        {
+                                            <tr>
+                                                <td>@transaction.Date.ToString("yyyy/MM/dd")</td>
+                                                <td>@transaction.JournalEntryNumber</td>
+                                                <td>@transaction.Description</td>
+                                                <td class="text-end">
+                                                    @if (transaction.DebitAmount > 0)
+                                                    {
+                                                        <span class="text-success fw-bold">@transaction.DebitAmount.ToString("N2")</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">-</span>
+                                                    }
+                                                </td>
+                                                <td class="text-end">
+                                                    @if (transaction.CreditAmount > 0)
+                                                    {
+                                                        <span class="text-danger fw-bold">@transaction.CreditAmount.ToString("N2")</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">-</span>
+                                                    }
+                                                </td>
+                                                <td class="text-end">
+                                                    <span class="fw-bold">@transaction.RunningBalance.ToString("N2")</span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted py-4">
+                                                <i class="fas fa-inbox fa-2x mb-2"></i>
+                                                <br>
+                                                لا توجد حركات في الفترة المحددة
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- ملخص الحركات -->
+                        <div class="row mt-4">
+                            <div class="col-md-4">
+                                <div class="card border-success">
+                                    <div class="card-body text-center">
+                                        <h6 class="card-title">إجمالي المدين</h6>
+                                        <h4 class="text-success">@Model.TotalDebit.ToString("N2") ريال</h4>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card border-danger">
+                                    <div class="card-body text-center">
+                                        <h6 class="card-title">إجمالي الدائن</h6>
+                                        <h4 class="text-danger">@Model.TotalCredit.ToString("N2") ريال</h4>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card border-primary">
+                                    <div class="card-body text-center">
+                                        <h6 class="card-title">صافي الحركة</h6>
+                                        <h4 class="text-primary">@((Model.TotalDebit - Model.TotalCredit).ToString("N2")) ريال</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">اختر الحساب لعرض الكشف</h5>
+                            <p class="text-muted">يرجى اختيار الحساب والفترة الزمنية المطلوبة</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

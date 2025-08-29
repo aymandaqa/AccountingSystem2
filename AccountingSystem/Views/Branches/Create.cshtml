@@ -1,0 +1,112 @@
+@model AccountingSystem.ViewModels.CreateBranchViewModel
+
+@{
+    ViewData["Title"] = "إضافة فرع جديد";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">إضافة فرع جديد</h3>
+                    <div class="card-tools">
+                        <a href="@Url.Action("Index")" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right"></i> العودة للقائمة
+                        </a>
+                    </div>
+                </div>
+                <form asp-action="Create" method="post">
+                    <div class="card-body">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="Code" class="form-label">كود الفرع <span class="text-danger">*</span></label>
+                                    <input asp-for="Code" class="form-control" placeholder="أدخل كود الفرع" />
+                                    <span asp-validation-for="Code" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="NameAr" class="form-label">الاسم العربي <span class="text-danger">*</span></label>
+                                    <input asp-for="NameAr" class="form-control" placeholder="أدخل الاسم العربي" />
+                                    <span asp-validation-for="NameAr" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="NameEn" class="form-label">الاسم الإنجليزي</label>
+                                    <input asp-for="NameEn" class="form-control" placeholder="أدخل الاسم الإنجليزي" />
+                                    <span asp-validation-for="NameEn" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="Phone" class="form-label">الهاتف</label>
+                                    <input asp-for="Phone" class="form-control" placeholder="أدخل رقم الهاتف" />
+                                    <span asp-validation-for="Phone" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="Email" class="form-label">البريد الإلكتروني</label>
+                                    <input asp-for="Email" type="email" class="form-control" placeholder="أدخل البريد الإلكتروني" />
+                                    <span asp-validation-for="Email" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <div class="form-check mt-4">
+                                        <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                                        <label asp-for="IsActive" class="form-check-label">نشط</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group mb-3">
+                                    <label asp-for="Address" class="form-label">العنوان</label>
+                                    <textarea asp-for="Address" class="form-control" rows="3" placeholder="أدخل العنوان"></textarea>
+                                    <span asp-validation-for="Address" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group mb-3">
+                                    <label asp-for="Description" class="form-label">الوصف</label>
+                                    <textarea asp-for="Description" class="form-control" rows="3" placeholder="أدخل وصف الفرع"></textarea>
+                                    <span asp-validation-for="Description" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> حفظ
+                        </button>
+                        <a href="@Url.Action("Index")" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> إلغاء
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+

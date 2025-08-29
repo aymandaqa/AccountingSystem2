@@ -1,0 +1,59 @@
+@model AccountingSystem.ViewModels.RegisterViewModel
+@{
+    ViewData["Title"] = "إنشاء حساب جديد";
+    Layout = "_AuthLayout";
+}
+
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <h2>نظام المحاسبة</h2>
+            <p>إنشاء حساب جديد</p>
+        </div>
+
+        <form asp-action="Register" method="post" class="login-form">
+            <div asp-validation-summary="All" class="text-danger"></div>
+            
+            <div class="form-group">
+                <label asp-for="FirstName" class="form-label"></label>
+                <input asp-for="FirstName" class="form-control" placeholder="أدخل الاسم الأول" />
+                <span asp-validation-for="FirstName" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="LastName" class="form-label"></label>
+                <input asp-for="LastName" class="form-control" placeholder="أدخل الاسم الأخير" />
+                <span asp-validation-for="LastName" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" placeholder="أدخل البريد الإلكتروني" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Password" class="form-label"></label>
+                <input asp-for="Password" class="form-control" placeholder="أدخل كلمة المرور" />
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="ConfirmPassword" class="form-label"></label>
+                <input asp-for="ConfirmPassword" class="form-control" placeholder="أعد إدخال كلمة المرور" />
+                <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">إنشاء الحساب</button>
+        </form>
+
+        <div class="login-footer">
+            <p>لديك حساب بالفعل؟ <a asp-action="Login">تسجيل الدخول</a></p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+

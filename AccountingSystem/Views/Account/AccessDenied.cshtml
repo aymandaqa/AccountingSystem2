@@ -1,0 +1,19 @@
+@{
+    ViewData["Title"] = "الوصول مرفوض";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="fas fa-exclamation-triangle fa-5x text-warning mb-4"></i>
+                    <h2 class="card-title">الوصول مرفوض</h2>
+                    <p class="card-text">عذراً، ليس لديك الصلاحية للوصول إلى هذه الصفحة.</p>
+                    <a href="@Url.Action("Index", "Home")" class="btn btn-primary">العودة للصفحة الرئيسية</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

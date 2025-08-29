@@ -1,0 +1,176 @@
+@using AccountingSystem.ViewModels
+@model DashboardViewModel
+
+@{
+    ViewData["Title"] = "لوحة التحكم";
+    Layout = "_AccountingLayout";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-tachometer-alt me-2"></i>
+                        لوحة التحكم الرئيسية
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label for="branchFilter" class="form-label">فلتر حسب الفرع:</label>
+                            <select id="branchFilter" class="form-select" onchange="filterByBranch()">
+                                <option value="">جميع الفروع</option>
+                                @if (ViewBag.Branches != null)
+                                {
+                                    @foreach (var branch in ViewBag.Branches)
+                                    {
+                                        <option value="@branch.Id">
+                                            @branch.NameAr
+                                        </option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- إحصائيات سريعة -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">إجمالي الأصول</h6>
+                            <h4 class="mb-0">0 ر.س</h4>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-chart-line fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">إجمالي الإيرادات</h6>
+                            <h4 class="mb-0">0 ر.س</h4>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-dollar-sign fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">إجمالي المصروفات</h6>
+                            <h4 class="mb-0">0 ر.س</h4>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-shopping-cart fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">صافي الربح</h6>
+                            <h4 class="mb-0">0 ر.س</h4>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-chart-pie fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- الروابط السريعة -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-link me-2"></i>
+                        الروابط السريعة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <a href="@Url.Action("Index", "Accounts")" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-list-alt d-block mb-2"></i>
+                                إدارة الحسابات
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <a href="@Url.Action("Tree", "Accounts")" class="btn btn-outline-success w-100">
+                                <i class="fas fa-sitemap d-block mb-2"></i>
+                                شجرة الحسابات
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <a href="@Url.Action("Index", "JournalEntries")" class="btn btn-outline-info w-100">
+                                <i class="fas fa-book d-block mb-2"></i>
+                                القيود المالية
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <a href="@Url.Action("Index", "Reports")" class="btn btn-outline-warning w-100">
+                                <i class="fas fa-chart-bar d-block mb-2"></i>
+                                التقارير المالية
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <a href="@Url.Action("Index", "Branches")" class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-building d-block mb-2"></i>
+                                إدارة الفروع
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <a href="@Url.Action("Index", "CostCenters")" class="btn btn-outline-dark w-100">
+                                <i class="fas fa-bullseye d-block mb-2"></i>
+                                مراكز التكلفة
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function filterByBranch() {
+    const branchId = document.getElementById('branchFilter').value;
+    const url = new URL(window.location);
+    if (branchId) {
+        url.searchParams.set('branchId', branchId);
+    } else {
+        url.searchParams.delete('branchId');
+    }
+    window.location.href = url.toString();
+}
+</script>
+
