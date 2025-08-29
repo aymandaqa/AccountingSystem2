@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace AccountingSystem.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = "accounts.view")]
     public class AccountsController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -86,6 +86,7 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Accounts/Create
+        [Authorize(Policy = "accounts.create")]
         public async Task<IActionResult> Create()
         {
             var viewModel = new CreateAccountViewModel();
@@ -96,6 +97,7 @@ namespace AccountingSystem.Controllers
         // POST: Accounts/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "accounts.create")]
         public async Task<IActionResult> Create(CreateAccountViewModel model)
         {
             if (ModelState.IsValid)

@@ -1,0 +1,32 @@
+@model IEnumerable<AccountingSystem.ViewModels.UserListViewModel>
+@{
+    ViewData["Title"] = "المستخدمون";
+}
+
+<h1 class="mb-4">المستخدمون</h1>
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>البريد الإلكتروني</th>
+            <th>الاسم</th>
+            <th>نشط</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var user in Model)
+    {
+        <tr>
+            <td>@user.Email</td>
+            <td>@user.FullName</td>
+            <td>@(user.IsActive ? "نعم" : "لا")</td>
+            <td>
+                <a class="btn btn-sm btn-primary" asp-action="ManagePermissions" asp-route-id="@user.Id">
+                    <i class="fas fa-key"></i> الصلاحيات
+                </a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

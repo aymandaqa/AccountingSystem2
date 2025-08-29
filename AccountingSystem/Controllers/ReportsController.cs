@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace AccountingSystem.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = "reports.view")]
     public class ReportsController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -130,6 +130,119 @@ namespace AccountingSystem.Controllers
             viewModel.TotalRevenues = viewModel.Revenues.Sum(r => r.Amount);
             viewModel.TotalExpenses = viewModel.Expenses.Sum(e => e.Amount);
             viewModel.NetIncome = viewModel.TotalRevenues - viewModel.TotalExpenses;
+
+            return View(viewModel);
+        }
+
+        // GET: Reports/AccountStatement
+        public async Task<IActionResult> AccountStatement(int? accountId, int? branchId, DateTime? fromDate, DateTime? toDate)
+        {
+            var viewModel = new AccountStatementViewModel
+            {
+                FromDate = fromDate ?? DateTime.Now.AddMonths(-1),
+                ToDate = toDate ?? DateTime.Now,
+                BranchId = branchId,
+                Accounts = await _context.Accounts
+                    .Where(a => a.CanPostTransactions)
+                    .Select(a => new SelectListItem
+                    {
+                        Value = a.Id.ToString(),
+                        Text = $"{a.Code} - {a.NameAr}"
+                    }).ToListAsync(),
+                Branches = await GetBranchesSelectList()
+            };
+
+            if (accountId.HasValue)
+            {
+                var account = await _context.Accounts.FindAsync(accountId.Value);
+                if (account != null)
+                {
+                    viewModel.AccountId = accountId;
+                    viewModel.AccountCode = account.Code;
+                    viewModel.AccountName = account.NameAr;
+
+                    var lines = await _context.JournalEntryLines
+                        .Include(l => l.JournalEntry)
+                        .Where(l => l.AccountId == accountId.Value)
+                        .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
+                        .Where(l => l.JournalEntry.Date >= viewModel.FromDate && l.JournalEntry.Date <= viewModel.ToDate)
+                        .OrderBy(l => l.JournalEntry.Date)
+                        .ThenBy(l => l.JournalEntry.Number)
+                        .ToListAsync();
+
+                    decimal running = account.OpeningBalance;
+                    foreach (var line in lines)
+                    {
+                        running += line.DebitAmount - line.CreditAmount;
+                        viewModel.Transactions.Add(new AccountTransactionViewModel
+                        {
+                            Date = line.JournalEntry.Date,
+                            JournalEntryNumber = line.JournalEntry.Number,
+                            Description = line.Description ?? string.Empty,
+                            DebitAmount = line.DebitAmount,
+                            CreditAmount = line.CreditAmount,
+                            RunningBalance = running
+                        });
+                    }
+
+                    viewModel.OpeningBalance = account.OpeningBalance;
+                    viewModel.ClosingBalance = running;
+                    viewModel.TotalDebit = viewModel.Transactions.Sum(t => t.DebitAmount);
+                    viewModel.TotalCredit = viewModel.Transactions.Sum(t => t.CreditAmount);
+                }
+            }
+
+            return View(viewModel);
+        }
+
+        // GET: Reports/GeneralLedger
+        public async Task<IActionResult> GeneralLedger(int? accountId, int? branchId, DateTime? fromDate, DateTime? toDate)
+        {
+            var from = fromDate ?? DateTime.Now.AddMonths(-1);
+            var to = toDate ?? DateTime.Now;
+
+            var lines = await _context.JournalEntryLines
+                .Include(l => l.JournalEntry)
+                .Include(l => l.Account)
+                .Where(l => l.JournalEntry.Date >= from && l.JournalEntry.Date <= to)
+                .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
+                .Where(l => !accountId.HasValue || l.AccountId == accountId)
+                .OrderBy(l => l.Account.Code)
+                .ThenBy(l => l.JournalEntry.Date)
+                .ToListAsync();
+
+            var accounts = lines
+                .GroupBy(l => l.Account)
+                .Select(g => new GeneralLedgerAccountViewModel
+                {
+                    AccountCode = g.Key.Code,
+                    AccountName = g.Key.NameAr,
+                    Transactions = g.Select(l => new GeneralLedgerTransactionViewModel
+                    {
+                        Date = l.JournalEntry.Date,
+                        JournalEntryNumber = l.JournalEntry.Number,
+                        Description = l.Description ?? string.Empty,
+                        DebitAmount = l.DebitAmount,
+                        CreditAmount = l.CreditAmount
+                    }).ToList()
+                }).ToList();
+
+            var viewModel = new GeneralLedgerViewModel
+            {
+                FromDate = from,
+                ToDate = to,
+                BranchId = branchId,
+                AccountId = accountId,
+                Accounts = accounts,
+                Branches = await GetBranchesSelectList(),
+                AccountOptions = await _context.Accounts
+                    .Where(a => a.CanPostTransactions)
+                    .Select(a => new SelectListItem
+                    {
+                        Value = a.Id.ToString(),
+                        Text = $"{a.Code} - {a.NameAr}"
+                    }).ToListAsync()
+            };
 
             return View(viewModel);
         }

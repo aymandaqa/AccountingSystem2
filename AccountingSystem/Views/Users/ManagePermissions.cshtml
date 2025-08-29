@@ -1,0 +1,29 @@
+@model AccountingSystem.ViewModels.ManageUserPermissionsViewModel
+@{
+    ViewData["Title"] = "صلاحيات المستخدم";
+}
+
+<h1 class="mb-4">صلاحيات المستخدم - @Model.UserName</h1>
+
+<form asp-action="ManagePermissions" method="post">
+    <input type="hidden" asp-for="UserId" />
+    @for (int i = 0; i < Model.Permissions.Count; i++)
+    {
+        var perm = Model.Permissions[i];
+        if (i == 0 || Model.Permissions[i - 1].Category != perm.Category)
+        {
+            <h5 class="mt-3">@perm.Category</h5>
+        }
+        <div class="form-check ms-3">
+            <input asp-for="Permissions[i].IsGranted" class="form-check-input" />
+            <input asp-for="Permissions[i].PermissionId" type="hidden" />
+            <input asp-for="Permissions[i].DisplayName" type="hidden" />
+            <input asp-for="Permissions[i].Category" type="hidden" />
+            <label class="form-check-label" asp-for="Permissions[i].IsGranted">@perm.DisplayName</label>
+        </div>
+    }
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ</button>
+        <a asp-action="Index" class="btn btn-secondary">عودة</a>
+    </div>
+</form>

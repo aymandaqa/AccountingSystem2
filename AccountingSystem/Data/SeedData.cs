@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using AccountingSystem.Models;
+using System.Linq;
 
 namespace AccountingSystem.Data
 {
@@ -18,14 +20,23 @@ namespace AccountingSystem.Data
             // Seed roles
             await SeedRolesAsync(roleManager);
 
+            // Seed permissions
+            await SeedPermissionsAsync(context);
+
             // Seed default admin user
-            await SeedAdminUserAsync(userManager);
+            var adminUser = await SeedAdminUserAsync(userManager);
 
             // Seed default branch
             await SeedDefaultBranchAsync(context);
 
             // Seed chart of accounts
             await SeedChartOfAccountsAsync(context);
+
+            // Grant all permissions to admin
+            if (adminUser != null)
+            {
+                await SeedAdminPermissionsAsync(context, adminUser);
+            }
 
             await context.SaveChangesAsync();
         }
@@ -43,11 +54,53 @@ namespace AccountingSystem.Data
             }
         }
 
-        private static async Task SeedAdminUserAsync(UserManager<User> userManager)
+        private static async Task SeedPermissionsAsync(ApplicationDbContext context)
+        {
+            var permissions = new List<Permission>
+            {
+                new Permission { Name = "users.view", DisplayName = "عرض المستخدمين", Category = "المستخدمين" },
+                new Permission { Name = "users.create", DisplayName = "إنشاء المستخدمين", Category = "المستخدمين" },
+                new Permission { Name = "users.edit", DisplayName = "تعديل المستخدمين", Category = "المستخدمين" },
+                new Permission { Name = "users.delete", DisplayName = "حذف المستخدمين", Category = "المستخدمين" },
+                new Permission { Name = "branches.view", DisplayName = "عرض الفروع", Category = "الفروع" },
+                new Permission { Name = "branches.create", DisplayName = "إنشاء الفروع", Category = "الفروع" },
+                new Permission { Name = "branches.edit", DisplayName = "تعديل الفروع", Category = "الفروع" },
+                new Permission { Name = "branches.delete", DisplayName = "حذف الفروع", Category = "الفروع" },
+                new Permission { Name = "costcenters.view", DisplayName = "عرض مراكز التكلفة", Category = "مراكز التكلفة" },
+                new Permission { Name = "costcenters.create", DisplayName = "إنشاء مراكز التكلفة", Category = "مراكز التكلفة" },
+                new Permission { Name = "costcenters.edit", DisplayName = "تعديل مراكز التكلفة", Category = "مراكز التكلفة" },
+                new Permission { Name = "costcenters.delete", DisplayName = "حذف مراكز التكلفة", Category = "مراكز التكلفة" },
+                new Permission { Name = "accounts.view", DisplayName = "عرض الحسابات", Category = "الحسابات" },
+                new Permission { Name = "accounts.create", DisplayName = "إنشاء الحسابات", Category = "الحسابات" },
+                new Permission { Name = "accounts.edit", DisplayName = "تعديل الحسابات", Category = "الحسابات" },
+                new Permission { Name = "accounts.delete", DisplayName = "حذف الحسابات", Category = "الحسابات" },
+                new Permission { Name = "journal.view", DisplayName = "عرض القيود", Category = "القيود المالية" },
+                new Permission { Name = "journal.create", DisplayName = "إنشاء القيود", Category = "القيود المالية" },
+                new Permission { Name = "journal.edit", DisplayName = "تعديل القيود", Category = "القيود المالية" },
+                new Permission { Name = "journal.delete", DisplayName = "حذف القيود", Category = "القيود المالية" },
+                new Permission { Name = "journal.approve", DisplayName = "اعتماد القيود", Category = "القيود المالية" },
+                new Permission { Name = "reports.view", DisplayName = "عرض التقارير", Category = "التقارير" },
+                new Permission { Name = "reports.export", DisplayName = "تصدير التقارير", Category = "التقارير" },
+                new Permission { Name = "dashboard.view", DisplayName = "عرض لوحة التحكم", Category = "لوحة التحكم" }
+            };
+
+            foreach (var perm in permissions)
+            {
+                if (!await context.Permissions.AnyAsync(p => p.Name == perm.Name))
+                {
+                    context.Permissions.Add(perm);
+                }
+            }
+
+            await context.SaveChangesAsync();
+        }
+
+        private static async Task<User?> SeedAdminUserAsync(UserManager<User> userManager)
         {
             var adminEmail = "admin@accounting.com";
-            
-            if (await userManager.FindByEmailAsync(adminEmail) == null)
+
+            var existing = await userManager.FindByEmailAsync(adminEmail);
+            if (existing == null)
             {
                 var adminUser = new User
                 {
@@ -60,12 +113,19 @@ namespace AccountingSystem.Data
                 };
 
                 var result = await userManager.CreateAsync(adminUser, "Admin123!");
-                
+
                 if (result.Succeeded)
                 {
                     await userManager.AddToRoleAsync(adminUser, "Admin");
+                    return adminUser;
                 }
             }
+            else
+            {
+                return existing;
+            }
+
+            return null;
         }
 
         private static async Task SeedDefaultBranchAsync(ApplicationDbContext context)
@@ -180,6 +240,28 @@ namespace AccountingSystem.Data
                 context.Accounts.AddRange(accounts);
                 await context.SaveChangesAsync();
             }
+        }
+
+        private static async Task SeedAdminPermissionsAsync(ApplicationDbContext context, User adminUser)
+        {
+            var allPermissions = await context.Permissions.Select(p => p.Id).ToListAsync();
+            var existing = await context.UserPermissions
+                .Where(up => up.UserId == adminUser.Id)
+                .Select(up => up.PermissionId)
+                .ToListAsync();
+
+            var toAdd = allPermissions.Except(existing);
+            foreach (var pid in toAdd)
+            {
+                context.UserPermissions.Add(new UserPermission
+                {
+                    UserId = adminUser.Id,
+                    PermissionId = pid,
+                    IsGranted = true
+                });
+            }
+
+            await context.SaveChangesAsync();
         }
     }
 }

@@ -197,6 +197,33 @@ namespace AccountingSystem.ViewModels
         public decimal RunningBalance { get; set; }
     }
 
+    public class GeneralLedgerViewModel
+    {
+        public int? AccountId { get; set; }
+        public DateTime FromDate { get; set; } = DateTime.Now.AddMonths(-1);
+        public DateTime ToDate { get; set; } = DateTime.Now;
+        public int? BranchId { get; set; }
+        public List<GeneralLedgerAccountViewModel> Accounts { get; set; } = new List<GeneralLedgerAccountViewModel>();
+        public List<SelectListItem> AccountOptions { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
+    }
+
+    public class GeneralLedgerAccountViewModel
+    {
+        public string AccountCode { get; set; } = string.Empty;
+        public string AccountName { get; set; } = string.Empty;
+        public List<GeneralLedgerTransactionViewModel> Transactions { get; set; } = new List<GeneralLedgerTransactionViewModel>();
+    }
+
+    public class GeneralLedgerTransactionViewModel
+    {
+        public DateTime Date { get; set; }
+        public string JournalEntryNumber { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public decimal DebitAmount { get; set; }
+        public decimal CreditAmount { get; set; }
+    }
+
     // User Management ViewModels
     public class CreateUserViewModel
     {
