@@ -7,7 +7,7 @@ using AccountingSystem.ViewModels;
 
 namespace AccountingSystem.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = "dashboard.view")]
     public class DashboardController : Controller
     {
         private readonly ApplicationDbContext _context;

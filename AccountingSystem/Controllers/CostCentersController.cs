@@ -7,7 +7,7 @@ using AccountingSystem.ViewModels;
 
 namespace AccountingSystem.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = "costcenters.view")]
     public class CostCentersController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -85,6 +85,7 @@ namespace AccountingSystem.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = "costcenters.create")]
         public IActionResult Create()
         {
             return View(new CreateCostCenterViewModel());
@@ -92,6 +93,7 @@ namespace AccountingSystem.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "costcenters.create")]
         public async Task<IActionResult> Create(CreateCostCenterViewModel model)
         {
             if (ModelState.IsValid)
@@ -122,6 +124,7 @@ namespace AccountingSystem.Controllers
             return View(model);
         }
 
+        [Authorize(Policy = "costcenters.edit")]
         public async Task<IActionResult> Edit(int id)
         {
             var costCenter = await _context.CostCenters.FindAsync(id);
@@ -145,6 +148,7 @@ namespace AccountingSystem.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "costcenters.edit")]
         public async Task<IActionResult> Edit(EditCostCenterViewModel model)
         {
             if (ModelState.IsValid)
@@ -180,6 +184,7 @@ namespace AccountingSystem.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "costcenters.delete")]
         public async Task<IActionResult> Delete(int id)
         {
             var costCenter = await _context.CostCenters
