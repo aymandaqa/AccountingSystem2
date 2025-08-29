@@ -1,9 +1,14 @@
 @using AccountingSystem.ViewModels
+@using Microsoft.AspNetCore.Authorization
 @model DashboardViewModel
+@inject IAuthorizationService AuthorizationService
 
 @{
     ViewData["Title"] = "لوحة التحكم";
     Layout = "_AccountingLayout";
+    var canViewStats = (await AuthorizationService.AuthorizeAsync(User, "dashboard.widget.stats")).Succeeded;
+    var canViewAccounts = (await AuthorizationService.AuthorizeAsync(User, "dashboard.widget.accounts")).Succeeded;
+    var canViewLinks = (await AuthorizationService.AuthorizeAsync(User, "dashboard.widget.links")).Succeeded;
 }
 
 <div class="container-fluid">
@@ -34,8 +39,12 @@
                             </select>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <label for="monthFilter" class="form-label">فلتر حسب الشهر:</label>
-                            <input type="month" id="monthFilter" class="form-control" value="@Model.SelectedMonth.ToString("yyyy-MM")" onchange="applyFilters()" />
+                            <label for="fromDateFilter" class="form-label">من تاريخ:</label>
+                            <input type="date" id="fromDateFilter" class="form-control" value="@Model.FromDate.ToString("yyyy-MM-dd")" onchange="applyFilters()" />
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="toDateFilter" class="form-label">إلى تاريخ:</label>
+                            <input type="date" id="toDateFilter" class="form-control" value="@Model.ToDate.ToString("yyyy-MM-dd")" onchange="applyFilters()" />
                         </div>
                     </div>
                 </div>
@@ -44,6 +53,8 @@
     </div>
 
     <!-- إحصائيات سريعة -->
+    @if (canViewStats)
+    {
     <div class="row mb-4">
         <div class="col-lg-2 col-md-4 mb-3">
             <div class="card bg-primary text-white">
@@ -141,8 +152,11 @@
             </div>
         </div>
     </div>
+    }
 
     <!-- أرصدة الحسابات -->
+    @if (canViewAccounts)
+    {
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
@@ -169,8 +183,11 @@
             </div>
         </div>
     </div>
+    }
 
     <!-- الروابط السريعة -->
+    @if (canViewLinks)
+    {
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
@@ -223,6 +240,7 @@
             </div>
         </div>
     </div>
+    }
 </div>
 
 @section Styles {
@@ -287,17 +305,23 @@
     <script>
         function applyFilters() {
             const branchId = document.getElementById('branchFilter').value;
-            const month = document.getElementById('monthFilter').value;
+            const fromDate = document.getElementById('fromDateFilter').value;
+            const toDate = document.getElementById('toDateFilter').value;
             const url = new URL(window.location);
             if (branchId) {
                 url.searchParams.set('branchId', branchId);
             } else {
                 url.searchParams.delete('branchId');
             }
-            if (month) {
-                url.searchParams.set('month', month);
+            if (fromDate) {
+                url.searchParams.set('fromDate', fromDate);
             } else {
-                url.searchParams.delete('month');
+                url.searchParams.delete('fromDate');
+            }
+            if (toDate) {
+                url.searchParams.set('toDate', toDate);
+            } else {
+                url.searchParams.delete('toDate');
             }
             window.location.href = url.toString();
         }

@@ -560,6 +560,33 @@ namespace AccountingSystem.Migrations
                             DisplayName = "عرض لوحة التحكم",
                             IsActive = true,
                             Name = "dashboard.view"
+                        },
+                        new
+                        {
+                            Id = 25,
+                            Category = "لوحة التحكم",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض إحصائيات لوحة التحكم",
+                            IsActive = true,
+                            Name = "dashboard.widget.stats"
+                        },
+                        new
+                        {
+                            Id = 26,
+                            Category = "لوحة التحكم",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض أرصدة الحسابات بلوحة التحكم",
+                            IsActive = true,
+                            Name = "dashboard.widget.accounts"
+                        },
+                        new
+                        {
+                            Id = 27,
+                            Category = "لوحة التحكم",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض الروابط السريعة بلوحة التحكم",
+                            IsActive = true,
+                            Name = "dashboard.widget.links"
                         });
                 });
 
