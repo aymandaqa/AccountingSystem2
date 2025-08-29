@@ -269,6 +269,27 @@ namespace AccountingSystem.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "journal.edit")]
+        public async Task<IActionResult> Post(int id)
+        {
+            var entry = await _context.JournalEntries.FindAsync(id);
+            if (entry == null)
+                return NotFound();
+
+            if (entry.Status != JournalEntryStatus.Draft)
+                return BadRequest();
+
+            entry.Status = JournalEntryStatus.Posted;
+            entry.UpdatedAt = DateTime.UtcNow;
+
+            _context.Update(entry);
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Index));
+        }
+
         [Authorize(Policy = "journal.view")]
         public async Task<IActionResult> Draft()
         {
