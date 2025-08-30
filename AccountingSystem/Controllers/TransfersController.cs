@@ -103,12 +103,15 @@ namespace AccountingSystem.Controllers
                 entry.Lines.Add(new JournalEntryLine
                 {
                     AccountId = transfer.ToPaymentAccountId,
-                    DebitAmount = transfer.Amount
+                    DebitAmount = transfer.Amount,
+                    Description = transfer.Notes ?? "تحويل",
                 });
                 entry.Lines.Add(new JournalEntryLine
                 {
                     AccountId = transfer.FromPaymentAccountId,
-                    CreditAmount = transfer.Amount
+                    CreditAmount = transfer.Amount,
+                    Description = transfer.Notes ?? "تحويل",
+
                 });
 
                 _context.JournalEntries.Add(entry);

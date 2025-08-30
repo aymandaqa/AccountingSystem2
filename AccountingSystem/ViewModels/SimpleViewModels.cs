@@ -10,8 +10,8 @@ namespace AccountingSystem.ViewModels
         public int Id { get; set; }
         public string Number { get; set; } = string.Empty;
         public DateTime Date { get; set; } = DateTime.Now;
-        public string Description { get; set; } = string.Empty;
-        public string? Reference { get; set; }
+        public string Description { get; set; } = "-";
+        public string? Reference { get; set; } = "-";
         [Range(1, int.MaxValue, ErrorMessage = "يجب اختيار الفرع")]
         public int BranchId { get; set; }
         public int? CostCenterId { get; set; }
@@ -26,9 +26,9 @@ namespace AccountingSystem.ViewModels
         public int AccountId { get; set; }
         public string AccountCode { get; set; } = string.Empty;
         public string AccountName { get; set; } = string.Empty;
-        public decimal DebitAmount { get; set; }
-        public decimal CreditAmount { get; set; }
-        public string Description { get; set; } = string.Empty;
+        public decimal DebitAmount { get; set; } = 0;
+        public decimal CreditAmount { get; set; } = 0;
+        public string Description { get; set; } = "-";
     }
 
     public class JournalEntryDetailsViewModel

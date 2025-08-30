@@ -3,6 +3,7 @@ using System;
 using AccountingSystem.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AccountingSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250830000626_update17")]
+    partial class update17
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.8");
@@ -374,9 +377,6 @@ namespace AccountingSystem.Migrations
                     b.Property<int>("FromPaymentAccountId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int?>("JournalEntryId")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
@@ -403,8 +403,6 @@ namespace AccountingSystem.Migrations
                     b.HasIndex("FromBranchId");
 
                     b.HasIndex("FromPaymentAccountId");
-
-                    b.HasIndex("JournalEntryId");
 
                     b.HasIndex("ReceiverId");
 
@@ -1175,11 +1173,6 @@ namespace AccountingSystem.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("AccountingSystem.Models.JournalEntry", "JournalEntry")
-                        .WithMany()
-                        .HasForeignKey("JournalEntryId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("AccountingSystem.Models.User", "Receiver")
                         .WithMany()
                         .HasForeignKey("ReceiverId")
@@ -1206,8 +1199,6 @@ namespace AccountingSystem.Migrations
                     b.Navigation("FromBranch");
 
                     b.Navigation("FromPaymentAccount");
-
-                    b.Navigation("JournalEntry");
 
                     b.Navigation("Receiver");
 

@@ -250,12 +250,14 @@ namespace AccountingSystem.Controllers
                 entry.Lines.Add(new JournalEntryLine
                 {
                     AccountId = expense.ExpenseAccountId,
-                    DebitAmount = expense.Amount
+                    DebitAmount = expense.Amount,
+                    Description = expense.Notes ?? "مصروف",
                 });
                 entry.Lines.Add(new JournalEntryLine
                 {
                     AccountId = expense.PaymentAccountId,
-                    CreditAmount = expense.Amount
+                    CreditAmount = expense.Amount,
+                    Description = expense.Notes ?? "مصروف",
                 });
 
                 _context.JournalEntries.Add(entry);
@@ -333,12 +335,14 @@ namespace AccountingSystem.Controllers
             entry.Lines.Add(new JournalEntryLine
             {
                 AccountId = expense.ExpenseAccountId,
-                DebitAmount = expense.Amount
+                DebitAmount = expense.Amount,
+                Description = expense.Notes ?? "مصروف",
             });
             entry.Lines.Add(new JournalEntryLine
             {
                 AccountId = expense.PaymentAccountId,
-                CreditAmount = expense.Amount
+                CreditAmount = expense.Amount,
+                Description = expense.Notes ?? "مصروف",
             });
 
             _context.JournalEntries.Add(entry);
