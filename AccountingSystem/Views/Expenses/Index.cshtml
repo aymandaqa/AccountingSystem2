@@ -1,4 +1,4 @@
-@model IEnumerable<AccountingSystem.ViewModels.ExpenseViewModel>
+@model AccountingSystem.ViewModels.PagedResult<AccountingSystem.ViewModels.ExpenseViewModel>
 @{
     ViewData["Title"] = "المصاريف";
     Layout = "_AccountingLayout";
@@ -13,45 +13,72 @@
                 <i class="fas fa-user"></i> مصاريفي
             </a>
         </div>
+        <div class="col-md-4 ms-auto">
+            <form method="get" class="d-flex">
+                <input type="text" name="searchTerm" value="@Model.SearchTerm" class="form-control me-2" placeholder="البحث في المصاريف..." />
+                <button type="submit" class="btn btn-secondary">بحث</button>
+            </form>
+        </div>
     </div>
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>المستخدم</th>
-                <th>الفرع</th>
-                <th>حساب الدفع</th>
-                <th>حساب المصروف</th>
-                <th>القيمة</th>
-                <th>ملاحظات</th>
-                <th>معتمد</th>
-                <th>التاريخ</th>
-                <th>إجراءات</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var item in Model)
-            {
+
+    @if (Model.Items.Any())
+    {
+        <table class="table table-bordered">
+            <thead>
                 <tr>
-                    <td>@item.UserName</td>
-                    <td>@item.Branch</td>
-                    <td>@item.PaymentAccountName</td>
-                    <td>@item.ExpenseAccountName</td>
-                    <td>@item.Amount</td>
-                    <td>@item.Notes</td>
-                    <td>@(item.IsApproved ? "نعم" : "لا")</td>
-                    <td>@item.CreatedAt.ToString("yyyy-MM-dd")</td>
-                    <td>
-                        @if (!item.IsApproved)
-                        {
-                            <a class="btn btn-sm btn-primary" asp-action="Edit" asp-route-id="@item.Id">تعديل</a>
-                            <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline">
-                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('هل أنت متأكد من الحذف؟');">حذف</button>
-                            </form>
-                            <a class="btn btn-sm btn-success" asp-action="Approve" asp-route-id="@item.Id">اعتماد</a>
-                        }
-                    </td>
+                    <th>المستخدم</th>
+                    <th>الفرع</th>
+                    <th>حساب الدفع</th>
+                    <th>حساب المصروف</th>
+                    <th>القيمة</th>
+                    <th>ملاحظات</th>
+                    <th>معتمد</th>
+                    <th>التاريخ</th>
+                    <th>إجراءات</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Items)
+                {
+                    <tr>
+                        <td>@item.UserName</td>
+                        <td>@item.Branch</td>
+                        <td>@item.PaymentAccountName</td>
+                        <td>@item.ExpenseAccountName</td>
+                        <td>@item.Amount</td>
+                        <td>@item.Notes</td>
+                        <td>@(item.IsApproved ? "نعم" : "لا")</td>
+                        <td>@item.CreatedAt.ToString("yyyy-MM-dd")</td>
+                        <td>
+                            @if (!item.IsApproved)
+                            {
+                                <a class="btn btn-sm btn-primary" asp-action="Edit" asp-route-id="@item.Id">تعديل</a>
+                                <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('هل أنت متأكد من الحذف؟');">حذف</button>
+                                </form>
+                                <a class="btn btn-sm btn-success" asp-action="Approve" asp-route-id="@item.Id">اعتماد</a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <nav>
+            <ul class="pagination justify-content-center mt-3">
+                @for (int i = 1; i <= Model.TotalPages; i++)
+                {
+                    <li class="page-item @(i == Model.Page ? "active" : "")">
+                        <a class="page-link" href="?page=@i&searchTerm=@Model.SearchTerm">@i</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    }
+    else
+    {
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle"></i>
+            لا توجد مصاريف مسجلة
+        </div>
+    }
 </div>

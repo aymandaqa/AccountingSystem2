@@ -323,19 +323,6 @@ namespace AccountingSystem.ViewModels
         public List<AccountTreeNodeViewModel> Children { get; set; } = new List<AccountTreeNodeViewModel>();
     }
 
-    public class JournalEntriesIndexViewModel
-    {
-        public List<JournalEntryViewModel> JournalEntries { get; set; } = new List<JournalEntryViewModel>();
-        public int TotalCount { get; set; }
-        public int PageNumber { get; set; }
-        public int PageSize { get; set; }
-        public string SearchTerm { get; set; } = string.Empty;
-        public DateTime? FromDate { get; set; }
-        public DateTime? ToDate { get; set; }
-        public int? BranchId { get; set; }
-        public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
-    }
-
     public class JournalEntryViewModel
     {
         public int Id { get; set; }
