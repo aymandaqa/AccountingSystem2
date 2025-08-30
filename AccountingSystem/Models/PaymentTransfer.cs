@@ -30,6 +30,8 @@ namespace AccountingSystem.Models
 
         public TransferStatus Status { get; set; } = TransferStatus.Pending;
 
+        public int? JournalEntryId { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation properties
@@ -39,6 +41,7 @@ namespace AccountingSystem.Models
         public virtual Account ToPaymentAccount { get; set; } = null!;
         public virtual Branch? FromBranch { get; set; }
         public virtual Branch? ToBranch { get; set; }
+        public virtual JournalEntry? JournalEntry { get; set; }
     }
 
     public enum TransferStatus

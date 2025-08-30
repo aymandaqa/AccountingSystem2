@@ -83,8 +83,39 @@ namespace AccountingSystem.Controllers
         {
             var userId = _userManager.GetUserId(User);
             var transfer = await _context.PaymentTransfers.FindAsync(id);
-            if (transfer == null || transfer.ReceiverId != userId)
+            if (transfer == null || transfer.ReceiverId != userId || transfer.Status != TransferStatus.Pending)
                 return NotFound();
+
+            if (accept)
+            {
+                var number = await GenerateJournalEntryNumber();
+                var entry = new JournalEntry
+                {
+                    Number = number,
+                    Date = DateTime.Now,
+                    Description = transfer.Notes ?? "تحويل",
+                    BranchId = transfer.FromBranchId ?? transfer.ToBranchId ?? 0,
+                    CreatedById = userId,
+                    TotalDebit = transfer.Amount,
+                    TotalCredit = transfer.Amount,
+                    Status = JournalEntryStatus.Posted
+                };
+                entry.Lines.Add(new JournalEntryLine
+                {
+                    AccountId = transfer.ToPaymentAccountId,
+                    DebitAmount = transfer.Amount
+                });
+                entry.Lines.Add(new JournalEntryLine
+                {
+                    AccountId = transfer.FromPaymentAccountId,
+                    CreditAmount = transfer.Amount
+                });
+
+                _context.JournalEntries.Add(entry);
+                await UpdateAccountBalances(entry);
+                await _context.SaveChangesAsync();
+                transfer.JournalEntryId = entry.Id;
+            }
 
             transfer.Status = accept ? TransferStatus.Accepted : TransferStatus.Rejected;
             await _context.SaveChangesAsync();
@@ -144,6 +175,37 @@ namespace AccountingSystem.Controllers
             _context.PaymentTransfers.Remove(transfer);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
+        }
+
+        private async Task UpdateAccountBalances(JournalEntry entry)
+        {
+            foreach (var line in entry.Lines)
+            {
+                var account = await _context.Accounts.FindAsync(line.AccountId);
+                if (account == null) continue;
+
+                var netAmount = account.Nature == AccountNature.Debit
+                    ? line.DebitAmount - line.CreditAmount
+                    : line.CreditAmount - line.DebitAmount;
+
+                account.CurrentBalance += netAmount;
+                account.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
+        private async Task<string> GenerateJournalEntryNumber()
+        {
+            var year = DateTime.Now.Year;
+            var lastEntry = await _context.JournalEntries
+                .Where(j => j.Date.Year == year)
+                .OrderByDescending(j => j.Number)
+                .FirstOrDefaultAsync();
+            if (lastEntry == null)
+                return $"JE{year}001";
+            var lastNumber = lastEntry.Number.Substring(6);
+            if (int.TryParse(lastNumber, out int number))
+                return $"JE{year}{(number + 1):D3}";
+            return $"JE{year}001";
         }
     }
 }
