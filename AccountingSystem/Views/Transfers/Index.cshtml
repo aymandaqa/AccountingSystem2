@@ -1,0 +1,46 @@
+@model IEnumerable<AccountingSystem.Models.PaymentTransfer>
+
+<h2>الحوالات</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>المرسل</th>
+            <th>المستلم</th>
+            <th>المبلغ</th>
+            <th>الحالة</th>
+            <th>التاريخ</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model)
+{
+        <tr>
+            <td>@(item.Sender?.FullName ?? item.SenderId)</td>
+            <td>@(item.Receiver?.FullName ?? item.ReceiverId)</td>
+            <td>@item.Amount</td>
+            <td>@item.Status</td>
+            <td>@item.CreatedAt.ToString("yyyy-MM-dd")</td>
+            <td>
+            @if (item.Status == AccountingSystem.Models.TransferStatus.Pending)
+            {
+                if (item.ReceiverId == ViewBag.CurrentUserId)
+                {
+                    <a asp-action="Approve" asp-route-id="@item.Id" asp-route-accept="true">استلام</a> |
+                    <a asp-action="Approve" asp-route-id="@item.Id" asp-route-accept="false">رفض</a>
+                }
+                else if (item.SenderId == ViewBag.CurrentUserId)
+                {
+                    <a asp-action="Edit" asp-route-id="@item.Id">تعديل</a> |
+                    <form asp-action="Delete" asp-route-id="@item.Id" method="post" style="display:inline">
+                        <button type="submit" class="btn btn-link p-0 m-0 align-baseline">حذف</button>
+                    </form>
+                }
+            }
+            </td>
+        </tr>
+}
+    </tbody>
+</table>
+
+<a asp-action="Create" class="btn btn-primary">إنشاء حوالة</a>
