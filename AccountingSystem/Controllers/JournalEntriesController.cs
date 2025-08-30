@@ -254,7 +254,7 @@ namespace AccountingSystem.Controllers
             entry.BranchId = model.BranchId;
             entry.TotalDebit = model.Lines.Sum(l => l.DebitAmount);
             entry.TotalCredit = model.Lines.Sum(l => l.CreditAmount);
-            entry.UpdatedAt = DateTime.UtcNow;
+            entry.UpdatedAt = DateTime.Now;
 
             _context.JournalEntryLines.RemoveRange(entry.Lines);
             entry.Lines = model.Lines.Select(l => new JournalEntryLine
@@ -296,11 +296,11 @@ namespace AccountingSystem.Controllers
                     : line.CreditAmount - line.DebitAmount;
 
                 account.CurrentBalance += netAmount;
-                account.UpdatedAt = DateTime.UtcNow;
+                account.UpdatedAt = DateTime.Now;
             }
 
             entry.Status = JournalEntryStatus.Posted;
-            entry.UpdatedAt = DateTime.UtcNow;
+            entry.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
 

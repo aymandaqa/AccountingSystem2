@@ -61,7 +61,7 @@ namespace AccountingSystem.Data
                     var log = new AuditLog
                     {
                         UserId = _httpContextAccessor?.HttpContext?.User?.Identity?.Name,
-                        Timestamp = DateTime.UtcNow,
+                        Timestamp = DateTime.Now,
                         TableName = tableName,
                         Operation = operation,
                         RecordId = recordId,
@@ -129,7 +129,7 @@ namespace AccountingSystem.Data
                 entity.Property(e => e.Code).IsRequired().HasMaxLength(10);
                 entity.Property(e => e.NameAr).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.NameEn).HasMaxLength(200);
-                
+
                 entity.HasOne(e => e.Parent)
                     .WithMany(e => e.Children)
                     .HasForeignKey(e => e.ParentId)
@@ -145,12 +145,12 @@ namespace AccountingSystem.Data
                 entity.Property(e => e.NameAr).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.NameEn).HasMaxLength(200);
                 entity.Property(e => e.OpeningBalance).HasColumnType("decimal(18,2)");
-                
+
                 entity.HasOne(e => e.Parent)
                     .WithMany(e => e.Children)
                     .HasForeignKey(e => e.ParentId)
                     .OnDelete(DeleteBehavior.Restrict);
-                
+
                 entity.HasOne(e => e.Branch)
                     .WithMany(e => e.Accounts)
                     .HasForeignKey(e => e.BranchId)
@@ -166,12 +166,12 @@ namespace AccountingSystem.Data
                 entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
                 entity.Property(e => e.TotalDebit).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.TotalCredit).HasColumnType("decimal(18,2)");
-                
+
                 entity.HasOne(e => e.Branch)
                     .WithMany(e => e.JournalEntries)
                     .HasForeignKey(e => e.BranchId)
                     .OnDelete(DeleteBehavior.Restrict);
-                
+
                 entity.HasOne(e => e.CreatedBy)
                     .WithMany(e => e.CreatedJournalEntries)
                     .HasForeignKey(e => e.CreatedById)
@@ -184,17 +184,17 @@ namespace AccountingSystem.Data
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.DebitAmount).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.CreditAmount).HasColumnType("decimal(18,2)");
-                
+
                 entity.HasOne(e => e.JournalEntry)
                     .WithMany(e => e.Lines)
                     .HasForeignKey(e => e.JournalEntryId)
                     .OnDelete(DeleteBehavior.Cascade);
-                
+
                 entity.HasOne(e => e.Account)
                     .WithMany(e => e.JournalEntryLines)
                     .HasForeignKey(e => e.AccountId)
                     .OnDelete(DeleteBehavior.Restrict);
-                
+
                 entity.HasOne(e => e.CostCenter)
                     .WithMany(e => e.JournalEntryLines)
                     .HasForeignKey(e => e.CostCenterId)
@@ -301,12 +301,12 @@ namespace AccountingSystem.Data
             builder.Entity<UserBranch>(entity =>
             {
                 entity.HasKey(e => new { e.UserId, e.BranchId });
-                
+
                 entity.HasOne(e => e.User)
                     .WithMany(e => e.UserBranches)
                     .HasForeignKey(e => e.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
-                
+
                 entity.HasOne(e => e.Branch)
                     .WithMany(e => e.UserBranches)
                     .HasForeignKey(e => e.BranchId)
@@ -317,12 +317,12 @@ namespace AccountingSystem.Data
             builder.Entity<UserPermission>(entity =>
             {
                 entity.HasKey(e => new { e.UserId, e.PermissionId });
-                
+
                 entity.HasOne(e => e.User)
                     .WithMany(e => e.UserPermissions)
                     .HasForeignKey(e => e.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
-                
+
                 entity.HasOne(e => e.Permission)
                     .WithMany(e => e.UserPermissions)
                     .HasForeignKey(e => e.PermissionId)

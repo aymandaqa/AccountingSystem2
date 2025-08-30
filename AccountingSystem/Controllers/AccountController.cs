@@ -49,7 +49,7 @@ namespace AccountingSystem.Controllers
                     
                     if (result.Succeeded)
                     {
-                        user.LastLoginAt = DateTime.UtcNow;
+                        user.LastLoginAt = DateTime.Now;
                         await _userManager.UpdateAsync(user);
 
                         _logger.LogInformation("User {Email} logged in.", model.Email);

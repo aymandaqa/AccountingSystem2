@@ -171,7 +171,7 @@ namespace AccountingSystem.Controllers
                 costCenter.NameEn = model.NameEn;
                 costCenter.Description = model.Description;
                 costCenter.IsActive = model.IsActive;
-                costCenter.UpdatedAt = DateTime.UtcNow;
+                costCenter.UpdatedAt = DateTime.Now;
 
                 await _context.SaveChangesAsync();
 

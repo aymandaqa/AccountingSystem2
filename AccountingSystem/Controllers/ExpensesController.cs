@@ -133,7 +133,7 @@ namespace AccountingSystem.Controllers
                 ExpenseAccountId = model.ExpenseAccountId,
                 Amount = model.Amount,
                 Notes = model.Notes,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 IsApproved = model.Amount <= user.ExpenseLimit
             };
 
@@ -366,7 +366,7 @@ namespace AccountingSystem.Controllers
                     : line.CreditAmount - line.DebitAmount;
 
                 account.CurrentBalance += netAmount;
-                account.UpdatedAt = DateTime.UtcNow;
+                account.UpdatedAt = DateTime.Now;
             }
         }
 

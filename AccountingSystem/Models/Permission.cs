@@ -22,7 +22,7 @@ namespace AccountingSystem.Models
 
         public bool IsActive { get; set; } = true;
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         // Navigation properties
         public virtual ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();

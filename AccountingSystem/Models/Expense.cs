@@ -12,7 +12,7 @@ namespace AccountingSystem.Models
         public decimal Amount { get; set; }
         [StringLength(500)]
         public string? Notes { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
         public bool IsApproved { get; set; } = false;
         public int? JournalEntryId { get; set; }
 

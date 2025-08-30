@@ -185,7 +185,7 @@ namespace AccountingSystem.Controllers
                 branch.Phone = model.Phone;
                 branch.Email = model.Email;
                 branch.IsActive = model.IsActive;
-                branch.UpdatedAt = DateTime.UtcNow;
+                branch.UpdatedAt = DateTime.Now;
 
                 await _context.SaveChangesAsync();
 

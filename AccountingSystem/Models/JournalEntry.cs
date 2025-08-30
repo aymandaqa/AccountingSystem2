@@ -35,7 +35,7 @@ namespace AccountingSystem.Models
 
         public string CreatedById { get; set; } = string.Empty;
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public string? ApprovedById { get; set; }
 

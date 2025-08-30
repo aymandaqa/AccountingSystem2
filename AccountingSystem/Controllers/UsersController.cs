@@ -302,7 +302,7 @@ namespace AccountingSystem.Controllers
                     UserId = model.UserId,
                     PermissionId = perm.PermissionId,
                     IsGranted = true,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.Now
                 });
             }
 

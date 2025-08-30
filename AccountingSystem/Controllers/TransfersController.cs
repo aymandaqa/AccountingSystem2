@@ -92,7 +92,7 @@ namespace AccountingSystem.Controllers
                 Amount = amount,
                 Notes = notes,
                 Status = TransferStatus.Pending,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.Now
             };
 
             _context.PaymentTransfers.Add(transfer);
@@ -233,7 +233,7 @@ namespace AccountingSystem.Controllers
                     : line.CreditAmount - line.DebitAmount;
 
                 account.CurrentBalance += netAmount;
-                account.UpdatedAt = DateTime.UtcNow;
+                account.UpdatedAt = DateTime.Now;
             }
         }
 

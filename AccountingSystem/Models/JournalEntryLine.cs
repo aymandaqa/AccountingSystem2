@@ -22,7 +22,7 @@ namespace AccountingSystem.Models
         [StringLength(100)]
         public string? Reference { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         // Navigation properties
         public virtual JournalEntry JournalEntry { get; set; } = null!;

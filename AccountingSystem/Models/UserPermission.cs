@@ -5,7 +5,7 @@ namespace AccountingSystem.Models
         public string UserId { get; set; } = string.Empty;
         public int PermissionId { get; set; }
         public bool IsGranted { get; set; } = true;
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime? UpdatedAt { get; set; }
 
         // Navigation properties

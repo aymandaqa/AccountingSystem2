@@ -32,7 +32,7 @@ namespace AccountingSystem.Models
 
         public int? JournalEntryId { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         // Navigation properties
         public virtual User Sender { get; set; } = null!;
