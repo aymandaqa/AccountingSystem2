@@ -26,12 +26,14 @@
             {
                 if (item.ReceiverId == ViewBag.CurrentUserId)
                 {
-                    <a asp-action="Approve" asp-route-id="@item.Id" asp-route-accept="true">استلام</a> |
+                    <a asp-action="Approve" asp-route-id="@item.Id" asp-route-accept="true">استلام</a>
+                    <span class="mx-1">|</span>
                     <a asp-action="Approve" asp-route-id="@item.Id" asp-route-accept="false">رفض</a>
                 }
                 else if (item.SenderId == ViewBag.CurrentUserId)
                 {
-                    <a asp-action="Edit" asp-route-id="@item.Id">تعديل</a> |
+                    <a asp-action="Edit" asp-route-id="@item.Id">تعديل</a>
+                    <span class="mx-1">|</span>
                     <form asp-action="Delete" asp-route-id="@item.Id" method="post" style="display:inline">
                         <button type="submit" class="btn btn-link p-0 m-0 align-baseline">حذف</button>
                     </form>
