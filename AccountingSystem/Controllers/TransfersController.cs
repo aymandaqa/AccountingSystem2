@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
+using System.Text.Json;
 
 namespace AccountingSystem.Controllers
 {
@@ -28,6 +29,8 @@ namespace AccountingSystem.Controllers
             var transfers = await _context.PaymentTransfers
                 .Include(t => t.Sender)
                 .Include(t => t.Receiver)
+                .Include(t => t.FromBranch)
+                .Include(t => t.ToBranch)
                 .Where(t => t.SenderId == userId || t.ReceiverId == userId)
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
@@ -38,7 +41,19 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "transfers.create")]
         public IActionResult Create()
         {
-            ViewData["Users"] = new SelectList(_context.Users.ToList(), "Id", "FullName");
+            var userId = _userManager.GetUserId(User);
+            var users = _context.Users
+                .Where(u => u.Id != userId)
+                .Include(u => u.PaymentBranch)
+                .ToList();
+            ViewData["Users"] = new SelectList(users, "Id", "FullName");
+            ViewBag.UserBranches = JsonSerializer.Serialize(users.ToDictionary(u => u.Id, u => u.PaymentBranch?.NameAr ?? ""));
+            var senderBranch = _context.Users
+                .Where(u => u.Id == userId)
+                .Include(u => u.PaymentBranch)
+                .Select(u => u.PaymentBranch!.NameAr)
+                .FirstOrDefault();
+            ViewBag.SenderBranch = senderBranch;
             return View();
         }
 
@@ -51,11 +66,18 @@ namespace AccountingSystem.Controllers
             if (sender == null)
                 return Challenge();
 
-            var receiver = await _context.Users.FindAsync(receiverId);
-            if (receiver == null)
+            var receiver = await _context.Users.Include(u => u.PaymentBranch).FirstOrDefaultAsync(u => u.Id == receiverId);
+            if (receiver == null || receiver.Id == sender.Id)
             {
-                ModelState.AddModelError("receiverId", "المستلم غير موجود");
-                ViewData["Users"] = new SelectList(_context.Users.ToList(), "Id", "FullName");
+                ModelState.AddModelError("receiverId", receiver == null ? "المستلم غير موجود" : "لا يمكن إرسال حوالة لنفسك");
+                var users = _context.Users
+                    .Where(u => u.Id != sender.Id)
+                    .Include(u => u.PaymentBranch)
+                    .ToList();
+                ViewData["Users"] = new SelectList(users, "Id", "FullName");
+                ViewBag.UserBranches = JsonSerializer.Serialize(users.ToDictionary(u => u.Id, u => u.PaymentBranch?.NameAr ?? ""));
+                var senderBranch = await _context.Branches.FindAsync(sender.PaymentBranchId);
+                ViewBag.SenderBranch = senderBranch?.NameAr;
                 return View();
             }
 
@@ -82,7 +104,9 @@ namespace AccountingSystem.Controllers
         public async Task<IActionResult> Approve(int id, bool accept)
         {
             var userId = _userManager.GetUserId(User);
-            var transfer = await _context.PaymentTransfers.FindAsync(id);
+            var transfer = await _context.PaymentTransfers
+                .Include(t => t.FromBranch)
+                .FirstOrDefaultAsync(t => t.Id == id);
             if (transfer == null || transfer.ReceiverId != userId || transfer.Status != TransferStatus.Pending)
                 return NotFound();
 
@@ -126,11 +150,20 @@ namespace AccountingSystem.Controllers
         public async Task<IActionResult> Edit(int id)
         {
             var userId = _userManager.GetUserId(User);
-            var transfer = await _context.PaymentTransfers.FindAsync(id);
+            var transfer = await _context.PaymentTransfers
+                .Include(t => t.FromBranch)
+                .Include(t => t.ToBranch)
+                .FirstOrDefaultAsync(t => t.Id == id);
             if (transfer == null || transfer.SenderId != userId || transfer.Status != TransferStatus.Pending)
                 return NotFound();
 
-            ViewData["Users"] = new SelectList(_context.Users.ToList(), "Id", "FullName", transfer.ReceiverId);
+            var users = _context.Users
+                .Where(u => u.Id != userId)
+                .Include(u => u.PaymentBranch)
+                .ToList();
+            ViewData["Users"] = new SelectList(users, "Id", "FullName", transfer.ReceiverId);
+            ViewBag.UserBranches = JsonSerializer.Serialize(users.ToDictionary(u => u.Id, u => u.PaymentBranch?.NameAr ?? ""));
+            ViewBag.SenderBranch = transfer.FromBranch?.NameAr;
             return View(transfer);
         }
 
@@ -140,15 +173,23 @@ namespace AccountingSystem.Controllers
         public async Task<IActionResult> Edit(int id, string receiverId, decimal amount, string? notes)
         {
             var userId = _userManager.GetUserId(User);
-            var transfer = await _context.PaymentTransfers.FindAsync(id);
+            var transfer = await _context.PaymentTransfers
+                .Include(t => t.FromBranch)
+                .FirstOrDefaultAsync(t => t.Id == id);
             if (transfer == null || transfer.SenderId != userId || transfer.Status != TransferStatus.Pending)
                 return NotFound();
 
-            var receiver = await _context.Users.FindAsync(receiverId);
-            if (receiver == null)
+            var receiver = await _context.Users.Include(u => u.PaymentBranch).FirstOrDefaultAsync(u => u.Id == receiverId);
+            if (receiver == null || receiver.Id == userId)
             {
-                ModelState.AddModelError("receiverId", "المستلم غير موجود");
-                ViewData["Users"] = new SelectList(_context.Users.ToList(), "Id", "FullName", receiverId);
+                ModelState.AddModelError("receiverId", receiver == null ? "المستلم غير موجود" : "لا يمكن إرسال حوالة لنفسك");
+                var users = _context.Users
+                    .Where(u => u.Id != userId)
+                    .Include(u => u.PaymentBranch)
+                    .ToList();
+                ViewData["Users"] = new SelectList(users, "Id", "FullName", receiverId);
+                ViewBag.UserBranches = JsonSerializer.Serialize(users.ToDictionary(u => u.Id, u => u.PaymentBranch?.NameAr ?? ""));
+                ViewBag.SenderBranch = transfer.FromBranch?.NameAr;
                 return View(transfer);
             }
 
