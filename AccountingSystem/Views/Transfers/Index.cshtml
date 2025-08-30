@@ -1,48 +1,33 @@
 @model IEnumerable<AccountingSystem.Models.PaymentTransfer>
 
 <h2>الحوالات</h2>
-<table class="table">
-    <thead>
-        <tr>
-            <th>المرسل</th>
-            <th>المستلم</th>
-            <th>المبلغ</th>
-            <th>الحالة</th>
-            <th>التاريخ</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model)
-{
-        <tr>
-            <td>@(item.Sender?.FullName ?? item.SenderId)</td>
-            <td>@(item.Receiver?.FullName ?? item.ReceiverId)</td>
-            <td>@item.Amount</td>
-            <td>@item.Status</td>
-            <td>@item.CreatedAt.ToString("yyyy-MM-dd")</td>
-            <td>
-            @if (item.Status == AccountingSystem.Models.TransferStatus.Pending)
-            {
-                if (item.ReceiverId == ViewBag.CurrentUserId)
-                {
-                    <a asp-action="Approve" asp-route-id="@item.Id" asp-route-accept="true">استلام</a>
-                    <span class="mx-1">|</span>
-                    <a asp-action="Approve" asp-route-id="@item.Id" asp-route-accept="false">رفض</a>
-                }
-                else if (item.SenderId == ViewBag.CurrentUserId)
-                {
-                    <a asp-action="Edit" asp-route-id="@item.Id">تعديل</a>
-                    <span class="mx-1">|</span>
-                    <form asp-action="Delete" asp-route-id="@item.Id" method="post" style="display:inline">
-                        <button type="submit" class="btn btn-link p-0 m-0 align-baseline">حذف</button>
-                    </form>
-                }
-            }
-            </td>
-        </tr>
+@{
+    var pending = Model.Where(t => t.Status == TransferStatus.Pending).ToList();
+    var accepted = Model.Where(t => t.Status == TransferStatus.Accepted).ToList();
+    var rejected = Model.Where(t => t.Status == TransferStatus.Rejected).ToList();
 }
-    </tbody>
-</table>
+
+<ul class="nav nav-tabs" id="transferTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">قيد الانتظار (@pending.Count)</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#accepted" type="button" role="tab">مقبولة (@accepted.Count)</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#rejected" type="button" role="tab">مرفوضة (@rejected.Count)</button>
+    </li>
+</ul>
+<div class="tab-content mt-3">
+    <div class="tab-pane fade show active" id="pending" role="tabpanel">
+        @await Html.PartialAsync("_TransferTable", pending)
+    </div>
+    <div class="tab-pane fade" id="accepted" role="tabpanel">
+        @await Html.PartialAsync("_TransferTable", accepted)
+    </div>
+    <div class="tab-pane fade" id="rejected" role="tabpanel">
+        @await Html.PartialAsync("_TransferTable", rejected)
+    </div>
+</div>
 
 <a asp-action="Create" class="btn btn-primary">إنشاء حوالة</a>
