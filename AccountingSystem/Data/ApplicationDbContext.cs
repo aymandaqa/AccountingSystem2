@@ -184,6 +184,11 @@ namespace AccountingSystem.Data
                     .WithMany()
                     .HasForeignKey(e => e.ToBranchId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.JournalEntry)
+                    .WithMany()
+                    .HasForeignKey(e => e.JournalEntryId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<User>(entity =>
