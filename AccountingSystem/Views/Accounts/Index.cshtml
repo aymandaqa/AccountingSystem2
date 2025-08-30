@@ -1,4 +1,4 @@
-@model List<AccountingSystem.ViewModels.AccountViewModel>
+@model AccountingSystem.ViewModels.PagedResult<AccountingSystem.ViewModels.AccountViewModel>
 
 @{
     ViewData["Title"] = "قائمة الحسابات";
@@ -21,38 +21,16 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <!-- فلاتر البحث -->
-                    <div class="row mb-3">
-                        <div class="col-md-3">
-                            <select id="accountTypeFilter" class="form-select">
-                                <option value="">جميع أنواع الحسابات</option>
-                                <option value="Assets">الأصول</option>
-                                <option value="Liabilities">الخصوم</option>
-                                <option value="Equity">حقوق الملكية</option>
-                                <option value="Revenue">الإيرادات</option>
-                                <option value="Expenses">المصروفات</option>
-                            </select>
+                    <form method="get" class="row mb-3">
+                        <div class="col-md-4 ms-auto">
+                            <input type="text" name="searchTerm" value="@Model.SearchTerm" class="form-control" placeholder="البحث في الحسابات..." />
                         </div>
-                        <div class="col-md-3">
-                            <select id="statusFilter" class="form-select">
-                                <option value="">جميع الحالات</option>
-                                <option value="true">نشط</option>
-                                <option value="false">غير نشط</option>
-                            </select>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-secondary w-100">بحث</button>
                         </div>
-                        <div class="col-md-3">
-                            <select id="postableFilter" class="form-select">
-                                <option value="">جميع الحسابات</option>
-                                <option value="true">قابل للترحيل</option>
-                                <option value="false">غير قابل للترحيل</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <input type="text" id="searchInput" class="form-control" placeholder="البحث في الحسابات...">
-                        </div>
-                    </div>
+                    </form>
 
-                    @if (Model.Any())
+                    @if (Model.Items.Any())
                     {
                         <div class="table-responsive">
                             <table class="table table-striped table-hover" id="accountsTable">
@@ -71,10 +49,10 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var account in Model)
+                                    @foreach (var account in Model.Items)
                                     {
-                                        <tr data-account-type="@account.AccountType" 
-                                            data-status="@account.IsActive.ToString().ToLower()" 
+                                        <tr data-account-type="@account.AccountType"
+                                            data-status="@account.IsActive.ToString().ToLower()"
                                             data-postable="@account.CanPostTransactions.ToString().ToLower()">
                                             <td><strong>@account.Code</strong></td>
                                             <td>@account.NameAr</td>
@@ -143,6 +121,16 @@
                                 </tbody>
                             </table>
                         </div>
+                        <nav>
+                            <ul class="pagination justify-content-center mt-3">
+                                @for (int i = 1; i <= Model.TotalPages; i++)
+                                {
+                                    <li class="page-item @(i == Model.Page ? "active" : "")">
+                                        <a class="page-link" href="?page=@i&searchTerm=@Model.SearchTerm">@i</a>
+                                    </li>
+                                }
+                            </ul>
+                        </nav>
                     }
                     else
                     {
@@ -159,47 +147,6 @@
 
 @section Scripts {
     <script>
-        $(document).ready(function() {
-            // تطبيق الفلاتر
-            function applyFilters() {
-                var accountType = $('#accountTypeFilter').val();
-                var status = $('#statusFilter').val();
-                var postable = $('#postableFilter').val();
-                var searchText = $('#searchInput').val().toLowerCase();
-
-                $('#accountsTable tbody tr').each(function() {
-                    var $row = $(this);
-                    var show = true;
-
-                    // فلتر نوع الحساب
-                    if (accountType && $row.data('account-type') !== accountType) {
-                        show = false;
-                    }
-
-                    // فلتر الحالة
-                    if (status && $row.data('status').toString() !== status) {
-                        show = false;
-                    }
-
-                    // فلتر قابلية الترحيل
-                    if (postable && $row.data('postable').toString() !== postable) {
-                        show = false;
-                    }
-
-                    // فلتر البحث النصي
-                    if (searchText && !$row.text().toLowerCase().includes(searchText)) {
-                        show = false;
-                    }
-
-                    $row.toggle(show);
-                });
-            }
-
-            // ربط الأحداث
-            $('#accountTypeFilter, #statusFilter, #postableFilter').change(applyFilters);
-            $('#searchInput').on('input', applyFilters);
-        });
-
         function deleteAccount(id) {
             if (confirm('هل أنت متأكد من حذف هذا الحساب؟')) {
                 $.post('@Url.Action("Delete")', { id: id }, function(result) {
