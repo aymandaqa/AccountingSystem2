@@ -18,7 +18,7 @@
                                 <option value="">كل الحسابات</option>
                                 @foreach (var acc in Model.Accounts)
                                 {
-                                    <option value="@acc.Value" @(Model.AccountId?.ToString() == acc.Value ? "selected" : "")>@acc.Text</option>
+                                    <option value="@acc.Value" selected="@(Model.AccountId?.ToString() == acc.Value ? "selected" : null)">@acc.Text</option>
                                 }
                             </select>
                         </div>
