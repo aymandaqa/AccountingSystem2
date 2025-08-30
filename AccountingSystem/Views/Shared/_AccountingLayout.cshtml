@@ -58,16 +58,42 @@
                         </ul>
                     </li>
 
-                    <li class="nav-item">
-                        <a class="nav-link" href="@Url.Action("Index", "Expenses")">
-                            <i class="fas fa-money-bill"></i> المصاريف
+
+
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-list-alt"></i> العمليات
                         </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="@Url.Action("MyClosures", "CashBoxClosures")">
+                                    <i class="fas fa-sitemap"></i> جرد الصندوق قائمة
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="@Url.Action("Pending", "CashBoxClosures")">
+                                    <i class="fas fa-sitemap"></i> جرد الصندوق مواقة
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="@Url.Action("Create", "CashBoxClosures")">
+                                    <i class="fas fa-sitemap"></i> جرد الصندوق
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item" href="@Url.Action("Index", "Expenses")">
+                                    <i class="fas fa-money-bill"></i> المصاريف
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="@Url.Action("Index", "transfers")">
+                                    <i class="fas fa-exchange"></i> الحوالات
+                                </a>
+                            </li>
+                        </ul>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="@Url.Action("Index", "transfers")">
-                            <i class="fas fa-exchange"></i> الحوالات
-                        </a>
-                    </li>
+
 
                     <!-- Journal Entries Dropdown -->
                     <li class="nav-item dropdown">

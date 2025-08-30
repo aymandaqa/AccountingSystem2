@@ -27,13 +27,13 @@
                     <tbody>
                         @foreach (var item in Model)
                         {
-                            var diff = item.CountedAmount - item.OpeningBalance;
+                            var diff = item.CountedAmount - item.Account.CurrentBalance;
                             <tr>
                                 <td>@item.User?.FullName</td>
                                 <td>@item.Account?.NameAr</td>
                                 <td>@item.Branch?.NameAr</td>
                                 <td>@item.CountedAmount.ToString("N2")</td>
-                                <td>@item.OpeningBalance.ToString("N2")</td>
+                                <td>@item.Account.CurrentBalance.ToString("N2")</td>
                                 <td class="@(diff == 0 ? "text-success" : "text-danger")">@diff.ToString("N2")</td>
                                 <td>
                                     <form asp-action="Approve" method="post" class="d-inline">
@@ -44,12 +44,12 @@
                                     <form asp-action="Approve" method="post" class="d-inline mt-1">
                                         <input type="hidden" name="id" value="@item.Id" />
                                         <input type="hidden" name="matched" value="false" />
-                                        <input type="text" name="reason" class="form-control form-control-sm d-inline w-auto" placeholder="سبب" />
+                                        <input type="text" required name="reason" class="form-control form-control-sm d-inline w-auto" placeholder="سبب" />
                                         <button type="submit" class="btn btn-warning btn-sm">موافقة مع فرق</button>
                                     </form>
                                     <form asp-action="Reject" method="post" class="d-inline mt-1">
                                         <input type="hidden" name="id" value="@item.Id" />
-                                        <input type="text" name="reason" class="form-control form-control-sm d-inline w-auto" placeholder="سبب" />
+                                        <input type="text" required name="reason" class="form-control form-control-sm d-inline w-auto" placeholder="سبب" />
                                         <button type="submit" class="btn btn-danger btn-sm">رفض</button>
                                     </form>
                                 </td>

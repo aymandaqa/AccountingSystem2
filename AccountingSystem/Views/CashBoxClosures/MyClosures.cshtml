@@ -17,9 +17,9 @@
                         <tr>
                             <th>التاريخ</th>
                             <th>المبلغ المعدود</th>
-                            <th>الرصيد الافتتاحي</th>
-                            <th>الفرق</th>
+                            <th>ملاحظة</th>
                             <th>الحالة</th>
+                            <th>سبب</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -29,9 +29,9 @@
                             <tr>
                                 <td>@item.CreatedAt.ToString("yyyy-MM-dd")</td>
                                 <td>@item.CountedAmount.ToString("N2")</td>
-                                <td>@item.OpeningBalance.ToString("N2")</td>
-                                <td class="@(diff == 0 ? "text-success" : "text-danger")">@diff.ToString("N2")</td>
+                                <td>@item.Notes </td>
                                 <td>@item.Status</td>
+                                <td>@item.Reason</td>
                             </tr>
                         }
                     </tbody>
