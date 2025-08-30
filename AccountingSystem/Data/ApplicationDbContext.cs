@@ -1,15 +1,24 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using AccountingSystem.Models;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
+using System.Threading;
 
 namespace AccountingSystem.Data
 {
     public class ApplicationDbContext : IdentityDbContext<User>
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        private readonly IHttpContextAccessor _httpContextAccessor;
+
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IHttpContextAccessor httpContextAccessor)
             : base(options)
         {
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public DbSet<Branch> Branches { get; set; }
@@ -22,6 +31,81 @@ namespace AccountingSystem.Data
         public DbSet<UserPermission> UserPermissions { get; set; }
         public DbSet<Expense> Expenses { get; set; }
         public DbSet<PaymentTransfer> PaymentTransfers { get; set; }
+        public DbSet<AuditLog> AuditLogs { get; set; }
+
+        public override int SaveChanges()
+        {
+            return SaveChangesAsync().GetAwaiter().GetResult();
+        }
+
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            ChangeTracker.DetectChanges();
+            var auditEntries = new List<(AuditLog Log, EntityEntry Entry)>();
+
+            foreach (var entry in ChangeTracker.Entries())
+            {
+                if (entry.Entity is AuditLog || entry.State == EntityState.Detached || entry.State == EntityState.Unchanged)
+                    continue;
+
+                var keyProperty = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey());
+                var recordId = keyProperty?.CurrentValue?.ToString();
+                var tableName = entry.Metadata.GetTableName();
+                var operation = entry.State.ToString();
+
+                foreach (var property in entry.Properties)
+                {
+                    if (entry.State == EntityState.Modified && !property.IsModified)
+                        continue;
+
+                    var log = new AuditLog
+                    {
+                        UserId = _httpContextAccessor?.HttpContext?.User?.Identity?.Name,
+                        Timestamp = DateTime.UtcNow,
+                        TableName = tableName,
+                        Operation = operation,
+                        RecordId = recordId,
+                        ColumnName = property.Metadata.Name
+                    };
+
+                    if (entry.State == EntityState.Modified)
+                    {
+                        log.OldValues = JsonSerializer.Serialize(property.OriginalValue);
+                        log.NewValues = JsonSerializer.Serialize(property.CurrentValue);
+                    }
+                    else if (entry.State == EntityState.Added)
+                    {
+                        log.NewValues = JsonSerializer.Serialize(property.CurrentValue);
+                    }
+                    else if (entry.State == EntityState.Deleted)
+                    {
+                        log.OldValues = JsonSerializer.Serialize(property.OriginalValue);
+                    }
+
+                    auditEntries.Add((log, entry));
+                }
+            }
+
+            var result = await base.SaveChangesAsync(cancellationToken);
+
+            if (auditEntries.Count > 0)
+            {
+                foreach (var (log, entry) in auditEntries)
+                {
+                    if (string.IsNullOrEmpty(log.RecordId))
+                    {
+                        var keyProperty = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey());
+                        if (keyProperty?.CurrentValue != null)
+                            log.RecordId = keyProperty.CurrentValue.ToString();
+                    }
+                }
+
+                AuditLogs.AddRange(auditEntries.Select(a => a.Log));
+                await base.SaveChangesAsync(cancellationToken);
+            }
+
+            return result;
+        }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
