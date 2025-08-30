@@ -1,0 +1,39 @@
+@model AccountingSystem.ViewModels.CashBoxClosureCreateViewModel
+@{
+    ViewData["Title"] = "إغلاق الصندوق";
+    Layout = "_AccountingLayout";
+}
+
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">إغلاق الصندوق</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">الحساب</label>
+                <input type="text" class="form-control" value="@Model.AccountName" readonly />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">الفرع</label>
+                <input type="text" class="form-control" value="@Model.BranchName" readonly />
+            </div>
+            <form asp-action="Create" method="post">
+                <div class="mb-3">
+                    <label asp-for="CountedAmount" class="form-label"></label>
+                    <input asp-for="CountedAmount" class="form-control" />
+                    <span asp-validation-for="CountedAmount" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Notes" class="form-label"></label>
+                    <textarea asp-for="Notes" class="form-control"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">حفظ</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

@@ -53,6 +53,16 @@ namespace AccountingSystem.Controllers
                     .Where(l => l.JournalEntry.Date >= startDate && l.JournalEntry.Date <= endDate && allowedBranchIds.Contains(l.JournalEntry.BranchId))
                     .Sum(l => l.DebitAmount - l.CreditAmount));
 
+            var cashBoxes = accounts
+                .Where(a => a.Code.StartsWith("1101"))
+                .Select(a => new CashBoxBalanceViewModel
+                {
+                    AccountName = a.NameAr,
+                    BranchName = a.Branch?.NameAr ?? string.Empty,
+                    Balance = accountBalances[a.Id]
+                })
+                .ToList();
+
             var nodes = accounts.Select(a => new AccountTreeNodeViewModel
             {
                 Id = a.Id,
@@ -119,7 +129,8 @@ namespace AccountingSystem.Controllers
                 TotalEquity = totals.ContainsKey(AccountType.Equity) ? totals[AccountType.Equity] : 0,
                 TotalRevenues = totals.ContainsKey(AccountType.Revenue) ? totals[AccountType.Revenue] : 0,
                 TotalExpenses = totals.ContainsKey(AccountType.Expenses) ? totals[AccountType.Expenses] : 0,
-                AccountTypeTrees = accountTypeTrees
+                AccountTypeTrees = accountTypeTrees,
+                CashBoxes = cashBoxes
             };
 
             viewModel.NetIncome = viewModel.TotalRevenues - viewModel.TotalExpenses;

@@ -32,6 +32,7 @@ namespace AccountingSystem.Data
         public DbSet<Expense> Expenses { get; set; }
         public DbSet<PaymentTransfer> PaymentTransfers { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<CashBoxClosure> CashBoxClosures { get; set; }
 
         public override int SaveChanges()
         {
@@ -198,6 +199,30 @@ namespace AccountingSystem.Data
                 entity.HasOne(e => e.CostCenter)
                     .WithMany(e => e.JournalEntryLines)
                     .HasForeignKey(e => e.CostCenterId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // CashBoxClosure configuration
+            builder.Entity<CashBoxClosure>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CountedAmount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.OpeningBalance).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.ClosingBalance).HasColumnType("decimal(18,2)");
+
+                entity.HasOne(e => e.User)
+                    .WithMany(u => u.CashBoxClosures)
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Account)
+                    .WithMany()
+                    .HasForeignKey(e => e.AccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Branch)
+                    .WithMany()
+                    .HasForeignKey(e => e.BranchId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
