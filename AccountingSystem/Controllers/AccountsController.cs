@@ -19,15 +19,30 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Accounts
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? searchTerm, int page = 1, int pageSize = 10)
         {
-            var accounts = await _context.Accounts
+            var query = _context.Accounts
                 .Include(a => a.Parent)
                 .Include(a => a.Branch)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(a =>
+                    a.Code.Contains(searchTerm) ||
+                    a.NameAr.Contains(searchTerm) ||
+                    a.NameEn.Contains(searchTerm));
+            }
+
+            var totalItems = await query.CountAsync();
+
+            var accounts = await query
                 .OrderBy(a => a.Code)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
-            var viewModel = accounts.Select(a => new AccountViewModel
+            var items = accounts.Select(a => new AccountViewModel
             {
                 Id = a.Id,
                 Code = a.Code,
@@ -49,7 +64,16 @@ namespace AccountingSystem.Controllers
                 HasTransactions = false
             }).ToList();
 
-            return View(viewModel);
+            var result = new PagedResult<AccountViewModel>
+            {
+                Items = items,
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                SearchTerm = searchTerm
+            };
+
+            return View(result);
         }
 
         // GET: Accounts/Tree

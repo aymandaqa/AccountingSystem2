@@ -21,31 +21,53 @@ namespace AccountingSystem.Controllers
 
         // GET: JournalEntries
         [Authorize(Policy = "journal.view")]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? searchTerm, int page = 1, int pageSize = 10)
         {
-            var journalEntries = await _context.JournalEntries
+            var query = _context.JournalEntries
                 .Include(j => j.Branch)
                 .Include(j => j.Lines)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(j =>
+                    j.Number.Contains(searchTerm) ||
+                    j.Description.Contains(searchTerm) ||
+                    (j.Reference != null && j.Reference.Contains(searchTerm)) ||
+                    j.Branch.NameAr.Contains(searchTerm));
+            }
+
+            var totalItems = await query.CountAsync();
+
+            var entries = await query
                 .OrderByDescending(j => j.Date)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
-            var viewModel = new JournalEntriesIndexViewModel
+            var items = entries.Select(j => new JournalEntryViewModel
             {
-                JournalEntries = journalEntries.Select(j => new JournalEntryViewModel
-                {
-                    Id = j.Id,
-                    Number = j.Number,
-                    Date = j.Date,
-                    Description = j.Description,
-                    Reference = j.Reference,
-                    Status = j.Status.ToString(),
-                    BranchName = j.Branch.NameAr,
-                    TotalAmount = j.Lines.Sum(l => l.DebitAmount),
-                    LinesCount = j.Lines.Count
-                }).ToList()
+                Id = j.Id,
+                Number = j.Number,
+                Date = j.Date,
+                Description = j.Description,
+                Reference = j.Reference,
+                Status = j.Status.ToString(),
+                BranchName = j.Branch.NameAr,
+                TotalAmount = j.Lines.Sum(l => l.DebitAmount),
+                LinesCount = j.Lines.Count
+            }).ToList();
+
+            var result = new PagedResult<JournalEntryViewModel>
+            {
+                Items = items,
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                SearchTerm = searchTerm
             };
 
-            return View(viewModel);
+            return View(result);
         }
 
         // GET: JournalEntries/Create
@@ -308,43 +330,65 @@ namespace AccountingSystem.Controllers
         }
 
         [Authorize(Policy = "journal.view")]
-        public async Task<IActionResult> Draft()
+        public async Task<IActionResult> Draft(string? searchTerm, int page = 1, int pageSize = 10)
         {
-            return await GetEntriesByStatus(JournalEntryStatus.Draft, "Draft");
+            return await GetEntriesByStatus(JournalEntryStatus.Draft, "Draft", searchTerm, page, pageSize);
         }
 
         [Authorize(Policy = "journal.view")]
-        public async Task<IActionResult> Posted()
+        public async Task<IActionResult> Posted(string? searchTerm, int page = 1, int pageSize = 10)
         {
-            return await GetEntriesByStatus(JournalEntryStatus.Posted, "Posted");
+            return await GetEntriesByStatus(JournalEntryStatus.Posted, "Posted", searchTerm, page, pageSize);
         }
 
-        private async Task<IActionResult> GetEntriesByStatus(JournalEntryStatus status, string viewName)
+        private async Task<IActionResult> GetEntriesByStatus(JournalEntryStatus status, string viewName, string? searchTerm, int page, int pageSize)
         {
-            var journalEntries = await _context.JournalEntries
+            var query = _context.JournalEntries
                 .Include(j => j.Branch)
                 .Include(j => j.Lines)
                 .Where(j => j.Status == status)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(j =>
+                    j.Number.Contains(searchTerm) ||
+                    j.Description.Contains(searchTerm) ||
+                    (j.Reference != null && j.Reference.Contains(searchTerm)) ||
+                    j.Branch.NameAr.Contains(searchTerm));
+            }
+
+            var totalItems = await query.CountAsync();
+
+            var entries = await query
                 .OrderByDescending(j => j.Date)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
-            var viewModel = new JournalEntriesIndexViewModel
+            var items = entries.Select(j => new JournalEntryViewModel
             {
-                JournalEntries = journalEntries.Select(j => new JournalEntryViewModel
-                {
-                    Id = j.Id,
-                    Number = j.Number,
-                    Date = j.Date,
-                    Description = j.Description,
-                    Reference = j.Reference,
-                    Status = j.Status.ToString(),
-                    BranchName = j.Branch.NameAr,
-                    TotalAmount = j.Lines.Sum(l => l.DebitAmount),
-                    LinesCount = j.Lines.Count
-                }).ToList()
+                Id = j.Id,
+                Number = j.Number,
+                Date = j.Date,
+                Description = j.Description,
+                Reference = j.Reference,
+                Status = j.Status.ToString(),
+                BranchName = j.Branch.NameAr,
+                TotalAmount = j.Lines.Sum(l => l.DebitAmount),
+                LinesCount = j.Lines.Count
+            }).ToList();
+
+            var result = new PagedResult<JournalEntryViewModel>
+            {
+                Items = items,
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                SearchTerm = searchTerm
             };
 
-            return View(viewName, viewModel);
+            return View(viewName, result);
         }
     }
 }

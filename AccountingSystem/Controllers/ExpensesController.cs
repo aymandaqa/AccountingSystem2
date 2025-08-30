@@ -22,22 +22,37 @@ namespace AccountingSystem.Controllers
             _userManager = userManager;
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? searchTerm, int page = 1, int pageSize = 10)
         {
-
-            var brn = await _context.Branches.ToListAsync();
-            var expenses = await _context.Expenses
-                .Include(e => e.User)
+            var query = _context.Expenses
+                .Include(e => e.User).ThenInclude(u => u.PaymentBranch)
                 .Include(e => e.PaymentAccount)
                 .Include(e => e.ExpenseAccount)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(e =>
+                    (e.User.FullName != null && e.User.FullName.Contains(searchTerm)) ||
+                    (e.User.Email != null && e.User.Email.Contains(searchTerm)) ||
+                    e.PaymentAccount.NameAr.Contains(searchTerm) ||
+                    e.ExpenseAccount.NameAr.Contains(searchTerm) ||
+                    (e.Notes != null && e.Notes.Contains(searchTerm)));
+            }
+
+            var totalItems = await query.CountAsync();
+
+            var expenses = await query
                 .OrderByDescending(e => e.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
-            var model = expenses.Select(e => new ExpenseViewModel
+            var items = expenses.Select(e => new ExpenseViewModel
             {
                 Id = e.Id,
                 UserName = e.User.FullName ?? e.User.Email ?? string.Empty,
-                Branch = brn.FirstOrDefault(x => x.Id == e.User.PaymentBranchId)?.NameAr,
+                Branch = e.User.PaymentBranch?.NameAr ?? string.Empty,
                 PaymentAccountName = e.PaymentAccount.NameAr,
                 ExpenseAccountName = e.ExpenseAccount.NameAr,
                 Amount = e.Amount,
@@ -46,26 +61,52 @@ namespace AccountingSystem.Controllers
                 CreatedAt = e.CreatedAt
             }).ToList();
 
-            return View(model);
+            var result = new PagedResult<ExpenseViewModel>
+            {
+                Items = items,
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                SearchTerm = searchTerm
+            };
+
+            return View(result);
         }
 
-        public async Task<IActionResult> My()
+        public async Task<IActionResult> My(string? searchTerm, int page = 1, int pageSize = 10)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var expenses = await _context.Expenses
+
+            var query = _context.Expenses
                 .Where(e => e.UserId == userId)
-                 .Include(e => e.User)
+                .Include(e => e.User).ThenInclude(u => u.PaymentBranch)
                 .Include(e => e.PaymentAccount)
                 .Include(e => e.ExpenseAccount)
-                .OrderByDescending(e => e.CreatedAt)
-                .ToListAsync();
-            var brn = await _context.Branches.ToListAsync();
+                .AsQueryable();
 
-            var model = expenses.Select(e => new ExpenseViewModel
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(e =>
+                    (e.User.FullName != null && e.User.FullName.Contains(searchTerm)) ||
+                    (e.User.Email != null && e.User.Email.Contains(searchTerm)) ||
+                    e.PaymentAccount.NameAr.Contains(searchTerm) ||
+                    e.ExpenseAccount.NameAr.Contains(searchTerm) ||
+                    (e.Notes != null && e.Notes.Contains(searchTerm)));
+            }
+
+            var totalItems = await query.CountAsync();
+
+            var expenses = await query
+                .OrderByDescending(e => e.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var items = expenses.Select(e => new ExpenseViewModel
             {
                 Id = e.Id,
                 UserName = e.User.FullName ?? e.User.Email ?? string.Empty,
-                Branch = brn.FirstOrDefault(x => x.Id == e.User.PaymentBranchId).NameAr,
+                Branch = e.User.PaymentBranch?.NameAr ?? string.Empty,
                 PaymentAccountName = e.PaymentAccount.NameAr,
                 ExpenseAccountName = e.ExpenseAccount.NameAr,
                 Amount = e.Amount,
@@ -74,7 +115,16 @@ namespace AccountingSystem.Controllers
                 CreatedAt = e.CreatedAt
             }).ToList();
 
-            return View("Index", model);
+            var result = new PagedResult<ExpenseViewModel>
+            {
+                Items = items,
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                SearchTerm = searchTerm
+            };
+
+            return View("Index", result);
         }
 
         [Authorize(Policy = "expenses.create")]
