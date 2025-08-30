@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Text;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
@@ -100,6 +102,88 @@ namespace AccountingSystem.Controllers
                 .OrderBy(c => c.CreatedAt)
                 .ToListAsync();
             return View(closures);
+        }
+
+        [Authorize(Policy = "cashclosures.report")]
+        public async Task<IActionResult> Report(int? accountId, DateTime? fromDate, DateTime? toDate)
+        {
+            var model = new CashBoxClosureReportViewModel
+            {
+                AccountId = accountId,
+                FromDate = fromDate,
+                ToDate = toDate,
+                Accounts = await _context.Accounts
+                    .Where(a => a.CanPostTransactions)
+                    .OrderBy(a => a.Code)
+                    .Select(a => new SelectListItem
+                    {
+                        Value = a.Id.ToString(),
+                        Text = $"{a.Code} - {a.NameAr}"
+                    }).ToListAsync()
+            };
+
+            var query = _context.CashBoxClosures
+                .Include(c => c.Account)
+                .Include(c => c.Branch)
+                .AsQueryable();
+
+            if (accountId.HasValue)
+                query = query.Where(c => c.AccountId == accountId.Value);
+            if (fromDate.HasValue)
+                query = query.Where(c => c.CreatedAt >= fromDate.Value);
+            if (toDate.HasValue)
+                query = query.Where(c => c.CreatedAt <= toDate.Value);
+
+            var closures = await query
+                .OrderByDescending(c => c.CreatedAt)
+                .ToListAsync();
+
+            model.Closures = closures.Select(c => new CashBoxClosureReportItemViewModel
+            {
+                CreatedAt = c.CreatedAt,
+                AccountName = c.Account?.NameAr ?? string.Empty,
+                BranchName = c.Branch?.NameAr ?? string.Empty,
+                OpeningBalance = c.OpeningBalance,
+                CountedAmount = c.CountedAmount,
+                ClosingBalance = c.ClosingBalance,
+                Status = c.Status switch
+                {
+                    CashBoxClosureStatus.Pending => "قيد الانتظار",
+                    CashBoxClosureStatus.ApprovedMatched => "مطابق",
+                    CashBoxClosureStatus.ApprovedWithDifference => "مع فرق",
+                    CashBoxClosureStatus.Rejected => "مرفوض",
+                    _ => c.Status.ToString()
+                }
+            }).ToList();
+
+            return View(model);
+        }
+
+        [Authorize(Policy = "cashclosures.report")]
+        public async Task<IActionResult> Export(int? accountId, DateTime? fromDate, DateTime? toDate)
+        {
+            var query = _context.CashBoxClosures
+                .Include(c => c.Account)
+                .Include(c => c.Branch)
+                .AsQueryable();
+
+            if (accountId.HasValue)
+                query = query.Where(c => c.AccountId == accountId.Value);
+            if (fromDate.HasValue)
+                query = query.Where(c => c.CreatedAt >= fromDate.Value);
+            if (toDate.HasValue)
+                query = query.Where(c => c.CreatedAt <= toDate.Value);
+
+            var closures = await query.OrderBy(c => c.CreatedAt).ToListAsync();
+
+            var sb = new StringBuilder();
+            sb.AppendLine("Date,Account,Branch,OpeningBalance,CountedAmount,ClosingBalance,Status");
+            foreach (var c in closures)
+            {
+                sb.AppendLine($"{c.CreatedAt:yyyy-MM-dd},{c.Account?.NameAr},{c.Branch?.NameAr},{c.OpeningBalance},{c.CountedAmount},{c.ClosingBalance},{c.Status}");
+            }
+
+            return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", "cashbox_closures.csv");
         }
 
         [HttpPost]

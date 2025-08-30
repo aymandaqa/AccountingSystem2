@@ -97,7 +97,8 @@ namespace AccountingSystem.Data
                 new Permission { Name = "transfers.approve", DisplayName = "اعتماد الحوالات", Category = "الحوالات" },
                 new Permission { Name = "cashclosures.view", DisplayName = "عرض إغلاقات الصندوق", Category = "الصندوق" },
                 new Permission { Name = "cashclosures.create", DisplayName = "إنشاء إغلاق صندوق", Category = "الصندوق" },
-                new Permission { Name = "cashclosures.approve", DisplayName = "اعتماد إغلاق الصندوق", Category = "الصندوق" }
+                new Permission { Name = "cashclosures.approve", DisplayName = "اعتماد إغلاق الصندوق", Category = "الصندوق" },
+                new Permission { Name = "cashclosures.report", DisplayName = "تقرير إغلاقات الصندوق", Category = "الصندوق" }
             };
 
 
