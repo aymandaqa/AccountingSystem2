@@ -21,6 +21,7 @@ namespace AccountingSystem.Data
         public DbSet<UserBranch> UserBranches { get; set; }
         public DbSet<UserPermission> UserPermissions { get; set; }
         public DbSet<Expense> Expenses { get; set; }
+        public DbSet<PaymentTransfer> PaymentTransfers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -148,6 +149,43 @@ namespace AccountingSystem.Data
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
+            builder.Entity<PaymentTransfer>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Notes).HasMaxLength(500);
+
+                entity.HasOne(e => e.Sender)
+                    .WithMany()
+                    .HasForeignKey(e => e.SenderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Receiver)
+                    .WithMany()
+                    .HasForeignKey(e => e.ReceiverId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.FromPaymentAccount)
+                    .WithMany()
+                    .HasForeignKey(e => e.FromPaymentAccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.ToPaymentAccount)
+                    .WithMany()
+                    .HasForeignKey(e => e.ToPaymentAccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.FromBranch)
+                    .WithMany()
+                    .HasForeignKey(e => e.FromBranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.ToBranch)
+                    .WithMany()
+                    .HasForeignKey(e => e.ToBranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
             builder.Entity<User>(entity =>
             {
                 entity.HasOne(u => u.PaymentAccount)
@@ -249,7 +287,10 @@ namespace AccountingSystem.Data
                 new Permission { Id = 29, Name = "expenses.create", DisplayName = "إنشاء المصاريف", Category = "المصاريف", CreatedAt = createdAt },
                 new Permission { Id = 30, Name = "expenses.edit", DisplayName = "تعديل المصاريف", Category = "المصاريف", CreatedAt = createdAt },
                 new Permission { Id = 31, Name = "expenses.delete", DisplayName = "حذف المصاريف", Category = "المصاريف", CreatedAt = createdAt },
-                new Permission { Id = 32, Name = "expenses.approve", DisplayName = "اعتماد المصاريف", Category = "المصاريف", CreatedAt = createdAt }
+                new Permission { Id = 32, Name = "expenses.approve", DisplayName = "اعتماد المصاريف", Category = "المصاريف", CreatedAt = createdAt },
+                new Permission { Id = 33, Name = "transfers.view", DisplayName = "عرض الحوالات", Category = "الحوالات", CreatedAt = createdAt },
+                new Permission { Id = 34, Name = "transfers.create", DisplayName = "إنشاء الحوالات", Category = "الحوالات", CreatedAt = createdAt },
+                new Permission { Id = 35, Name = "transfers.approve", DisplayName = "اعتماد الحوالات", Category = "الحوالات", CreatedAt = createdAt }
             );
         }
     }

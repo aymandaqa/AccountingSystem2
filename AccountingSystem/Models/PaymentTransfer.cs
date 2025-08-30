@@ -1,0 +1,50 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace AccountingSystem.Models
+{
+    public class PaymentTransfer
+    {
+        public int Id { get; set; }
+
+        [Required]
+        public string SenderId { get; set; } = string.Empty;
+
+        [Required]
+        public string ReceiverId { get; set; } = string.Empty;
+
+        [Required]
+        public int FromPaymentAccountId { get; set; }
+
+        [Required]
+        public int ToPaymentAccountId { get; set; }
+
+        public int? FromBranchId { get; set; }
+        public int? ToBranchId { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal Amount { get; set; }
+
+        [StringLength(500)]
+        public string? Notes { get; set; }
+
+        public TransferStatus Status { get; set; } = TransferStatus.Pending;
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        // Navigation properties
+        public virtual User Sender { get; set; } = null!;
+        public virtual User Receiver { get; set; } = null!;
+        public virtual Account FromPaymentAccount { get; set; } = null!;
+        public virtual Account ToPaymentAccount { get; set; } = null!;
+        public virtual Branch? FromBranch { get; set; }
+        public virtual Branch? ToBranch { get; set; }
+    }
+
+    public enum TransferStatus
+    {
+        Pending = 1,
+        Accepted = 2,
+        Rejected = 3
+    }
+}
