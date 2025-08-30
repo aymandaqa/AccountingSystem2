@@ -9,6 +9,7 @@
     var canViewStats = (await AuthorizationService.AuthorizeAsync(User, "dashboard.widget.stats")).Succeeded;
     var canViewAccounts = (await AuthorizationService.AuthorizeAsync(User, "dashboard.widget.accounts")).Succeeded;
     var canViewLinks = (await AuthorizationService.AuthorizeAsync(User, "dashboard.widget.links")).Succeeded;
+    var canViewCashBoxes = (await AuthorizationService.AuthorizeAsync(User, "dashboard.widget.cashboxes")).Succeeded;
 }
 
 <div class="container-fluid">
@@ -148,6 +149,53 @@
                             <i class="fas fa-chart-pie fa-2x"></i>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- أرصدة الصناديق -->
+    @if (canViewCashBoxes)
+    {
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-cash-register me-2"></i>
+                        أرصدة الصناديق
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.CashBoxes.Any())
+                    {
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>الفرع</th>
+                                    <th>الحساب</th>
+                                    <th>الرصيد</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var cb in Model.CashBoxes)
+                                {
+                                    <tr>
+                                        <td>@cb.BranchName</td>
+                                        <td>@cb.AccountName</td>
+                                        <td>@cb.Balance.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info text-center">
+                            لا توجد بيانات لعرضها
+                        </div>
+                    }
                 </div>
             </div>
         </div>

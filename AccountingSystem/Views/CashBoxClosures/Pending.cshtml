@@ -1,0 +1,67 @@
+@model IEnumerable<AccountingSystem.Models.CashBoxClosure>
+@{
+    ViewData["Title"] = "طلبات إغلاق الصندوق";
+    Layout = "_AccountingLayout";
+}
+
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">طلبات إغلاق الصندوق</h5>
+        </div>
+        <div class="card-body">
+            @if (Model.Any())
+            {
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>المستخدم</th>
+                            <th>الحساب</th>
+                            <th>الفرع</th>
+                            <th>المبلغ المعدود</th>
+                            <th>الرصيد</th>
+                            <th>الفرق</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            var diff = item.CountedAmount - item.OpeningBalance;
+                            <tr>
+                                <td>@item.User?.FullName</td>
+                                <td>@item.Account?.NameAr</td>
+                                <td>@item.Branch?.NameAr</td>
+                                <td>@item.CountedAmount.ToString("N2")</td>
+                                <td>@item.OpeningBalance.ToString("N2")</td>
+                                <td class="@(diff == 0 ? "text-success" : "text-danger")">@diff.ToString("N2")</td>
+                                <td>
+                                    <form asp-action="Approve" method="post" class="d-inline">
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <input type="hidden" name="matched" value="true" />
+                                        <button type="submit" class="btn btn-success btn-sm">موافقة مطابقة</button>
+                                    </form>
+                                    <form asp-action="Approve" method="post" class="d-inline mt-1">
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <input type="hidden" name="matched" value="false" />
+                                        <input type="text" name="reason" class="form-control form-control-sm d-inline w-auto" placeholder="سبب" />
+                                        <button type="submit" class="btn btn-warning btn-sm">موافقة مع فرق</button>
+                                    </form>
+                                    <form asp-action="Reject" method="post" class="d-inline mt-1">
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <input type="text" name="reason" class="form-control form-control-sm d-inline w-auto" placeholder="سبب" />
+                                        <button type="submit" class="btn btn-danger btn-sm">رفض</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="alert alert-info text-center">لا توجد طلبات حالية</div>
+            }
+        </div>
+    </div>
+</div>
