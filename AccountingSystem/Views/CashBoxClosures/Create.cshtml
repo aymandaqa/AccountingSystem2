@@ -18,11 +18,27 @@
                 <label class="form-label">الفرع</label>
                 <input type="text" class="form-control" value="@Model.BranchName" readonly />
             </div>
+            <div class="mb-3">
+                <label class="form-label">الرصيد الافتتاحي</label>
+                <input asp-for="OpeningBalance" class="form-control" readonly asp-format="{0:N2}" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">حركات اليوم</label>
+                <input asp-for="TodayTransactions" class="form-control" readonly asp-format="{0:N2}" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">الرصيد التراكمي</label>
+                <input asp-for="CumulativeBalance" class="form-control" readonly asp-format="{0:N2}" />
+            </div>
             <form asp-action="Create" method="post">
                 <div class="mb-3">
                     <label asp-for="CountedAmount" class="form-label"></label>
                     <input asp-for="CountedAmount" class="form-control" />
                     <span asp-validation-for="CountedAmount" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">الفرق</label>
+                    <input id="difference" type="text" class="form-control" readonly />
                 </div>
                 <div class="mb-3">
                     <label asp-for="Notes" class="form-label"></label>
@@ -36,4 +52,15 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        const countedInput = document.getElementById("CountedAmount");
+        const diffInput = document.getElementById("difference");
+        const expected = @Model.TodayTransactions;
+        function updateDiff() {
+            const counted = parseFloat(countedInput.value) || 0;
+            diffInput.value = (counted - expected).toFixed(2);
+        }
+        countedInput.addEventListener("input", updateDiff);
+        updateDiff();
+    </script>
 }

@@ -31,11 +31,26 @@ namespace AccountingSystem.Controllers
 
             var account = await _context.Accounts.FindAsync(user.PaymentAccountId);
             var branch = await _context.Branches.FindAsync(user.PaymentBranchId);
+            if (account == null)
+                return NotFound();
+
+            var today = DateTime.Today;
+            var todayTransactions = await _context.JournalEntryLines
+                .Include(l => l.JournalEntry)
+                .Where(l => l.AccountId == account.Id)
+                .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
+                .Where(l => l.JournalEntry.Date >= today && l.JournalEntry.Date < today.AddDays(1))
+                .SumAsync(l => l.DebitAmount - l.CreditAmount);
+
+            var openingBalance = account.CurrentBalance - todayTransactions;
 
             var model = new CashBoxClosureCreateViewModel
             {
                 AccountName = account?.NameAr ?? string.Empty,
-                BranchName = branch?.NameAr ?? string.Empty
+                BranchName = branch?.NameAr ?? string.Empty,
+                OpeningBalance = openingBalance,
+                TodayTransactions = todayTransactions,
+                CumulativeBalance = account.CurrentBalance
             };
 
             return View(model);
@@ -46,18 +61,34 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "cashclosures.create")]
         public async Task<IActionResult> Create(CashBoxClosureCreateViewModel model)
         {
-            if (!ModelState.IsValid)
-            {
-                return View(model);
-            }
-
             var user = await _userManager.GetUserAsync(User);
             if (user == null || user.PaymentAccountId == null || user.PaymentBranchId == null)
                 return NotFound();
 
             var account = await _context.Accounts.FindAsync(user.PaymentAccountId);
+            var branch = await _context.Branches.FindAsync(user.PaymentBranchId);
             if (account == null)
                 return NotFound();
+
+            var today = DateTime.Today;
+            var todayTransactions = await _context.JournalEntryLines
+                .Include(l => l.JournalEntry)
+                .Where(l => l.AccountId == account.Id)
+                .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
+                .Where(l => l.JournalEntry.Date >= today && l.JournalEntry.Date < today.AddDays(1))
+                .SumAsync(l => l.DebitAmount - l.CreditAmount);
+
+            var openingBalance = account.CurrentBalance - todayTransactions;
+
+            if (!ModelState.IsValid)
+            {
+                model.AccountName = account.NameAr;
+                model.BranchName = branch?.NameAr ?? string.Empty;
+                model.OpeningBalance = openingBalance;
+                model.TodayTransactions = todayTransactions;
+                model.CumulativeBalance = account.CurrentBalance;
+                return View(model);
+            }
 
             var closure = new CashBoxClosure
             {
@@ -65,8 +96,8 @@ namespace AccountingSystem.Controllers
                 AccountId = account.Id,
                 BranchId = user.PaymentBranchId.Value,
                 CountedAmount = model.CountedAmount,
-                OpeningBalance = account.CurrentBalance,
-                ClosingBalance = model.CountedAmount,
+                OpeningBalance = openingBalance,
+                ClosingBalance = account.CurrentBalance,
                 Notes = model.Notes,
                 Status = CashBoxClosureStatus.Pending,
                 CreatedAt = DateTime.Now
@@ -114,6 +145,7 @@ namespace AccountingSystem.Controllers
                 ToDate = toDate,
                 Accounts = await _context.Accounts
                     .Where(a => a.CanPostTransactions)
+                    .Where(a => _context.Users.Any(u => u.PaymentAccountId == a.Id))
                     .OrderBy(a => a.Code)
                     .Select(a => new SelectListItem
                     {
@@ -146,6 +178,7 @@ namespace AccountingSystem.Controllers
                 OpeningBalance = c.OpeningBalance,
                 CountedAmount = c.CountedAmount,
                 ClosingBalance = c.ClosingBalance,
+                Difference = c.CountedAmount - (c.ClosingBalance - c.OpeningBalance),
                 Status = c.Status switch
                 {
                     CashBoxClosureStatus.Pending => "قيد الانتظار",
@@ -177,10 +210,11 @@ namespace AccountingSystem.Controllers
             var closures = await query.OrderBy(c => c.CreatedAt).ToListAsync();
 
             var sb = new StringBuilder();
-            sb.AppendLine("Date,Account,Branch,OpeningBalance,CountedAmount,ClosingBalance,Status");
+            sb.AppendLine("Date,Account,Branch,OpeningBalance,CountedAmount,ClosingBalance,Difference,Status");
             foreach (var c in closures)
             {
-                sb.AppendLine($"{c.CreatedAt:yyyy-MM-dd},{c.Account?.NameAr},{c.Branch?.NameAr},{c.OpeningBalance},{c.CountedAmount},{c.ClosingBalance},{c.Status}");
+                var diff = c.CountedAmount - (c.ClosingBalance - c.OpeningBalance);
+                sb.AppendLine($"{c.CreatedAt:yyyy-MM-dd},{c.Account?.NameAr},{c.Branch?.NameAr},{c.OpeningBalance},{c.CountedAmount},{c.ClosingBalance},{diff},{c.Status}");
             }
 
             return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", "cashbox_closures.csv");
