@@ -50,6 +50,7 @@
                                     <th>الفرع</th>
                                     <th>الرصيد الافتتاحي</th>
                                     <th>المبلغ المعدود</th>
+                                    <th>الفرق</th>
                                     <th>الرصيد الختامي</th>
                                     <th>الحالة</th>
                                 </tr>
@@ -65,6 +66,7 @@
                                             <td>@c.BranchName</td>
                                             <td class="text-end">@c.OpeningBalance.ToString("N2")</td>
                                             <td class="text-end">@c.CountedAmount.ToString("N2")</td>
+                                            <td class="text-end">@c.Difference.ToString("N2")</td>
                                             <td class="text-end">@c.ClosingBalance.ToString("N2")</td>
                                             <td>@c.Status</td>
                                         </tr>
@@ -73,7 +75,7 @@
                                 else
                                 {
                                     <tr>
-                                        <td colspan="7" class="text-center text-muted">لا توجد بيانات</td>
+                                        <td colspan="8" class="text-center text-muted">لا توجد بيانات</td>
                                     </tr>
                                 }
                             </tbody>

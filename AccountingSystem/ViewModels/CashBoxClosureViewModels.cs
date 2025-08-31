@@ -15,6 +15,17 @@ namespace AccountingSystem.ViewModels
 
         public string AccountName { get; set; } = string.Empty;
         public string BranchName { get; set; } = string.Empty;
+
+        [Display(Name = "الرصيد الافتتاحي")]
+        public decimal OpeningBalance { get; set; }
+
+        [Display(Name = "حركات اليوم")]
+        public decimal TodayTransactions { get; set; }
+
+        [Display(Name = "الرصيد التراكمي")]
+        public decimal CumulativeBalance { get; set; }
+
+        public decimal Difference => CountedAmount - TodayTransactions;
     }
 
     public class CashBoxClosureReportViewModel
@@ -34,6 +45,7 @@ namespace AccountingSystem.ViewModels
         public decimal OpeningBalance { get; set; }
         public decimal CountedAmount { get; set; }
         public decimal ClosingBalance { get; set; }
+        public decimal Difference { get; set; }
         public string Status { get; set; } = string.Empty;
     }
 }
