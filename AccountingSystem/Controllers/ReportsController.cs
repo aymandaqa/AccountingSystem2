@@ -29,7 +29,7 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/TrialBalance
-        public async Task<IActionResult> TrialBalance(int? branchId, DateTime? fromDate, DateTime? toDate)
+        public async Task<IActionResult> TrialBalance(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false)
         {
             var accounts = await _context.Accounts
                 .Include(a => a.Branch)
@@ -38,17 +38,38 @@ namespace AccountingSystem.Controllers
                 .OrderBy(a => a.Code)
                 .ToListAsync();
 
+            var from = fromDate ?? DateTime.Now.AddMonths(-1);
+            var to = toDate ?? DateTime.Now;
+
+            var pending = includePending
+                ? await _context.JournalEntryLines
+                    .Include(l => l.JournalEntry)
+                    .Where(l => l.JournalEntry.Status != JournalEntryStatus.Posted)
+                    .Where(l => l.JournalEntry.Date >= from && l.JournalEntry.Date <= to)
+                    .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
+                    .GroupBy(l => l.AccountId)
+                    .Select(g => new { g.Key, Debit = g.Sum(x => x.DebitAmount), Credit = g.Sum(x => x.CreditAmount) })
+                    .ToDictionaryAsync(x => x.Key, x => (x.Debit, x.Credit))
+                : new Dictionary<int, (decimal Debit, decimal Credit)>();
+
             var viewModel = new TrialBalanceViewModel
             {
-                FromDate = fromDate ?? DateTime.Now.AddMonths(-1),
-                ToDate = toDate ?? DateTime.Now,
+                FromDate = from,
+                ToDate = to,
                 BranchId = branchId,
-                Accounts = accounts.Select(a => new TrialBalanceAccountViewModel
+                IncludePending = includePending,
+                Accounts = accounts.Select(a =>
                 {
-                    AccountCode = a.Code,
-                    AccountName = a.NameAr,
-                    DebitBalance = a.Nature == AccountNature.Debit ? a.CurrentBalance : 0,
-                    CreditBalance = a.Nature == AccountNature.Credit ? a.CurrentBalance : 0
+                    pending.TryGetValue(a.Id, out var p);
+                    var pendingBalance = a.Nature == AccountNature.Debit ? p.Debit - p.Credit : p.Credit - p.Debit;
+                    var balance = a.CurrentBalance + pendingBalance;
+                    return new TrialBalanceAccountViewModel
+                    {
+                        AccountCode = a.Code,
+                        AccountName = a.NameAr,
+                        DebitBalance = a.Nature == AccountNature.Debit ? balance : 0,
+                        CreditBalance = a.Nature == AccountNature.Credit ? balance : 0
+                    };
                 }).ToList(),
                 Branches = await GetBranchesSelectList()
             };
@@ -99,16 +120,16 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/BalanceSheet
-        public async Task<IActionResult> BalanceSheet(int? branchId, DateTime? asOfDate)
+        public async Task<IActionResult> BalanceSheet(int? branchId, DateTime? asOfDate, bool includePending = false)
         {
-            var viewModel = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now);
+            var viewModel = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now, includePending);
             return View(viewModel);
         }
 
         // GET: Reports/BalanceSheetPdf
-        public async Task<IActionResult> BalanceSheetPdf(int? branchId, DateTime? asOfDate)
+        public async Task<IActionResult> BalanceSheetPdf(int? branchId, DateTime? asOfDate, bool includePending = false)
         {
-            var model = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now);
+            var model = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now, includePending);
 
             var document = Document.Create(container =>
             {
@@ -154,9 +175,9 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/BalanceSheetExcel
-        public async Task<IActionResult> BalanceSheetExcel(int? branchId, DateTime? asOfDate)
+        public async Task<IActionResult> BalanceSheetExcel(int? branchId, DateTime? asOfDate, bool includePending = false)
         {
-            var model = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now);
+            var model = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now, includePending);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.AddWorksheet("BalanceSheet");
@@ -195,7 +216,7 @@ namespace AccountingSystem.Controllers
             return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "BalanceSheet.xlsx");
         }
 
-        private async Task<BalanceSheetViewModel> BuildBalanceSheetViewModel(int? branchId, DateTime asOfDate)
+        private async Task<BalanceSheetViewModel> BuildBalanceSheetViewModel(int? branchId, DateTime asOfDate, bool includePending)
         {
             var accounts = await _context.Accounts
                 .Include(a => a.JournalEntryLines)
@@ -207,7 +228,7 @@ namespace AccountingSystem.Controllers
 
             var balances = accounts.ToDictionary(a => a.Id, a =>
                 a.OpeningBalance + a.JournalEntryLines
-                    .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
+                    .Where(l => includePending || l.JournalEntry.Status == JournalEntryStatus.Posted)
                     .Where(l => l.JournalEntry.Date <= asOfDate)
                     .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
                     .Sum(l => l.DebitAmount - l.CreditAmount));
@@ -261,6 +282,7 @@ namespace AccountingSystem.Controllers
             {
                 AsOfDate = asOfDate,
                 BranchId = branchId,
+                IncludePending = includePending,
                 Assets = assets,
                 Liabilities = liabilities,
                 Equity = equity,
@@ -275,7 +297,7 @@ namespace AccountingSystem.Controllers
             return viewModel;
         }
 
-        private async Task<IncomeStatementViewModel> BuildIncomeStatementViewModel(int? branchId, DateTime fromDate, DateTime toDate)
+        private async Task<IncomeStatementViewModel> BuildIncomeStatementViewModel(int? branchId, DateTime fromDate, DateTime toDate, bool includePending)
         {
             var accounts = await _context.Accounts
                 .Include(a => a.JournalEntryLines)
@@ -287,7 +309,7 @@ namespace AccountingSystem.Controllers
 
             var balances = accounts.ToDictionary(a => a.Id, a =>
                 a.JournalEntryLines
-                    .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
+                    .Where(l => includePending || l.JournalEntry.Status == JournalEntryStatus.Posted)
                     .Where(l => l.JournalEntry.Date >= fromDate && l.JournalEntry.Date <= toDate)
                     .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
                     .Sum(l => a.Nature == AccountNature.Debit ? l.DebitAmount - l.CreditAmount : l.CreditAmount - l.DebitAmount));
@@ -338,6 +360,7 @@ namespace AccountingSystem.Controllers
                 FromDate = fromDate,
                 ToDate = toDate,
                 BranchId = branchId,
+                IncludePending = includePending,
                 Revenues = revenues,
                 Expenses = expenses,
                 Branches = await GetBranchesSelectList()
@@ -351,22 +374,24 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/IncomeStatement
-        public async Task<IActionResult> IncomeStatement(int? branchId, DateTime? fromDate, DateTime? toDate)
+        public async Task<IActionResult> IncomeStatement(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false)
         {
             var model = await BuildIncomeStatementViewModel(
                 branchId,
                 fromDate ?? DateTime.Now.AddMonths(-1),
-                toDate ?? DateTime.Now);
+                toDate ?? DateTime.Now,
+                includePending);
             return View(model);
         }
 
         // GET: Reports/IncomeStatementPdf
-        public async Task<IActionResult> IncomeStatementPdf(int? branchId, DateTime? fromDate, DateTime? toDate)
+        public async Task<IActionResult> IncomeStatementPdf(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false)
         {
             var model = await BuildIncomeStatementViewModel(
                 branchId,
                 fromDate ?? DateTime.Now.AddMonths(-1),
-                toDate ?? DateTime.Now);
+                toDate ?? DateTime.Now,
+                includePending);
 
             var document = Document.Create(container =>
             {
@@ -410,12 +435,13 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/IncomeStatementExcel
-        public async Task<IActionResult> IncomeStatementExcel(int? branchId, DateTime? fromDate, DateTime? toDate)
+        public async Task<IActionResult> IncomeStatementExcel(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false)
         {
             var model = await BuildIncomeStatementViewModel(
                 branchId,
                 fromDate ?? DateTime.Now.AddMonths(-1),
-                toDate ?? DateTime.Now);
+                toDate ?? DateTime.Now,
+                includePending);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.AddWorksheet("IncomeStatement");
@@ -518,7 +544,7 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/GeneralLedger
-        public async Task<IActionResult> GeneralLedger(int? accountId, int? branchId, DateTime? fromDate, DateTime? toDate)
+        public async Task<IActionResult> GeneralLedger(int? accountId, int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false)
         {
             var from = fromDate ?? DateTime.Now.AddMonths(-1);
             var to = toDate ?? DateTime.Now;
@@ -526,7 +552,7 @@ namespace AccountingSystem.Controllers
             var lines = await _context.JournalEntryLines
                 .Include(l => l.JournalEntry)
                 .Include(l => l.Account)
-                .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
+                .Where(l => includePending || l.JournalEntry.Status == JournalEntryStatus.Posted)
                 .Where(l => l.JournalEntry.Date >= from && l.JournalEntry.Date <= to)
                 .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
                 .Where(l => !accountId.HasValue || l.AccountId == accountId)
@@ -556,6 +582,7 @@ namespace AccountingSystem.Controllers
                 ToDate = to,
                 BranchId = branchId,
                 AccountId = accountId,
+                IncludePending = includePending,
                 Accounts = accounts,
                 Branches = await GetBranchesSelectList(),
                 AccountOptions = await _context.Accounts
