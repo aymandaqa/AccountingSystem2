@@ -31,13 +31,22 @@
                             <label for="asOfDate" class="form-label">كما في تاريخ:</label>
                             <input type="date" name="asOfDate" id="asOfDate" class="form-control" value="@Model.AsOfDate.ToString("yyyy-MM-dd")" />
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <label class="form-label">&nbsp;</label>
-                            <div>
-                                <button type="submit" class="btn btn-primary">
+                            <div class="d-flex">
+                                <button type="submit" class="btn btn-primary me-2">
                                     <i class="fas fa-search me-1"></i>
                                     عرض التقرير
                                 </button>
+                                @if (Model.Assets.Any() || Model.Liabilities.Any() || Model.Equity.Any())
+                                {
+                                    <a class="btn btn-secondary me-2" href="@Url.Action("BalanceSheetPdf", new { branchId = Model.BranchId, asOfDate = Model.AsOfDate.ToString("yyyy-MM-dd") })">
+                                        <i class="fas fa-file-pdf me-1"></i> PDF
+                                    </a>
+                                    <a class="btn btn-success" href="@Url.Action("BalanceSheetExcel", new { branchId = Model.BranchId, asOfDate = Model.AsOfDate.ToString("yyyy-MM-dd") })">
+                                        <i class="fas fa-file-excel me-1"></i> Excel
+                                    </a>
+                                }
                             </div>
                         </div>
                     </form>
@@ -50,12 +59,15 @@
                                     <h5 class="mb-0">الأصول</h5>
                                 </div>
                                 <div class="card-body">
-                                    @foreach (var asset in Model.Assets)
+                                    @if (Model.Assets.Any())
                                     {
-                                        <div class="d-flex justify-content-between border-bottom py-2">
-                                            <span>@asset.AccountName</span>
-                                            <span class="fw-bold">@asset.Amount.ToString("N2") </span>
+                                        <div class="tree-container">
+                                            @await Html.PartialAsync("~/Views/Dashboard/_AccountBalanceTreeNode.cshtml", Model.Assets)
                                         </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="alert alert-info text-center">لا توجد بيانات</div>
                                     }
                                     <div class="d-flex justify-content-between border-top pt-3 mt-3">
                                         <strong>إجمالي الأصول:</strong>
@@ -73,12 +85,15 @@
                                     <h5 class="mb-0">الخصوم</h5>
                                 </div>
                                 <div class="card-body">
-                                    @foreach (var liability in Model.Liabilities)
+                                    @if (Model.Liabilities.Any())
                                     {
-                                        <div class="d-flex justify-content-between border-bottom py-2">
-                                            <span>@liability.AccountName</span>
-                                            <span class="fw-bold">@liability.Amount.ToString("N2") </span>
+                                        <div class="tree-container">
+                                            @await Html.PartialAsync("~/Views/Dashboard/_AccountBalanceTreeNode.cshtml", Model.Liabilities)
                                         </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="alert alert-info text-center">لا توجد بيانات</div>
                                     }
                                     <div class="d-flex justify-content-between border-top pt-3 mt-3">
                                         <strong>إجمالي الخصوم:</strong>
@@ -93,12 +108,15 @@
                                     <h5 class="mb-0">حقوق الملكية</h5>
                                 </div>
                                 <div class="card-body">
-                                    @foreach (var equity in Model.Equity)
+                                    @if (Model.Equity.Any())
                                     {
-                                        <div class="d-flex justify-content-between border-bottom py-2">
-                                            <span>@equity.AccountName</span>
-                                            <span class="fw-bold">@equity.Amount.ToString("N2") </span>
+                                        <div class="tree-container">
+                                            @await Html.PartialAsync("~/Views/Dashboard/_AccountBalanceTreeNode.cshtml", Model.Equity)
                                         </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="alert alert-info text-center">لا توجد بيانات</div>
                                     }
                                     <div class="d-flex justify-content-between border-top pt-3 mt-3">
                                         <strong>إجمالي حقوق الملكية:</strong>
@@ -113,3 +131,82 @@
         </div>
     </div>
 </div>
+
+@section Styles {
+    <style>
+        .tree-container {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .tree-node {
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 5px;
+        }
+
+        .tree-node-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .tree-node-info {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+        }
+
+        .tree-children {
+            margin-right: 25px;
+            border-right: 2px solid #e9ecef;
+            padding-right: 15px;
+        }
+
+        .account-code {
+            font-weight: bold;
+            color: #495057;
+            margin-left: 10px;
+        }
+
+        .account-name {
+            color: #212529;
+            margin-left: 10px;
+        }
+
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 0;
+            margin-left: 5px;
+            width: 20px;
+            text-align: center;
+        }
+
+            .toggle-btn:hover {
+                color: #495057;
+            }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('.toggle-btn').on('click', function () {
+                var $this = $(this);
+                var $children = $this.closest('.tree-node').find('> .tree-children');
+                if ($children.is(':visible')) {
+                    $children.hide();
+                    $this.html('<i class="fas fa-plus"></i>');
+                } else {
+                    $children.show();
+                    $this.html('<i class="fas fa-minus"></i>');
+                }
+            });
+        });
+        $(document).ready(function () {
+            $('.tree-node[data-level="0"] .toggle-btn').click();
+        });
+    </script>
+}

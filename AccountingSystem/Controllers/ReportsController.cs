@@ -5,6 +5,10 @@ using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using ClosedXML.Excel;
+using QuestPDF.Fluent;
+using QuestPDF.Infrastructure;
+using QuestPDF.Helpers;
 
 namespace AccountingSystem.Controllers
 {
@@ -58,43 +62,178 @@ namespace AccountingSystem.Controllers
         // GET: Reports/BalanceSheet
         public async Task<IActionResult> BalanceSheet(int? branchId, DateTime? asOfDate)
         {
+            var viewModel = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now);
+            return View(viewModel);
+        }
+
+        // GET: Reports/BalanceSheetPdf
+        public async Task<IActionResult> BalanceSheetPdf(int? branchId, DateTime? asOfDate)
+        {
+            var model = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now);
+
+            var document = Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Margin(20);
+                    page.Size(PageSizes.A4);
+                    page.Header().Text($"الميزانية العمومية - {model.AsOfDate:yyyy-MM-dd}").FontSize(16).Bold();
+                    page.Content().Column(col =>
+                    {
+                        col.Item().Text("الأصول").FontSize(14).Bold();
+                        ComposePdfTree(col, model.Assets, 0);
+                        col.Item().Text($"إجمالي الأصول: {model.TotalAssets:N2}");
+
+                        col.Item().PaddingTop(10).Text("الخصوم").FontSize(14).Bold();
+                        ComposePdfTree(col, model.Liabilities, 0);
+                        col.Item().Text($"إجمالي الخصوم: {model.TotalLiabilities:N2}");
+
+                        col.Item().PaddingTop(10).Text("حقوق الملكية").FontSize(14).Bold();
+                        ComposePdfTree(col, model.Equity, 0);
+                        col.Item().Text($"إجمالي حقوق الملكية: {model.TotalEquity:N2}");
+                    });
+                });
+            });
+
+            static void ComposePdfTree(ColumnDescriptor col, List<AccountTreeNodeViewModel> nodes, int level)
+            {
+                foreach (var node in nodes)
+                {
+                    col.Item().Row(row =>
+                    {
+                        row.ConstantItem(level * 15);
+                        row.RelativeItem().Text(node.Id == 0 ? node.NameAr : $"{node.Code} - {node.NameAr}");
+                        row.ConstantItem(100).AlignRight().Text(node.Balance.ToString("N2"));
+                    });
+                    if (node.Children.Any())
+                        ComposePdfTree(col, node.Children, level + 1);
+                }
+            }
+
+            var pdf = document.GeneratePdf();
+            return File(pdf, "application/pdf", "BalanceSheet.pdf");
+        }
+
+        // GET: Reports/BalanceSheetExcel
+        public async Task<IActionResult> BalanceSheetExcel(int? branchId, DateTime? asOfDate)
+        {
+            var model = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now);
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.AddWorksheet("BalanceSheet");
+            var row = 1;
+            worksheet.Cell(row, 1).Value = "الحساب";
+            worksheet.Cell(row, 2).Value = "الرصيد";
+            row++;
+
+            void WriteNodes(List<AccountTreeNodeViewModel> nodes, int level)
+            {
+                foreach (var node in nodes)
+                {
+                    worksheet.Cell(row, 1).Value = new string(' ', level * 2) + (node.Id == 0 ? node.NameAr : $"{node.Code} - {node.NameAr}");
+                    worksheet.Cell(row, 2).Value = node.Balance;
+                    row++;
+                    if (node.Children.Any())
+                        WriteNodes(node.Children, level + 1);
+                }
+            }
+
+            WriteNodes(model.Assets, 0);
+            worksheet.Cell(row, 1).Value = "إجمالي الأصول";
+            worksheet.Cell(row, 2).Value = model.TotalAssets;
+            row++;
+            WriteNodes(model.Liabilities, 0);
+            worksheet.Cell(row, 1).Value = "إجمالي الخصوم";
+            worksheet.Cell(row, 2).Value = model.TotalLiabilities;
+            row++;
+            WriteNodes(model.Equity, 0);
+            worksheet.Cell(row, 1).Value = "إجمالي حقوق الملكية";
+            worksheet.Cell(row, 2).Value = model.TotalEquity;
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            var content = stream.ToArray();
+            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "BalanceSheet.xlsx");
+        }
+
+        private async Task<BalanceSheetViewModel> BuildBalanceSheetViewModel(int? branchId, DateTime asOfDate)
+        {
             var accounts = await _context.Accounts
-                .Include(a => a.Branch)
-                .Where(a => a.CanPostTransactions)
+                .Include(a => a.JournalEntryLines)
+                    .ThenInclude(l => l.JournalEntry)
+                .Where(a => a.Classification == AccountClassification.BalanceSheet)
                 .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
-                .OrderBy(a => a.Code)
+                .AsNoTracking()
                 .ToListAsync();
+
+            var balances = accounts.ToDictionary(a => a.Id, a =>
+                a.OpeningBalance + a.JournalEntryLines
+                    .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
+                    .Where(l => l.JournalEntry.Date <= asOfDate)
+                    .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
+                    .Sum(l => l.DebitAmount - l.CreditAmount));
+
+            var nodes = accounts.Select(a => new AccountTreeNodeViewModel
+            {
+                Id = a.Id,
+                Code = a.Code,
+                NameAr = a.NameAr,
+                AccountType = a.AccountType,
+                Nature = a.Nature,
+                OpeningBalance = a.OpeningBalance,
+                Balance = balances[a.Id],
+                IsActive = a.IsActive,
+                CanPostTransactions = a.CanPostTransactions,
+                ParentId = a.ParentId,
+                Level = a.Level,
+                Children = new List<AccountTreeNodeViewModel>(),
+                HasChildren = false
+            }).ToDictionary(n => n.Id);
+
+            foreach (var node in nodes.Values)
+            {
+                if (node.ParentId.HasValue && nodes.TryGetValue(node.ParentId.Value, out var parent))
+                {
+                    parent.Children.Add(node);
+                    parent.HasChildren = true;
+                }
+            }
+
+            decimal ComputeBalance(AccountTreeNodeViewModel node)
+            {
+                if (node.Children.Any())
+                {
+                    node.Balance = node.Children.Sum(ComputeBalance);
+                }
+                return node.Balance;
+            }
+
+            var rootNodes = nodes.Values.Where(n => n.ParentId == null).ToList();
+            foreach (var root in rootNodes)
+            {
+                ComputeBalance(root);
+            }
+
+            var assets = rootNodes.Where(n => n.AccountType == AccountType.Assets).OrderBy(n => n.Code).ToList();
+            var liabilities = rootNodes.Where(n => n.AccountType == AccountType.Liabilities).OrderBy(n => n.Code).ToList();
+            var equity = rootNodes.Where(n => n.AccountType == AccountType.Equity).OrderBy(n => n.Code).ToList();
 
             var viewModel = new BalanceSheetViewModel
             {
-                AsOfDate = asOfDate ?? DateTime.Now,
+                AsOfDate = asOfDate,
                 BranchId = branchId,
-                Assets = accounts.Where(a => a.AccountType == AccountType.Assets)
-                    .Select(a => new BalanceSheetItemViewModel
-                    {
-                        AccountName = a.NameAr,
-                        Amount = a.CurrentBalance
-                    }).ToList(),
-                Liabilities = accounts.Where(a => a.AccountType == AccountType.Liabilities)
-                    .Select(a => new BalanceSheetItemViewModel
-                    {
-                        AccountName = a.NameAr,
-                        Amount = a.CurrentBalance
-                    }).ToList(),
-                Equity = accounts.Where(a => a.AccountType == AccountType.Equity)
-                    .Select(a => new BalanceSheetItemViewModel
-                    {
-                        AccountName = a.NameAr,
-                        Amount = a.CurrentBalance
-                    }).ToList(),
+                Assets = assets,
+                Liabilities = liabilities,
+                Equity = equity,
                 Branches = await GetBranchesSelectList()
             };
 
-            viewModel.TotalAssets = viewModel.Assets.Sum(a => a.Amount);
-            viewModel.TotalLiabilities = viewModel.Liabilities.Sum(l => l.Amount);
-            viewModel.TotalEquity = viewModel.Equity.Sum(e => e.Amount);
+            viewModel.TotalAssets = assets.Sum(a => a.Balance);
+            viewModel.TotalLiabilities = liabilities.Sum(l => l.Balance);
+            viewModel.TotalEquity = equity.Sum(e => e.Balance);
+            viewModel.IsBalanced = viewModel.TotalAssets == (viewModel.TotalLiabilities + viewModel.TotalEquity);
 
-            return View(viewModel);
+            return viewModel;
         }
 
         // GET: Reports/IncomeStatement

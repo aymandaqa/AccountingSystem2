@@ -172,9 +172,9 @@ namespace AccountingSystem.ViewModels
     {
         public DateTime AsOfDate { get; set; } = DateTime.Now;
         public int? BranchId { get; set; }
-        public List<BalanceSheetItemViewModel> Assets { get; set; } = new List<BalanceSheetItemViewModel>();
-        public List<BalanceSheetItemViewModel> Liabilities { get; set; } = new List<BalanceSheetItemViewModel>();
-        public List<BalanceSheetItemViewModel> Equity { get; set; } = new List<BalanceSheetItemViewModel>();
+        public List<AccountTreeNodeViewModel> Assets { get; set; } = new List<AccountTreeNodeViewModel>();
+        public List<AccountTreeNodeViewModel> Liabilities { get; set; } = new List<AccountTreeNodeViewModel>();
+        public List<AccountTreeNodeViewModel> Equity { get; set; } = new List<AccountTreeNodeViewModel>();
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
         public decimal TotalAssets { get; set; }
         public decimal TotalLiabilities { get; set; }
