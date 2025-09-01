@@ -142,6 +142,7 @@ namespace AccountingSystem.ViewModels
         public DateTime ToDate { get; set; } = DateTime.Now;
         public DateTime AsOfDate { get; set; } = DateTime.Now;
         public int? BranchId { get; set; }
+        public bool IncludePending { get; set; }
         public List<TrialBalanceItemViewModel> Items { get; set; } = new List<TrialBalanceItemViewModel>();
         public List<TrialBalanceAccountViewModel> Accounts { get; set; } = new List<TrialBalanceAccountViewModel>();
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
@@ -172,6 +173,7 @@ namespace AccountingSystem.ViewModels
     {
         public DateTime AsOfDate { get; set; } = DateTime.Now;
         public int? BranchId { get; set; }
+        public bool IncludePending { get; set; }
         public List<AccountTreeNodeViewModel> Assets { get; set; } = new List<AccountTreeNodeViewModel>();
         public List<AccountTreeNodeViewModel> Liabilities { get; set; } = new List<AccountTreeNodeViewModel>();
         public List<AccountTreeNodeViewModel> Equity { get; set; } = new List<AccountTreeNodeViewModel>();
@@ -195,6 +197,7 @@ namespace AccountingSystem.ViewModels
         public DateTime FromDate { get; set; } = new DateTime(DateTime.Now.Year, 1, 1);
         public DateTime ToDate { get; set; } = DateTime.Now;
         public int? BranchId { get; set; }
+        public bool IncludePending { get; set; }
         public List<AccountTreeNodeViewModel> Revenues { get; set; } = new List<AccountTreeNodeViewModel>();
         public List<AccountTreeNodeViewModel> Expenses { get; set; } = new List<AccountTreeNodeViewModel>();
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
@@ -246,6 +249,7 @@ namespace AccountingSystem.ViewModels
         public DateTime FromDate { get; set; } = DateTime.Now.AddMonths(-1);
         public DateTime ToDate { get; set; } = DateTime.Now;
         public int? BranchId { get; set; }
+        public bool IncludePending { get; set; }
         public List<GeneralLedgerAccountViewModel> Accounts { get; set; } = new List<GeneralLedgerAccountViewModel>();
         public List<SelectListItem> AccountOptions { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
