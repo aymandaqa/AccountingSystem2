@@ -62,7 +62,7 @@
                                     @if (Model.Assets.Any())
                                     {
                                         <div class="tree-container">
-                                            @await Html.PartialAsync("~/Views/Dashboard/_AccountBalanceTreeNode.cshtml", Model.Assets)
+                                            @await Html.PartialAsync("_AccountBalanceTreeNode", Model.Assets)
                                         </div>
                                     }
                                     else
@@ -88,7 +88,7 @@
                                     @if (Model.Liabilities.Any())
                                     {
                                         <div class="tree-container">
-                                            @await Html.PartialAsync("~/Views/Dashboard/_AccountBalanceTreeNode.cshtml", Model.Liabilities)
+                                            @await Html.PartialAsync("_AccountBalanceTreeNode", Model.Liabilities)
                                         </div>
                                     }
                                     else
@@ -111,7 +111,7 @@
                                     @if (Model.Equity.Any())
                                     {
                                         <div class="tree-container">
-                                            @await Html.PartialAsync("~/Views/Dashboard/_AccountBalanceTreeNode.cshtml", Model.Equity)
+                                            @await Html.PartialAsync("_AccountBalanceTreeNode", Model.Equity)
                                         </div>
                                     }
                                     else
