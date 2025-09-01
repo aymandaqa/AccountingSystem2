@@ -46,19 +46,19 @@ namespace AccountingSystem.Controllers
                 if (user != null && user.IsActive)
                 {
                     var result = await _signInManager.PasswordSignInAsync(user, model.Password, model.RememberMe, lockoutOnFailure: false);
-                    
+
                     if (result.Succeeded)
                     {
                         user.LastLoginAt = DateTime.Now;
                         await _userManager.UpdateAsync(user);
 
                         _logger.LogInformation("User {Email} logged in.", model.Email);
-                        
+
                         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                         {
                             return Redirect(returnUrl);
                         }
-                        return RedirectToAction("Index", "Home");
+                        return RedirectToAction("Index", "Dashboard");
                     }
                     else
                     {
@@ -89,48 +89,48 @@ namespace AccountingSystem.Controllers
             return View();
         }
 
-        [HttpGet]
-        public IActionResult Register()
-        {
-            return View();
-        }
+        //[HttpGet]
+        //public IActionResult Register()
+        //{
+        //    return View();
+        //}
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Register(RegisterViewModel model)
-        {
-            if (ModelState.IsValid)
-            {
-                var user = new User
-                {
-                    UserName = model.Email,
-                    Email = model.Email,
-                    FirstName = model.FirstName,
-                    LastName = model.LastName,
-                    EmailConfirmed = true,
-                    IsActive = true
-                };
+        //[HttpPost]
+        //[ValidateAntiForgeryToken]
+        //public async Task<IActionResult> Register(RegisterViewModel model)
+        //{
+        //    if (ModelState.IsValid)
+        //    {
+        //        var user = new User
+        //        {
+        //            UserName = model.Email,
+        //            Email = model.Email,
+        //            FirstName = model.FirstName,
+        //            LastName = model.LastName,
+        //            EmailConfirmed = true,
+        //            IsActive = true
+        //        };
 
-                var result = await _userManager.CreateAsync(user, model.Password);
-                
-                if (result.Succeeded)
-                {
-                    await _userManager.AddToRoleAsync(user, "User");
-                    
-                    _logger.LogInformation("User created a new account with password.");
-                    
-                    await _signInManager.SignInAsync(user, isPersistent: false);
-                    return RedirectToAction("Index", "Home");
-                }
-                
-                foreach (var error in result.Errors)
-                {
-                    ModelState.AddModelError(string.Empty, error.Description);
-                }
-            }
+        //        var result = await _userManager.CreateAsync(user, model.Password);
 
-            return View(model);
-        }
+        //        if (result.Succeeded)
+        //        {
+        //            await _userManager.AddToRoleAsync(user, "User");
+
+        //            _logger.LogInformation("User created a new account with password.");
+
+        //            await _signInManager.SignInAsync(user, isPersistent: false);
+        //            return RedirectToAction("Index", "Home");
+        //        }
+
+        //        foreach (var error in result.Errors)
+        //        {
+        //            ModelState.AddModelError(string.Empty, error.Description);
+        //        }
+        //    }
+
+        //    return View(model);
+        //}
 
         [Authorize]
         [HttpGet]

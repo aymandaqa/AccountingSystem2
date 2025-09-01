@@ -22,11 +22,11 @@
                 <label class="form-label">الرصيد الافتتاحي</label>
                 <input asp-for="OpeningBalance" class="form-control" readonly asp-format="{0:N2}" />
             </div>
-            <div class="mb-3">
+            <div class="mb-3" style="display:none">
                 <label class="form-label">حركات اليوم</label>
                 <input asp-for="TodayTransactions" class="form-control" readonly asp-format="{0:N2}" />
             </div>
-            <div class="mb-3">
+            <div class="mb-3" style="display:none">
                 <label class="form-label">الرصيد التراكمي</label>
                 <input asp-for="CumulativeBalance" class="form-control" readonly asp-format="{0:N2}" />
             </div>
@@ -36,7 +36,7 @@
                     <input asp-for="CountedAmount" class="form-control" />
                     <span asp-validation-for="CountedAmount" class="text-danger"></span>
                 </div>
-                <div class="mb-3">
+                <div class="mb-3" style="display:none">
                     <label class="form-label">الفرق</label>
                     <input id="difference" type="text" class="form-control" readonly />
                 </div>
@@ -51,7 +51,9 @@
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
     <script>
         const countedInput = document.getElementById("CountedAmount");
         const diffInput = document.getElementById("difference");
