@@ -59,6 +59,44 @@ namespace AccountingSystem.Controllers
             return View(viewModel);
         }
 
+        // GET: Reports/PendingTransactions
+        public async Task<IActionResult> PendingTransactions(int? branchId, DateTime? fromDate, DateTime? toDate)
+        {
+            var query = _context.JournalEntryLines
+                .Include(l => l.JournalEntry)
+                .Include(l => l.Account)
+                .Where(l => l.JournalEntry.Status != JournalEntryStatus.Posted)
+                .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
+                .Where(l => !fromDate.HasValue || l.JournalEntry.Date >= fromDate)
+                .Where(l => !toDate.HasValue || l.JournalEntry.Date <= toDate);
+
+            var accounts = await query
+                .GroupBy(l => new { l.Account.Code, l.Account.NameAr })
+                .Select(g => new TrialBalanceAccountViewModel
+                {
+                    AccountCode = g.Key.Code,
+                    AccountName = g.Key.NameAr,
+                    DebitBalance = g.Sum(x => x.DebitAmount),
+                    CreditBalance = g.Sum(x => x.CreditAmount)
+                })
+                .OrderBy(a => a.AccountCode)
+                .ToListAsync();
+
+            var viewModel = new PendingTransactionsViewModel
+            {
+                FromDate = fromDate ?? DateTime.Now.AddMonths(-1),
+                ToDate = toDate ?? DateTime.Now,
+                BranchId = branchId,
+                Accounts = accounts,
+                Branches = await GetBranchesSelectList()
+            };
+
+            viewModel.TotalDebits = viewModel.Accounts.Sum(a => a.DebitBalance);
+            viewModel.TotalCredits = viewModel.Accounts.Sum(a => a.CreditBalance);
+
+            return View(viewModel);
+        }
+
         // GET: Reports/BalanceSheet
         public async Task<IActionResult> BalanceSheet(int? branchId, DateTime? asOfDate)
         {
