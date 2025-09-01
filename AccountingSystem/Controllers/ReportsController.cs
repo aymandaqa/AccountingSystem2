@@ -60,6 +60,7 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/PendingTransactions
+        [Authorize(Policy = "reports.pending")]
         public async Task<IActionResult> PendingTransactions(int? branchId, DateTime? fromDate, DateTime? toDate)
         {
             var query = _context.JournalEntryLines

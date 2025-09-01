@@ -87,6 +87,7 @@ namespace AccountingSystem.Data
                 new Permission { Name = "journal.approve", DisplayName = "اعتماد القيود", Category = "القيود المالية" },
                 new Permission { Name = "reports.view", DisplayName = "عرض التقارير", Category = "التقارير" },
                 new Permission { Name = "reports.export", DisplayName = "تصدير التقارير", Category = "التقارير" },
+                new Permission { Name = "reports.pending", DisplayName = "عرض الحركات غير المرحلة", Category = "التقارير" },
                 new Permission { Name = "dashboard.view", DisplayName = "عرض لوحة التحكم", Category = "لوحة التحكم" },
                 new Permission { Name = "dashboard.widget.stats", DisplayName = "عرض لوحة التحكم stats", Category = "لوحة التحكم" },
                 new Permission { Name = "dashboard.widget.accounts", DisplayName = " accountsعرض لوحة التحكم", Category = "لوحة التحكم" },
