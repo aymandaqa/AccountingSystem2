@@ -236,41 +236,182 @@ namespace AccountingSystem.Controllers
             return viewModel;
         }
 
-        // GET: Reports/IncomeStatement
-        public async Task<IActionResult> IncomeStatement(int? branchId, DateTime? fromDate, DateTime? toDate)
+        private async Task<IncomeStatementViewModel> BuildIncomeStatementViewModel(int? branchId, DateTime fromDate, DateTime toDate)
         {
             var accounts = await _context.Accounts
-                .Include(a => a.Branch)
-                .Where(a => a.CanPostTransactions)
+                .Include(a => a.JournalEntryLines)
+                    .ThenInclude(l => l.JournalEntry)
+                .Where(a => a.Classification == AccountClassification.IncomeStatement)
                 .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
-                .OrderBy(a => a.Code)
+                .AsNoTracking()
                 .ToListAsync();
+
+            var balances = accounts.ToDictionary(a => a.Id, a =>
+                a.JournalEntryLines
+                    .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
+                    .Where(l => l.JournalEntry.Date >= fromDate && l.JournalEntry.Date <= toDate)
+                    .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
+                    .Sum(l => a.Nature == AccountNature.Debit ? l.DebitAmount - l.CreditAmount : l.CreditAmount - l.DebitAmount));
+
+            var nodes = accounts.Select(a => new AccountTreeNodeViewModel
+            {
+                Id = a.Id,
+                Code = a.Code,
+                NameAr = a.NameAr,
+                AccountType = a.AccountType,
+                Nature = a.Nature,
+                Balance = balances[a.Id],
+                ParentId = a.ParentId,
+                Level = a.Level,
+                Children = new List<AccountTreeNodeViewModel>(),
+                HasChildren = false
+            }).ToDictionary(n => n.Id);
+
+            foreach (var node in nodes.Values)
+            {
+                if (node.ParentId.HasValue && nodes.TryGetValue(node.ParentId.Value, out var parent))
+                {
+                    parent.Children.Add(node);
+                    parent.HasChildren = true;
+                }
+            }
+
+            decimal ComputeBalance(AccountTreeNodeViewModel node)
+            {
+                if (node.Children.Any())
+                {
+                    node.Balance = node.Children.Sum(ComputeBalance);
+                }
+                return node.Balance;
+            }
+
+            var rootNodes = nodes.Values.Where(n => n.ParentId == null).ToList();
+            foreach (var root in rootNodes)
+            {
+                ComputeBalance(root);
+            }
+
+            var revenues = rootNodes.Where(n => n.AccountType == AccountType.Revenue).OrderBy(n => n.Code).ToList();
+            var expenses = rootNodes.Where(n => n.AccountType == AccountType.Expenses).OrderBy(n => n.Code).ToList();
 
             var viewModel = new IncomeStatementViewModel
             {
-                FromDate = fromDate ?? DateTime.Now.AddMonths(-1),
-                ToDate = toDate ?? DateTime.Now,
+                FromDate = fromDate,
+                ToDate = toDate,
                 BranchId = branchId,
-                Revenues = accounts.Where(a => a.AccountType == AccountType.Revenue)
-                    .Select(a => new IncomeStatementItemViewModel
-                    {
-                        AccountName = a.NameAr,
-                        Amount = a.CurrentBalance
-                    }).ToList(),
-                Expenses = accounts.Where(a => a.AccountType == AccountType.Expenses)
-                    .Select(a => new IncomeStatementItemViewModel
-                    {
-                        AccountName = a.NameAr,
-                        Amount = a.CurrentBalance
-                    }).ToList(),
+                Revenues = revenues,
+                Expenses = expenses,
                 Branches = await GetBranchesSelectList()
             };
 
-            viewModel.TotalRevenues = viewModel.Revenues.Sum(r => r.Amount);
-            viewModel.TotalExpenses = viewModel.Expenses.Sum(e => e.Amount);
+            viewModel.TotalRevenues = revenues.Sum(r => r.Balance);
+            viewModel.TotalExpenses = expenses.Sum(e => e.Balance);
             viewModel.NetIncome = viewModel.TotalRevenues - viewModel.TotalExpenses;
 
-            return View(viewModel);
+            return viewModel;
+        }
+
+        // GET: Reports/IncomeStatement
+        public async Task<IActionResult> IncomeStatement(int? branchId, DateTime? fromDate, DateTime? toDate)
+        {
+            var model = await BuildIncomeStatementViewModel(
+                branchId,
+                fromDate ?? DateTime.Now.AddMonths(-1),
+                toDate ?? DateTime.Now);
+            return View(model);
+        }
+
+        // GET: Reports/IncomeStatementPdf
+        public async Task<IActionResult> IncomeStatementPdf(int? branchId, DateTime? fromDate, DateTime? toDate)
+        {
+            var model = await BuildIncomeStatementViewModel(
+                branchId,
+                fromDate ?? DateTime.Now.AddMonths(-1),
+                toDate ?? DateTime.Now);
+
+            var document = Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Margin(20);
+                    page.Size(PageSizes.A4);
+                    page.Header().Text($"قائمة الدخل - {model.FromDate:yyyy-MM-dd} إلى {model.ToDate:yyyy-MM-dd}").FontSize(16).Bold();
+                    page.Content().Column(col =>
+                    {
+                        col.Item().Text("الإيرادات").FontSize(14).Bold();
+                        ComposePdfTree(col, model.Revenues, 0);
+                        col.Item().Text($"إجمالي الإيرادات: {model.TotalRevenues:N2}");
+
+                        col.Item().PaddingTop(10).Text("المصروفات").FontSize(14).Bold();
+                        ComposePdfTree(col, model.Expenses, 0);
+                        col.Item().Text($"إجمالي المصروفات: {model.TotalExpenses:N2}");
+
+                        col.Item().PaddingTop(10).Text($"صافي الدخل: {model.NetIncome:N2}").FontSize(14).Bold();
+                    });
+                });
+            });
+
+            static void ComposePdfTree(ColumnDescriptor col, List<AccountTreeNodeViewModel> nodes, int level)
+            {
+                foreach (var node in nodes)
+                {
+                    col.Item().Row(row =>
+                    {
+                        row.ConstantItem(level * 15);
+                        row.RelativeItem().Text(node.Id == 0 ? node.NameAr : $"{node.Code} - {node.NameAr}");
+                        row.ConstantItem(100).AlignRight().Text(node.Balance.ToString("N2"));
+                    });
+                    if (node.Children.Any())
+                        ComposePdfTree(col, node.Children, level + 1);
+                }
+            }
+
+            var pdf = document.GeneratePdf();
+            return File(pdf, "application/pdf", "IncomeStatement.pdf");
+        }
+
+        // GET: Reports/IncomeStatementExcel
+        public async Task<IActionResult> IncomeStatementExcel(int? branchId, DateTime? fromDate, DateTime? toDate)
+        {
+            var model = await BuildIncomeStatementViewModel(
+                branchId,
+                fromDate ?? DateTime.Now.AddMonths(-1),
+                toDate ?? DateTime.Now);
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.AddWorksheet("IncomeStatement");
+            var row = 1;
+            worksheet.Cell(row, 1).Value = "الحساب";
+            worksheet.Cell(row, 2).Value = "المبلغ";
+            row++;
+
+            void WriteNodes(List<AccountTreeNodeViewModel> nodes, int level)
+            {
+                foreach (var node in nodes)
+                {
+                    worksheet.Cell(row, 1).Value = new string(' ', level * 2) + (node.Id == 0 ? node.NameAr : $"{node.Code} - {node.NameAr}");
+                    worksheet.Cell(row, 2).Value = node.Balance;
+                    row++;
+                    if (node.Children.Any())
+                        WriteNodes(node.Children, level + 1);
+                }
+            }
+
+            WriteNodes(model.Revenues, 0);
+            worksheet.Cell(row, 1).Value = "إجمالي الإيرادات";
+            worksheet.Cell(row, 2).Value = model.TotalRevenues;
+            row++;
+            WriteNodes(model.Expenses, 0);
+            worksheet.Cell(row, 1).Value = "إجمالي المصروفات";
+            worksheet.Cell(row, 2).Value = model.TotalExpenses;
+            row++;
+            worksheet.Cell(row, 1).Value = "صافي الدخل";
+            worksheet.Cell(row, 2).Value = model.NetIncome;
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            var content = stream.ToArray();
+            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "IncomeStatement.xlsx");
         }
 
         // GET: Reports/AccountStatement

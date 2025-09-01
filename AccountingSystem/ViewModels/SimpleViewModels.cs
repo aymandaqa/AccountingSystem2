@@ -195,8 +195,8 @@ namespace AccountingSystem.ViewModels
         public DateTime FromDate { get; set; } = new DateTime(DateTime.Now.Year, 1, 1);
         public DateTime ToDate { get; set; } = DateTime.Now;
         public int? BranchId { get; set; }
-        public List<IncomeStatementItemViewModel> Revenues { get; set; } = new List<IncomeStatementItemViewModel>();
-        public List<IncomeStatementItemViewModel> Expenses { get; set; } = new List<IncomeStatementItemViewModel>();
+        public List<AccountTreeNodeViewModel> Revenues { get; set; } = new List<AccountTreeNodeViewModel>();
+        public List<AccountTreeNodeViewModel> Expenses { get; set; } = new List<AccountTreeNodeViewModel>();
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
         public decimal TotalRevenues { get; set; }
         public decimal TotalExpenses { get; set; }
