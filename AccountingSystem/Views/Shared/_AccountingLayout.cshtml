@@ -1,3 +1,5 @@
+@using Microsoft.AspNetCore.Authorization
+@inject IAuthorizationService AuthorizationService
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -17,6 +19,19 @@
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
+@{
+    var canBusinessStatementBulk = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.businessstatementbulk")).Succeeded;
+    var canBusinessRetStatementBulk = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.businessretstatementbulk")).Succeeded;
+    var canBusnissShipmentsReturn = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.busnissshipmentsreturn")).Succeeded;
+    var canBusnissStatment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.busnissstatment")).Succeeded;
+    var canDriverPayment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.driverpayment")).Succeeded;
+    var canDriverStatment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.driverstatment")).Succeeded;
+    var canPrintSlip = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.printslip")).Succeeded;
+    var canReceivePayments = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.receivepayments")).Succeeded;
+    var canReceiveRetPayments = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.receiveretpayments")).Succeeded;
+    var canUserPayment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.userpayment")).Succeeded;
+    var showAccountManagement = canBusinessStatementBulk || canBusinessRetStatementBulk || canBusnissShipmentsReturn || canBusnissStatment || canDriverPayment || canDriverStatment || canPrintSlip || canReceivePayments || canReceiveRetPayments || canUserPayment;
+}
     <!-- Top Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
@@ -102,7 +117,58 @@
                     </li>
 
 
-                    <!-- Journal Entries Dropdown -->
+    
+                @if (showAccountManagement)
+                {
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-briefcase"></i> إدارة الحسابات
+                        </a>
+                        <ul class="dropdown-menu">
+                            @if (canBusinessRetStatementBulk)
+                            {
+                                <li><a class="dropdown-item" href="@Url.Action("BusinessRetStatementBulk", "AccountManagement")">اصدار كلي لفاتورة طرود مرتجعه</a></li>
+                            }
+                            @if (canBusinessStatementBulk)
+                            {
+                                <li><a class="dropdown-item" href="@Url.Action("BusinessStatementBulk", "AccountManagement")">حساب العميل كلي</a></li>
+                            }
+                            @if (canBusnissShipmentsReturn)
+                            {
+                                <li><a class="dropdown-item" href="@Url.Action("BusnissShipmentsReturn", "AccountManagement")">اغلاق طرود مرتجعه</a></li>
+                            }
+                            @if (canBusnissStatment)
+                            {
+                                <li><a class="dropdown-item" href="@Url.Action("BusnissStatment", "AccountManagement")">حساب العميل</a></li>
+                            }
+                            @if (canDriverPayment)
+                            {
+                                <li><a class="dropdown-item" href="@Url.Action("DriverPayment", "AccountManagement")">دفعات السائق</a></li>
+                            }
+                            @if (canDriverStatment)
+                            {
+                                <li><a class="dropdown-item" href="@Url.Action("DriverStatment", "AccountManagement")">حساب السائق</a></li>
+                            }
+                            @if (canPrintSlip)
+                            {
+                                <li><a class="dropdown-item" href="@Url.Action("PrintSlip", "AccountManagement")">طباعة ايصال</a></li>
+                            }
+                            @if (canReceivePayments)
+                            {
+                                <li><a class="dropdown-item" href="@Url.Action("ReceivePayments", "AccountManagement")">تسليم فواتير</a></li>
+                            }
+                            @if (canReceiveRetPayments)
+                            {
+                                <li><a class="dropdown-item" href="@Url.Action("ReceiveRetPayments", "AccountManagement")">تسليم فواتير طرود مرتجعه</a></li>
+                            }
+                            @if (canUserPayment)
+                            {
+                                <li><a class="dropdown-item" href="@Url.Action("UserPayment", "AccountManagement")">دفعات العميل</a></li>
+                            }
+                        </ul>
+                    </li>
+                }
+                <!-- Journal Entries Dropdown -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-file-invoice"></i> القيود المالية
