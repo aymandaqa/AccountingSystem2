@@ -966,7 +966,7 @@ namespace Roadfn.Controllers
                 fromDate = DateTime.Now.AddDays(-1);
                 toDate = DateTime.Now;
             }
-            var DataSource = _context.RptpaymentHistoryDrivers.Where(t => t.DriverId == DriverID && t.PaymentDate >= fromDate && t.PaymentDate <= toDate).AsQueryable();
+            var DataSource = _context.RptpaymentHistoryDriver.Where(t => t.DriverId == DriverID && t.PaymentDate >= fromDate && t.PaymentDate <= toDate).AsQueryable();
 
             DataOperations operation = new DataOperations();
             if (dm.Search != null && dm.Search.Count > 0)

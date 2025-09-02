@@ -112,7 +112,7 @@ namespace AccountingSystem.Data
 
         public virtual DbSet<RPTPaymentHistoryUser> RPTPaymentHistoryUsers { get; set; }
 
-        public virtual DbSet<RptpaymentHistoryDriver> RptpaymentHistoryDrivers { get; set; }
+        public virtual DbSet<RptpaymentHistoryDriver> RptpaymentHistoryDriver { get; set; }
 
         public virtual DbSet<BusinessRetStatementBulk> BusinessRetStatementBulk { get; set; }
         public virtual DbSet<Area> Areas { get; set; }

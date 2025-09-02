@@ -4,23 +4,7 @@
 }
 
 <div class="container-full">
-    <!-- Content Header (Page header) -->
-    <div class="content-header">
-        <div class="d-flex align-items-center">
-            <div class="me-auto">
-                <h3 class="page-title">دفعات العميل </h3>
-                <div class="d-inline-block align-items-center">
-                    <nav>
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="#"><i class="mdi Home">الرئيسية</i></a></li>
-                            <li class="breadcrumb-item active" aria-current="page">دفعات العميل </li>
-                        </ol>
-                    </nav>
-                </div>
-            </div>
 
-        </div>
-    </div>
 
     <!-- Main content -->
     <section class="content">
@@ -59,9 +43,9 @@
                                     </ejs-dropdownlist>
                                 </div>
                                 <div class="col-xs-6 col-sm-3">
-                                    <ejs-datepicker id="datepickerFromDate" format="yyyy-MM-dd"  value="DateTime.Now.AddDays(-1)" placeholder="من تاريخ"></ejs-datepicker>
+                                    <ejs-datepicker id="datepickerFromDate" format="yyyy-MM-dd" value="DateTime.Now.AddDays(-1)" placeholder="من تاريخ"></ejs-datepicker>
                                 </div> <div class="col-xs-6 col-sm-3">
-                                    <ejs-datepicker id="datepickerToDate" format="yyyy-MM-dd"  value="DateTime.Now" placeholder="الى تاريخ"></ejs-datepicker>
+                                    <ejs-datepicker id="datepickerToDate" format="yyyy-MM-dd" value="DateTime.Now" placeholder="الى تاريخ"></ejs-datepicker>
                                 </div>
                             </div>
 
@@ -77,7 +61,7 @@
                             <e-grid-columns>
                                 <e-grid-column type="checkbox" width="50"></e-grid-column>
 
-                                <e-grid-column field="ID" headerText="رقم الفاتورة"   width="120" allowEditing="false" isPrimaryKey="true"></e-grid-column>
+                                <e-grid-column field="ID" headerText="رقم الفاتورة" width="120" allowEditing="false" isPrimaryKey="true"></e-grid-column>
                                 @*<e-grid-column field="CityCode" headerText="City Code" width="120"></e-grid-column>*@
                                 <e-grid-column field="UserID" Visible="false" headerText="UserID" width="120"></e-grid-column>
                                 <e-grid-column field="PaymentDate" format="dd/MM/yyyy hh:mm" type="date" headerText="تاريخ الدفع" width="120"></e-grid-column>
@@ -102,68 +86,68 @@
 <script>
 
 
-        function Refresh() {
+         function Refresh() {
 
-                     var User = document.getElementById('User').ej2_instances[0];
-                  var datepickerFromDate = document.getElementById('datepickerFromDate').ej2_instances[0];
-                  var datepickerToDate = document.getElementById('datepickerToDate').ej2_instances[0];
-                      var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
-                         if(User.value==null||datepickerFromDate.value==null||datepickerToDate.value==null){
-                          return;
-                      }
-          grid1.dataSource = new ej.data.DataManager({
-                                                  url: '/AccountManagement/UrlDatasourceRPTPaymentHistoryUser?userID='+User.value+'&fromDate='+datepickerFromDate.value.toDateString()+'&toDate='+datepickerToDate.value.toDateString(),
-                                                  adaptor:new ej.data.UrlAdaptor()
-                                              });
+                      var User = document.getElementById('User').ej2_instances[0];
+                   var datepickerFromDate = document.getElementById('datepickerFromDate').ej2_instances[0];
+                   var datepickerToDate = document.getElementById('datepickerToDate').ej2_instances[0];
+                       var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+                          if(User.value==null||datepickerFromDate.value==null||datepickerToDate.value==null){
+                           return;
+                       }
+           grid1.dataSource = new ej.data.DataManager({
+                                                   url: '/AccountManagement/UrlDatasourceRPTPaymentHistoryUser?userID='+User.value+'&fromDate='+datepickerFromDate.value.toDateString()+'&toDate='+datepickerToDate.value.toDateString(),
+                                                   adaptor:new ej.data.UrlAdaptor()
+                                               });
 
-    }
-
-      function Search() {
-                   var User = document.getElementById('User').ej2_instances[0];
-                  var datepickerFromDate = document.getElementById('datepickerFromDate').ej2_instances[0];
-                  var datepickerToDate = document.getElementById('datepickerToDate').ej2_instances[0];
-
-                      var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
-                      if(User.value==null||datepickerFromDate.value==null||datepickerToDate.value==null){
-                          return;
-                      }
-          grid1.dataSource = new ej.data.DataManager({
-                                                  url: '/AccountManagement/UrlDatasourceRPTPaymentHistoryUser?userID='+User.value+'&fromDate='+datepickerFromDate.value.toDateString()+'&toDate='+datepickerToDate.value.toDateString(),
-                                                  adaptor:new ej.data.UrlAdaptor()
-          });
-
-    }
-    function ExportExcel() {
-                     var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
-                       var exceldata = grid1.getSelectedRecords();
-                        if(exceldata==null){
-                              grid1.excelExport(); 
-                        }else{
-                            var exportProperties = {
-                                        dataSource: exceldata
-                                    };
-                                    grid1.excelExport(exportProperties);
-                        }
-    }
-
-    function print() {
-                      var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
-            grid1.print();
      }
 
-        function PrintSlip()  {
+       function Search() {
+                    var User = document.getElementById('User').ej2_instances[0];
+                   var datepickerFromDate = document.getElementById('datepickerFromDate').ej2_instances[0];
+                   var datepickerToDate = document.getElementById('datepickerToDate').ej2_instances[0];
 
+                       var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+                       if(User.value==null||datepickerFromDate.value==null||datepickerToDate.value==null){
+                           return;
+                       }
+           grid1.dataSource = new ej.data.DataManager({
+                                                   url: '/AccountManagement/UrlDatasourceRPTPaymentHistoryUser?userID='+User.value+'&fromDate='+datepickerFromDate.value.toDateString()+'&toDate='+datepickerToDate.value.toDateString(),
+                                                   adaptor:new ej.data.UrlAdaptor()
+           });
 
-                var grid = document.getElementById("Grid").ej2_instances[0];
-    var selectedRecords = grid.getSelectedRecords();
-  
-      var ids = "";
-    for (var k in selectedRecords) {
-        ids+=selectedRecords[k].ID+",";
-
-    }
-     if (selectedRecords.length > 0) {
-   window.open('/AccountManagement/PrintUserSlip?id=' +ids, "_blank");
      }
+     function ExportExcel() {
+                      var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+                        var exceldata = grid1.getSelectedRecords();
+                         if(exceldata==null){
+                               grid1.excelExport();
+                         }else{
+                             var exportProperties = {
+                                         dataSource: exceldata
+                                     };
+                                     grid1.excelExport(exportProperties);
+                         }
      }
+
+     function print() {
+                       var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+             grid1.print();
+      }
+
+         function PrintSlip()  {
+
+
+                 var grid = document.getElementById("Grid").ej2_instances[0];
+     var selectedRecords = grid.getSelectedRecords();
+
+       var ids = "";
+     for (var k in selectedRecords) {
+         ids+=selectedRecords[k].ID+",";
+
+     }
+      if (selectedRecords.length > 0) {
+    window.open('/AccountManagement/PrintUserSlip?id=' +ids, "_blank");
+      }
+      }
 </script>
