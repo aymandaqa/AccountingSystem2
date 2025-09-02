@@ -8,6 +8,7 @@ using Syncfusion.EJ2.Base;
 using System.Data;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Roadfn.Controllers
 {
@@ -24,6 +25,7 @@ namespace Roadfn.Controllers
             this.iConfig = iConfig;
         }
 
+        [Authorize(Policy = "accountmanagement.driverstatment")]
         public async Task<IActionResult> DriverStatment()
         {
             ViewBag.CompanyBranches = await _context.CompanyBranches.ToListAsync();
@@ -39,6 +41,7 @@ namespace Roadfn.Controllers
             return View();
         }
 
+        [Authorize(Policy = "accountmanagement.busnissstatment")]
         public async Task<IActionResult> BusnissStatment()
         {
             ViewBag.Driver = from t1 in _context.Users
@@ -56,6 +59,7 @@ namespace Roadfn.Controllers
             ViewBag.CompanyBranches = await _context.CompanyBranches.ToListAsync();
             return View();
         }
+        [Authorize(Policy = "accountmanagement.busnissshipmentsreturn")]
         public async Task<IActionResult> BusnissShipmentsReturn()
         {
             ViewBag.Driver = from t1 in _context.Users
@@ -158,6 +162,7 @@ namespace Roadfn.Controllers
             return Json(Data);
         }
 
+        [Authorize(Policy = "accountmanagement.receivepayments")]
         public IActionResult ReceivePayments()
         {
             ViewBag.Driver = from t1 in _context.Users
@@ -167,7 +172,8 @@ namespace Roadfn.Controllers
 
             return View();
         }
-        public async Task<IActionResult> ReceiveRetPaymentsAsync()
+        [Authorize(Policy = "accountmanagement.receiveretpayments")]
+        public async Task<IActionResult> ReceiveRetPayments()
         {
             ViewBag.Driver = from t1 in _context.Users
                              where t1.UserType == "4"
@@ -499,6 +505,7 @@ namespace Roadfn.Controllers
             return dm.RequiresCounts ? Json(new { result = DataSource, count = count }) : Json(DataSource);
         }
 
+        [Authorize(Policy = "accountmanagement.businessstatementbulk")]
         public async Task<IActionResult> BusinessStatementBulk()
         {
             ViewBag.Driver = from t1 in _context.Users
@@ -516,6 +523,7 @@ namespace Roadfn.Controllers
             ViewBag.CompanyBranches = await _context.CompanyBranches.ToListAsync();
             return View();
         }
+        [Authorize(Policy = "accountmanagement.businessretstatementbulk")]
         public async Task<IActionResult> BusinessRetStatementBulk()
         {
             ViewBag.Driver = from t1 in _context.Users
@@ -535,6 +543,7 @@ namespace Roadfn.Controllers
         }
 
 
+        [Authorize(Policy = "accountmanagement.driverpayment")]
         public async Task<IActionResult> DriverPayment()
         {
             var t = from c in _context.Drives
@@ -547,6 +556,7 @@ namespace Roadfn.Controllers
             return View();
         }
 
+        [Authorize(Policy = "accountmanagement.userpayment")]
         public async Task<IActionResult> UserPayment()
         {
             //ViewBag.city = await _context.Cities.ToListAsync();
@@ -554,6 +564,13 @@ namespace Roadfn.Controllers
                        where u.UserType == "3"
                        select new { u.Id, UserName = u.FirstName + " " + u.LastName };
             ViewBag.user = await user.ToListAsync();
+            return View();
+        }
+
+        [HttpGet]
+        [Authorize(Policy = "accountmanagement.printslip")]
+        public IActionResult PrintSlip()
+        {
             return View();
         }
 
@@ -1640,6 +1657,7 @@ namespace Roadfn.Controllers
 
 
         [HttpGet]
+        [Authorize(Policy = "accountmanagement.printslip")]
         public async Task<IActionResult> PrintDriverSlip(string Id)
         {
             var ids = Id.Split(",");
@@ -1729,6 +1747,7 @@ namespace Roadfn.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = "accountmanagement.printslip")]
         public async Task<IActionResult> PrintUserSlip(string Id)
         {
             //var ids = Id.Split(",");
