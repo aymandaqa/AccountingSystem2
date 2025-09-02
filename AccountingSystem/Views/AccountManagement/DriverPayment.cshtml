@@ -1,0 +1,171 @@
+﻿@{
+    var rtl = true;
+}
+<title>دفعات السائق - roadfn </title>
+
+<div class="container-full">
+    <!-- Content Header (Page header) -->
+    <div class="content-header">
+        <div class="d-flex align-items-center">
+            <div class="me-auto">
+                <h3 class="page-title">دفعات السائق </h3>
+                <div class="d-inline-block align-items-center">
+                    <nav>
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="#"><i class="mdi Home">الرئيسية</i></a></li>
+                            <li class="breadcrumb-item active" aria-current="page">دفعات السائق </li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <section class="content">
+        <div class="row">
+            <div class="col-12">
+                <div class="box">
+                    <div class="box-body">
+                        <div class="table-responsive col-12" id="bodytarg2">
+                            <table class="table" style="font-size:15px; color:#1dbfc1">
+                                <tbody>
+                                    <tr>
+
+                                        <th style="width:100%">
+                                            <button class="btn btn-primary btn-sm" id="Excel" onclick="ExportExcel()">  <i class="ti-layout"></i> اكسل</button>
+                                            <button class="btn btn-primary btn-sm" onclick="print()" id="Print">  <i class="ti-printer"></i> طباعة</button>
+                                            <button class="btn btn-primary btn-sm" id="reload" onclick="Refresh()">  <i class="ti-reload"></i> تحديث</button>
+                                            <button class="btn btn-primary btn-sm" id="reload" onclick="PrintSlip()">  <i class="ti-printer"></i> طباعة الفاتورة </button>
+                                            <button class="btn btn-primary btn-sm" id="reload" onclick=" Search()">  <i class="ti-search"></i> بحث</button>
+                                        </th>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col=md-12">
+                            <div class="row">
+                                @*      <div class="col-xs-6 col-sm-3">
+                                    <ejs-dropdownlist id="City" name="City" Query="new ej.data.Query()"
+                                    allowFiltering="true" dataSource="@ViewBag.city" placeholder="المدينة"  >
+                                    <e-dropdownlist-fields text="FirstName" value="Id"></e-dropdownlist-fields>
+                                    </ejs-dropdownlist>
+                                    </div>*@
+                                <div class="col-xs-6 col-sm-3">
+                                    <ejs-dropdownlist id="User" name="User" Query="new ej.data.Query()"
+                                                      allowFiltering="true" dataSource="@ViewBag.Driver" placeholder="السائق">
+                                        <e-dropdownlist-fields text="Name" value="Id"></e-dropdownlist-fields>
+                                    </ejs-dropdownlist>
+                                </div>
+                                <div class="col-xs-6 col-sm-3">
+                                    <ejs-datepicker id="datepickerFromDate" format="yyyy-MM-dd" value="DateTime.Now.AddDays(-1)" placeholder="من تاريخ"></ejs-datepicker>
+                                </div> <div class="col-xs-6 col-sm-3">
+                                    <ejs-datepicker id="datepickerToDate" format="yyyy-MM-dd" value="DateTime.Now" placeholder="الى تاريخ"></ejs-datepicker>
+                                </div>
+                            </div>
+
+                        </div>
+                        <ejs-grid id="Grid" allowResizing="true" autoFit="true" gridLines="Both" enableRtl="@rtl" allowPaging="false" allowSorting="true" allowFiltering="true"
+                                  width="100%"
+                                  allowExcelExport="true" allowPdfExport="true"
+                                  enableStickyHeader="true" height="400px" allowTextWrap="true" allowSorting="true"
+                                  allowSelection="true">
+                            <e-data-manager url="/AccountManagement/UrlDatasourceRPTPaymentHistoryDriver" adaptor="UrlAdaptor"></e-data-manager>
+                            <e-grid-filterSettings type="Menu"></e-grid-filterSettings>
+
+                            <e-grid-columns>
+                                <e-grid-column type="checkbox" width="50"></e-grid-column>
+
+                                <e-grid-column field="Id" headerText="رقم الفاتورة" width="120" allowEditing="false" isPrimaryKey="true"></e-grid-column>
+                                @*<e-grid-column field="CityCode" headerText="City Code" width="120"></e-grid-column>*@
+                                <e-grid-column field="PaymentDate" format="dd/MM/yyyy hh:mm" type="date" headerText="تاريخ الدفع" width="120"></e-grid-column>
+                                <e-grid-column field="PaymentValue" headerText="قيمة الدفعة" width="120"></e-grid-column>
+                                <e-grid-column field="DriverId" Visible="false" headerText="DriverId" width="120"></e-grid-column>
+                                <e-grid-column field="DriverName" headerText="اسم السائق" width="120"></e-grid-column>
+                                <e-grid-column field="TotalCod" headerText="المجموع" width="120"></e-grid-column>
+                                <e-grid-column field="SumOfComison" headerText="مجموع العمولات" width="120"></e-grid-column>
+                                <e-grid-column field="EntryUser" headerText="المستخدم" width="120"></e-grid-column>
+                            </e-grid-columns>
+                        </ejs-grid>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- /.content -->
+
+</div>
+
+<script>
+
+
+        function Refresh() {
+
+                     var User = document.getElementById('User').ej2_instances[0];
+                  var datepickerFromDate = document.getElementById('datepickerFromDate').ej2_instances[0];
+                  var datepickerToDate = document.getElementById('datepickerToDate').ej2_instances[0];
+                      var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+                         if(User.value==null||datepickerFromDate.value==null||datepickerToDate.value==null){
+                          return;
+                      }
+          grid1.dataSource = new ej.data.DataManager({
+                                                  url: '/AccountManagement/UrlDatasourceRPTPaymentHistoryDriver?DriverID='+User.value+'&fromDate='+datepickerFromDate.value.toDateString()+'&toDate='+datepickerToDate.value.toDateString(),
+                                                  adaptor:new ej.data.UrlAdaptor()
+                                              });
+
+    }
+
+      function Search() {
+                   var User = document.getElementById('User').ej2_instances[0];
+                  var datepickerFromDate = document.getElementById('datepickerFromDate').ej2_instances[0];
+                  var datepickerToDate = document.getElementById('datepickerToDate').ej2_instances[0];
+
+                      var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+                      if(User.value==null||datepickerFromDate.value==null||datepickerToDate.value==null){
+                          return;
+                      }
+          grid1.dataSource = new ej.data.DataManager({
+                                                  url: '/AccountManagement/UrlDatasourceRPTPaymentHistoryDriver?DriverID='+User.value+'&fromDate='+datepickerFromDate.value.toDateString()+'&toDate='+datepickerToDate.value.toDateString(),
+                                                  adaptor:new ej.data.UrlAdaptor()
+          });
+
+    }
+    function ExportExcel() {
+
+                      var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+                       var exceldata = grid1.getSelectedRecords();
+                        if(exceldata==null){
+                              grid1.excelExport();
+                        }else{
+                            var exportProperties = {
+                                        dataSource: exceldata
+                                    };
+                                    grid1.excelExport(exportProperties);
+                        }
+
+    }
+
+    function print() {
+                      var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+            grid1.print();
+     }
+
+     function PrintSlip()  {
+
+
+                var grid = document.getElementById("Grid").ej2_instances[0];
+    var selectedRecords = grid.getSelectedRecords();
+    var ids = "";
+    for (var k in selectedRecords) {
+        ids+=selectedRecords[k].Id+",";
+
+    }
+     if (selectedRecords.length > 0) {
+            window.open('/AccountManagement/PrintDriverSlip?id=' + ids, "_blank");
+
+     }
+     }
+
+
+</script>

@@ -1,0 +1,419 @@
+﻿@{
+    var rtl = true;
+}
+<title>تسليم فواتير طرود مرتجعه - roadfn </title>
+
+<div class="container-full">
+    <!-- Content Header (Page header) -->
+    <div class="content-header">
+        <div class="d-flex align-items-center">
+            <div class="me-auto">
+                <h3 class="page-title">تسليم فواتير طرود مرتجعه  </h3>
+                <div class="d-inline-block align-items-center">
+                    <nav>
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="#"><i class="mdi Home">الرئيسية</i></a></li>
+                            <li class="breadcrumb-item active" aria-current="page">تسليم فواتير طرود مرتجعه </li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <section class="content" id="bodytarg">
+        <div class="row">
+            <div class="col-12">
+                <div class="box">
+                    <div class="box-body">
+                        <div class="table-responsive col-12" id="bodytarg2">
+                            <table class="table" style="font-size:15px; color:#1dbfc1">
+                                <tbody>
+                                    <tr>
+
+                                        <th style="width:100%">
+                                            <button class="btn btn-primary btn-sm" id="Excel" onclick="ExportExcel()">  <i class="ti-layout"></i> اكسل</button>
+                                            <button class="btn btn-primary btn-sm" onclick="print()" id="Print">  <i class="ti-printer"></i> طباعة</button>
+                                            <button class="btn btn-primary btn-sm" id="reload" onclick="PrintSlip()">  <i class="ti-printer"></i> طباعة الفاتورة</button>
+                                            <button class="btn btn-primary btn-sm" id="recin" onclick="RecPayment()">  <i class="ti-receipt"></i> تسليم</button>
+                                            <button class="btn btn-primary btn-sm" id="Barcode" onclick="OpenDlgBarcode()">  <i class="ti-line-double"></i> باركود</button>
+                                            <button class="btn btn-primary btn-sm" id="chdr" onclick="changeDriver()">  <i class="ti-receipt"></i> تغيير السائق</button>
+                                            <button class="btn btn-primary btn-sm" id="reload" onclick="Refresh()">  <i class="ti-reload"></i> تحديث</button>
+
+                                            <label class="btn-danger  btn-sm" onclick="showcount()">عدد المحدد</label>    : <label class="btn btn-danger  btn-sm" onclick="showcount()" id="shipRetCount"></label> &nbsp;&nbsp;
+
+                                        </th>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col=md-12">
+                            <div class="row">
+                                <div class="col-xs-6 col-sm-6">
+                                    <ejs-dropdownlist id="CompanyBranches" name="CompanyBranches" Query="new ej.data.Query()"
+                                                      allowFiltering="true" dataSource="@ViewBag.CompanyBranches" placeholder="الفرع" change="GetRetInvStmt">
+
+                                        <e-dropdownlist-fields text="BranchName" value="Id"></e-dropdownlist-fields>
+                                    </ejs-dropdownlist>
+                                </div>
+                                <div class="col-xs-6 col-sm-4">
+                                    <ejs-dropdownlist id="Driver" name="Driver" Query="new ej.data.Query()"
+                                                      allowFiltering="true" dataSource="@ViewBag.Driver" placeholder="السائق">
+                                        <e-dropdownlist-fields text="Name" value="Id"></e-dropdownlist-fields>
+                                    </ejs-dropdownlist>
+                                </div>
+
+
+                            </div>
+
+                        </div>
+                        <ejs-grid id="Grid" rowSelected="rowSelected"
+                                  recordClick="recordClick"
+                                  onclick="showcount()"
+                                  actionBegin="actionBegin" gridLines="Both" enableRtl="@rtl" allowPaging="false" allowSorting="true" allowFiltering="true"
+                                  width="100%"
+                                  allowExcelExport="true" allowPdfExport="true"
+                                  enableStickyHeader="true" height="400px" allowTextWrap="true" allowSorting="true"
+                                  allowSelection="true">
+                            <e-data-manager url="/AccountManagement/UrlDatasourceInvoiceRetBusinessUserShipments" adaptor="UrlAdaptor"></e-data-manager>
+                            <e-grid-filterSettings></e-grid-filterSettings>
+
+                            <e-grid-columns>
+                                <e-grid-column type="checkbox" width="50"></e-grid-column>
+
+                                <e-grid-column field="ID" headerText="رقم الفاتورة" width="120" allowEditing="false" isPrimaryKey="true"></e-grid-column>
+                                @*<e-grid-column field="CityCode" headerText="City Code" width="120"></e-grid-column>*@
+                                <e-grid-column field="UserID" Visible="false" headerText="UserID" width="120"></e-grid-column>
+                                <e-grid-column field="PaymentDate" format="dd/MM/yyyy hh:mm" type="date" headerText="تاريخ الدفع" width="120"></e-grid-column>
+                                <e-grid-column field="EmpName" headerText="اسم الموظف" width="120"></e-grid-column>
+                                <e-grid-column field="BusinessUserName" headerText="اسم العميل" width="120"></e-grid-column>
+                                <e-grid-column field="BranchName" headerText="اسم الفرع" width="120"></e-grid-column>
+                                <e-grid-column field="StatusName" headerText="حالة الدفعة" width="120"></e-grid-column>
+                                <e-grid-column field="Driver" headerText="السائق" width="120"></e-grid-column>
+                            </e-grid-columns>
+                        </ejs-grid>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- /.content -->
+
+</div>
+
+@{
+    var defaultanimation = new Syncfusion.EJ2.Popups.DialogAnimationSettings { Effect = Syncfusion.EJ2.Popups.DialogEffect.Fade };
+    var resizeDirectionHandles = new List<string>() { "All" };
+}
+<ejs-dialog id="barcode_dialog"
+            allowDragging="false" isModal="true"
+            resizeHandles="resizeDirectionHandles"
+            enableResize="true" created="onCreatedBarcode"
+            animationSettings="defaultanimation"
+            width="50%" target="#bodytarg"
+            open="dialogOpen"
+            close="dialogClose"
+            showCloseIcon="true"
+            header="BarCode">
+    <e-content-template>
+        <div class="row">
+            <h4> Barcode Mode</h4>
+            <div class="table-responsive col-12" id="bodytarg2">
+                <table class="table" style="font-size:15px; color:#1dbfc1">
+                    <tbody>
+                        <tr>
+                            <th style="width:100%">
+                                <button class="btn btn-primary btn-sm" onclick="copyBarcode()">  <i class="ti-files"></i> copy</button>
+                                <button class="btn btn-primary btn-sm" onclick="Searchbarcode()">  <i class="ti-search"></i> Search</button>
+                                <label class="btn-danger  btn-sm">عدد المقروء</label>    : <label class="btn btn-danger  btn-sm" id="barcodeCount"></label> &nbsp;&nbsp;
+
+                            </th>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            @*  <ejs-multiselect enableRtl id="Barcodemultiselect" allowFiltering="true" placeholder="Barcode" mode="Box">
+            <e-data-manager adaptor="UrlAdaptor" url="/Shipments/Barcode/"></e-data-manager>
+            <e-multiselect-fields value="Id" text="ShipmentTrackingNo"></e-multiselect-fields>
+            </ejs-multiselect>*@
+            <select class="form-control" id="Barcodemultiselect" style="width:100%" multiple="multiple">
+                <option>RI</option>
+            </select>
+        </div>
+    </e-content-template>
+
+</ejs-dialog>
+
+
+<script>
+            function rowSelected(args) {
+
+
+            //debugger;
+            //alert(args);
+            // alert('Grid <b>rowSelected</b> event called<hr>');
+            var grid = document.getElementById("Grid").ej2_instances[0];
+            var selectedRecords = grid.getSelectedRecords();
+            var rows = JSON.stringify(selectedRecords);
+
+            $('#shipRetCount').text(selectedRecords.length);
+
+
+        }
+        function showcount() {
+        var grid = document.getElementById("Grid").ej2_instances[0];
+        var selectedRecords = grid.getSelectedRecords();
+        var rows = JSON.stringify(selectedRecords);
+
+        $('#shipRetCount').text(selectedRecords.length);
+    }
+
+            function GetRetInvStmt() {
+            var CompanyBranches = document.getElementById('CompanyBranches').ej2_instances[0];
+            var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+            grid1.dataSource = new ej.data.DataManager({
+                url: '/AccountManagement/UrlDatasourceInvoiceRetBusinessUserShipments?BranchId=' + CompanyBranches.value,
+                 adaptor: new ej.data.UrlAdaptor()
+            });
+        }
+
+        function Searchbarcode() {
+             var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+            //alert(Barcodemultiselect.value);
+
+            grid1.dataSource = new ej.data.DataManager({
+                url: '/AccountManagement/UrlDatasourceInvoiceRetBusinessUserShipments?barcode=' + $("#Barcodemultiselect").val(),
+                adaptor: new ej.data.UrlAdaptor()
+            });
+
+            var dialogObjbarcode = document.getElementById("barcode_dialog");
+            dialogObjbarcode.ej2_instances[0].hide();
+        }
+
+        function dialogClose() {
+            //  btnElement.style.display = "block";
+        }
+        function dialogOpen() {
+            //  btnElement.style.display = "none";
+        }
+        function onCreatedBarcode() {
+            var dialogObj = document.getElementById("barcode_dialog").ej2_instances[0];
+            dialogObj.hide();
+        }
+        function OpenDlgBarcode() {
+            var dialogObjbarcode = document.getElementById("barcode_dialog");
+            dialogObjbarcode.ej2_instances[0].show();
+        }
+
+        //function copyBarcode() {
+        //    //var Barcodemultiselect = document.getElementById("Barcodemultiselect").ej2_instances[0];
+        //    //navigator.clipboard.writeText(Barcodemultiselect.text);
+        //    //var Barcodemultiselect = document.getElementById("Barcodemultiselect").ej2_instances[0];
+        //    var Barcodemultiselect = $("#Barcodemultiselect");
+        //    navigator.clipboard.writeText($("#Barcodemultiselect").val() + ',');
+        //}
+        function Refresh() {
+
+            var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+
+            grid1.dataSource = new ej.data.DataManager({
+                url: '/AccountManagement/UrlDatasourceInvoiceRetBusinessUserShipments',
+                adaptor: new ej.data.UrlAdaptor()
+                });        var grid = document.getElementById("Grid").ej2_instances[0];
+
+
+        }
+                      function alertFunc() {
+                var grid = document.getElementById("Grid").ej2_instances[0];
+                var selectedRecords = grid.getSelectedRecords();
+
+                $('#shipRetCount').text(selectedRecords.length);
+            }
+
+                       function recordClick() {
+
+
+                timeout = setTimeout(alertFunc, 500);
+
+            }
+        function Search() {
+
+
+            var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+
+            grid1.dataSource = new ej.data.DataManager({
+                url: '/AccountManagement/UrlDatasourceInvoiceRetBusinessUserShipments',
+                adaptor: new ej.data.UrlAdaptor()
+            });
+
+        }
+        function ExportExcel() {
+            var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+            var exceldata = grid1.getSelectedRecords();
+            if (exceldata == null) {
+                grid1.excelExport();
+            } else {
+                var exportProperties = {
+                    dataSource: exceldata
+                };
+                grid1.excelExport(exportProperties);
+            }
+        }
+
+        function print() {
+            var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+            grid1.print();
+        }
+
+        function PrintSlip() {
+            var grid = document.getElementById("Grid").ej2_instances[0];
+            var selectedRecords = grid.getSelectedRecords();
+            var ids = "";
+            for (var k in selectedRecords) {
+                window.open('/AccountManagement/GeneratePdfFile?id=' + selectedRecords[k].ID, "_blank");
+
+            }
+        }
+
+        function RecPayment() {
+            var grid = document.getElementById("Grid").ej2_instances[0];
+            var selectedRecords = grid.getSelectedRecords();
+
+
+            //alert(JSON.stringify(selectedRecords));
+            swal({
+                title: "هل انت متأكد ؟",
+                icon: "info",
+                buttons: true,
+                dangerMode: true,
+            })
+                .then((willDelete) => {
+                    if (willDelete) {
+                        document.getElementById("recin").disabled = true;
+                        document.getElementById('spinner-div').style.display = 'block';
+                        //alert(myJSON);
+                        var ajax1 = new ej.base.Ajax({ url: '/AccountManagement/ReceivingRetPayments', data: JSON.stringify(selectedRecords), type: 'POST', contentType: 'application/json' });
+                        ajax1.send(JSON.stringify(selectedRecords));
+                        ajax1.onSuccess = function(data) {
+                            swal(data, {
+                                icon: "success",
+                            });
+                            document.getElementById("recin").disabled = false;
+                            document.getElementById('spinner-div').style.display = 'none';
+                            var grid = document.getElementById("Grid").ej2_instances[0];
+                            grid.refresh(); //tabObj.select(0);
+                        };
+                        ajax1.onFailure = function(data) {
+                            swal(data);
+                        };
+                    } else {
+                        //swal("Your imaginary file is safe!");
+                    }
+                });
+        }
+
+
+
+
+        function changeDriver() {
+            var grid = document.getElementById("Grid").ej2_instances[0];
+            var Driver = document.getElementById("Driver").ej2_instances[0];
+            var selectedRecords = grid.getSelectedRecords();
+            if (Driver.value == null) {
+                swal("الرجاء اختيار السائق");
+                return;
+            }
+            //alert(JSON.stringify(selectedRecords));
+            swal({
+                title: "هل انت متأكد ؟",
+                icon: "info",
+                buttons: true,
+                dangerMode: true,
+            })
+                .then((willDelete) => {
+                    if (willDelete) {
+                        document.getElementById("chdr").disabled = true;
+                        document.getElementById('spinner-div').style.display = 'block';
+                        //alert(myJSON);
+                        var ajax1 = new ej.base.Ajax({ url: '/AccountManagement/changeRetDriver?DriverId=' + Driver.value, data: JSON.stringify(selectedRecords), type: 'POST', contentType: 'application/json' });
+                        ajax1.send(JSON.stringify(selectedRecords));
+                        ajax1.onSuccess = function(data) {
+                            swal(data, {
+                                icon: "success",
+                            });
+                            document.getElementById("chdr").disabled = false;
+                            document.getElementById('spinner-div').style.display = 'none';
+                            var grid = document.getElementById("Grid").ej2_instances[0];
+                            grid.refresh(); //tabObj.select(0);
+                        };
+                        ajax1.onFailure = function(data) {
+                            swal(data);
+                        };
+                    } else {
+                        //swal("Your imaginary file is safe!");
+                    }
+                });
+        }
+
+        function actionBegin(args) {
+            if (args.requestType == "filtering") {
+                var len = this.filterSettings.columns.length;
+                for (var i = 0; i < len; i++) {
+                    this.filterSettings.columns[i].operator = "contains";
+                }
+            }
+        }
+</script>
+
+@section scripts {
+    <script>
+        var select = $('#Barcodemultiselect').select2({
+            //matcher: matchCustom,
+            tags: true,
+
+            tokenSeparators: [',', ' ']
+        });
+
+
+        $('#Barcodemultiselect').on('select2:close', function() {
+            let select = $(this)
+            let count = select.select2('data').length;
+            $('#barcodeCount').text(count);
+
+
+
+            //alert(count);
+        })
+
+
+        function matchCustom(params, data) {
+            //alert(params.term);
+            //if ($.trim(params.term) === '') {
+            //                       return data;
+            //                     }
+
+            var startsh = 'RI';
+            if (params.term.toUpperCase().indexOf(startsh)) {
+                // alert(params);
+            } else {
+                // return null;
+            }
+
+
+
+
+        }
+
+        function copyBarcode() {
+            //var Barcodemultiselect = document.getElementById("Barcodemultiselect").ej2_instances[0];
+            //navigator.clipboard.writeText(Barcodemultiselect.text);
+            //var Barcodemultiselect = document.getElementById("Barcodemultiselect").ej2_instances[0];
+            var Barcodemultiselect = $("#Barcodemultiselect");
+            navigator.clipboard.writeText($("#Barcodemultiselect").val() + ',');
+        }
+
+
+    </script>
+}

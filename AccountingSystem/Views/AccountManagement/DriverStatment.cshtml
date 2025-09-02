@@ -1,0 +1,494 @@
+﻿@using Newtonsoft.Json
+
+@{
+    var rtl = true;
+    ViewData["Title"] = "حساب سائق";
+
+}
+<title>Driver Statment - roadfn </title>
+
+<div class="container-full" id="mains">
+
+
+    <!-- Main content -->
+    <section class="content">
+        <div class="row">
+            <div class="col-12">
+                <div class="box">
+                    <div class="box-body">
+                        <div class="table-responsive col-12" id="bodytarg2">
+                            <table class="table" style="font-size:15px; color:#1dbfc1">
+                                <tbody>
+                                    <tr>
+                                        <th style="width:100%">
+                                            <button class="btn btn-primary btn-sm" id="Excel" onclick="ExportExcel()">  <i class="ti-layout"></i> اكسل</button>
+                                            <button class="btn btn-primary btn-sm" onclick="print()" id="Print">  <i class="ti-printer"></i> طباعة</button>
+
+                                            <button class="btn btn-primary btn-sm" id="pay" onclick="pay()">  <i class="ti-money"></i> دفع</button>
+
+                                            <button class="btn btn-primary btn-sm" id="reload" onclick="Refresh()">  <i class="ti-reload"></i> تحديث</button>
+                                        </th>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <ejs-dropdownlist id="Driver" name="Driver" Query="new ej.data.Query()"
+                                              allowFiltering="true" placeholder="السائق" change="GetDriverStmt">
+                                <e-data-manager adaptor="UrlAdaptor" url="/AccountManagement/GetDrivers/"></e-data-manager>
+
+                                <e-dropdownlist-fields text="Name" value="Id"></e-dropdownlist-fields>
+                            </ejs-dropdownlist>
+
+                        </div>
+                        <div class="col-xs-6 col-sm-6">
+                            <ejs-dropdownlist id="CompanyBranches" name="CompanyBranches" Query="new ej.data.Query()"
+                                              allowFiltering="true" dataSource="@ViewBag.CompanyBranches" placeholder="الفرع" change="GetDriver">
+
+
+                                <e-dropdownlist-fields text="BranchName" value="Id"></e-dropdownlist-fields>
+                            </ejs-dropdownlist>
+                        </div>
+
+                        <div class="table-responsive col-12" id="bodytarg2">
+                            <table class="table" style="font-size:15px; color:#1dbfc1">
+                                <tbody>
+                                    <tr>
+                                        @*     @if (User.IsInRole(Roadfn.Controllers.Role.superAdmin))
+                                        { *@
+                                        <th style="width:100%">
+                                            عدد الطرود  : <label id="shipRetCount"></label> &nbsp;&nbsp;
+                                            مجموع العمولة : <label id="commSum"></label> &nbsp;&nbsp;
+                                            مجموع الرسوم الاضافية : <label id="ShipmentExtraFee"></label> &nbsp;&nbsp;
+                                            مجموع مبالغ الطرود : <label id="shipTotSum"></label> &nbsp;&nbsp;
+                                            الصافي : <label id="total"></label> &nbsp;&nbsp;
+
+                                        </th>
+                                        @*   }
+                                        else
+                                        {
+                                            <th style="width:100%">
+                                                عدد الطرود  : <label id="shipRetCount"></label> &nbsp;&nbsp;
+                                                مجموع العمولة : <label id="commSum"></label> &nbsp;&nbsp;
+                                                <label style="display:none" id="ShipmentExtraFee"></label> &nbsp;&nbsp;
+                                                مجموع مبالغ الطرود : <label id="shipTotSum"></label> &nbsp;&nbsp;
+                                                الصافي : <label id="total"></label> &nbsp;&nbsp;
+
+                                            </th>
+                                        } *@
+
+
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <ejs-grid id="Grid" width="100%"
+                                  allowExcelExport="true" allowPdfExport="true"
+                                  enableStickyHeader="true" height="400px" gridLines="Both"
+                                  enableRtl="@rtl" allowPaging="false" allowSorting="true" allowFiltering="true"
+                                  allowTextWrap="true"
+                                  allowSelection="true" rowSelected="rowSelected" recordClick="recordClick"
+                                  toolbar="@(new List<string>() {   "Edit", "Cancel", "Update"  })">
+                            <e-data-manager url="/AccountManagement/UrlDatasourceDriverStatment?DriverId=0"
+                                            updateUrl="/AccountManagement/update"
+                                            adaptor="UrlAdaptor"></e-data-manager>
+                            <e-grid-editSettings allowEditing="true"></e-grid-editSettings>
+
+                            <e-grid-filterSettings type="Excel"></e-grid-filterSettings>
+                            <e-grid-aggregates>
+                                <e-grid-aggregate>
+                                    <e-aggregate-columns>
+                                        <e-aggregate-column field="ShipmentTrackingNo" type="Count" footerTemplate="Count Of Shipments:(${Count})"></e-aggregate-column>
+                                        <e-aggregate-column field="CommissionPerItem" type="Sum" footerTemplate="Sum of Commission:(${Sum})"></e-aggregate-column>
+                                        <e-aggregate-column field="ShipmentTotal" type="Sum" footerTemplate="Sum of Shipment Total:(${Sum})"></e-aggregate-column>
+                                    </e-aggregate-columns>
+                                </e-grid-aggregate>
+                            </e-grid-aggregates>
+                            <e-grid-columns>
+                                <e-grid-column type="checkbox" width="50"></e-grid-column>
+                                <e-grid-column field="Id" headerText="ID" allowEditing="false" Visible="false" isPrimaryKey="true"></e-grid-column>
+                                @*<e-grid-column field="CityCode" headerText="City Code" width="120"></e-grid-column>*@
+                                <e-grid-column field="ShipmentTrackingNo" allowEditing="false" template="#ShipmentTrackingNo" headerText="رقم تتبع الشحنة" width="120"></e-grid-column>
+                                <e-grid-column field="ShipmentId" allowEditing="false" Visible="false" headerText="ShipmentId" width="120"></e-grid-column>
+                                <e-grid-column field="EntryDate" allowEditing="false" customFormat="@(new { type ="date", format="dd/MM/yyyy hh:mm" })" headerText="تاريخ ادخال الشحنة" width="120"></e-grid-column>
+                                <e-grid-column field="DriverName" allowEditing="false" headerText="اسم السائق" width="120"></e-grid-column>
+                                <e-grid-column field="ClientName" allowEditing="false" headerText="اسم العميل" width="120"></e-grid-column>
+                                <e-grid-column field="BranchName" allowEditing="false" headerText="الفرع" width="120"></e-grid-column>
+                                <e-grid-column field="CityName" allowEditing="false" headerText="اسم المدينة" width="120"></e-grid-column>
+
+                                <e-grid-column field="AreaName" allowEditing="false" headerText="اسم المنطقة" width="120"></e-grid-column>
+
+                                <e-grid-column field="PaidAmountFromShipmentFees" allowEditing="false" headerText="المبلغ المدفوع من رسوم التوصيل" width="120"></e-grid-column>
+                                <e-grid-column field="ShipmentTotal" allowEditing="false" headerText="المجموع الكلي" width="120"></e-grid-column>
+                                <e-grid-column field="CommissionPerItem" allowEditing="false" headerText="العمولة لكل شحنة" width="120"></e-grid-column>
+                                <e-grid-column field="DriverExtraComisionValue" allowEditing="true" headerText="عمولةاضافية للسائق" width="120"></e-grid-column>
+                                <e-grid-column field="ShipmentExtraFees" allowEditing="false" headerText="العمولة الاضافية" width="120"></e-grid-column>
+                                <e-grid-column field="ShipmentCod" allowEditing="false" headerText="الصافي" width="120"></e-grid-column>
+
+                                <e-grid-column field="OldStatus" allowEditing="false" Visible="false" headerText="الحالة السابقة" width="120"></e-grid-column>
+                                <e-grid-column field="NewStatus" allowEditing="false" Visible="false" headerText="الحالة الجديدة" width="120"></e-grid-column>
+                                <e-grid-column field="DriverID" allowEditing="false" Visible="false" headerText="DriverID" width="120"></e-grid-column>
+                            </e-grid-columns>
+                        </ejs-grid>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    @{
+        var defaultanimation = new Syncfusion.EJ2.Popups.DialogAnimationSettings { Effect = Syncfusion.EJ2.Popups.DialogEffect.Fade };
+        var resizeDirectionHandles = new List<string>() { "All" };
+    }
+    <!-- /.content -->
+    <ejs-dialog id="default_dialog"
+                allowDragging="false" isModal="true"
+                resizeHandles="resizeDirectionHandles"
+                enableResize="true" created="onCreated"
+                animationSettings="defaultanimation"
+                width="80%" target="#mains"
+                open="dialogOpen"
+                close="dialogClose"
+                showCloseIcon="true"
+                header="تفاصيل الشحنة">
+        <e-content-template>
+            <div>
+                <div id='detailstab'></div>
+
+            </div>
+
+        </e-content-template>
+
+    </ejs-dialog>
+</div>
+<script type="text/x-jsrender" id="ShipmentTrackingNo">
+    <div id="${ShipmentTrackingNo}" class="statustemp" style="color:#6610f2;font-weight: bold;" onclick='Shipdetails(${Id},${ShipmentTrackingNo})'>
+
+          <button class="btn btn-primary btn-sm" id="reload">   ${ShipmentTrackingNo}</button>
+    </div>
+</script>
+<script>
+    function dialogClose() {
+        //  btnElement.style.display = "block";
+    }
+    function dialogOpen() {
+        //  btnElement.style.display = "none";
+    }
+    function onCreated() {
+        var dialogObj = document.getElementById("default_dialog").ej2_instances[0];
+        dialogObj.hide();
+
+
+    }
+    function Shipdetails(sss, tr) {
+
+
+        dialogClose();
+        var dialogObj = document.getElementById("default_dialog");
+
+        dialogObj.ej2_instances[0].header = "تفاصيل الشحنة " + tr.id;
+        dialogObj.ej2_instances[0].show();
+        var ajax = new ej.base.Ajax('/Shipments/Update?Id=' + sss, 'GET', true);
+        ajax.send().then();
+        ajax.onSuccess = function (data) {
+            $("#detailstab").html(data);
+        }
+    }
+
+
+
+    function GetDriverStmt() {
+        var driver = document.getElementById('Driver').ej2_instances[0];
+        var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+        grid1.dataSource = new ej.data.DataManager({
+            url: '/AccountManagement/UrlDatasourceDriverStatment?DriverId=' + driver.value,
+            updateUrl: "/AccountManagement/update",
+            adaptor: new ej.data.UrlAdaptor()
+        });
+    }
+
+    function Refresh() {
+        var driver = document.getElementById('Driver').ej2_instances[0];
+        var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+        grid1.dataSource = new ej.data.DataManager({
+            url: '/AccountManagement/UrlDatasourceDriverStatment?DriverId=' + driver.value,
+            updateUrl: "/AccountManagement/update",
+            adaptor: new ej.data.UrlAdaptor()
+        });
+    }
+    function ExportExcel() {
+        var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+        var exceldata = grid1.getSelectedRecords();
+        if (exceldata == null) {
+            grid1.excelExport();
+        } else {
+            var exportProperties = {
+                dataSource: exceldata
+            };
+            grid1.excelExport(exportProperties);
+        }
+    }
+
+    function print() {
+        var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+        grid1.print();
+    }
+    function pay() {
+        var grid = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+        var selectedRecords = grid.getSelectedRecords();
+        swal({
+            title: "هل انت متأكد ؟",
+            icon: "warning",
+            buttons: true,
+            dangerMode: true,
+        })
+            .then((willDelete) => {
+                if (willDelete) {
+                    document.getElementById("pay").disabled = true;
+                    document.getElementById('spinner-div').style.display = 'block';
+                    //alert(myJSON);
+                    var ajax1 = new ej.base.Ajax({ url: '/AccountManagement/PayToDriver', data: JSON.stringify(selectedRecords), type: 'POST', contentType: 'application/json' });
+                    ajax1.send(JSON.stringify(selectedRecords));
+                    ajax1.onSuccess = function (data) {
+                        swal(data, {
+                            icon: "success",
+                        });
+                        document.getElementById("pay").disabled = false;
+                        document.getElementById('spinner-div').style.display = 'none';
+                        var grid = document.getElementById("Grid").ej2_instances[0];
+                        grid.refresh(); //tabObj.select(0);
+
+                        window.open('/AccountManagement/PrintDriverSlip?id=' + JSON.parse(data).Id, '_blank');
+                    };
+
+                    ajax1.onFailure = function (data) {
+                        swal(data);
+                    };
+
+                } else {
+                    //swal("Your imaginary file is safe!");
+                }
+            });
+    }
+    function rowSelected(args) {
+
+        var shipRetCount = 0;
+        var commSum = 0;
+        var shipTotSum = 0;
+        var ShipmentExtraFees = 0;
+        var total = 0;
+        $('#shipRetCount').text(shipRetCount);
+        $('#ShipmentExtraFee').text(ShipmentExtraFees);
+        $('#commSum').text(commSum);
+        $('#shipTotSum').text(shipTotSum);
+        $('#total').text(total);
+        var grid = document.getElementById("Grid").ej2_instances[0];
+        var selectedRecords = grid.getSelectedRecords();
+        var ids = "";
+        for (var k in selectedRecords) {
+            commSum += selectedRecords[k].CommissionPerItem + selectedRecords[k].DriverExtraComisionValue;
+            shipTotSum += selectedRecords[k].ShipmentTotal;
+            ShipmentExtraFees += selectedRecords[k].ShipmentExtraFees;
+
+        }
+        $('#commSum').text(commSum);
+        $('#ShipmentExtraFee').text(ShipmentExtraFees);
+        $('#shipRetCount').text(selectedRecords.length);
+        $('#shipTotSum').text(shipTotSum);
+        $('#total').text(shipTotSum - commSum);
+    }
+
+    function GetDriver() {
+
+        var Driver = document.getElementById('Driver').ej2_instances[0]; // Grid instance
+        Driver.value = null;
+        var CompanyBranches = document.getElementById('CompanyBranches').ej2_instances[0]; // Grid instance
+        Driver.dataSource = new ej.data.DataManager({
+            url: '/AccountManagement/GetDrivers?Id=' + CompanyBranches.value,
+            adaptor: new ej.data.UrlAdaptor()
+        });
+    }
+
+</script>
+
+
+
+
+<script>
+    function onfiltering(e) {
+        var query = new ej.data.Query();
+        query = (e.text !== '') ? query.where('Name', 'contains', e.text, true) : query;
+        e.updateData(@Html.Raw(JsonConvert.SerializeObject(ViewBag.UsersBus)), query);
+    }
+    function statechange() {
+        var city = document.getElementById('ClientCityID').ej2_instances[0];
+        var Area = document.getElementById('ClientAreaID').ej2_instances[0];
+        Area.enabled = true;
+        //Query the data source based on state DropDownList selected value
+        var tempQuery = new ej.data.Query().where('CityId', 'equal', city.value);
+        //set the framed query based on selected value in city DropDownList.
+        Area.query = tempQuery;
+        //clear the existing selection
+        Area.text = null;
+        //bind the property change to city DropDownList
+        Area.dataBind();
+        GetShipmentFee();
+    }
+    function GetTrkingNo() {
+        var SenderName = document.getElementById('SenderName').ej2_instances[0];
+        $.ajax({
+            type: "Get",
+            url: "/Shipments/GetShipmentsTrackingGeneratedCode?UserId=" + SenderName.value,
+            data: ''
+        }).done(function (data) {
+            var obj = JSON.parse(JSON.stringify(data));
+
+            $("#ShipmentTrackingNo").val(obj["GeneratedCode"]);
+        });
+        GetShipmentFee();
+    }
+    function GetAlert() {
+        var ShipmentTypeID = document.getElementById('ShipmentTypeID').ej2_instances[0];
+        $.ajax({
+            type: "Get",
+            url: "/Shipments/GetAlert?ShipmentTypeId=" + ShipmentTypeID.value,
+            data: ''
+        }).done(function (data) {
+            var obj = JSON.parse(JSON.stringify(data));
+            $("#Alert").val(obj["Alert"]);
+        });
+    }
+
+    function GetShipmentCount() {
+        var x = document.getElementById("ClientPhone");
+        var mobile = x.value;
+        $.ajax({
+            type: "Get",
+            url: "/Shipments/GetShipmentByClinteMobile?Mobile=" + mobile,
+            data: ''
+        }).done(function (data) {
+            var obj = JSON.parse(JSON.stringify(data));
+            $("#shipDoneCount1").text(obj.ShipmentsTypesClose);
+            $("#shipRetCount1").text(obj.ShipmentsTypesRet);
+        });
+    }
+    function GetShipmentFee() {
+        var ShipmentTotal = document.getElementById("ShipmentTotal");
+        var city = document.getElementById('ClientCityID').ej2_instances[0];
+        var SenderName = document.getElementById('SenderName').ej2_instances[0];
+        var ShipmentPrice = document.getElementById("ShipmentPrice");
+        var ShipmentFees = document.getElementById("ShipmentFees");
+        if (city.value == null) {
+            swal("الرجاء اختيار المدينة");
+            // swal("Here's a message!");
+            return;
+        }
+        if (SenderName.value == null) {
+            swal("الرجاء اختيار المرسل");
+            return;
+        }
+        $.ajax({
+            type: "Get",
+            url: "/Shipments/GetShipmentFee?UserId=" + SenderName.value + "&CityId=" + city.value,
+            data: ''
+        }).done(function (data) {
+            if (data == "NotFound") {
+                swal("لا يوجد تسعيرة شحن");
+                $("#ShipmentExtraFees").val("0");
+                $("#ShipmentFees").val("0");
+                $("#ShipmentExtraFeesq").val("1");
+                $("#rangeVal").text("1");
+                $("#ShipmentPrice").val("");
+            } else {
+                var obj = JSON.parse(JSON.stringify(data));
+                $("#ShipmentFees").val("0");
+                $("#ShipmentExtraFeesq").val("1");
+                $("#ShipmentExtraFees").val("0");
+                $("#rangeVal").text("1");
+                $("#ShipmentPrice").val("");
+
+                $("#ShipmentFees").val(obj.Fees);
+                $("#ShipmentPrice").val($("#ShipmentTotal").val() - obj.Fees);
+            }
+        });
+    }
+    function GetShipmentExtFee() {
+
+
+        var ShipmentFees = $("#ShipmentFees").val();
+        var ShipmentExtraFeesq = $("#ShipmentExtraFeesq").val();
+        var ShipmentTotal = $("#ShipmentTotal").val();
+        var total = ShipmentFees * ShipmentExtraFeesq;
+        total = total - ShipmentFees;
+        $("#ShipmentExtraFees").val(total);
+        ShipmentPrice = ShipmentTotal - ShipmentFees - parseFloat($("#ShipmentExtraFees").val());
+        $("#ShipmentPrice").val(ShipmentPrice);
+    }
+
+
+
+    function GetShipmentExtFee2() {
+        var ShipmentFees = $("#ShipmentFees").val();
+        var ShipmentTotal = $("#ShipmentTotal").val();
+        ShipmentPrice = ShipmentTotal - ShipmentFees - parseFloat($("#ShipmentExtraFees").val());
+        $("#ShipmentPrice").val(ShipmentPrice);
+        //$("#ShipmentTotal").val(parseFloat(ShipmentFees)+parseFloat(ShipmentPrice));
+    }
+    function updateshipment() {
+        GetShipmentExtFee2();
+        if ($("#updateShipmentForm").valid()) {
+            var data = $("#updateShipmentForm").serialize();
+            //console.log(data);
+            //alert(data);
+            $.ajax({
+                type: 'POST',
+                url: '/Shipments/update',
+                contentType: 'application/x-www-form-urlencoded; charset=UTF-8', // when we use .serialize() this generates the data in query string format. this needs the default contentType (default content type is: contentType: 'application/x-www-form-urlencoded; charset=UTF-8') so it is optional, you can remove it
+                data: data,
+                success: function (result) {
+                    swal(result, { icon: "success", });
+                    console.log(result);
+                },
+                error: function (data) {
+                    swal(data, { icon: "error", });
+                    console.log('Failed ');
+                }
+            })
+        }
+    }
+
+    function recordClick() {
+
+
+        timeout = setTimeout(alertFunc, 500);
+
+    }
+
+    function alertFunc() {
+
+        var shipRetCount = 0;
+        var commSum = 0;
+        var ShipmentExtraFees = 0;
+        var shipTotSum = 0;
+        var total = 0;
+        $('#shipRetCount').text(shipRetCount);
+        $('#commSum').text(commSum);
+        $('#shipTotSum').text(shipTotSum);
+        $('#ShipmentExtraFee').text(ShipmentExtraFees);
+        $('#total').text(total);
+        var grid = document.getElementById("Grid").ej2_instances[0];
+        var selectedRecords = grid.getSelectedRecords();
+        var ids = "";
+        for (var k in selectedRecords) {
+            commSum += selectedRecords[k].CommissionPerItem + selectedRecords[k].DriverExtraComisionValue;
+            shipTotSum += selectedRecords[k].ShipmentTotal;
+            ShipmentExtraFees += selectedRecords[k].ShipmentExtraFees;
+
+        }
+        $('#ShipmentExtraFee').text(ShipmentExtraFees);
+        $('#commSum').text(commSum);
+        $('#shipRetCount').text(selectedRecords.length);
+        $('#shipTotSum').text(shipTotSum);
+        $('#total').text(shipTotSum - commSum);
+    }
+</script>

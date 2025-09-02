@@ -4,12 +4,20 @@ using Microsoft.AspNetCore.Authorization;
 using AccountingSystem.Authorization;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Roadfn.Services;
+using Microsoft.Extensions.Configuration;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+
+builder.Services.AddDbContext<RoadFnDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("RoadConnection")));
 
 builder.Services.AddIdentity<User, IdentityRole>(options =>
 {
@@ -37,25 +45,39 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
 });
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews().AddNewtonsoftJson(options =>
+{
+    options.SerializerSettings.ContractResolver = new Newtonsoft.Json.Serialization.DefaultContractResolver();
+
+}).AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    options.JsonSerializerOptions.PropertyNamingPolicy = null;
+
+});
 builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddScoped<UserResolverService>();
+
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 
 var app = builder.Build();
+Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense(builder.Configuration.GetValue<string>("SyncfusionLicenseProvider:Key"));
 
-// Initialize database
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    // Apply pending migrations and create the database if it doesn't exist.
-    // EnsureCreated() bypasses migrations which can lead to missing columns
-    // like ExpenseLimit when the schema evolves.
-    context.Database.Migrate();
+//// Initialize database
+//using (var scope = app.Services.CreateScope())
+//{
+//    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+//    // Apply pending migrations and create the database if it doesn't exist.
+//    // EnsureCreated() bypasses migrations which can lead to missing columns
+//    // like ExpenseLimit when the schema evolves.
+//    context.Database.Migrate();
 
-    // Seed initial data
-    await SeedData.InitializeAsync(app.Services);
-}
+//    // Seed initial data
+//    await SeedData.InitializeAsync(app.Services);
+//}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
