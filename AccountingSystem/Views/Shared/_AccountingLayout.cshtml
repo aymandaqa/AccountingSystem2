@@ -135,34 +135,37 @@
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-chart-bar"></i> التقارير
                         </a>
-                        <ul class="dropdown-menu">
-                            <li>
+                        <ul class="dropdown-menu" id="reportsDropdown">
+                            <li class="px-3">
+                                <input type="text" class="form-control" id="reportSearch" placeholder="ابحث عن تقرير...">
+                            </li>
+                            <li class="report-item">
                                 <a class="dropdown-item" href="@Url.Action("TrialBalance", "Reports")">
                                     <i class="fas fa-balance-scale"></i> ميزان المراجعة
                                 </a>
                             </li>
-                            <li>
+                            <li class="report-item">
                                 <a class="dropdown-item" href="@Url.Action("BalanceSheet", "Reports")">
                                     <i class="fas fa-chart-pie"></i> الميزانية العمومية
                                 </a>
                             </li>
-                            <li>
+                            <li class="report-item">
                                 <a class="dropdown-item" href="@Url.Action("IncomeStatement", "Reports")">
                                     <i class="fas fa-chart-line"></i> قائمة الدخل
                                 </a>
                             </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
+                            <li class="report-item"><hr class="dropdown-divider"></li>
+                            <li class="report-item">
                                 <a class="dropdown-item" href="@Url.Action("GeneralLedger", "Reports")">
                                     <i class="fas fa-book"></i> دفتر الأستاذ العام
                                 </a>
                             </li>
-                            <li>
+                            <li class="report-item">
                                 <a class="dropdown-item" href="@Url.Action("AccountStatement", "Reports")">
                                     <i class="fas fa-file-alt"></i> كشف حساب
                                 </a>
                             </li>
-                            <li>
+                            <li class="report-item">
                                 <a class="dropdown-item" href="@Url.Action("PendingTransactions", "Reports")">
                                     <i class="fas fa-hourglass-half"></i> الحركات غير المرحلة
                                 </a>
@@ -327,6 +330,14 @@
                         $('input[name="__RequestVerificationToken"]').val());
                 }
             }
+        });
+
+        // Reports dropdown search filter
+        $('#reportSearch').on('input', function () {
+            var value = $(this).val().toLowerCase();
+            $('#reportsDropdown li.report-item').each(function () {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+            });
         });
     </script>
 </body>

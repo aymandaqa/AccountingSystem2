@@ -3,6 +3,10 @@
     ViewData["Title"] = "كشف الحساب";
 }
 
+@section Styles {
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+}
+
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
@@ -18,7 +22,7 @@
                     <form method="get" class="row g-3 mb-4">
                         <div class="col-md-3">
                             <label for="accountId" class="form-label">الحساب:</label>
-                            <select name="accountId" id="accountId" class="form-select" required>
+                            <select name="accountId" id="accountId" class="form-select account-select" required>
                                 <option value="">اختر الحساب</option>
                                 @if (Model?.Accounts != null)
                                 {
@@ -182,3 +186,13 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        $('#accountId').select2({
+            placeholder: 'اختر الحساب',
+            width: '100%'
+        });
+    </script>
+}
