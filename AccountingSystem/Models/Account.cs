@@ -34,6 +34,9 @@ namespace AccountingSystem.Models
 
         public decimal OpeningBalance { get; set; } = 0;
 
+        [Required]
+        public int CurrencyId { get; set; } = 1;
+
         // Calculated property for current balance
         public decimal CurrentBalance { get; set; } = 0;
 
@@ -53,6 +56,7 @@ namespace AccountingSystem.Models
         public virtual Account? Parent { get; set; }
         public virtual ICollection<Account> Children { get; set; } = new List<Account>();
         public virtual Branch? Branch { get; set; }
+        public virtual Currency Currency { get; set; } = null!;
         public virtual ICollection<JournalEntryLine> JournalEntryLines { get; set; } = new List<JournalEntryLine>();
     }
 
