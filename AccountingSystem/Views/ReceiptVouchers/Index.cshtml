@@ -1,0 +1,28 @@
+@model IEnumerable<AccountingSystem.Models.ReceiptVoucher>
+@{
+    ViewData["Title"] = "سندات القبض";
+    Layout = "~/Views/Shared/_AccountingLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <a asp-action="Create" class="btn btn-primary mb-3">سند قبض جديد</a>
+    <table class="table table-striped table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>التاريخ</th>
+                <th>الحساب</th>
+                <th>المبلغ</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var v in Model)
+            {
+                <tr>
+                    <td>@v.Date.ToString("yyyy-MM-dd")</td>
+                    <td>@v.Account.NameAr</td>
+                    <td>@v.Amount.ToString("N2")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

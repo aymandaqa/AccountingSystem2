@@ -9,6 +9,7 @@ using ClosedXML.Excel;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 using QuestPDF.Helpers;
+using AccountingSystem.Services;
 
 namespace AccountingSystem.Controllers
 {
@@ -16,10 +17,12 @@ namespace AccountingSystem.Controllers
     public class ReportsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly ICurrencyService _currencyService;
 
-        public ReportsController(ApplicationDbContext context)
+        public ReportsController(ApplicationDbContext context, ICurrencyService currencyService)
         {
             _context = context;
+            _currencyService = currencyService;
         }
 
         // GET: Reports
@@ -29,10 +32,11 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/TrialBalance
-        public async Task<IActionResult> TrialBalance(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false)
+        public async Task<IActionResult> TrialBalance(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null)
         {
             var accounts = await _context.Accounts
                 .Include(a => a.Branch)
+                .Include(a => a.Currency)
                 .Where(a => a.CanPostTransactions)
                 .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
                 .OrderBy(a => a.Code)
@@ -52,6 +56,10 @@ namespace AccountingSystem.Controllers
                     .ToDictionaryAsync(x => x.Key, x => (x.Debit, x.Credit))
                 : new Dictionary<int, (decimal Debit, decimal Credit)>();
 
+            var baseCurrency = await _context.Currencies.FirstAsync(c => c.IsBase);
+            var selectedCurrency = currencyId.HasValue ? await _context.Currencies.FirstOrDefaultAsync(c => c.Id == currencyId.Value) : baseCurrency;
+            selectedCurrency ??= baseCurrency;
+
             var viewModel = new TrialBalanceViewModel
             {
                 FromDate = from,
@@ -63,19 +71,31 @@ namespace AccountingSystem.Controllers
                     pending.TryGetValue(a.Id, out var p);
                     var pendingBalance = a.Nature == AccountNature.Debit ? p.Debit - p.Credit : p.Credit - p.Debit;
                     var balance = a.CurrentBalance + pendingBalance;
+                    var balanceSelected = _currencyService.Convert(balance, a.Currency, selectedCurrency);
+                    var balanceBase = _currencyService.Convert(balance, a.Currency, baseCurrency);
                     return new TrialBalanceAccountViewModel
                     {
                         AccountCode = a.Code,
                         AccountName = a.NameAr,
-                        DebitBalance = a.Nature == AccountNature.Debit ? balance : 0,
-                        CreditBalance = a.Nature == AccountNature.Credit ? balance : 0
+                        DebitBalance = a.Nature == AccountNature.Debit ? balanceSelected : 0,
+                        CreditBalance = a.Nature == AccountNature.Credit ? balanceSelected : 0,
+                        DebitBalanceBase = a.Nature == AccountNature.Debit ? balanceBase : 0,
+                        CreditBalanceBase = a.Nature == AccountNature.Credit ? balanceBase : 0
                     };
                 }).ToList(),
-                Branches = await GetBranchesSelectList()
+                Branches = await GetBranchesSelectList(),
+                Currencies = await _context.Currencies
+                    .Select(c => new SelectListItem { Value = c.Id.ToString(), Text = c.Code })
+                    .ToListAsync(),
+                SelectedCurrencyId = selectedCurrency.Id,
+                SelectedCurrencyCode = selectedCurrency.Code,
+                BaseCurrencyCode = baseCurrency.Code
             };
 
             viewModel.TotalDebits = viewModel.Accounts.Sum(a => a.DebitBalance);
             viewModel.TotalCredits = viewModel.Accounts.Sum(a => a.CreditBalance);
+            viewModel.TotalDebitsBase = viewModel.Accounts.Sum(a => a.DebitBalanceBase);
+            viewModel.TotalCreditsBase = viewModel.Accounts.Sum(a => a.CreditBalanceBase);
 
             return View(viewModel);
         }
