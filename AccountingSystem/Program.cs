@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Roadfn.Services;
 using Microsoft.Extensions.Configuration;
 using System.Text.Json.Serialization;
+using AccountingSystem.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,6 +60,7 @@ builder.Services.AddControllersWithViews().AddNewtonsoftJson(options =>
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<UserResolverService>();
+builder.Services.AddScoped<ICurrencyService, CurrencyService>();
 
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();

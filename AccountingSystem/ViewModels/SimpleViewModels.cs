@@ -278,6 +278,8 @@ namespace AccountingSystem.ViewModels
         public string BranchName { get; set; } = string.Empty;
         public string AccountName { get; set; } = string.Empty;
         public decimal Balance { get; set; }
+        public decimal BalanceSelected { get; set; }
+        public decimal BalanceBase { get; set; }
     }
 
     public class DashboardViewModel
@@ -292,7 +294,16 @@ namespace AccountingSystem.ViewModels
         public decimal TotalRevenues { get; set; }
         public decimal TotalExpenses { get; set; }
         public decimal NetIncome { get; set; }
+        public decimal TotalAssetsBase { get; set; }
+        public decimal TotalLiabilitiesBase { get; set; }
+        public decimal TotalEquityBase { get; set; }
+        public decimal TotalRevenuesBase { get; set; }
+        public decimal TotalExpensesBase { get; set; }
+        public decimal NetIncomeBase { get; set; }
         public int? SelectedBranchId { get; set; }
+        public int? SelectedCurrencyId { get; set; }
+        public string SelectedCurrencyCode { get; set; } = string.Empty;
+        public string BaseCurrencyCode { get; set; } = string.Empty;
         public DateTime FromDate { get; set; } = DateTime.Today;
         public DateTime ToDate { get; set; } = DateTime.Today;
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
@@ -327,6 +338,8 @@ namespace AccountingSystem.ViewModels
         public decimal OpeningBalance { get; set; }
         public decimal CurrentBalance { get; set; }
         public decimal Balance { get; set; }
+        public decimal BalanceSelected { get; set; }
+        public decimal BalanceBase { get; set; }
         public bool IsActive { get; set; }
         public bool CanPostTransactions { get; set; }
         public int? ParentId { get; set; }
