@@ -47,6 +47,19 @@
                             <label for="toDateFilter" class="form-label">إلى تاريخ:</label>
                             <input type="date" id="toDateFilter" class="form-control" value="@Model.ToDate.ToString("yyyy-MM-dd")" onchange="applyFilters()" />
                         </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="currencyFilter" class="form-label">العملة:</label>
+                            <select id="currencyFilter" class="form-select" onchange="applyFilters()">
+                                <option value="">@Model.BaseCurrencyCode</option>
+                                @if (ViewBag.Currencies != null)
+                                {
+                                    @foreach (var currency in ViewBag.Currencies)
+                                    {
+                                        <option value="@currency.Id" selected="@(Model.SelectedCurrencyId == currency.Id ? "selected" : null)">@currency.Code</option>
+                                    }
+                                }
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -63,7 +76,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="card-title">إجمالي الأصول</h6>
-                            <h4 class="mb-0">@Model.TotalAssets.ToString("N0")</h4>
+                            <h4 class="mb-0">@Model.TotalAssets.ToString("N0") @Model.SelectedCurrencyCode <small class="text-muted">(@Model.TotalAssetsBase.ToString("N0") @Model.BaseCurrencyCode)</small></h4>
                         </div>
                         <div class="align-self-center">
                             <i class="fas fa-chart-line fa-2x"></i>
@@ -79,7 +92,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="card-title">إجمالي الخصوم</h6>
-                            <h4 class="mb-0">@Model.TotalLiabilities.ToString("N0")</h4>
+                            <h4 class="mb-0">@Model.TotalLiabilities.ToString("N0") @Model.SelectedCurrencyCode <small class="text-muted">(@Model.TotalLiabilitiesBase.ToString("N0") @Model.BaseCurrencyCode)</small></h4>
                         </div>
                         <div class="align-self-center">
                             <i class="fas fa-balance-scale fa-2x"></i>
@@ -95,7 +108,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="card-title">إجمالي حقوق الملكية</h6>
-                            <h4 class="mb-0">@Model.TotalEquity.ToString("N0")</h4>
+                            <h4 class="mb-0">@Model.TotalEquity.ToString("N0") @Model.SelectedCurrencyCode <small class="text-muted">(@Model.TotalEquityBase.ToString("N0") @Model.BaseCurrencyCode)</small></h4>
                         </div>
                         <div class="align-self-center">
                             <i class="fas fa-university fa-2x"></i>
@@ -111,7 +124,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="card-title">إجمالي الإيرادات</h6>
-                            <h4 class="mb-0">@Model.TotalRevenues.ToString("N0")</h4>
+                            <h4 class="mb-0">@Model.TotalRevenues.ToString("N0") @Model.SelectedCurrencyCode <small class="text-muted">(@Model.TotalRevenuesBase.ToString("N0") @Model.BaseCurrencyCode)</small></h4>
                         </div>
                         <div class="align-self-center">
                             <i class="fas fa-dollar-sign fa-2x"></i>
@@ -127,7 +140,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="card-title">إجمالي المصروفات</h6>
-                            <h4 class="mb-0">@Model.TotalExpenses.ToString("N0")</h4>
+                            <h4 class="mb-0">@Model.TotalExpenses.ToString("N0") @Model.SelectedCurrencyCode <small class="text-muted">(@Model.TotalExpensesBase.ToString("N0") @Model.BaseCurrencyCode)</small></h4>
                         </div>
                         <div class="align-self-center">
                             <i class="fas fa-shopping-cart fa-2x"></i>
@@ -143,7 +156,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="card-title">صافي الربح</h6>
-                            <h4 class="mb-0">@Model.NetIncome.ToString("N0")</h4>
+                            <h4 class="mb-0">@Model.NetIncome.ToString("N0") @Model.SelectedCurrencyCode <small class="text-muted">(@Model.NetIncomeBase.ToString("N0") @Model.BaseCurrencyCode)</small></h4>
                         </div>
                         <div class="align-self-center">
                             <i class="fas fa-chart-pie fa-2x"></i>
@@ -175,7 +188,9 @@
                                 <tr>
                                     <th>الفرع</th>
                                     <th>الحساب</th>
-                                    <th>الرصيد</th>
+                                    <th>الرصيد (عملة الحساب)</th>
+                                    <th>الرصيد (@Model.SelectedCurrencyCode)</th>
+                                    <th>الرصيد (@Model.BaseCurrencyCode)</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -185,6 +200,8 @@
                                         <td>@cb.BranchName</td>
                                         <td>@cb.AccountName</td>
                                         <td>@cb.Balance.ToString("N2")</td>
+                                        <td>@cb.BalanceSelected.ToString("N2")</td>
+                                        <td>@cb.BalanceBase.ToString("N2")</td>
                                     </tr>
                                 }
                             </tbody>
@@ -218,6 +235,7 @@
                     @if (Model.AccountTypeTrees.Any())
                     {
                         <div class="tree-container">
+                            @{ ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode; ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode; }
                             @await Html.PartialAsync("_AccountBalanceTreeNode", Model.AccountTypeTrees)
                         </div>
                     }
@@ -355,6 +373,7 @@
             const branchId = document.getElementById('branchFilter').value;
             const fromDate = document.getElementById('fromDateFilter').value;
             const toDate = document.getElementById('toDateFilter').value;
+            const currencyId = document.getElementById('currencyFilter').value;
             const url = new URL(window.location);
             if (branchId) {
                 url.searchParams.set('branchId', branchId);
@@ -370,6 +389,11 @@
                 url.searchParams.set('toDate', toDate);
             } else {
                 url.searchParams.delete('toDate');
+            }
+            if (currencyId) {
+                url.searchParams.set('currencyId', currencyId);
+            } else {
+                url.searchParams.delete('currencyId');
             }
             window.location.href = url.toString();
         }
