@@ -37,6 +37,15 @@
                                 }
                             </select>
                         </div>
+                        <div class="col-md-3">
+                            <label class="form-label">العملة:</label>
+                            <select name="currencyId" class="form-select">
+                                @foreach (var currency in Model.Currencies)
+                                {
+                                    <option value="@currency.Value" selected="@(currency.Value == Model.SelectedCurrencyId?.ToString())">@currency.Text</option>
+                                }
+                            </select>
+                        </div>
                         <div class="col-md-3 d-flex align-items-end">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="includePending" value="true" @(Model.IncludePending ? "checked" : "") />
@@ -58,8 +67,10 @@
                                 <tr>
                                     <th>رمز الحساب</th>
                                     <th>اسم الحساب</th>
-                                    <th>الرصيد المدين</th>
-                                    <th>الرصيد الدائن</th>
+                                    <th>الرصيد المدين (@Model.SelectedCurrencyCode)</th>
+                                    <th>الرصيد الدائن (@Model.SelectedCurrencyCode)</th>
+                                    <th>الرصيد المدين (@Model.BaseCurrencyCode)</th>
+                                    <th>الرصيد الدائن (@Model.BaseCurrencyCode)</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -70,6 +81,8 @@
                                         <td>@account.AccountName</td>
                                         <td>@account.DebitBalance.ToString("N2")</td>
                                         <td>@account.CreditBalance.ToString("N2")</td>
+                                        <td>@account.DebitBalanceBase.ToString("N2")</td>
+                                        <td>@account.CreditBalanceBase.ToString("N2")</td>
                                     </tr>
                                 }
                             </tbody>
@@ -78,6 +91,8 @@
                                     <th colspan="2">الإجمالي</th>
                                     <th>@Model.TotalDebits.ToString("N2")</th>
                                     <th>@Model.TotalCredits.ToString("N2")</th>
+                                    <th>@Model.TotalDebitsBase.ToString("N2")</th>
+                                    <th>@Model.TotalCreditsBase.ToString("N2")</th>
                                 </tr>
                             </tfoot>
                         </table>

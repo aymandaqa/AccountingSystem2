@@ -148,6 +148,12 @@ namespace AccountingSystem.ViewModels
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
         public decimal TotalDebits { get; set; }
         public decimal TotalCredits { get; set; }
+        public decimal TotalDebitsBase { get; set; }
+        public decimal TotalCreditsBase { get; set; }
+        public int? SelectedCurrencyId { get; set; }
+        public string SelectedCurrencyCode { get; set; } = string.Empty;
+        public string BaseCurrencyCode { get; set; } = string.Empty;
+        public List<SelectListItem> Currencies { get; set; } = new List<SelectListItem>();
         public bool IsBalanced { get; set; }
     }
 
@@ -157,6 +163,8 @@ namespace AccountingSystem.ViewModels
         public string AccountName { get; set; } = "";
         public decimal DebitBalance { get; set; }
         public decimal CreditBalance { get; set; }
+        public decimal DebitBalanceBase { get; set; }
+        public decimal CreditBalanceBase { get; set; }
     }
 
     public class TrialBalanceItemViewModel

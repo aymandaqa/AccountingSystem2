@@ -1,0 +1,29 @@
+@model AccountingSystem.Models.DisbursementVoucher
+@{
+    ViewData["Title"] = "سند صرف جديد";
+    Layout = "~/Views/Shared/_AccountingLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <form asp-action="Create" method="post" class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">الحساب</label>
+            <select asp-for="AccountId" class="form-select" asp-items="ViewBag.Accounts"></select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">المبلغ</label>
+            <input asp-for="Amount" class="form-control" />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">التاريخ</label>
+            <input asp-for="Date" type="date" class="form-control" />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">ملاحظات</label>
+            <textarea asp-for="Notes" class="form-control"></textarea>
+        </div>
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary">حفظ</button>
+        </div>
+    </form>
+</div>
