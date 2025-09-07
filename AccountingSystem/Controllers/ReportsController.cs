@@ -140,16 +140,16 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/BalanceSheet
-        public async Task<IActionResult> BalanceSheet(int? branchId, DateTime? asOfDate, bool includePending = false)
+        public async Task<IActionResult> BalanceSheet(int? branchId, DateTime? asOfDate, bool includePending = false, int? currencyId = null)
         {
-            var viewModel = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now, includePending);
+            var viewModel = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now, includePending, currencyId);
             return View(viewModel);
         }
 
         // GET: Reports/BalanceSheetPdf
-        public async Task<IActionResult> BalanceSheetPdf(int? branchId, DateTime? asOfDate, bool includePending = false)
+        public async Task<IActionResult> BalanceSheetPdf(int? branchId, DateTime? asOfDate, bool includePending = false, int? currencyId = null)
         {
-            var model = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now, includePending);
+            var model = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now, includePending, currencyId);
 
             var document = Document.Create(container =>
             {
@@ -161,21 +161,21 @@ namespace AccountingSystem.Controllers
                     page.Content().Column(col =>
                     {
                         col.Item().Text("الأصول").FontSize(14).Bold();
-                        ComposePdfTree(col, model.Assets, 0);
-                        col.Item().Text($"إجمالي الأصول: {model.TotalAssets:N2}");
+                        ComposePdfTree(col, model.Assets, 0, model.SelectedCurrencyCode, model.BaseCurrencyCode);
+                        col.Item().Text($"إجمالي الأصول: {model.TotalAssets:N2} {model.SelectedCurrencyCode} ({model.TotalAssetsBase:N2} {model.BaseCurrencyCode})");
 
                         col.Item().PaddingTop(10).Text("الخصوم").FontSize(14).Bold();
-                        ComposePdfTree(col, model.Liabilities, 0);
-                        col.Item().Text($"إجمالي الخصوم: {model.TotalLiabilities:N2}");
+                        ComposePdfTree(col, model.Liabilities, 0, model.SelectedCurrencyCode, model.BaseCurrencyCode);
+                        col.Item().Text($"إجمالي الخصوم: {model.TotalLiabilities:N2} {model.SelectedCurrencyCode} ({model.TotalLiabilitiesBase:N2} {model.BaseCurrencyCode})");
 
                         col.Item().PaddingTop(10).Text("حقوق الملكية").FontSize(14).Bold();
-                        ComposePdfTree(col, model.Equity, 0);
-                        col.Item().Text($"إجمالي حقوق الملكية: {model.TotalEquity:N2}");
+                        ComposePdfTree(col, model.Equity, 0, model.SelectedCurrencyCode, model.BaseCurrencyCode);
+                        col.Item().Text($"إجمالي حقوق الملكية: {model.TotalEquity:N2} {model.SelectedCurrencyCode} ({model.TotalEquityBase:N2} {model.BaseCurrencyCode})");
                     });
                 });
             });
 
-            static void ComposePdfTree(ColumnDescriptor col, List<AccountTreeNodeViewModel> nodes, int level)
+            static void ComposePdfTree(ColumnDescriptor col, List<AccountTreeNodeViewModel> nodes, int level, string selectedCurrencyCode, string baseCurrencyCode)
             {
                 foreach (var node in nodes)
                 {
@@ -183,10 +183,10 @@ namespace AccountingSystem.Controllers
                     {
                         row.ConstantItem(level * 15);
                         row.RelativeItem().Text(node.Id == 0 ? node.NameAr : $"{node.Code} - {node.NameAr}");
-                        row.ConstantItem(100).AlignRight().Text(node.Balance.ToString("N2"));
+                        row.ConstantItem(150).AlignRight().Text($"{node.BalanceSelected:N2} {selectedCurrencyCode} ({node.BalanceBase:N2} {baseCurrencyCode})");
                     });
                     if (node.Children.Any())
-                        ComposePdfTree(col, node.Children, level + 1);
+                        ComposePdfTree(col, node.Children, level + 1, selectedCurrencyCode, baseCurrencyCode);
                 }
             }
 
@@ -195,15 +195,16 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/BalanceSheetExcel
-        public async Task<IActionResult> BalanceSheetExcel(int? branchId, DateTime? asOfDate, bool includePending = false)
+        public async Task<IActionResult> BalanceSheetExcel(int? branchId, DateTime? asOfDate, bool includePending = false, int? currencyId = null)
         {
-            var model = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now, includePending);
+            var model = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now, includePending, currencyId);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.AddWorksheet("BalanceSheet");
             var row = 1;
             worksheet.Cell(row, 1).Value = "الحساب";
-            worksheet.Cell(row, 2).Value = "الرصيد";
+            worksheet.Cell(row, 2).Value = $"الرصيد ({model.SelectedCurrencyCode})";
+            worksheet.Cell(row, 3).Value = $"الرصيد ({model.BaseCurrencyCode})";
             row++;
 
             void WriteNodes(List<AccountTreeNodeViewModel> nodes, int level)
@@ -211,7 +212,8 @@ namespace AccountingSystem.Controllers
                 foreach (var node in nodes)
                 {
                     worksheet.Cell(row, 1).Value = new string(' ', level * 2) + (node.Id == 0 ? node.NameAr : $"{node.Code} - {node.NameAr}");
-                    worksheet.Cell(row, 2).Value = node.Balance;
+                    worksheet.Cell(row, 2).Value = node.BalanceSelected;
+                    worksheet.Cell(row, 3).Value = node.BalanceBase;
                     row++;
                     if (node.Children.Any())
                         WriteNodes(node.Children, level + 1);
@@ -221,14 +223,17 @@ namespace AccountingSystem.Controllers
             WriteNodes(model.Assets, 0);
             worksheet.Cell(row, 1).Value = "إجمالي الأصول";
             worksheet.Cell(row, 2).Value = model.TotalAssets;
+            worksheet.Cell(row, 3).Value = model.TotalAssetsBase;
             row++;
             WriteNodes(model.Liabilities, 0);
             worksheet.Cell(row, 1).Value = "إجمالي الخصوم";
             worksheet.Cell(row, 2).Value = model.TotalLiabilities;
+            worksheet.Cell(row, 3).Value = model.TotalLiabilitiesBase;
             row++;
             WriteNodes(model.Equity, 0);
             worksheet.Cell(row, 1).Value = "إجمالي حقوق الملكية";
             worksheet.Cell(row, 2).Value = model.TotalEquity;
+            worksheet.Cell(row, 3).Value = model.TotalEquityBase;
 
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);
@@ -236,15 +241,20 @@ namespace AccountingSystem.Controllers
             return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "BalanceSheet.xlsx");
         }
 
-        private async Task<BalanceSheetViewModel> BuildBalanceSheetViewModel(int? branchId, DateTime asOfDate, bool includePending)
+        private async Task<BalanceSheetViewModel> BuildBalanceSheetViewModel(int? branchId, DateTime asOfDate, bool includePending, int? currencyId)
         {
             var accounts = await _context.Accounts
                 .Include(a => a.JournalEntryLines)
                     .ThenInclude(l => l.JournalEntry)
+                .Include(a => a.Currency)
                 .Where(a => a.Classification == AccountClassification.BalanceSheet)
                 .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
                 .AsNoTracking()
                 .ToListAsync();
+
+            var baseCurrency = await _context.Currencies.FirstAsync(c => c.IsBase);
+            var selectedCurrency = currencyId.HasValue ? await _context.Currencies.FirstOrDefaultAsync(c => c.Id == currencyId.Value) : baseCurrency;
+            selectedCurrency ??= baseCurrency;
 
             var balances = accounts.ToDictionary(a => a.Id, a =>
                 a.OpeningBalance + a.JournalEntryLines
@@ -253,21 +263,27 @@ namespace AccountingSystem.Controllers
                     .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
                     .Sum(l => l.DebitAmount - l.CreditAmount));
 
-            var nodes = accounts.Select(a => new AccountTreeNodeViewModel
+            var nodes = accounts.Select(a =>
             {
-                Id = a.Id,
-                Code = a.Code,
-                NameAr = a.NameAr,
-                AccountType = a.AccountType,
-                Nature = a.Nature,
-                OpeningBalance = a.OpeningBalance,
-                Balance = balances[a.Id],
-                IsActive = a.IsActive,
-                CanPostTransactions = a.CanPostTransactions,
-                ParentId = a.ParentId,
-                Level = a.Level,
-                Children = new List<AccountTreeNodeViewModel>(),
-                HasChildren = false
+                var balance = balances[a.Id];
+                return new AccountTreeNodeViewModel
+                {
+                    Id = a.Id,
+                    Code = a.Code,
+                    NameAr = a.NameAr,
+                    AccountType = a.AccountType,
+                    Nature = a.Nature,
+                    OpeningBalance = a.OpeningBalance,
+                    Balance = balance,
+                    BalanceSelected = _currencyService.Convert(balance, a.Currency, selectedCurrency),
+                    BalanceBase = _currencyService.Convert(balance, a.Currency, baseCurrency),
+                    IsActive = a.IsActive,
+                    CanPostTransactions = a.CanPostTransactions,
+                    ParentId = a.ParentId,
+                    Level = a.Level,
+                    Children = new List<AccountTreeNodeViewModel>(),
+                    HasChildren = false
+                };
             }).ToDictionary(n => n.Id);
 
             foreach (var node in nodes.Values)
@@ -279,19 +295,24 @@ namespace AccountingSystem.Controllers
                 }
             }
 
-            decimal ComputeBalance(AccountTreeNodeViewModel node)
+            void ComputeBalances(AccountTreeNodeViewModel node)
             {
+                foreach (var child in node.Children)
+                {
+                    ComputeBalances(child);
+                }
                 if (node.Children.Any())
                 {
-                    node.Balance = node.Children.Sum(ComputeBalance);
+                    node.Balance = node.Children.Sum(c => c.Balance);
+                    node.BalanceSelected = node.Children.Sum(c => c.BalanceSelected);
+                    node.BalanceBase = node.Children.Sum(c => c.BalanceBase);
                 }
-                return node.Balance;
             }
 
             var rootNodes = nodes.Values.Where(n => n.ParentId == null).ToList();
             foreach (var root in rootNodes)
             {
-                ComputeBalance(root);
+                ComputeBalances(root);
             }
 
             var assets = rootNodes.Where(n => n.AccountType == AccountType.Assets).OrderBy(n => n.Code).ToList();
@@ -306,26 +327,38 @@ namespace AccountingSystem.Controllers
                 Assets = assets,
                 Liabilities = liabilities,
                 Equity = equity,
-                Branches = await GetBranchesSelectList()
+                Branches = await GetBranchesSelectList(),
+                SelectedCurrencyId = selectedCurrency.Id,
+                SelectedCurrencyCode = selectedCurrency.Code,
+                BaseCurrencyCode = baseCurrency.Code,
+                Currencies = await _context.Currencies.Select(c => new SelectListItem { Value = c.Id.ToString(), Text = c.Code }).ToListAsync()
             };
 
-            viewModel.TotalAssets = assets.Sum(a => a.Balance);
-            viewModel.TotalLiabilities = liabilities.Sum(l => l.Balance);
-            viewModel.TotalEquity = equity.Sum(e => e.Balance);
-            viewModel.IsBalanced = viewModel.TotalAssets == (viewModel.TotalLiabilities + viewModel.TotalEquity);
+            viewModel.TotalAssets = assets.Sum(a => a.BalanceSelected);
+            viewModel.TotalLiabilities = liabilities.Sum(l => l.BalanceSelected);
+            viewModel.TotalEquity = equity.Sum(e => e.BalanceSelected);
+            viewModel.TotalAssetsBase = assets.Sum(a => a.BalanceBase);
+            viewModel.TotalLiabilitiesBase = liabilities.Sum(l => l.BalanceBase);
+            viewModel.TotalEquityBase = equity.Sum(e => e.BalanceBase);
+            viewModel.IsBalanced = viewModel.TotalAssetsBase == (viewModel.TotalLiabilitiesBase + viewModel.TotalEquityBase);
 
             return viewModel;
         }
 
-        private async Task<IncomeStatementViewModel> BuildIncomeStatementViewModel(int? branchId, DateTime fromDate, DateTime toDate, bool includePending)
+        private async Task<IncomeStatementViewModel> BuildIncomeStatementViewModel(int? branchId, DateTime fromDate, DateTime toDate, bool includePending, int? currencyId)
         {
             var accounts = await _context.Accounts
                 .Include(a => a.JournalEntryLines)
                     .ThenInclude(l => l.JournalEntry)
+                .Include(a => a.Currency)
                 .Where(a => a.Classification == AccountClassification.IncomeStatement)
                 .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
                 .AsNoTracking()
                 .ToListAsync();
+
+            var baseCurrency = await _context.Currencies.FirstAsync(c => c.IsBase);
+            var selectedCurrency = currencyId.HasValue ? await _context.Currencies.FirstOrDefaultAsync(c => c.Id == currencyId.Value) : baseCurrency;
+            selectedCurrency ??= baseCurrency;
 
             var balances = accounts.ToDictionary(a => a.Id, a =>
                 a.JournalEntryLines
@@ -334,18 +367,24 @@ namespace AccountingSystem.Controllers
                     .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
                     .Sum(l => a.Nature == AccountNature.Debit ? l.DebitAmount - l.CreditAmount : l.CreditAmount - l.DebitAmount));
 
-            var nodes = accounts.Select(a => new AccountTreeNodeViewModel
+            var nodes = accounts.Select(a =>
             {
-                Id = a.Id,
-                Code = a.Code,
-                NameAr = a.NameAr,
-                AccountType = a.AccountType,
-                Nature = a.Nature,
-                Balance = balances[a.Id],
-                ParentId = a.ParentId,
-                Level = a.Level,
-                Children = new List<AccountTreeNodeViewModel>(),
-                HasChildren = false
+                var balance = balances[a.Id];
+                return new AccountTreeNodeViewModel
+                {
+                    Id = a.Id,
+                    Code = a.Code,
+                    NameAr = a.NameAr,
+                    AccountType = a.AccountType,
+                    Nature = a.Nature,
+                    Balance = balance,
+                    BalanceSelected = _currencyService.Convert(balance, a.Currency, selectedCurrency),
+                    BalanceBase = _currencyService.Convert(balance, a.Currency, baseCurrency),
+                    ParentId = a.ParentId,
+                    Level = a.Level,
+                    Children = new List<AccountTreeNodeViewModel>(),
+                    HasChildren = false
+                };
             }).ToDictionary(n => n.Id);
 
             foreach (var node in nodes.Values)
@@ -357,19 +396,24 @@ namespace AccountingSystem.Controllers
                 }
             }
 
-            decimal ComputeBalance(AccountTreeNodeViewModel node)
+            void ComputeBalances(AccountTreeNodeViewModel node)
             {
+                foreach (var child in node.Children)
+                {
+                    ComputeBalances(child);
+                }
                 if (node.Children.Any())
                 {
-                    node.Balance = node.Children.Sum(ComputeBalance);
+                    node.Balance = node.Children.Sum(c => c.Balance);
+                    node.BalanceSelected = node.Children.Sum(c => c.BalanceSelected);
+                    node.BalanceBase = node.Children.Sum(c => c.BalanceBase);
                 }
-                return node.Balance;
             }
 
             var rootNodes = nodes.Values.Where(n => n.ParentId == null).ToList();
             foreach (var root in rootNodes)
             {
-                ComputeBalance(root);
+                ComputeBalances(root);
             }
 
             var revenues = rootNodes.Where(n => n.AccountType == AccountType.Revenue).OrderBy(n => n.Code).ToList();
@@ -383,35 +427,44 @@ namespace AccountingSystem.Controllers
                 IncludePending = includePending,
                 Revenues = revenues,
                 Expenses = expenses,
-                Branches = await GetBranchesSelectList()
+                Branches = await GetBranchesSelectList(),
+                SelectedCurrencyId = selectedCurrency.Id,
+                SelectedCurrencyCode = selectedCurrency.Code,
+                BaseCurrencyCode = baseCurrency.Code,
+                Currencies = await _context.Currencies.Select(c => new SelectListItem { Value = c.Id.ToString(), Text = c.Code }).ToListAsync()
             };
 
-            viewModel.TotalRevenues = revenues.Sum(r => r.Balance);
-            viewModel.TotalExpenses = expenses.Sum(e => e.Balance);
+            viewModel.TotalRevenues = revenues.Sum(r => r.BalanceSelected);
+            viewModel.TotalExpenses = expenses.Sum(e => e.BalanceSelected);
             viewModel.NetIncome = viewModel.TotalRevenues - viewModel.TotalExpenses;
+            viewModel.TotalRevenuesBase = revenues.Sum(r => r.BalanceBase);
+            viewModel.TotalExpensesBase = expenses.Sum(e => e.BalanceBase);
+            viewModel.NetIncomeBase = viewModel.TotalRevenuesBase - viewModel.TotalExpensesBase;
 
             return viewModel;
         }
 
         // GET: Reports/IncomeStatement
-        public async Task<IActionResult> IncomeStatement(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false)
+        public async Task<IActionResult> IncomeStatement(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null)
         {
             var model = await BuildIncomeStatementViewModel(
                 branchId,
                 fromDate ?? DateTime.Now.AddMonths(-1),
                 toDate ?? DateTime.Now,
-                includePending);
+                includePending,
+                currencyId);
             return View(model);
         }
 
         // GET: Reports/IncomeStatementPdf
-        public async Task<IActionResult> IncomeStatementPdf(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false)
+        public async Task<IActionResult> IncomeStatementPdf(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null)
         {
             var model = await BuildIncomeStatementViewModel(
                 branchId,
                 fromDate ?? DateTime.Now.AddMonths(-1),
                 toDate ?? DateTime.Now,
-                includePending);
+                includePending,
+                currencyId);
 
             var document = Document.Create(container =>
             {
@@ -423,19 +476,19 @@ namespace AccountingSystem.Controllers
                     page.Content().Column(col =>
                     {
                         col.Item().Text("الإيرادات").FontSize(14).Bold();
-                        ComposePdfTree(col, model.Revenues, 0);
-                        col.Item().Text($"إجمالي الإيرادات: {model.TotalRevenues:N2}");
+                        ComposePdfTree(col, model.Revenues, 0, model.SelectedCurrencyCode, model.BaseCurrencyCode);
+                        col.Item().Text($"إجمالي الإيرادات: {model.TotalRevenues:N2} {model.SelectedCurrencyCode} ({model.TotalRevenuesBase:N2} {model.BaseCurrencyCode})");
 
                         col.Item().PaddingTop(10).Text("المصروفات").FontSize(14).Bold();
-                        ComposePdfTree(col, model.Expenses, 0);
-                        col.Item().Text($"إجمالي المصروفات: {model.TotalExpenses:N2}");
+                        ComposePdfTree(col, model.Expenses, 0, model.SelectedCurrencyCode, model.BaseCurrencyCode);
+                        col.Item().Text($"إجمالي المصروفات: {model.TotalExpenses:N2} {model.SelectedCurrencyCode} ({model.TotalExpensesBase:N2} {model.BaseCurrencyCode})");
 
-                        col.Item().PaddingTop(10).Text($"صافي الدخل: {model.NetIncome:N2}").FontSize(14).Bold();
+                        col.Item().PaddingTop(10).Text($"صافي الدخل: {model.NetIncome:N2} {model.SelectedCurrencyCode} ({model.NetIncomeBase:N2} {model.BaseCurrencyCode})").FontSize(14).Bold();
                     });
                 });
             });
 
-            static void ComposePdfTree(ColumnDescriptor col, List<AccountTreeNodeViewModel> nodes, int level)
+            static void ComposePdfTree(ColumnDescriptor col, List<AccountTreeNodeViewModel> nodes, int level, string selectedCurrencyCode, string baseCurrencyCode)
             {
                 foreach (var node in nodes)
                 {
@@ -443,10 +496,10 @@ namespace AccountingSystem.Controllers
                     {
                         row.ConstantItem(level * 15);
                         row.RelativeItem().Text(node.Id == 0 ? node.NameAr : $"{node.Code} - {node.NameAr}");
-                        row.ConstantItem(100).AlignRight().Text(node.Balance.ToString("N2"));
+                        row.ConstantItem(150).AlignRight().Text($"{node.BalanceSelected:N2} {selectedCurrencyCode} ({node.BalanceBase:N2} {baseCurrencyCode})");
                     });
                     if (node.Children.Any())
-                        ComposePdfTree(col, node.Children, level + 1);
+                        ComposePdfTree(col, node.Children, level + 1, selectedCurrencyCode, baseCurrencyCode);
                 }
             }
 
@@ -455,19 +508,21 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/IncomeStatementExcel
-        public async Task<IActionResult> IncomeStatementExcel(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false)
+        public async Task<IActionResult> IncomeStatementExcel(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null)
         {
             var model = await BuildIncomeStatementViewModel(
                 branchId,
                 fromDate ?? DateTime.Now.AddMonths(-1),
                 toDate ?? DateTime.Now,
-                includePending);
+                includePending,
+                currencyId);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.AddWorksheet("IncomeStatement");
             var row = 1;
             worksheet.Cell(row, 1).Value = "الحساب";
-            worksheet.Cell(row, 2).Value = "المبلغ";
+            worksheet.Cell(row, 2).Value = $"المبلغ ({model.SelectedCurrencyCode})";
+            worksheet.Cell(row, 3).Value = $"المبلغ ({model.BaseCurrencyCode})";
             row++;
 
             void WriteNodes(List<AccountTreeNodeViewModel> nodes, int level)
@@ -475,7 +530,8 @@ namespace AccountingSystem.Controllers
                 foreach (var node in nodes)
                 {
                     worksheet.Cell(row, 1).Value = new string(' ', level * 2) + (node.Id == 0 ? node.NameAr : $"{node.Code} - {node.NameAr}");
-                    worksheet.Cell(row, 2).Value = node.Balance;
+                    worksheet.Cell(row, 2).Value = node.BalanceSelected;
+                    worksheet.Cell(row, 3).Value = node.BalanceBase;
                     row++;
                     if (node.Children.Any())
                         WriteNodes(node.Children, level + 1);
@@ -485,13 +541,16 @@ namespace AccountingSystem.Controllers
             WriteNodes(model.Revenues, 0);
             worksheet.Cell(row, 1).Value = "إجمالي الإيرادات";
             worksheet.Cell(row, 2).Value = model.TotalRevenues;
+            worksheet.Cell(row, 3).Value = model.TotalRevenuesBase;
             row++;
             WriteNodes(model.Expenses, 0);
             worksheet.Cell(row, 1).Value = "إجمالي المصروفات";
             worksheet.Cell(row, 2).Value = model.TotalExpenses;
+            worksheet.Cell(row, 3).Value = model.TotalExpensesBase;
             row++;
             worksheet.Cell(row, 1).Value = "صافي الدخل";
             worksheet.Cell(row, 2).Value = model.NetIncome;
+            worksheet.Cell(row, 3).Value = model.NetIncomeBase;
 
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);
@@ -502,6 +561,7 @@ namespace AccountingSystem.Controllers
         // GET: Reports/AccountStatement
         public async Task<IActionResult> AccountStatement(int? accountId, int? branchId, DateTime? fromDate, DateTime? toDate)
         {
+            var baseCurrency = await _context.Currencies.FirstAsync(c => c.IsBase);
             var viewModel = new AccountStatementViewModel
             {
                 FromDate = fromDate ?? DateTime.Now.AddMonths(-1),
@@ -514,17 +574,21 @@ namespace AccountingSystem.Controllers
                         Value = a.Id.ToString(),
                         Text = $"{a.Code} - {a.NameAr}"
                     }).ToListAsync(),
-                Branches = await GetBranchesSelectList()
+                Branches = await GetBranchesSelectList(),
+                BaseCurrencyCode = baseCurrency.Code
             };
 
             if (accountId.HasValue)
             {
-                var account = await _context.Accounts.FindAsync(accountId.Value);
+                var account = await _context.Accounts
+                    .Include(a => a.Currency)
+                    .FirstOrDefaultAsync(a => a.Id == accountId.Value);
                 if (account != null)
                 {
                     viewModel.AccountId = accountId;
                     viewModel.AccountCode = account.Code;
                     viewModel.AccountName = account.NameAr;
+                    viewModel.CurrencyCode = account.Currency.Code;
 
                     var lines = await _context.JournalEntryLines
                         .Include(l => l.JournalEntry)
@@ -537,11 +601,17 @@ namespace AccountingSystem.Controllers
                         .ToListAsync();
 
                     decimal running = account.OpeningBalance;
+                    decimal runningBase = _currencyService.Convert(running, account.Currency, baseCurrency);
                     foreach (var line in lines)
                     {
+                        var debitBase = _currencyService.Convert(line.DebitAmount, account.Currency, baseCurrency);
+                        var creditBase = _currencyService.Convert(line.CreditAmount, account.Currency, baseCurrency);
                         running += account.Nature == AccountNature.Debit
                             ? line.DebitAmount - line.CreditAmount
                             : line.CreditAmount - line.DebitAmount;
+                        runningBase += account.Nature == AccountNature.Debit
+                            ? debitBase - creditBase
+                            : creditBase - debitBase;
                         viewModel.Transactions.Add(new AccountTransactionViewModel
                         {
                             Date = line.JournalEntry.Date,
@@ -549,14 +619,21 @@ namespace AccountingSystem.Controllers
                             Description = line.Description ?? string.Empty,
                             DebitAmount = line.DebitAmount,
                             CreditAmount = line.CreditAmount,
-                            RunningBalance = running
+                            RunningBalance = running,
+                            DebitAmountBase = debitBase,
+                            CreditAmountBase = creditBase,
+                            RunningBalanceBase = runningBase
                         });
                     }
 
                     viewModel.OpeningBalance = account.OpeningBalance;
+                    viewModel.OpeningBalanceBase = _currencyService.Convert(account.OpeningBalance, account.Currency, baseCurrency);
                     viewModel.ClosingBalance = running;
+                    viewModel.ClosingBalanceBase = runningBase;
                     viewModel.TotalDebit = viewModel.Transactions.Sum(t => t.DebitAmount);
                     viewModel.TotalCredit = viewModel.Transactions.Sum(t => t.CreditAmount);
+                    viewModel.TotalDebitBase = viewModel.Transactions.Sum(t => t.DebitAmountBase);
+                    viewModel.TotalCreditBase = viewModel.Transactions.Sum(t => t.CreditAmountBase);
                 }
             }
 
