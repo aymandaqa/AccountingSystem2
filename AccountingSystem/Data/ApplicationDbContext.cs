@@ -451,7 +451,11 @@ namespace AccountingSystem.Data
                 new Permission { Id = 32, Name = "expenses.approve", DisplayName = "اعتماد المصاريف", Category = "المصاريف", CreatedAt = createdAt },
                 new Permission { Id = 33, Name = "transfers.view", DisplayName = "عرض الحوالات", Category = "الحوالات", CreatedAt = createdAt },
                 new Permission { Id = 34, Name = "transfers.create", DisplayName = "إنشاء الحوالات", Category = "الحوالات", CreatedAt = createdAt },
-                new Permission { Id = 35, Name = "transfers.approve", DisplayName = "اعتماد الحوالات", Category = "الحوالات", CreatedAt = createdAt }
+                new Permission { Id = 35, Name = "transfers.approve", DisplayName = "اعتماد الحوالات", Category = "الحوالات", CreatedAt = createdAt },
+                new Permission { Id = 36, Name = "currencies.view", DisplayName = "عرض العملات", Category = "العملات", CreatedAt = createdAt },
+                new Permission { Id = 37, Name = "currencies.create", DisplayName = "إنشاء العملات", Category = "العملات", CreatedAt = createdAt },
+                new Permission { Id = 38, Name = "currencies.edit", DisplayName = "تعديل العملات", Category = "العملات", CreatedAt = createdAt },
+                new Permission { Id = 39, Name = "currencies.delete", DisplayName = "حذف العملات", Category = "العملات", CreatedAt = createdAt }
             );
         }
     }
