@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace AccountingSystem.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = "receiptvouchers.view")]
     public class ReceiptVouchersController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -30,6 +30,7 @@ namespace AccountingSystem.Controllers
             return View(vouchers);
         }
 
+        [Authorize(Policy = "receiptvouchers.create")]
         public async Task<IActionResult> Create()
         {
             ViewBag.Currencies = await _context.Currencies
@@ -43,6 +44,7 @@ namespace AccountingSystem.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "receiptvouchers.create")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(ReceiptVoucher model)
         {

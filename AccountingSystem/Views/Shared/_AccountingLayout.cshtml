@@ -31,6 +31,11 @@
     var canReceiveRetPayments = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.receiveretpayments")).Succeeded;
     var canUserPayment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.userpayment")).Succeeded;
     var canCurrencies = (await AuthorizationService.AuthorizeAsync(User, "currencies.view")).Succeeded;
+    var canReceiptVouchers = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.view")).Succeeded;
+    var canDisbursementVouchers = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.view")).Succeeded;
+    var canReceiptVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.create")).Succeeded;
+    var canDisbursementVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.create")).Succeeded;
+    var showVouchers = canReceiptVouchers || canDisbursementVouchers || canReceiptVouchersCreate || canDisbursementVouchersCreate;
     var showAccountManagement = canBusinessStatementBulk || canBusinessRetStatementBulk || canBusnissShipmentsReturn || canBusnissStatment || canDriverPayment || canDriverStatment || canPrintSlip || canReceivePayments || canReceiveRetPayments || canUserPayment;
 }
     <!-- Top Navigation -->
@@ -117,8 +122,33 @@
                         </ul>
                     </li>
 
+                @if (showVouchers)
+                {
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-file-invoice-dollar"></i> السندات
+                        </a>
+                        <ul class="dropdown-menu">
+                            @if (canReceiptVouchers)
+                            {
+                                <li><a class="dropdown-item" href="@Url.Action("Index", "ReceiptVouchers")"><i class="fas fa-list"></i> سندات القبض</a></li>
+                            }
+                            @if (canReceiptVouchersCreate)
+                            {
+                                <li><a class="dropdown-item" href="@Url.Action("Create", "ReceiptVouchers")"><i class="fas fa-plus"></i> إضافة سند قبض</a></li>
+                            }
+                            @if (canDisbursementVouchers)
+                            {
+                                <li><a class="dropdown-item" href="@Url.Action("Index", "DisbursementVouchers")"><i class="fas fa-list"></i> سندات الصرف</a></li>
+                            }
+                            @if (canDisbursementVouchersCreate)
+                            {
+                                <li><a class="dropdown-item" href="@Url.Action("Create", "DisbursementVouchers")"><i class="fas fa-plus"></i> إضافة سند صرف</a></li>
+                            }
+                        </ul>
+                    </li>
+                }
 
-    
                 @if (showAccountManagement)
                 {
                     <li class="nav-item dropdown">
