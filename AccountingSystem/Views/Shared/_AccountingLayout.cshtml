@@ -416,6 +416,24 @@
                 $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
             });
         });
+
+        // Filter account options based on selected currency in voucher forms
+        document.addEventListener('DOMContentLoaded', function () {
+            var currencySelect = document.querySelector('select[name="CurrencyId"]');
+            var accountSelect = document.querySelector('select[name="AccountId"]');
+            if (currencySelect && accountSelect) {
+                function filterAccounts() {
+                    var currency = currencySelect.value;
+                    Array.from(accountSelect.options).forEach(function (opt) {
+                        opt.hidden = opt.getAttribute('data-currency') !== currency;
+                    });
+                    var firstVisible = Array.from(accountSelect.options).find(function (opt) { return !opt.hidden; });
+                    if (firstVisible) accountSelect.value = firstVisible.value;
+                }
+                filterAccounts();
+                currencySelect.addEventListener('change', filterAccounts);
+            }
+        });
     </script>
 
     <ejs-scripts></ejs-scripts>

@@ -329,6 +329,10 @@ namespace AccountingSystem.Data
                     .WithMany()
                     .HasForeignKey(e => e.AccountId)
                     .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Currency)
+                    .WithMany()
+                    .HasForeignKey(e => e.CurrencyId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             // DisbursementVoucher configuration
@@ -340,6 +344,10 @@ namespace AccountingSystem.Data
                 entity.HasOne(e => e.Account)
                     .WithMany()
                     .HasForeignKey(e => e.AccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Currency)
+                    .WithMany()
+                    .HasForeignKey(e => e.CurrencyId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 

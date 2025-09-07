@@ -11,6 +11,7 @@
             <tr>
                 <th>التاريخ</th>
                 <th>الحساب</th>
+                <th>العملة</th>
                 <th>المبلغ</th>
             </tr>
         </thead>
@@ -20,6 +21,7 @@
                 <tr>
                     <td>@v.Date.ToString("yyyy-MM-dd")</td>
                     <td>@v.Account.NameAr</td>
+                    <td>@v.Currency.Code</td>
                     <td>@v.Amount.ToString("N2")</td>
                 </tr>
             }
