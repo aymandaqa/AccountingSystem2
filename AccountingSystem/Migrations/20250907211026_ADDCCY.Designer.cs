@@ -4,6 +4,7 @@ using AccountingSystem.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AccountingSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250907211026_ADDCCY")]
+    partial class ADDCCY
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -963,42 +966,6 @@ namespace AccountingSystem.Migrations
                             DisplayName = "اعتماد الحوالات",
                             IsActive = true,
                             Name = "transfers.approve"
-                        },
-                        new
-                        {
-                            Id = 36,
-                            Category = "العملات",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DisplayName = "عرض العملات",
-                            IsActive = true,
-                            Name = "currencies.view"
-                        },
-                        new
-                        {
-                            Id = 37,
-                            Category = "العملات",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DisplayName = "إنشاء العملات",
-                            IsActive = true,
-                            Name = "currencies.create"
-                        },
-                        new
-                        {
-                            Id = 38,
-                            Category = "العملات",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DisplayName = "تعديل العملات",
-                            IsActive = true,
-                            Name = "currencies.edit"
-                        },
-                        new
-                        {
-                            Id = 39,
-                            Category = "العملات",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DisplayName = "حذف العملات",
-                            IsActive = true,
-                            Name = "currencies.delete"
                         });
                 });
 
