@@ -31,6 +31,15 @@
                             <label for="asOfDate" class="form-label">كما في تاريخ:</label>
                             <input type="date" name="asOfDate" id="asOfDate" class="form-control" value="@Model.AsOfDate.ToString("yyyy-MM-dd")" />
                         </div>
+                        <div class="col-md-3">
+                            <label class="form-label">العملة:</label>
+                            <select name="currencyId" class="form-select">
+                                @foreach (var currency in Model.Currencies)
+                                {
+                                    <option value="@currency.Value" selected="@(currency.Value == Model.SelectedCurrencyId?.ToString())">@currency.Text</option>
+                                }
+                            </select>
+                        </div>
                         <div class="col-md-3 d-flex align-items-end">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="includePending" value="true" @(Model.IncludePending ? "checked" : "") />
@@ -46,16 +55,17 @@
                                 </button>
                                 @if (Model.Assets.Any() || Model.Liabilities.Any() || Model.Equity.Any())
                                 {
-                                    <a class="btn btn-secondary me-2" href="@Url.Action("BalanceSheetPdf", new { branchId = Model.BranchId, asOfDate = Model.AsOfDate.ToString("yyyy-MM-dd"), includePending = Model.IncludePending })">
+                                    <a class="btn btn-secondary me-2" href="@Url.Action("BalanceSheetPdf", new { branchId = Model.BranchId, asOfDate = Model.AsOfDate.ToString("yyyy-MM-dd"), includePending = Model.IncludePending, currencyId = Model.SelectedCurrencyId })">
                                         <i class="fas fa-file-pdf me-1"></i> PDF
                                     </a>
-                                    <a class="btn btn-success" href="@Url.Action("BalanceSheetExcel", new { branchId = Model.BranchId, asOfDate = Model.AsOfDate.ToString("yyyy-MM-dd"), includePending = Model.IncludePending })">
+                                    <a class="btn btn-success" href="@Url.Action("BalanceSheetExcel", new { branchId = Model.BranchId, asOfDate = Model.AsOfDate.ToString("yyyy-MM-dd"), includePending = Model.IncludePending, currencyId = Model.SelectedCurrencyId })">
                                         <i class="fas fa-file-excel me-1"></i> Excel
                                     </a>
                                 }
                             </div>
                         </div>
                     </form>
+                    @{ ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode; ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode; }
 
                     <div class="row">
                         <!-- الأصول -->
@@ -77,7 +87,7 @@
                                     }
                                     <div class="d-flex justify-content-between border-top pt-3 mt-3">
                                         <strong>إجمالي الأصول:</strong>
-                                        <strong class="text-success">@Model.TotalAssets.ToString("N2") </strong>
+                                        <strong class="text-success">@Model.TotalAssets.ToString("N2") @Model.SelectedCurrencyCode <small class="text-muted">(@Model.TotalAssetsBase.ToString("N2") @Model.BaseCurrencyCode)</small></strong>
                                     </div>
                                 </div>
                             </div>
@@ -103,7 +113,7 @@
                                     }
                                     <div class="d-flex justify-content-between border-top pt-3 mt-3">
                                         <strong>إجمالي الخصوم:</strong>
-                                        <strong class="text-danger">@Model.TotalLiabilities.ToString("N2") </strong>
+                                        <strong class="text-danger">@Model.TotalLiabilities.ToString("N2") @Model.SelectedCurrencyCode <small class="text-muted">(@Model.TotalLiabilitiesBase.ToString("N2") @Model.BaseCurrencyCode)</small></strong>
                                     </div>
                                 </div>
                             </div>
@@ -126,7 +136,7 @@
                                     }
                                     <div class="d-flex justify-content-between border-top pt-3 mt-3">
                                         <strong>إجمالي حقوق الملكية:</strong>
-                                        <strong class="text-info">@Model.TotalEquity.ToString("N2") </strong>
+                                        <strong class="text-info">@Model.TotalEquity.ToString("N2") @Model.SelectedCurrencyCode <small class="text-muted">(@Model.TotalEquityBase.ToString("N2") @Model.BaseCurrencyCode)</small></strong>
                                     </div>
                                 </div>
                             </div>

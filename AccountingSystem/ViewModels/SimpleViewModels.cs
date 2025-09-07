@@ -189,6 +189,13 @@ namespace AccountingSystem.ViewModels
         public decimal TotalAssets { get; set; }
         public decimal TotalLiabilities { get; set; }
         public decimal TotalEquity { get; set; }
+        public decimal TotalAssetsBase { get; set; }
+        public decimal TotalLiabilitiesBase { get; set; }
+        public decimal TotalEquityBase { get; set; }
+        public int? SelectedCurrencyId { get; set; }
+        public string SelectedCurrencyCode { get; set; } = string.Empty;
+        public string BaseCurrencyCode { get; set; } = string.Empty;
+        public List<SelectListItem> Currencies { get; set; } = new List<SelectListItem>();
         public bool IsBalanced { get; set; }
     }
 
@@ -212,6 +219,13 @@ namespace AccountingSystem.ViewModels
         public decimal TotalRevenues { get; set; }
         public decimal TotalExpenses { get; set; }
         public decimal NetIncome { get; set; }
+        public decimal TotalRevenuesBase { get; set; }
+        public decimal TotalExpensesBase { get; set; }
+        public decimal NetIncomeBase { get; set; }
+        public int? SelectedCurrencyId { get; set; }
+        public string SelectedCurrencyCode { get; set; } = string.Empty;
+        public string BaseCurrencyCode { get; set; } = string.Empty;
+        public List<SelectListItem> Currencies { get; set; } = new List<SelectListItem>();
     }
 
     public class IncomeStatementItemViewModel
@@ -231,11 +245,17 @@ namespace AccountingSystem.ViewModels
         public DateTime ToDate { get; set; }
         public int? BranchId { get; set; }
         public decimal OpeningBalance { get; set; }
+        public decimal OpeningBalanceBase { get; set; }
         public decimal ClosingBalance { get; set; }
+        public decimal ClosingBalanceBase { get; set; }
         public decimal TotalDebits { get; set; }
         public decimal TotalCredits { get; set; }
         public decimal TotalDebit { get; set; }
         public decimal TotalCredit { get; set; }
+        public decimal TotalDebitBase { get; set; }
+        public decimal TotalCreditBase { get; set; }
+        public string CurrencyCode { get; set; } = string.Empty;
+        public string BaseCurrencyCode { get; set; } = string.Empty;
         public List<AccountTransactionViewModel> Transactions { get; set; } = new List<AccountTransactionViewModel>();
         public List<SelectListItem> Accounts { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
@@ -249,6 +269,9 @@ namespace AccountingSystem.ViewModels
         public decimal DebitAmount { get; set; }
         public decimal CreditAmount { get; set; }
         public decimal RunningBalance { get; set; }
+        public decimal DebitAmountBase { get; set; }
+        public decimal CreditAmountBase { get; set; }
+        public decimal RunningBalanceBase { get; set; }
     }
 
     public class GeneralLedgerViewModel
