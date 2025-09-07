@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace AccountingSystem.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = "disbursementvouchers.view")]
     public class DisbursementVouchersController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -24,21 +24,27 @@ namespace AccountingSystem.Controllers
         {
             var vouchers = await _context.DisbursementVouchers
                 .Include(v => v.Account)
+                .Include(v => v.Currency)
                 .OrderByDescending(v => v.Date)
                 .ToListAsync();
             return View(vouchers);
         }
 
+        [Authorize(Policy = "disbursementvouchers.create")]
         public async Task<IActionResult> Create()
         {
+            ViewBag.Currencies = await _context.Currencies
+                .Select(c => new SelectListItem { Value = c.Id.ToString(), Text = c.Code })
+                .ToListAsync();
             ViewBag.Accounts = await _context.Accounts
                 .Where(a => a.CanPostTransactions)
-                .Select(a => new SelectListItem { Value = a.Id.ToString(), Text = $"{a.Code} - {a.NameAr}" })
+                .Select(a => new { a.Id, a.Code, a.NameAr, a.CurrencyId })
                 .ToListAsync();
             return View(new DisbursementVoucher { Date = DateTime.Now });
         }
 
         [HttpPost]
+        [Authorize(Policy = "disbursementvouchers.create")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(DisbursementVoucher model)
         {
@@ -46,14 +52,24 @@ namespace AccountingSystem.Controllers
             if (user == null || user.PaymentAccountId == null || user.PaymentBranchId == null)
                 return Challenge();
 
+            var account = await _context.Accounts.FindAsync(model.AccountId);
+            if (account == null || account.CurrencyId != model.CurrencyId)
+                ModelState.AddModelError("CurrencyId", "العملة لا تطابق عملة الحساب");
+
             if (!ModelState.IsValid)
             {
+                ViewBag.Currencies = await _context.Currencies
+                    .Select(c => new SelectListItem { Value = c.Id.ToString(), Text = c.Code })
+                    .ToListAsync();
                 ViewBag.Accounts = await _context.Accounts
                     .Where(a => a.CanPostTransactions)
-                    .Select(a => new SelectListItem { Value = a.Id.ToString(), Text = $"{a.Code} - {a.NameAr}" })
+                    .Select(a => new { a.Id, a.Code, a.NameAr, a.CurrencyId })
                     .ToListAsync();
                 return View(model);
             }
+
+            var currency = await _context.Currencies.FindAsync(model.CurrencyId);
+            model.ExchangeRate = currency?.ExchangeRate ?? 1m;
 
             _context.DisbursementVouchers.Add(model);
 

@@ -103,7 +103,11 @@ namespace AccountingSystem.Data
                 new Permission { Name = "cashclosures.view", DisplayName = "عرض إغلاقات الصندوق", Category = "الصندوق" },
                 new Permission { Name = "cashclosures.create", DisplayName = "إنشاء إغلاق صندوق", Category = "الصندوق" },
                 new Permission { Name = "cashclosures.approve", DisplayName = "اعتماد إغلاق الصندوق", Category = "الصندوق" },
-                new Permission { Name = "cashclosures.report", DisplayName = "تقرير إغلاقات الصندوق", Category = "الصندوق" }
+                new Permission { Name = "cashclosures.report", DisplayName = "تقرير إغلاقات الصندوق", Category = "الصندوق" },
+                new Permission { Name = "receiptvouchers.view", DisplayName = "عرض سندات القبض", Category = "السندات" },
+                new Permission { Name = "receiptvouchers.create", DisplayName = "إنشاء سند قبض", Category = "السندات" },
+                new Permission { Name = "disbursementvouchers.view", DisplayName = "عرض سندات الصرف", Category = "السندات" },
+                new Permission { Name = "disbursementvouchers.create", DisplayName = "إنشاء سند صرف", Category = "السندات" }
             };
 
 

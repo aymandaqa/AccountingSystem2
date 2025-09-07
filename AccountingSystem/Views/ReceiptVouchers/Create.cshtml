@@ -7,8 +7,17 @@
 <div class="container-fluid">
     <form asp-action="Create" method="post" class="row g-3">
         <div class="col-md-6">
+            <label class="form-label">العملة</label>
+            <select asp-for="CurrencyId" class="form-select" asp-items="ViewBag.Currencies"></select>
+        </div>
+        <div class="col-md-6">
             <label class="form-label">الحساب</label>
-            <select asp-for="AccountId" class="form-select" asp-items="ViewBag.Accounts"></select>
+            <select asp-for="AccountId" class="form-select" id="accountSelect">
+                @foreach (var a in ViewBag.Accounts)
+                {
+                    <option value="@a.Id" data-currency="@a.CurrencyId">@a.Code - @a.NameAr</option>
+                }
+            </select>
         </div>
         <div class="col-md-6">
             <label class="form-label">المبلغ</label>

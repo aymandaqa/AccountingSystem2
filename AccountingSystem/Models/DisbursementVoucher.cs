@@ -10,6 +10,9 @@ namespace AccountingSystem.Models
         [Required]
         public int AccountId { get; set; }
 
+        [Required]
+        public int CurrencyId { get; set; }
+
         [Column(TypeName = "decimal(18,2)")]
         public decimal Amount { get; set; }
 
@@ -22,5 +25,6 @@ namespace AccountingSystem.Models
         public string? Notes { get; set; }
 
         public virtual Account Account { get; set; } = null!;
+        public virtual Currency Currency { get; set; } = null!;
     }
 }
