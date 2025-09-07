@@ -33,6 +33,9 @@ namespace AccountingSystem.Data
         public DbSet<PaymentTransfer> PaymentTransfers { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<CashBoxClosure> CashBoxClosures { get; set; }
+        public DbSet<Currency> Currencies { get; set; }
+        public DbSet<ReceiptVoucher> ReceiptVouchers { get; set; }
+        public DbSet<DisbursementVoucher> DisbursementVouchers { get; set; }
 
         public override int SaveChanges()
         {
@@ -137,6 +140,16 @@ namespace AccountingSystem.Data
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
+            // Currency configuration
+            builder.Entity<Currency>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.Code).IsUnique();
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Code).IsRequired().HasMaxLength(3);
+                entity.Property(e => e.ExchangeRate).HasColumnType("decimal(18,6)");
+            });
+
             // Account configuration
             builder.Entity<Account>(entity =>
             {
@@ -146,6 +159,7 @@ namespace AccountingSystem.Data
                 entity.Property(e => e.NameAr).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.NameEn).HasMaxLength(200);
                 entity.Property(e => e.OpeningBalance).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.CurrencyId).HasDefaultValue(1);
 
                 entity.HasOne(e => e.Parent)
                     .WithMany(e => e.Children)
@@ -155,6 +169,11 @@ namespace AccountingSystem.Data
                 entity.HasOne(e => e.Branch)
                     .WithMany(e => e.Accounts)
                     .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Currency)
+                    .WithMany(e => e.Accounts)
+                    .HasForeignKey(e => e.CurrencyId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -300,6 +319,30 @@ namespace AccountingSystem.Data
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
+            // ReceiptVoucher configuration
+            builder.Entity<ReceiptVoucher>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.ExchangeRate).HasColumnType("decimal(18,6)");
+                entity.HasOne(e => e.Account)
+                    .WithMany()
+                    .HasForeignKey(e => e.AccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // DisbursementVoucher configuration
+            builder.Entity<DisbursementVoucher>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.ExchangeRate).HasColumnType("decimal(18,6)");
+                entity.HasOne(e => e.Account)
+                    .WithMany()
+                    .HasForeignKey(e => e.AccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
             builder.Entity<User>(entity =>
             {
                 entity.HasOne(u => u.PaymentAccount)
@@ -360,6 +403,10 @@ namespace AccountingSystem.Data
 
         private void SeedData(ModelBuilder builder)
         {
+            builder.Entity<Currency>().HasData(
+                new Currency { Id = 1, Name = "US Dollar", Code = "USD", ExchangeRate = 1m, IsBase = true }
+            );
+
             // Seed default permissions with deterministic CreatedAt values to avoid
             // model changes between builds.
             var createdAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
