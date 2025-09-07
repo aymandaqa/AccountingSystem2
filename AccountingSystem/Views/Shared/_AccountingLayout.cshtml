@@ -30,6 +30,7 @@
     var canReceivePayments = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.receivepayments")).Succeeded;
     var canReceiveRetPayments = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.receiveretpayments")).Succeeded;
     var canUserPayment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.userpayment")).Succeeded;
+    var canCurrencies = (await AuthorizationService.AuthorizeAsync(User, "currencies.view")).Succeeded;
     var showAccountManagement = canBusinessStatementBulk || canBusinessRetStatementBulk || canBusnissShipmentsReturn || canBusnissStatment || canDriverPayment || canDriverStatment || canPrintSlip || canReceivePayments || canReceiveRetPayments || canUserPayment;
 }
     <!-- Top Navigation -->
@@ -257,6 +258,14 @@
                                     <i class="fas fa-bullseye"></i> مراكز التكلفة
                                 </a>
                             </li>
+                            @if (canCurrencies)
+                            {
+                                <li>
+                                    <a class="dropdown-item" href="@Url.Action("Index", "Currencies")">
+                                        <i class="fas fa-money-bill-wave"></i> العملات
+                                    </a>
+                                </li>
+                            }
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <a class="dropdown-item" href="@Url.Action("Index", "Users")">
