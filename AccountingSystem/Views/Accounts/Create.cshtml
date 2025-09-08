@@ -136,7 +136,7 @@
 
 @if (isModal)
 {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    await Html.RenderPartialAsync("_ValidationScriptsPartial");
     <script>
         $(document).ready(function() {
             $('#accountTypeSelect').change(function() {
@@ -201,67 +201,69 @@
 }
 else
 {
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-    <script>
-        $(document).ready(function() {
-            $('#accountTypeSelect').change(function() {
-                var accountType = $(this).val();
-                var defaultNature = getDefaultNature(accountType);
-                $('#natureSelect').val(defaultNature);
-                $('#Classification').val(getClassification(accountType));
-            }).change();
-        });
-
-        function getClassification(accountType) {
-            switch(accountType) {
-                case 'Assets':
-                case 'Liabilities':
-                case 'Equity':
-                    return 'BalanceSheet';
-                case 'Revenue':
-                case 'Expenses':
-                    return 'IncomeStatement';
-                default:
-                    return '';
-            }
+    @section Scripts {
+    @{
+            await Html.RenderPartialAsync("_ValidationScriptsPartial");
         }
-
-        function getDefaultNature(accountType) {
-            switch(accountType) {
-                case 'Assets':
-                case 'Expenses':
-                    return 'Debit';
-                case 'Liabilities':
-                case 'Equity':
-                case 'Revenue':
-                    return 'Credit';
-                default:
-                    return '';
-            }
-        }
-
-        function generateCode() {
-            var accountType = $('#accountTypeSelect').val();
-            var parentId = $('#ParentId').val();
-
-            if (!accountType) {
-                alert('يرجى اختيار نوع الحساب أولاً');
-                return;
-            }
-
-            $.post('@Url.Action("GenerateAccountCode")', {
-                accountType: accountType,
-                parentId: parentId
-            }, function(result) {
-                if (result.success) {
-                    $('#Code').val(result.code);
-                } else {
-                    alert(result.message || 'حدث خطأ في توليد الكود');
-                }
+        <script>
+            $(document).ready(function() {
+                $('#accountTypeSelect').change(function() {
+                    var accountType = $(this).val();
+                    var defaultNature = getDefaultNature(accountType);
+                    $('#natureSelect').val(defaultNature);
+                    $('#Classification').val(getClassification(accountType));
+                }).change();
             });
-        }
-    </script>
+
+            function getClassification(accountType) {
+                switch(accountType) {
+                    case 'Assets':
+                    case 'Liabilities':
+                    case 'Equity':
+                        return 'BalanceSheet';
+                    case 'Revenue':
+                    case 'Expenses':
+                        return 'IncomeStatement';
+                    default:
+                        return '';
+                }
+            }
+
+            function getDefaultNature(accountType) {
+                switch(accountType) {
+                    case 'Assets':
+                    case 'Expenses':
+                        return 'Debit';
+                    case 'Liabilities':
+                    case 'Equity':
+                    case 'Revenue':
+                        return 'Credit';
+                    default:
+                        return '';
+                }
+            }
+
+            function generateCode() {
+                var accountType = $('#accountTypeSelect').val();
+                var parentId = $('#ParentId').val();
+
+                if (!accountType) {
+                    alert('يرجى اختيار نوع الحساب أولاً');
+                    return;
+                }
+
+                $.post('@Url.Action("GenerateAccountCode")', {
+                    accountType: accountType,
+                    parentId: parentId
+                }, function(result) {
+                    if (result.success) {
+                        $('#Code').val(result.code);
+                    } else {
+                        alert(result.message || 'حدث خطأ في توليد الكود');
+                    }
+                });
+            }
+        </script>
 }
 }
 
