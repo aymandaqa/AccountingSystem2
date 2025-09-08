@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
-using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace AccountingSystem.Controllers
 {
@@ -35,12 +34,9 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "receiptvouchers.create")]
         public async Task<IActionResult> Create()
         {
-            ViewBag.Currencies = await _context.Currencies
-                .Select(c => new SelectListItem { Value = c.Id.ToString(), Text = c.Code })
-                .ToListAsync();
             ViewBag.Accounts = await _context.Accounts
                 .Where(a => a.CanPostTransactions)
-                .Select(a => new { a.Id, a.Code, a.NameAr, a.CurrencyId })
+                .Select(a => new { a.Id, a.Code, a.NameAr, a.CurrencyId, CurrencyCode = a.Currency.Code })
                 .ToListAsync();
             return View(new ReceiptVoucher { Date = DateTime.Now });
         }
@@ -55,17 +51,20 @@ namespace AccountingSystem.Controllers
                 return Challenge();
 
             var account = await _context.Accounts.FindAsync(model.AccountId);
-            if (account == null || account.CurrencyId != model.CurrencyId)
-                ModelState.AddModelError("CurrencyId", "العملة لا تطابق عملة الحساب");
+            if (account == null)
+                ModelState.AddModelError("AccountId", "الحساب غير موجود");
+            else
+                model.CurrencyId = account.CurrencyId;
+
+            var paymentAccount = await _context.Accounts.FindAsync(user.PaymentAccountId);
+            if (account != null && paymentAccount != null && paymentAccount.CurrencyId != account.CurrencyId)
+                ModelState.AddModelError("AccountId", "يجب أن تكون الحسابات بنفس العملة");
 
             if (!ModelState.IsValid)
             {
-                ViewBag.Currencies = await _context.Currencies
-                    .Select(c => new SelectListItem { Value = c.Id.ToString(), Text = c.Code })
-                    .ToListAsync();
                 ViewBag.Accounts = await _context.Accounts
                     .Where(a => a.CanPostTransactions)
-                    .Select(a => new { a.Id, a.Code, a.NameAr, a.CurrencyId })
+                    .Select(a => new { a.Id, a.Code, a.NameAr, a.CurrencyId, CurrencyCode = a.Currency.Code })
                     .ToListAsync();
                 return View(model);
             }
