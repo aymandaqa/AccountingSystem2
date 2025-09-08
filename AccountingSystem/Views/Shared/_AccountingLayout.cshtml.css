@@ -1,0 +1,35 @@
+/* Sidebar layout */
+#wrapper {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#sidebar {
+  min-width: 250px;
+  max-width: 250px;
+  min-height: 100vh;
+  transition: margin 0.3s ease-in-out;
+}
+
+#sidebar .nav-link {
+  color: #adb5bd;
+}
+
+#sidebar .nav-link.active,
+#sidebar .nav-link:hover {
+  background-color: #495057;
+  color: #fff;
+}
+
+#wrapper.toggled #sidebar {
+  margin-right: -250px;
+}
+
+@media (max-width: 768px) {
+  #sidebar {
+    margin-right: -250px;
+  }
+  #wrapper.toggled #sidebar {
+    margin-right: 0;
+  }
+}
