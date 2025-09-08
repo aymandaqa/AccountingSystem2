@@ -43,6 +43,7 @@
                                         <th>الطبيعة</th>
                                         <th>الرصيد الافتتاحي</th>
                                         <th>الرصيد الحالي</th>
+                                        <th>العملة</th>
                                         <th>الحساب الأب</th>
                                         <th>الحالة</th>
                                         <th>الإجراءات</th>
@@ -74,6 +75,7 @@
                                             </td>
                                             <td>@account.OpeningBalance.ToString("N0")</td>
                                             <td>@account.CurrentBalance.ToString("N0")</td>
+                                            <td>@account.CurrencyCode</td>
                                             <td>@account.ParentAccountName</td>
                                             <td>
                                                 @if (account.IsActive)

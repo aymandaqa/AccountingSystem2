@@ -59,8 +59,11 @@ namespace AccountingSystem.ViewModels
         public bool CanPostTransactions { get; set; } = true;
         public int? ParentId { get; set; }
         public int? BranchId { get; set; }
+        [Range(1, int.MaxValue, ErrorMessage = "يجب اختيار العملة")]
+        public int CurrencyId { get; set; }
         public List<SelectListItem> ParentAccounts { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Currencies { get; set; } = new List<SelectListItem>();
     }
 
     public class EditAccountViewModel
@@ -77,8 +80,11 @@ namespace AccountingSystem.ViewModels
         public bool CanPostTransactions { get; set; }
         public int? ParentId { get; set; }
         public int? BranchId { get; set; }
+        [Range(1, int.MaxValue, ErrorMessage = "يجب اختيار العملة")]
+        public int CurrencyId { get; set; }
         public List<SelectListItem> ParentAccounts { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Currencies { get; set; } = new List<SelectListItem>();
     }
 
     public class AccountViewModel
@@ -101,6 +107,7 @@ namespace AccountingSystem.ViewModels
         public int Level { get; set; }
         public bool HasChildren { get; set; }
         public bool HasTransactions { get; set; }
+        public string CurrencyCode { get; set; } = string.Empty;
     }
 
     public class AccountDetailsViewModel
@@ -122,6 +129,7 @@ namespace AccountingSystem.ViewModels
         public string ParentAccountName { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
+        public string CurrencyCode { get; set; } = string.Empty;
         public List<AccountDetailsChildViewModel> ChildAccounts { get; set; } = new List<AccountDetailsChildViewModel>();
     }
 

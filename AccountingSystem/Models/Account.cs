@@ -35,7 +35,7 @@ namespace AccountingSystem.Models
         public decimal OpeningBalance { get; set; } = 0;
 
         [Required]
-        public int CurrencyId { get; set; } = 1;
+        public int CurrencyId { get; set; }
 
         // Calculated property for current balance
         public decimal CurrentBalance { get; set; } = 0;

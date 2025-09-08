@@ -159,7 +159,7 @@ namespace AccountingSystem.Data
                 entity.Property(e => e.NameAr).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.NameEn).HasMaxLength(200);
                 entity.Property(e => e.OpeningBalance).HasColumnType("decimal(18,2)");
-                entity.Property(e => e.CurrencyId).HasDefaultValue(1);
+                entity.Property(e => e.CurrencyId);
 
                 entity.HasOne(e => e.Parent)
                     .WithMany(e => e.Children)
