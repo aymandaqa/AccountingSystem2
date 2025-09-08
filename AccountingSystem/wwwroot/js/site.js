@@ -10,4 +10,16 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('wrapper').classList.toggle('toggled');
         });
     }
+
+    // Highlight active sidebar link based on current path
+    var currentPath = window.location.pathname.toLowerCase();
+    document.querySelectorAll('#sidebar .nav-link').forEach(function (link) {
+        if (link.hasAttribute('data-bs-toggle')) return; // Skip collapse toggles
+        var linkPath = link.pathname.toLowerCase();
+        if (currentPath === linkPath || currentPath.startsWith(linkPath + '/')) {
+            link.classList.add('active');
+            var parent = link.closest('.collapse');
+            if (parent) parent.classList.add('show');
+        }
+    });
 });

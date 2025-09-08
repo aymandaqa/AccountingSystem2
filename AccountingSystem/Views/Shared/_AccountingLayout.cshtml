@@ -41,18 +41,18 @@
         var showVouchers = canReceiptVouchers || canDisbursementVouchers || canReceiptVouchersCreate || canDisbursementVouchersCreate;
         var showAccountManagement = canBusinessStatementBulk || canBusinessRetStatementBulk || canBusnissShipmentsReturn || canBusnissStatment || canDriverPayment || canDriverStatment || canPrintSlip || canReceivePayments || canReceiveRetPayments || canUserPayment;
 
-        var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
-        var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
-        var accountsActive = currentController == "Accounts";
-        var operationsActive = currentController == "CashBoxClosures" || currentController == "Expenses" || currentController == "transfers";
-        var vouchersActive = currentController == "ReceiptVouchers" || currentController == "DisbursementVouchers";
-        var accountMgmtActive = currentController == "AccountManagement";
-        var journalActive = currentController == "JournalEntries";
-        var reportsActive = currentController == "Reports";
-        var settingsActive = currentController == "Branches" || currentController == "CostCenters" || currentController == "Currencies" || currentController == "Users";
+        var currentController = ViewContext.RouteData.Values["controller"]?.ToString()?.ToLower();
+        var currentAction = ViewContext.RouteData.Values["action"]?.ToString()?.ToLower();
+        var accountsActive = currentController == "accounts";
+        var operationsActive = currentController == "cashboxclosures" || currentController == "expenses" || currentController == "transfers";
+        var vouchersActive = currentController == "receiptvouchers" || currentController == "disbursementvouchers";
+        var accountMgmtActive = currentController == "accountmanagement";
+        var journalActive = currentController == "journalentries";
+        var reportsActive = currentController == "reports";
+        var settingsActive = currentController == "branches" || currentController == "costcenters" || currentController == "currencies" || currentController == "users";
     }
     <div id="wrapper" class="d-flex">
-        <nav id="sidebar" class="bg-dark">
+        <nav id="sidebar">
             <div class="sidebar-header p-3 mb-3 border-bottom">
                 <a class="navbar-brand d-flex align-items-center text-white" href="@Url.Action("Index", "Dashboard")">
                     <i class="fas fa-calculator me-2"></i> RoadFinity
@@ -320,6 +320,7 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
 
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay" style="display: none;">
