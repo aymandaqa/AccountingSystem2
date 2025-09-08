@@ -1,0 +1,42 @@
+@model IEnumerable<AccountingSystem.Models.SystemSetting>
+@{
+    ViewData["Title"] = "إعدادات النظام";
+}
+<h1 class="mb-3">إعدادات النظام</h1>
+@Html.AntiForgeryToken()
+<p>
+    <a class="btn btn-primary" href="@Url.Action("Create")">إضافة إعداد</a>
+</p>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>المفتاح</th>
+            <th>القيمة</th>
+            <th>الإجراءات</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td>@item.Key</td>
+            <td>@item.Value</td>
+            <td>
+                <a class="btn btn-sm btn-warning" href="@Url.Action("Edit", new { id = item.Id })">تعديل</a>
+                <button class="btn btn-sm btn-danger" onclick="deleteSetting(@item.Id)">حذف</button>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+@section Scripts {
+    <script>
+        function deleteSetting(id) {
+            if (confirm('هل أنت متأكد من حذف الإعداد؟')) {
+                $.post('@Url.Action("Delete")', { id: id }, function () {
+                    location.reload();
+                });
+            }
+        }
+    </script>
+}

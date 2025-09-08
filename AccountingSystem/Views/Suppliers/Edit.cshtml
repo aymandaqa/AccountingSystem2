@@ -1,0 +1,34 @@
+@model AccountingSystem.Models.Supplier
+@{
+    ViewData["Title"] = "تعديل مورد";
+}
+<h1 class="mb-3">تعديل مورد</h1>
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="Id" />
+    <div class="mb-3">
+        <label asp-for="NameAr" class="form-label"></label>
+        <input asp-for="NameAr" class="form-control" />
+        <span asp-validation-for="NameAr" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="NameEn" class="form-label"></label>
+        <input asp-for="NameEn" class="form-control" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="Phone" class="form-label"></label>
+        <input asp-for="Phone" class="form-control" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="Email" class="form-label"></label>
+        <input asp-for="Email" class="form-control" />
+    </div>
+    <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" asp-for="IsActive" />
+        <label class="form-check-label" asp-for="IsActive"></label>
+    </div>
+    <button type="submit" class="btn btn-primary">حفظ</button>
+    <a class="btn btn-secondary" href="@Url.Action("Index")">إلغاء</a>
+</form>
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

@@ -115,7 +115,11 @@ namespace AccountingSystem.Data
                 new Permission { Name = "suppliers.view", DisplayName = "عرض الموردين", Category = "الموردين" },
                 new Permission { Name = "suppliers.create", DisplayName = "إنشاء الموردين", Category = "الموردين" },
                 new Permission { Name = "suppliers.edit", DisplayName = "تعديل الموردين", Category = "الموردين" },
-                new Permission { Name = "suppliers.delete", DisplayName = "حذف الموردين", Category = "الموردين" }
+                new Permission { Name = "suppliers.delete", DisplayName = "حذف الموردين", Category = "الموردين" },
+                new Permission { Name = "systemsettings.view", DisplayName = "عرض إعدادات النظام", Category = "إعدادات النظام" },
+                new Permission { Name = "systemsettings.create", DisplayName = "إنشاء إعدادات النظام", Category = "إعدادات النظام" },
+                new Permission { Name = "systemsettings.edit", DisplayName = "تعديل إعدادات النظام", Category = "إعدادات النظام" },
+                new Permission { Name = "systemsettings.delete", DisplayName = "حذف إعدادات النظام", Category = "إعدادات النظام" }
             };
 
 
