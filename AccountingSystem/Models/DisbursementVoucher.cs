@@ -24,7 +24,11 @@ namespace AccountingSystem.Models
         [StringLength(500)]
         public string? Notes { get; set; }
 
+        [Required]
+        public string CreatedById { get; set; } = string.Empty;
+
         public virtual Account Account { get; set; } = null!;
         public virtual Currency Currency { get; set; } = null!;
+        public virtual User CreatedBy { get; set; } = null!;
     }
 }
