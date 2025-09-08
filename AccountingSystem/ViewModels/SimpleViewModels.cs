@@ -374,6 +374,7 @@ namespace AccountingSystem.ViewModels
         public string NameAr { get; set; } = string.Empty;
         public AccountType AccountType { get; set; }
         public AccountNature Nature { get; set; }
+        public string CurrencyCode { get; set; } = string.Empty;
         public decimal OpeningBalance { get; set; }
         public decimal CurrentBalance { get; set; }
         public decimal Balance { get; set; }
