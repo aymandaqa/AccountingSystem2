@@ -80,6 +80,7 @@ namespace AccountingSystem.Controllers
                 NameAr = a.NameAr,
                 AccountType = a.AccountType,
                 Nature = a.Nature,
+                CurrencyCode = a.Currency.Code,
                 OpeningBalance = a.OpeningBalance,
                 Balance = accountBalances[a.Id],
                 BalanceSelected = _currencyService.Convert(accountBalances[a.Id], a.Currency, selectedCurrency),
