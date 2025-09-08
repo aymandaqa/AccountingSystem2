@@ -24,6 +24,7 @@ namespace AccountingSystem.Controllers
             var query = _context.Accounts
                 .Include(a => a.Parent)
                 .Include(a => a.Branch)
+                .Where(a => a.IsActive)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
@@ -60,7 +61,7 @@ namespace AccountingSystem.Controllers
                 BranchId = a.BranchId,
                 BranchName = a.Branch?.NameAr ?? "",
                 Level = a.Level,
-                HasChildren = _context.Accounts.Any(x => x.ParentId == a.Id),
+                HasChildren = _context.Accounts.Any(x => x.ParentId == a.Id && x.IsActive),
                 HasTransactions = false
             }).ToList();
 
@@ -84,7 +85,7 @@ namespace AccountingSystem.Controllers
                     .ThenInclude(c => c.Children)
                         .ThenInclude(c => c.Children)
                             .ThenInclude(c => c.Children)
-                .Where(a => a.ParentId == null)
+                .Where(a => a.ParentId == null && a.IsActive)
                 .OrderBy(a => a.Code)
                 .ToListAsync();
 
@@ -121,8 +122,11 @@ namespace AccountingSystem.Controllers
                 CanPostTransactions = account.CanPostTransactions,
                 ParentId = account.ParentId,
                 Level = account.Level,
-                HasChildren = account.Children.Any(),
-                Children = account.Children.Select(c => MapToTreeNode(c)).ToList()
+                HasChildren = account.Children.Any(c => c.IsActive),
+                Children = account.Children
+                    .Where(c => c.IsActive)
+                    .Select(c => MapToTreeNode(c))
+                    .ToList()
             };
         }
 
@@ -246,7 +250,7 @@ namespace AccountingSystem.Controllers
         private async Task PopulateDropdowns(CreateAccountViewModel model)
         {
             model.ParentAccounts = await _context.Accounts
-                .Where(a => a.CanPostTransactions == false)
+                .Where(a => a.CanPostTransactions == false && a.IsActive)
                 .Select(a => new SelectListItem
                 {
                     Value = a.Id.ToString(),
@@ -264,7 +268,7 @@ namespace AccountingSystem.Controllers
         private async Task PopulateDropdowns(EditAccountViewModel model)
         {
             model.ParentAccounts = await _context.Accounts
-                .Where(a => a.CanPostTransactions == false)
+                .Where(a => a.CanPostTransactions == false && a.IsActive)
                 .Select(a => new SelectListItem
                 {
                     Value = a.Id.ToString(),
