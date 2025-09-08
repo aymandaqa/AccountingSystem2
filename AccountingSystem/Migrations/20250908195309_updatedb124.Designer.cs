@@ -4,6 +4,7 @@ using AccountingSystem.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AccountingSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250908195309_updatedb124")]
+    partial class updatedb124
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1008,78 +1011,6 @@ namespace AccountingSystem.Migrations
                             DisplayName = "حذف العملات",
                             IsActive = true,
                             Name = "currencies.delete"
-                        },
-                        new
-                        {
-                            Id = 40,
-                            Category = "الموردين",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DisplayName = "عرض الموردين",
-                            IsActive = true,
-                            Name = "suppliers.view"
-                        },
-                        new
-                        {
-                            Id = 41,
-                            Category = "الموردين",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DisplayName = "إنشاء الموردين",
-                            IsActive = true,
-                            Name = "suppliers.create"
-                        },
-                        new
-                        {
-                            Id = 42,
-                            Category = "الموردين",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DisplayName = "تعديل الموردين",
-                            IsActive = true,
-                            Name = "suppliers.edit"
-                        },
-                        new
-                        {
-                            Id = 43,
-                            Category = "الموردين",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DisplayName = "حذف الموردين",
-                            IsActive = true,
-                            Name = "suppliers.delete"
-                        },
-                        new
-                        {
-                            Id = 44,
-                            Category = "إعدادات النظام",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DisplayName = "عرض إعدادات النظام",
-                            IsActive = true,
-                            Name = "systemsettings.view"
-                        },
-                        new
-                        {
-                            Id = 45,
-                            Category = "إعدادات النظام",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DisplayName = "إنشاء إعدادات النظام",
-                            IsActive = true,
-                            Name = "systemsettings.create"
-                        },
-                        new
-                        {
-                            Id = 46,
-                            Category = "إعدادات النظام",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DisplayName = "تعديل إعدادات النظام",
-                            IsActive = true,
-                            Name = "systemsettings.edit"
-                        },
-                        new
-                        {
-                            Id = 47,
-                            Category = "إعدادات النظام",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DisplayName = "حذف إعدادات النظام",
-                            IsActive = true,
-                            Name = "systemsettings.delete"
                         });
                 });
 
@@ -1123,72 +1054,6 @@ namespace AccountingSystem.Migrations
                     b.HasIndex("CurrencyId");
 
                     b.ToTable("ReceiptVouchers");
-                });
-
-            modelBuilder.Entity("AccountingSystem.Models.Supplier", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("AccountId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("NameAr")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("NameEn")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Phone")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AccountId");
-
-                    b.ToTable("Suppliers");
-                });
-
-            modelBuilder.Entity("AccountingSystem.Models.SystemSetting", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Key")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Value")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Key")
-                        .IsUnique();
-
-                    b.ToTable("SystemSettings");
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.User", b =>
@@ -1727,16 +1592,6 @@ namespace AccountingSystem.Migrations
                     b.Navigation("CreatedBy");
 
                     b.Navigation("Currency");
-                });
-
-            modelBuilder.Entity("AccountingSystem.Models.Supplier", b =>
-                {
-                    b.HasOne("AccountingSystem.Models.Account", "Account")
-                        .WithMany()
-                        .HasForeignKey("AccountId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Account");
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.User", b =>

@@ -20,302 +20,302 @@
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
-@{
-    var canBusinessStatementBulk = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.businessstatementbulk")).Succeeded;
-    var canBusinessRetStatementBulk = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.businessretstatementbulk")).Succeeded;
-    var canBusnissShipmentsReturn = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.busnissshipmentsreturn")).Succeeded;
-    var canBusnissStatment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.busnissstatment")).Succeeded;
-    var canDriverPayment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.driverpayment")).Succeeded;
-    var canDriverStatment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.driverstatment")).Succeeded;
-    var canPrintSlip = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.printslip")).Succeeded;
-    var canReceivePayments = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.receivepayments")).Succeeded;
-    var canReceiveRetPayments = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.receiveretpayments")).Succeeded;
-    var canUserPayment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.userpayment")).Succeeded;
-    var canCurrencies = (await AuthorizationService.AuthorizeAsync(User, "currencies.view")).Succeeded;
-    var canSuppliers = (await AuthorizationService.AuthorizeAsync(User, "suppliers.view")).Succeeded;
-    var canSystemSettings = (await AuthorizationService.AuthorizeAsync(User, "systemsettings.view")).Succeeded;
-    var canReceiptVouchers = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.view")).Succeeded;
-    var canDisbursementVouchers = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.view")).Succeeded;
-    var canReceiptVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.create")).Succeeded;
-    var canDisbursementVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.create")).Succeeded;
-    var showVouchers = canReceiptVouchers || canDisbursementVouchers || canReceiptVouchersCreate || canDisbursementVouchersCreate;
-    var showAccountManagement = canBusinessStatementBulk || canBusinessRetStatementBulk || canBusnissShipmentsReturn || canBusnissStatment || canDriverPayment || canDriverStatment || canPrintSlip || canReceivePayments || canReceiveRetPayments || canUserPayment;
-}
-    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
-    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
-    var accountsActive = currentController == "Accounts";
-    var operationsActive = currentController == "CashBoxClosures" || currentController == "Expenses" || currentController == "transfers";
-    var vouchersActive = currentController == "ReceiptVouchers" || currentController == "DisbursementVouchers";
-    var accountMgmtActive = currentController == "AccountManagement";
-    var journalActive = currentController == "JournalEntries";
-    var reportsActive = currentController == "Reports";
-    var settingsActive = currentController == "Branches" || currentController == "CostCenters" || currentController == "Currencies" || currentController == "Users";
-}
-<div id="wrapper" class="d-flex">
-    <nav id="sidebar" class="bg-dark">
-        <div class="sidebar-header p-3 mb-3 border-bottom">
-            <a class="navbar-brand d-flex align-items-center text-white" href="@Url.Action("Index", "Dashboard")">
-                <i class="fas fa-calculator me-2"></i> RoadFinity
-            </a>
-        </div>
-        <ul class="nav flex-column">
-            <li class="nav-item">
-                <a class="nav-link @(currentController == "Dashboard" && currentAction == "Index" ? "active" : "")" href="@Url.Action("Index", "Dashboard")">
-                    <i class="fas fa-tachometer-alt"></i> لوحة التحكم
+    @{
+        var canBusinessStatementBulk = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.businessstatementbulk")).Succeeded;
+        var canBusinessRetStatementBulk = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.businessretstatementbulk")).Succeeded;
+        var canBusnissShipmentsReturn = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.busnissshipmentsreturn")).Succeeded;
+        var canBusnissStatment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.busnissstatment")).Succeeded;
+        var canDriverPayment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.driverpayment")).Succeeded;
+        var canDriverStatment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.driverstatment")).Succeeded;
+        var canPrintSlip = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.printslip")).Succeeded;
+        var canReceivePayments = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.receivepayments")).Succeeded;
+        var canReceiveRetPayments = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.receiveretpayments")).Succeeded;
+        var canUserPayment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.userpayment")).Succeeded;
+        var canCurrencies = (await AuthorizationService.AuthorizeAsync(User, "currencies.view")).Succeeded;
+        var canSuppliers = (await AuthorizationService.AuthorizeAsync(User, "suppliers.view")).Succeeded;
+        var canSystemSettings = (await AuthorizationService.AuthorizeAsync(User, "systemsettings.view")).Succeeded;
+        var canReceiptVouchers = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.view")).Succeeded;
+        var canDisbursementVouchers = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.view")).Succeeded;
+        var canReceiptVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.create")).Succeeded;
+        var canDisbursementVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.create")).Succeeded;
+        var showVouchers = canReceiptVouchers || canDisbursementVouchers || canReceiptVouchersCreate || canDisbursementVouchersCreate;
+        var showAccountManagement = canBusinessStatementBulk || canBusinessRetStatementBulk || canBusnissShipmentsReturn || canBusnissStatment || canDriverPayment || canDriverStatment || canPrintSlip || canReceivePayments || canReceiveRetPayments || canUserPayment;
+
+        var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+        var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+        var accountsActive = currentController == "Accounts";
+        var operationsActive = currentController == "CashBoxClosures" || currentController == "Expenses" || currentController == "transfers";
+        var vouchersActive = currentController == "ReceiptVouchers" || currentController == "DisbursementVouchers";
+        var accountMgmtActive = currentController == "AccountManagement";
+        var journalActive = currentController == "JournalEntries";
+        var reportsActive = currentController == "Reports";
+        var settingsActive = currentController == "Branches" || currentController == "CostCenters" || currentController == "Currencies" || currentController == "Users";
+    }
+    <div id="wrapper" class="d-flex">
+        <nav id="sidebar" class="bg-dark">
+            <div class="sidebar-header p-3 mb-3 border-bottom">
+                <a class="navbar-brand d-flex align-items-center text-white" href="@Url.Action("Index", "Dashboard")">
+                    <i class="fas fa-calculator me-2"></i> RoadFinity
                 </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="collapse" href="#accountsMenu" role="button" aria-expanded="@(accountsActive ? "true" : "false")">
-                    <i class="fas fa-list-alt"></i> الحسابات
-                </a>
-                <ul class="collapse nav flex-column ms-3 @(accountsActive ? "show" : "")" id="accountsMenu">
-                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Tree", "Accounts")"><i class="fas fa-sitemap"></i> شجرة الحسابات</a></li>
-                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Accounts")"><i class="fas fa-list"></i> قائمة الحسابات</a></li>
-                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "Accounts")"><i class="fas fa-plus"></i> إضافة حساب جديد</a></li>
-                </ul>
-            </li>
-            @if (canSuppliers)
-            {
+            </div>
+            <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link @(currentController == "Suppliers" ? "active" : "")" href="@Url.Action("Index", "Suppliers")">
-                        <i class="fas fa-truck"></i> الموردين
+                    <a class="nav-link @(currentController == "Dashboard" && currentAction == "Index" ? "active" : "")" href="@Url.Action("Index", "Dashboard")">
+                        <i class="fas fa-tachometer-alt"></i> لوحة التحكم
                     </a>
                 </li>
-            }
-            @if (canSystemSettings)
-            {
                 <li class="nav-item">
-                    <a class="nav-link @(currentController == "SystemSettings" ? "active" : "")" href="@Url.Action("Index", "SystemSettings")">
-                        <i class="fas fa-cog"></i> إعدادات النظام
+                    <a class="nav-link" data-bs-toggle="collapse" href="#accountsMenu" role="button" aria-expanded="@(accountsActive ? "true" : "false")">
+                        <i class="fas fa-list-alt"></i> الحسابات
                     </a>
-                </li>
-            }
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="collapse" href="#operationsMenu" role="button" aria-expanded="@(operationsActive ? "true" : "false")">
-                    <i class="fas fa-list-alt"></i> العمليات
-                </a>
-                <ul class="collapse nav flex-column ms-3 @(operationsActive ? "show" : "")" id="operationsMenu">
-                    <li class="nav-item"><a class="nav-link" href="@Url.Action("MyClosures", "CashBoxClosures")"><i class="fas fa-sitemap"></i> جرد الصندوق قائمة</a></li>
-                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Pending", "CashBoxClosures")"><i class="fas fa-sitemap"></i> جرد الصندوق مواقة</a></li>
-                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "CashBoxClosures")"><i class="fas fa-sitemap"></i> جرد الصندوق</a></li>
-                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Report", "CashBoxClosures")"><i class="fas fa-file-alt"></i> تقرير إغلاقات الصندوق</a></li>
-                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Expenses")"><i class="fas fa-money-bill"></i> المصاريف</a></li>
-                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "transfers")"><i class="fas fa-exchange"></i> الحوالات</a></li>
-                </ul>
-            </li>
-            @if (showVouchers)
-            {
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="collapse" href="#vouchersMenu" role="button" aria-expanded="@(vouchersActive ? "true" : "false")">
-                        <i class="fas fa-file-invoice-dollar"></i> السندات
-                    </a>
-                    <ul class="collapse nav flex-column ms-3 @(vouchersActive ? "show" : "")" id="vouchersMenu">
-                        @if (canReceiptVouchers)
-                        {
-                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "ReceiptVouchers")"><i class="fas fa-list"></i> سندات القبض</a></li>
-                        }
-                        @if (canReceiptVouchersCreate)
-                        {
-                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "ReceiptVouchers")"><i class="fas fa-plus"></i> إضافة سند قبض</a></li>
-                        }
-                        @if (canDisbursementVouchers)
-                        {
-                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "DisbursementVouchers")"><i class="fas fa-list"></i> سندات الصرف</a></li>
-                        }
-                        @if (canDisbursementVouchersCreate)
-                        {
-                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "DisbursementVouchers")"><i class="fas fa-plus"></i> إضافة سند صرف</a></li>
-                        }
+                    <ul class="collapse nav flex-column ms-3 @(accountsActive ? "show" : "")" id="accountsMenu">
+                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Tree", "Accounts")"><i class="fas fa-sitemap"></i> شجرة الحسابات</a></li>
+                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Accounts")"><i class="fas fa-list"></i> قائمة الحسابات</a></li>
+                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "Accounts")"><i class="fas fa-plus"></i> إضافة حساب جديد</a></li>
                     </ul>
                 </li>
-            }
-            @if (showAccountManagement)
-            {
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="collapse" href="#accountMgmtMenu" role="button" aria-expanded="@(accountMgmtActive ? "true" : "false")">
-                        <i class="fas fa-briefcase"></i> إدارة الحسابات
-                    </a>
-                    <ul class="collapse nav flex-column ms-3 @(accountMgmtActive ? "show" : "")" id="accountMgmtMenu">
-                        @if (canBusinessRetStatementBulk)
-                        {
-                            <li class="nav-item"><a class="nav-link" href="@Url.Action("BusinessRetStatementBulk", "AccountManagement")">اصدار كلي لفاتورة طرود مرتجعه</a></li>
-                        }
-                        @if (canBusinessStatementBulk)
-                        {
-                            <li class="nav-item"><a class="nav-link" href="@Url.Action("BusinessStatementBulk", "AccountManagement")">حساب العميل كلي</a></li>
-                        }
-                        @if (canBusnissShipmentsReturn)
-                        {
-                            <li class="nav-item"><a class="nav-link" href="@Url.Action("BusnissShipmentsReturn", "AccountManagement")">اغلاق طرود مرتجعه</a></li>
-                        }
-                        @if (canBusnissStatment)
-                        {
-                            <li class="nav-item"><a class="nav-link" href="@Url.Action("BusnissStatment", "AccountManagement")">حساب العميل</a></li>
-                        }
-                        @if (canDriverPayment)
-                        {
-                            <li class="nav-item"><a class="nav-link" href="@Url.Action("DriverPayment", "AccountManagement")">دفعات السائق</a></li>
-                        }
-                        @if (canDriverStatment)
-                        {
-                            <li class="nav-item"><a class="nav-link" href="@Url.Action("DriverStatment", "AccountManagement")">حساب السائق</a></li>
-                        }
-                        @if (canPrintSlip)
-                        {
-                            <li class="nav-item"><a class="nav-link" href="@Url.Action("PrintSlip", "AccountManagement")">طباعة ايصال</a></li>
-                        }
-                        @if (canReceivePayments)
-                        {
-                            <li class="nav-item"><a class="nav-link" href="@Url.Action("ReceivePayments", "AccountManagement")">تسليم فواتير</a></li>
-                        }
-                        @if (canReceiveRetPayments)
-                        {
-                            <li class="nav-item"><a class="nav-link" href="@Url.Action("ReceiveRetPayments", "AccountManagement")">تسليم فواتير طرود مرتجعه</a></li>
-                        }
-                        @if (canUserPayment)
-                        {
-                            <li class="nav-item"><a class="nav-link" href="@Url.Action("UserPayment", "AccountManagement")">دفعات العميل</a></li>
-                        }
-                    </ul>
-                </li>
-            }
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="collapse" href="#journalMenu" role="button" aria-expanded="@(journalActive ? "true" : "false")">
-                    <i class="fas fa-file-invoice"></i> القيود المالية
-                </a>
-                <ul class="collapse nav flex-column ms-3 @(journalActive ? "show" : "")" id="journalMenu">
-                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "JournalEntries")"><i class="fas fa-list"></i> قائمة القيود</a></li>
-                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "JournalEntries")"><i class="fas fa-plus"></i> إضافة قيد جديد</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Draft", "JournalEntries")"><i class="fas fa-edit"></i> المسودات</a></li>
-                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Posted", "JournalEntries")"><i class="fas fa-check"></i> المرحلة</a></li>
-                </ul>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="collapse" href="#reportsMenu" role="button" aria-expanded="@(reportsActive ? "true" : "false")">
-                    <i class="fas fa-chart-bar"></i> التقارير
-                </a>
-                <ul class="collapse nav flex-column ms-3 @(reportsActive ? "show" : "")" id="reportsMenu">
-                    <li class="px-3">
-                        <input type="text" class="form-control" id="reportSearch" placeholder="ابحث عن تقرير...">
+                @if (canSuppliers)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link @(currentController == "Suppliers" ? "active" : "")" href="@Url.Action("Index", "Suppliers")">
+                            <i class="fas fa-truck"></i> الموردين
+                        </a>
                     </li>
-                    <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("TrialBalance", "Reports")"><i class="fas fa-balance-scale"></i> ميزان المراجعة</a></li>
-                    <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("BalanceSheet", "Reports")"><i class="fas fa-chart-pie"></i> الميزانية العمومية</a></li>
-                    <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("IncomeStatement", "Reports")"><i class="fas fa-chart-line"></i> قائمة الدخل</a></li>
-                    <li class="report-item"><hr class="dropdown-divider"></li>
-                    <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("GeneralLedger", "Reports")"><i class="fas fa-book"></i> دفتر الأستاذ العام</a></li>
-                    <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("AccountStatement", "Reports")"><i class="fas fa-file-alt"></i> كشف حساب</a></li>
-                    <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("PendingTransactions", "Reports")"><i class="fas fa-hourglass-half"></i> الحركات غير المرحلة</a></li>
-                </ul>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="collapse" href="#settingsMenu" role="button" aria-expanded="@(settingsActive ? "true" : "false")">
-                    <i class="fas fa-cog"></i> الإعدادات
-                </a>
-                <ul class="collapse nav flex-column ms-3 @(settingsActive ? "show" : "")" id="settingsMenu">
-                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Branches")"><i class="fas fa-building"></i> الفروع</a></li>
-                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "CostCenters")"><i class="fas fa-bullseye"></i> مراكز التكلفة</a></li>
-                    @if (canCurrencies)
-                    {
-                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Currencies")"><i class="fas fa-money-bill-wave"></i> العملات</a></li>
-                    }
-                    <li><hr class="dropdown-divider"></li>
-                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Users")"><i class="fas fa-users"></i> المستخدمون</a></li>
-                </ul>
-            </li>
-        </ul>
-    </nav>
-    <div id="content" class="flex-fill">
-        <nav class="navbar navbar-dark bg-dark border-bottom mb-3">
-            <div class="container-fluid">
-                <button id="sidebarToggle" class="btn btn-outline-light" type="button">☰</button>
-                <ul class="navbar-nav ms-auto">
-                    @if (User.Identity.IsAuthenticated)
-                    {
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-user"></i> @User.Identity.Name
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li>
-                                    <a class="dropdown-item" href="@Url.Action("Profile", "Account")"><i class="fas fa-user-edit"></i> الملف الشخصي</a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
-                                        <button type="submit" class="dropdown-item"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
-                                    </form>
-                                </li>
-                            </ul>
-                        </li>
-                    }
-                    else
-                    {
-                        <li class="nav-item">
-                            <a class="nav-link" href="@Url.Action("Login", "Account")"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</a>
-                        </li>
-                    }
-                </ul>
-            </div>
-        </nav>
-
-    <!-- Main Content -->
-    <main style="padding:20px">
-        <!-- Breadcrumb -->
-        <nav aria-label="breadcrumb" class="mb-3">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item">
-                    <a href="@Url.Action("Index", "Dashboard")">الرئيسية</a>
+                }
+                @if (canSystemSettings)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link @(currentController == "SystemSettings" ? "active" : "")" href="@Url.Action("Index", "SystemSettings")">
+                            <i class="fas fa-cog"></i> إعدادات النظام
+                        </a>
+                    </li>
+                }
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="collapse" href="#operationsMenu" role="button" aria-expanded="@(operationsActive ? "true" : "false")">
+                        <i class="fas fa-list-alt"></i> العمليات
+                    </a>
+                    <ul class="collapse nav flex-column ms-3 @(operationsActive ? "show" : "")" id="operationsMenu">
+                        <li class="nav-item"><a class="nav-link" href="@Url.Action("MyClosures", "CashBoxClosures")"><i class="fas fa-sitemap"></i> جرد الصندوق قائمة</a></li>
+                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Pending", "CashBoxClosures")"><i class="fas fa-sitemap"></i> جرد الصندوق مواقة</a></li>
+                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "CashBoxClosures")"><i class="fas fa-sitemap"></i> جرد الصندوق</a></li>
+                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Report", "CashBoxClosures")"><i class="fas fa-file-alt"></i> تقرير إغلاقات الصندوق</a></li>
+                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Expenses")"><i class="fas fa-money-bill"></i> المصاريف</a></li>
+                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "transfers")"><i class="fas fa-exchange"></i> الحوالات</a></li>
+                    </ul>
                 </li>
-                @if (ViewData["Breadcrumb"] != null)
+                @if (showVouchers)
                 {
-                    @Html.Raw(ViewData["Breadcrumb"])
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="collapse" href="#vouchersMenu" role="button" aria-expanded="@(vouchersActive ? "true" : "false")">
+                            <i class="fas fa-file-invoice-dollar"></i> السندات
+                        </a>
+                        <ul class="collapse nav flex-column ms-3 @(vouchersActive ? "show" : "")" id="vouchersMenu">
+                            @if (canReceiptVouchers)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "ReceiptVouchers")"><i class="fas fa-list"></i> سندات القبض</a></li>
+                            }
+                            @if (canReceiptVouchersCreate)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "ReceiptVouchers")"><i class="fas fa-plus"></i> إضافة سند قبض</a></li>
+                            }
+                            @if (canDisbursementVouchers)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "DisbursementVouchers")"><i class="fas fa-list"></i> سندات الصرف</a></li>
+                            }
+                            @if (canDisbursementVouchersCreate)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "DisbursementVouchers")"><i class="fas fa-plus"></i> إضافة سند صرف</a></li>
+                            }
+                        </ul>
+                    </li>
                 }
-                else
+                @if (showAccountManagement)
                 {
-                    <li class="breadcrumb-item active">@ViewData["Title"]</li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="collapse" href="#accountMgmtMenu" role="button" aria-expanded="@(accountMgmtActive ? "true" : "false")">
+                            <i class="fas fa-briefcase"></i> إدارة الحسابات
+                        </a>
+                        <ul class="collapse nav flex-column ms-3 @(accountMgmtActive ? "show" : "")" id="accountMgmtMenu">
+                            @if (canBusinessRetStatementBulk)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("BusinessRetStatementBulk", "AccountManagement")">اصدار كلي لفاتورة طرود مرتجعه</a></li>
+                            }
+                            @if (canBusinessStatementBulk)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("BusinessStatementBulk", "AccountManagement")">حساب العميل كلي</a></li>
+                            }
+                            @if (canBusnissShipmentsReturn)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("BusnissShipmentsReturn", "AccountManagement")">اغلاق طرود مرتجعه</a></li>
+                            }
+                            @if (canBusnissStatment)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("BusnissStatment", "AccountManagement")">حساب العميل</a></li>
+                            }
+                            @if (canDriverPayment)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("DriverPayment", "AccountManagement")">دفعات السائق</a></li>
+                            }
+                            @if (canDriverStatment)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("DriverStatment", "AccountManagement")">حساب السائق</a></li>
+                            }
+                            @if (canPrintSlip)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("PrintSlip", "AccountManagement")">طباعة ايصال</a></li>
+                            }
+                            @if (canReceivePayments)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("ReceivePayments", "AccountManagement")">تسليم فواتير</a></li>
+                            }
+                            @if (canReceiveRetPayments)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("ReceiveRetPayments", "AccountManagement")">تسليم فواتير طرود مرتجعه</a></li>
+                            }
+                            @if (canUserPayment)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("UserPayment", "AccountManagement")">دفعات العميل</a></li>
+                            }
+                        </ul>
+                    </li>
                 }
-            </ol>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="collapse" href="#journalMenu" role="button" aria-expanded="@(journalActive ? "true" : "false")">
+                        <i class="fas fa-file-invoice"></i> القيود المالية
+                    </a>
+                    <ul class="collapse nav flex-column ms-3 @(journalActive ? "show" : "")" id="journalMenu">
+                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "JournalEntries")"><i class="fas fa-list"></i> قائمة القيود</a></li>
+                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "JournalEntries")"><i class="fas fa-plus"></i> إضافة قيد جديد</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Draft", "JournalEntries")"><i class="fas fa-edit"></i> المسودات</a></li>
+                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Posted", "JournalEntries")"><i class="fas fa-check"></i> المرحلة</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="collapse" href="#reportsMenu" role="button" aria-expanded="@(reportsActive ? "true" : "false")">
+                        <i class="fas fa-chart-bar"></i> التقارير
+                    </a>
+                    <ul class="collapse nav flex-column ms-3 @(reportsActive ? "show" : "")" id="reportsMenu">
+                        <li class="px-3">
+                            <input type="text" class="form-control" id="reportSearch" placeholder="ابحث عن تقرير...">
+                        </li>
+                        <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("TrialBalance", "Reports")"><i class="fas fa-balance-scale"></i> ميزان المراجعة</a></li>
+                        <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("BalanceSheet", "Reports")"><i class="fas fa-chart-pie"></i> الميزانية العمومية</a></li>
+                        <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("IncomeStatement", "Reports")"><i class="fas fa-chart-line"></i> قائمة الدخل</a></li>
+                        <li class="report-item"><hr class="dropdown-divider"></li>
+                        <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("GeneralLedger", "Reports")"><i class="fas fa-book"></i> دفتر الأستاذ العام</a></li>
+                        <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("AccountStatement", "Reports")"><i class="fas fa-file-alt"></i> كشف حساب</a></li>
+                        <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("PendingTransactions", "Reports")"><i class="fas fa-hourglass-half"></i> الحركات غير المرحلة</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="collapse" href="#settingsMenu" role="button" aria-expanded="@(settingsActive ? "true" : "false")">
+                        <i class="fas fa-cog"></i> الإعدادات
+                    </a>
+                    <ul class="collapse nav flex-column ms-3 @(settingsActive ? "show" : "")" id="settingsMenu">
+                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Branches")"><i class="fas fa-building"></i> الفروع</a></li>
+                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "CostCenters")"><i class="fas fa-bullseye"></i> مراكز التكلفة</a></li>
+                        @if (canCurrencies)
+                        {
+                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Currencies")"><i class="fas fa-money-bill-wave"></i> العملات</a></li>
+                        }
+                        <li><hr class="dropdown-divider"></li>
+                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Users")"><i class="fas fa-users"></i> المستخدمون</a></li>
+                    </ul>
+                </li>
+            </ul>
         </nav>
+        <div id="content" class="flex-fill">
+            <nav class="navbar navbar-dark bg-dark border-bottom mb-3">
+                <div class="container-fluid">
+                    <button id="sidebarToggle" class="btn btn-outline-light" type="button">☰</button>
+                    <ul class="navbar-nav ms-auto">
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-user"></i> @User.Identity.Name
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item" href="@Url.Action("Profile", "Account")"><i class="fas fa-user-edit"></i> الملف الشخصي</a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                                            <button type="submit" class="dropdown-item"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" href="@Url.Action("Login", "Account")"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </nav>
 
-        <!-- Alerts -->
-        @if (TempData["SuccessMessage"] != null)
-        {
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        }
+            <!-- Main Content -->
+            <main style="padding:20px">
+                <!-- Breadcrumb -->
+                <nav aria-label="breadcrumb" class="mb-3">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="@Url.Action("Index", "Dashboard")">الرئيسية</a>
+                        </li>
+                        @if (ViewData["Breadcrumb"] != null)
+                        {
+                            @Html.Raw(ViewData["Breadcrumb"])
+                        }
+                        else
+                        {
+                            <li class="breadcrumb-item active">@ViewData["Title"]</li>
+                        }
+                    </ol>
+                </nav>
 
-        @if (TempData["ErrorMessage"] != null)
-        {
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="fas fa-exclamation-circle"></i> @TempData["ErrorMessage"]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        }
+                <!-- Alerts -->
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
 
-        @if (TempData["InfoMessage"] != null)
-        {
-            <div class="alert alert-info alert-dismissible fade show" role="alert">
-                <i class="fas fa-info-circle"></i> @TempData["InfoMessage"]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        }
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-circle"></i> @TempData["ErrorMessage"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
 
-        @RenderBody()
-    </main>
+                @if (TempData["InfoMessage"] != null)
+                {
+                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        <i class="fas fa-info-circle"></i> @TempData["InfoMessage"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
 
-    <!-- Footer -->
-    <footer class="bg-light text-center py-3 mt-5">
-        <div class="container">
-            <p class="text-muted mb-0">
-                &copy; @DateTime.Now.Year - RoadFinity  - جميع الحقوق محفوظة
-            </p>
+                @RenderBody()
+            </main>
+
+            <!-- Footer -->
+            <footer class="bg-light text-center py-3 mt-5">
+                <div class="container">
+                    <p class="text-muted mb-0">
+                        &copy; @DateTime.Now.Year - RoadFinity  - جميع الحقوق محفوظة
+                    </p>
+                </div>
+            </footer>
         </div>
-    </footer>
     </div>
-</div>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>

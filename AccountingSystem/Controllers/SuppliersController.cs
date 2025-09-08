@@ -47,7 +47,7 @@ namespace AccountingSystem.Controllers
                 {
                     parentAccount = await _context.Accounts
                         .Include(a => a.Children)
-                        .FirstOrDefaultAsync(a => a.Id == parentId);
+                        .FirstOrDefaultAsync(a => a.Code == parentId.ToString());
                 }
 
                 string code;
