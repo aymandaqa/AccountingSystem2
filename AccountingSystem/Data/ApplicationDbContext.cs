@@ -36,6 +36,8 @@ namespace AccountingSystem.Data
         public DbSet<Currency> Currencies { get; set; }
         public DbSet<ReceiptVoucher> ReceiptVouchers { get; set; }
         public DbSet<DisbursementVoucher> DisbursementVouchers { get; set; }
+        public DbSet<Supplier> Suppliers { get; set; }
+        public DbSet<SystemSetting> SystemSettings { get; set; }
 
         public override int SaveChanges()
         {
@@ -351,6 +353,30 @@ namespace AccountingSystem.Data
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
+            // Supplier configuration
+            builder.Entity<Supplier>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.NameAr).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.NameEn).HasMaxLength(200);
+                entity.Property(e => e.Phone).HasMaxLength(200);
+                entity.Property(e => e.Email).HasMaxLength(200);
+
+                entity.HasOne(e => e.Account)
+                    .WithMany()
+                    .HasForeignKey(e => e.AccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // SystemSetting configuration
+            builder.Entity<SystemSetting>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.Key).IsUnique();
+                entity.Property(e => e.Key).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Value).HasMaxLength(500);
+            });
+
             builder.Entity<User>(entity =>
             {
                 entity.HasOne(u => u.PaymentAccount)
@@ -463,7 +489,11 @@ namespace AccountingSystem.Data
                 new Permission { Id = 36, Name = "currencies.view", DisplayName = "عرض العملات", Category = "العملات", CreatedAt = createdAt },
                 new Permission { Id = 37, Name = "currencies.create", DisplayName = "إنشاء العملات", Category = "العملات", CreatedAt = createdAt },
                 new Permission { Id = 38, Name = "currencies.edit", DisplayName = "تعديل العملات", Category = "العملات", CreatedAt = createdAt },
-                new Permission { Id = 39, Name = "currencies.delete", DisplayName = "حذف العملات", Category = "العملات", CreatedAt = createdAt }
+                new Permission { Id = 39, Name = "currencies.delete", DisplayName = "حذف العملات", Category = "العملات", CreatedAt = createdAt },
+                new Permission { Id = 40, Name = "suppliers.view", DisplayName = "عرض الموردين", Category = "الموردين", CreatedAt = createdAt },
+                new Permission { Id = 41, Name = "suppliers.create", DisplayName = "إنشاء الموردين", Category = "الموردين", CreatedAt = createdAt },
+                new Permission { Id = 42, Name = "suppliers.edit", DisplayName = "تعديل الموردين", Category = "الموردين", CreatedAt = createdAt },
+                new Permission { Id = 43, Name = "suppliers.delete", DisplayName = "حذف الموردين", Category = "الموردين", CreatedAt = createdAt }
             );
         }
     }

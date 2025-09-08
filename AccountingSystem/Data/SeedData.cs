@@ -33,6 +33,9 @@ namespace AccountingSystem.Data
             // Seed chart of accounts
             await SeedChartOfAccountsAsync(context);
 
+            // Seed system settings
+            await SeedSystemSettingsAsync(context);
+
             // Grant all permissions to admin
             if (adminUser != null)
             {
@@ -108,7 +111,11 @@ namespace AccountingSystem.Data
                 new Permission { Name = "receiptvouchers.view", DisplayName = " سندات القبض", Category = "السندات" },
                 new Permission { Name = "receiptvouchers.create", DisplayName = "إنشاء سند قبض", Category = "السندات" },
                 new Permission { Name = "disbursementvouchers.view", DisplayName = " سندات الصرف", Category = "السندات" },
-                new Permission { Name = "disbursementvouchers.create", DisplayName = "إنشاء سند صرف", Category = "السندات" }
+                new Permission { Name = "disbursementvouchers.create", DisplayName = "إنشاء سند صرف", Category = "السندات" },
+                new Permission { Name = "suppliers.view", DisplayName = "عرض الموردين", Category = "الموردين" },
+                new Permission { Name = "suppliers.create", DisplayName = "إنشاء الموردين", Category = "الموردين" },
+                new Permission { Name = "suppliers.edit", DisplayName = "تعديل الموردين", Category = "الموردين" },
+                new Permission { Name = "suppliers.delete", DisplayName = "حذف الموردين", Category = "الموردين" }
             };
 
 
@@ -266,6 +273,15 @@ namespace AccountingSystem.Data
                 };
 
                 context.Accounts.AddRange(accounts);
+                await context.SaveChangesAsync();
+            }
+        }
+
+        private static async Task SeedSystemSettingsAsync(ApplicationDbContext context)
+        {
+            if (!context.SystemSettings.Any(s => s.Key == "SuppliersParentAccountId"))
+            {
+                context.SystemSettings.Add(new SystemSetting { Key = "SuppliersParentAccountId", Value = null });
                 await context.SaveChangesAsync();
             }
         }
