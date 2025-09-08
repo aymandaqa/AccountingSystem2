@@ -31,6 +31,7 @@
     var canReceiveRetPayments = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.receiveretpayments")).Succeeded;
     var canUserPayment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.userpayment")).Succeeded;
     var canCurrencies = (await AuthorizationService.AuthorizeAsync(User, "currencies.view")).Succeeded;
+    var canSuppliers = (await AuthorizationService.AuthorizeAsync(User, "suppliers.view")).Succeeded;
     var canReceiptVouchers = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.view")).Succeeded;
     var canDisbursementVouchers = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.view")).Succeeded;
     var canReceiptVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.create")).Succeeded;
@@ -81,7 +82,14 @@
                         </ul>
                     </li>
 
-
+                    @if (canSuppliers)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link" href="@Url.Action("Index", "Suppliers")">
+                                <i class="fas fa-truck"></i> الموردين
+                            </a>
+                        </li>
+                    }
 
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
