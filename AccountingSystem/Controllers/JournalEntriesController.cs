@@ -103,6 +103,19 @@ namespace AccountingSystem.Controllers
                 return View(model);
             }
 
+            var accountIds = model.Lines.Select(l => l.AccountId).Distinct().ToList();
+            var currencies = await _context.Accounts
+                .Where(a => accountIds.Contains(a.Id))
+                .Select(a => a.CurrencyId)
+                .Distinct()
+                .ToListAsync();
+            if (currencies.Count > 1)
+            {
+                ModelState.AddModelError(string.Empty, "يجب أن تكون جميع الحسابات بنفس العملة");
+                await PopulateDropdowns(model);
+                return View(model);
+            }
+
             var entry = new JournalEntry
             {
                 Number = model.Number,
@@ -172,7 +185,7 @@ namespace AccountingSystem.Controllers
                 .Select(a => new SelectListItem
                 {
                     Value = a.Id.ToString(),
-                    Text = $"{a.Code} - {a.NameAr}"
+                    Text = $"{a.Code} - {a.NameAr} ({a.Currency.Code})"
                 }).ToListAsync();
         }
 
@@ -201,7 +214,7 @@ namespace AccountingSystem.Controllers
                 {
                     AccountId = l.AccountId,
                     AccountCode = l.Account.Code,
-                    AccountName = l.Account.NameAr,
+                    AccountName = $"{l.Account.NameAr} ({l.Account.Currency.Code})",
                     Description = l.Description ?? string.Empty,
                     DebitAmount = l.DebitAmount,
                     CreditAmount = l.CreditAmount
@@ -260,6 +273,19 @@ namespace AccountingSystem.Controllers
                 if (Math.Round(model.Lines?.Sum(l => l.DebitAmount) ?? 0, 2) != Math.Round(model.Lines?.Sum(l => l.CreditAmount) ?? 0, 2))
                     ModelState.AddModelError(string.Empty, "القيد غير متوازن");
 
+                await PopulateDropdowns(model);
+                return View(model);
+            }
+
+            var accountIds = model.Lines.Select(l => l.AccountId).Distinct().ToList();
+            var currencies = await _context.Accounts
+                .Where(a => accountIds.Contains(a.Id))
+                .Select(a => a.CurrencyId)
+                .Distinct()
+                .ToListAsync();
+            if (currencies.Count > 1)
+            {
+                ModelState.AddModelError(string.Empty, "يجب أن تكون جميع الحسابات بنفس العملة");
                 await PopulateDropdowns(model);
                 return View(model);
             }
