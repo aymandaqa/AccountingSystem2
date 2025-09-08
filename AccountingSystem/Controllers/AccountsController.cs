@@ -24,6 +24,7 @@ namespace AccountingSystem.Controllers
             var query = _context.Accounts
                 .Include(a => a.Parent)
                 .Include(a => a.Branch)
+                .Include(a => a.Currency)
                 .Where(a => a.IsActive)
                 .AsQueryable();
 
@@ -62,7 +63,8 @@ namespace AccountingSystem.Controllers
                 BranchName = a.Branch?.NameAr ?? "",
                 Level = a.Level,
                 HasChildren = _context.Accounts.Any(x => x.ParentId == a.Id && x.IsActive),
-                HasTransactions = false
+                HasTransactions = false,
+                CurrencyCode = a.Currency.Code
             }).ToList();
 
             var result = new PagedResult<AccountViewModel>
@@ -170,7 +172,8 @@ namespace AccountingSystem.Controllers
                     ParentId = model.ParentId,
                     BranchId = model.BranchId > 0 ? model.BranchId : null,
                     Level = model.ParentId.HasValue ?
-                        (_context.Accounts.Find(model.ParentId.Value)?.Level ?? 0) + 1 : 1
+                        (_context.Accounts.Find(model.ParentId.Value)?.Level ?? 0) + 1 : 1,
+                    CurrencyId = model.CurrencyId
                 };
 
                 _context.Accounts.Add(account);
@@ -263,6 +266,19 @@ namespace AccountingSystem.Controllers
                     Value = b.Id.ToString(),
                     Text = b.NameAr
                 }).ToListAsync();
+
+            var currencies = await _context.Currencies.ToListAsync();
+            model.Currencies = currencies.Select(c => new SelectListItem
+            {
+                Value = c.Id.ToString(),
+                Text = $"{c.Code} - {c.Name}"
+            }).ToList();
+            if (model.CurrencyId == 0)
+            {
+                var baseCurrency = currencies.FirstOrDefault(c => c.IsBase);
+                if (baseCurrency != null)
+                    model.CurrencyId = baseCurrency.Id;
+            }
         }
 
         private async Task PopulateDropdowns(EditAccountViewModel model)
@@ -281,6 +297,19 @@ namespace AccountingSystem.Controllers
                     Value = b.Id.ToString(),
                     Text = b.NameAr
                 }).ToListAsync();
+
+            var currencies = await _context.Currencies.ToListAsync();
+            model.Currencies = currencies.Select(c => new SelectListItem
+            {
+                Value = c.Id.ToString(),
+                Text = $"{c.Code} - {c.Name}"
+            }).ToList();
+            if (model.CurrencyId == 0)
+            {
+                var baseCurrency = currencies.FirstOrDefault(c => c.IsBase);
+                if (baseCurrency != null)
+                    model.CurrencyId = baseCurrency.Id;
+            }
         }
 
         // GET: Accounts/Edit/5
@@ -306,7 +335,8 @@ namespace AccountingSystem.Controllers
                 IsActive = account.IsActive,
                 CanPostTransactions = account.CanPostTransactions,
                 ParentId = account.ParentId,
-                BranchId = account.BranchId
+                BranchId = account.BranchId,
+                CurrencyId = account.CurrencyId
             };
 
             await PopulateDropdowns(model);
@@ -354,6 +384,7 @@ namespace AccountingSystem.Controllers
             account.BranchId = model.BranchId > 0 ? model.BranchId : null;
             account.Level = model.ParentId.HasValue ?
                 (_context.Accounts.Find(model.ParentId.Value)?.Level ?? 0) + 1 : 1;
+            account.CurrencyId = model.CurrencyId;
 
             await _context.SaveChangesAsync();
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
@@ -367,6 +398,7 @@ namespace AccountingSystem.Controllers
             var account = await _context.Accounts
                 .Include(a => a.Parent)
                 .Include(a => a.Children)
+                .Include(a => a.Currency)
                 .FirstOrDefaultAsync(a => a.Id == id);
             if (account == null)
                 return NotFound();
@@ -390,6 +422,7 @@ namespace AccountingSystem.Controllers
                 ParentAccountName = account.Parent?.NameAr ?? string.Empty,
                 Description = account.Description ?? string.Empty,
                 CreatedAt = account.CreatedAt,
+                CurrencyCode = account.Currency.Code,
                 ChildAccounts = account.Children.Select(c => new AccountDetailsChildViewModel
                 {
                     Id = c.Id,

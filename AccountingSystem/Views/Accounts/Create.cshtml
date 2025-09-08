@@ -92,11 +92,18 @@
                         </div>
 
                         <div class="row">
-                            <div class="col-12">
+                            <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label asp-for="OpeningBalance" class="form-label">الرصيد الافتتاحي</label>
                                     <input asp-for="OpeningBalance" class="form-control" type="number" step="0.01" placeholder="0.00" />
                                     <span asp-validation-for="OpeningBalance" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="CurrencyId" class="form-label">العملة <span class="text-danger">*</span></label>
+                                    <select asp-for="CurrencyId" asp-items="Model.Currencies" class="form-select"></select>
+                                    <span asp-validation-for="CurrencyId" class="text-danger"></span>
                                 </div>
                             </div>
                         </div>
