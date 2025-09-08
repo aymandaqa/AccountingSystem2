@@ -403,6 +403,29 @@ namespace AccountingSystem.Controllers
 
             return View(model);
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "accounts.delete")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == id);
+            if (account == null)
+                return Json(new { success = false, message = "الحساب غير موجود" });
+
+            var hasChildren = await _context.Accounts.AnyAsync(a => a.ParentId == id && a.IsActive);
+            if (hasChildren)
+                return Json(new { success = false, message = "لا يمكن حذف الحساب لوجود حسابات فرعية" });
+
+            var hasTransactions = await _context.JournalEntryLines.AnyAsync(l => l.AccountId == id);
+            if (hasTransactions)
+                return Json(new { success = false, message = "لا يمكن حذف الحساب لوجود حركات مالية" });
+
+            _context.Accounts.Remove(account);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true });
+        }
     }
 }
 
