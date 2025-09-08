@@ -22,7 +22,9 @@ namespace AccountingSystem.Controllers
 
         public async Task<IActionResult> Index()
         {
+            var user = await _userManager.GetUserAsync(User);
             var vouchers = await _context.DisbursementVouchers
+                .Where(v => v.CreatedById == user!.Id)
                 .Include(v => v.Account)
                 .Include(v => v.Currency)
                 .OrderByDescending(v => v.Date)
@@ -69,8 +71,10 @@ namespace AccountingSystem.Controllers
             }
 
             var currency = await _context.Currencies.FindAsync(model.CurrencyId);
-            model.ExchangeRate = currency?.ExchangeRate ?? 1m;
+            if (model.ExchangeRate <= 0)
+                model.ExchangeRate = currency?.ExchangeRate ?? 1m;
 
+            model.CreatedById = user.Id;
             _context.DisbursementVouchers.Add(model);
 
             var number = await GenerateJournalEntryNumber();
