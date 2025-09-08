@@ -32,6 +32,7 @@
     var canUserPayment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.userpayment")).Succeeded;
     var canCurrencies = (await AuthorizationService.AuthorizeAsync(User, "currencies.view")).Succeeded;
     var canSuppliers = (await AuthorizationService.AuthorizeAsync(User, "suppliers.view")).Succeeded;
+    var canSystemSettings = (await AuthorizationService.AuthorizeAsync(User, "systemsettings.view")).Succeeded;
     var canReceiptVouchers = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.view")).Succeeded;
     var canDisbursementVouchers = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.view")).Succeeded;
     var canReceiptVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.create")).Succeeded;
@@ -87,6 +88,15 @@
                         <li class="nav-item">
                             <a class="nav-link" href="@Url.Action("Index", "Suppliers")">
                                 <i class="fas fa-truck"></i> الموردين
+                            </a>
+                        </li>
+                    }
+
+                    @if (canSystemSettings)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link" href="@Url.Action("Index", "SystemSettings")">
+                                <i class="fas fa-cog"></i> إعدادات النظام
                             </a>
                         </li>
                     }

@@ -109,6 +109,92 @@ namespace AccountingSystem.Controllers
             return View(model);
         }
 
+        // GET: Suppliers/Edit/5
+        [Authorize(Policy = "suppliers.edit")]
+        public async Task<IActionResult> Edit(int id)
+        {
+            var supplier = await _context.Suppliers
+                .Include(s => s.Account)
+                .FirstOrDefaultAsync(s => s.Id == id);
+            if (supplier == null)
+            {
+                return NotFound();
+            }
+            return View(supplier);
+        }
+
+        // POST: Suppliers/Edit/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "suppliers.edit")]
+        public async Task<IActionResult> Edit(int id, Supplier model)
+        {
+            if (id != model.Id)
+            {
+                return NotFound();
+            }
+
+            if (ModelState.IsValid)
+            {
+                var supplier = await _context.Suppliers
+                    .Include(s => s.Account)
+                    .FirstOrDefaultAsync(s => s.Id == id);
+                if (supplier == null)
+                {
+                    return NotFound();
+                }
+
+                supplier.NameAr = model.NameAr;
+                supplier.NameEn = model.NameEn;
+                supplier.Phone = model.Phone;
+                supplier.Email = model.Email;
+                supplier.IsActive = model.IsActive;
+
+                if (supplier.Account != null)
+                {
+                    supplier.Account.NameAr = model.NameAr;
+                    supplier.Account.NameEn = model.NameEn;
+                }
+
+                await _context.SaveChangesAsync();
+                return RedirectToAction(nameof(Index));
+            }
+
+            return View(model);
+        }
+
+        // POST: Suppliers/Delete/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "suppliers.delete")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var supplier = await _context.Suppliers
+                .Include(s => s.Account)
+                    .ThenInclude(a => a.JournalEntryLines)
+                .FirstOrDefaultAsync(s => s.Id == id);
+            if (supplier == null)
+            {
+                return NotFound();
+            }
+
+            if (supplier.Account != null && supplier.Account.JournalEntryLines.Any())
+            {
+                TempData["Error"] = "لا يمكن حذف المورد لوجود معاملات مرتبطة به";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (supplier.Account != null)
+            {
+                _context.Accounts.Remove(supplier.Account);
+            }
+            _context.Suppliers.Remove(supplier);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "تم حذف المورد بنجاح";
+            return RedirectToAction(nameof(Index));
+        }
+
         private static string GenerateChildCode(string parentCode, string? lastChildCode)
         {
             var segmentLength = parentCode.Length == 1 ? 1 : 2;

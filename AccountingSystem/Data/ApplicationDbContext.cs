@@ -493,7 +493,11 @@ namespace AccountingSystem.Data
                 new Permission { Id = 40, Name = "suppliers.view", DisplayName = "عرض الموردين", Category = "الموردين", CreatedAt = createdAt },
                 new Permission { Id = 41, Name = "suppliers.create", DisplayName = "إنشاء الموردين", Category = "الموردين", CreatedAt = createdAt },
                 new Permission { Id = 42, Name = "suppliers.edit", DisplayName = "تعديل الموردين", Category = "الموردين", CreatedAt = createdAt },
-                new Permission { Id = 43, Name = "suppliers.delete", DisplayName = "حذف الموردين", Category = "الموردين", CreatedAt = createdAt }
+                new Permission { Id = 43, Name = "suppliers.delete", DisplayName = "حذف الموردين", Category = "الموردين", CreatedAt = createdAt },
+                new Permission { Id = 44, Name = "systemsettings.view", DisplayName = "عرض إعدادات النظام", Category = "إعدادات النظام", CreatedAt = createdAt },
+                new Permission { Id = 45, Name = "systemsettings.create", DisplayName = "إنشاء إعدادات النظام", Category = "إعدادات النظام", CreatedAt = createdAt },
+                new Permission { Id = 46, Name = "systemsettings.edit", DisplayName = "تعديل إعدادات النظام", Category = "إعدادات النظام", CreatedAt = createdAt },
+                new Permission { Id = 47, Name = "systemsettings.delete", DisplayName = "حذف إعدادات النظام", Category = "إعدادات النظام", CreatedAt = createdAt }
             );
         }
     }

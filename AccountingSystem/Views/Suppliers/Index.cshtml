@@ -1,8 +1,9 @@
 @model IEnumerable<AccountingSystem.Models.Supplier>
-@{
+@{ 
     ViewData["Title"] = "الموردين";
 }
 <h1 class="mb-3">الموردين</h1>
+@Html.AntiForgeryToken()
 <p>
     <a class="btn btn-primary" href="@Url.Action("Create")">إضافة مورد</a>
 </p>
@@ -12,6 +13,7 @@
             <th>الاسم</th>
             <th>التليفون</th>
             <th>البريد الإلكتروني</th>
+            <th>الإجراءات</th>
         </tr>
     </thead>
     <tbody>
@@ -21,7 +23,23 @@
             <td>@item.NameAr</td>
             <td>@item.Phone</td>
             <td>@item.Email</td>
+            <td>
+                <a class="btn btn-sm btn-warning" href="@Url.Action("Edit", new { id = item.Id })">تعديل</a>
+                <button class="btn btn-sm btn-danger" onclick="deleteSupplier(@item.Id)">حذف</button>
+            </td>
         </tr>
     }
     </tbody>
 </table>
+
+@section Scripts {
+    <script>
+        function deleteSupplier(id) {
+            if (confirm('هل أنت متأكد من حذف المورد؟')) {
+                $.post('@Url.Action("Delete")', { id: id }, function () {
+                    location.reload();
+                });
+            }
+        }
+    </script>
+}
