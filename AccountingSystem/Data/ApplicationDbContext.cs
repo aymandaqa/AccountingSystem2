@@ -36,6 +36,7 @@ namespace AccountingSystem.Data
         public DbSet<Currency> Currencies { get; set; }
         public DbSet<ReceiptVoucher> ReceiptVouchers { get; set; }
         public DbSet<DisbursementVoucher> DisbursementVouchers { get; set; }
+        public DbSet<PaymentVoucher> PaymentVouchers { get; set; }
         public DbSet<Supplier> Suppliers { get; set; }
         public DbSet<SystemSetting> SystemSettings { get; set; }
         public DbSet<UserPaymentAccount> UserPaymentAccounts { get; set; }

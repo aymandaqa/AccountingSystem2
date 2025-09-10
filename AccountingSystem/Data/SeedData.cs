@@ -112,6 +112,8 @@ namespace AccountingSystem.Data
                 new Permission { Name = "receiptvouchers.create", DisplayName = "إنشاء سند قبض", Category = "السندات" },
                 new Permission { Name = "disbursementvouchers.view", DisplayName = " سندات الصرف", Category = "السندات" },
                 new Permission { Name = "disbursementvouchers.create", DisplayName = "إنشاء سند صرف", Category = "السندات" },
+                new Permission { Name = "paymentvouchers.view", DisplayName = "سندات الدفع", Category = "السندات" },
+                new Permission { Name = "paymentvouchers.create", DisplayName = "إنشاء سند دفع", Category = "السندات" },
                 new Permission { Name = "suppliers.view", DisplayName = "عرض الموردين", Category = "الموردين" },
                 new Permission { Name = "suppliers.create", DisplayName = "إنشاء الموردين", Category = "الموردين" },
                 new Permission { Name = "suppliers.edit", DisplayName = "تعديل الموردين", Category = "الموردين" },
@@ -286,8 +288,14 @@ namespace AccountingSystem.Data
             if (!context.SystemSettings.Any(s => s.Key == "SuppliersParentAccountId"))
             {
                 context.SystemSettings.Add(new SystemSetting { Key = "SuppliersParentAccountId", Value = null });
-                await context.SaveChangesAsync();
             }
+
+            if (!context.SystemSettings.Any(s => s.Key == "SupplierPaymentsParentAccountId"))
+            {
+                context.SystemSettings.Add(new SystemSetting { Key = "SupplierPaymentsParentAccountId", Value = null });
+            }
+
+            await context.SaveChangesAsync();
         }
 
         private static async Task SeedAdminPermissionsAsync(ApplicationDbContext context, User adminUser)
