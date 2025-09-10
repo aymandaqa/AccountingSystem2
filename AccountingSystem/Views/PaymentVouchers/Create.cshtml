@@ -1,0 +1,99 @@
+@model AccountingSystem.Models.PaymentVoucher
+@{
+    ViewData["Title"] = "سند دفع جديد";
+    Layout = "~/Views/Shared/_AccountingLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <form asp-action="Create" method="post" class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">المورد</label>
+            <select asp-for="SupplierId" class="form-select" id="supplierSelect">
+                @foreach (var s in ViewBag.Suppliers)
+                {
+                    <option value="@s.Id" data-account-id="@s.AccountId" data-currency-id="@s.CurrencyId" data-currency-code="@s.CurrencyCode">@s.NameAr</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">نوع الدفع</label>
+            <select asp-for="IsCash" class="form-select" id="paymentType">
+                <option value="true">نقدي</option>
+                <option value="false">غير نقدي</option>
+            </select>
+        </div>
+        <div class="col-md-6" id="accountContainer" style="display:none;">
+            <label class="form-label">الحساب</label>
+            <select asp-for="AccountId" class="form-select" id="accountSelect">
+                @foreach (var a in ViewBag.Accounts)
+                {
+                    <option value="@a.Id" data-currency-id="@a.CurrencyId" data-currency-code="@a.CurrencyCode">@a.Code - @a.NameAr (@a.CurrencyCode)</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">العملة</label>
+            <input type="text" class="form-control" id="currencyDisplay" readonly />
+            <input type="hidden" asp-for="CurrencyId" id="currencyId" />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">سعر الصرف</label>
+            <input asp-for="ExchangeRate" class="form-control" />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">المبلغ</label>
+            <input asp-for="Amount" class="form-control" />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">التاريخ</label>
+            <input asp-for="Date" type="date" class="form-control" />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">ملاحظات</label>
+            <textarea asp-for="Notes" class="form-control"></textarea>
+        </div>
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary">حفظ</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const supplierSelect = document.getElementById('supplierSelect');
+            const paymentType = document.getElementById('paymentType');
+            const accountContainer = document.getElementById('accountContainer');
+            const accountSelect = document.getElementById('accountSelect');
+            const currencyDisplay = document.getElementById('currencyDisplay');
+            const currencyId = document.getElementById('currencyId');
+
+            function updateCurrency() {
+                const option = supplierSelect.options[supplierSelect.selectedIndex];
+                currencyDisplay.value = option.getAttribute('data-currency-code') || '';
+                currencyId.value = option.getAttribute('data-currency-id') || '';
+                filterAccounts();
+            }
+
+            function toggleAccount() {
+                accountContainer.style.display = paymentType.value === 'true' ? 'none' : 'block';
+            }
+
+            function filterAccounts() {
+                const currency = currencyId.value;
+                if (accountSelect) {
+                    Array.from(accountSelect.options).forEach(function (opt) {
+                        opt.hidden = opt.getAttribute('data-currency-id') !== currency;
+                    });
+                    const firstVisible = Array.from(accountSelect.options).find(function (opt) { return !opt.hidden; });
+                    if (firstVisible) accountSelect.value = firstVisible.value;
+                }
+            }
+
+            supplierSelect.addEventListener('change', updateCurrency);
+            paymentType.addEventListener('change', toggleAccount);
+            updateCurrency();
+            toggleAccount();
+        });
+    </script>
+}

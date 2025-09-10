@@ -36,16 +36,18 @@
         var canSystemSettings = (await AuthorizationService.AuthorizeAsync(User, "systemsettings.view")).Succeeded;
         var canReceiptVouchers = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.view")).Succeeded;
         var canDisbursementVouchers = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.view")).Succeeded;
+        var canPaymentVouchers = (await AuthorizationService.AuthorizeAsync(User, "paymentvouchers.view")).Succeeded;
         var canReceiptVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.create")).Succeeded;
         var canDisbursementVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.create")).Succeeded;
-        var showVouchers = canReceiptVouchers || canDisbursementVouchers || canReceiptVouchersCreate || canDisbursementVouchersCreate;
+        var canPaymentVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "paymentvouchers.create")).Succeeded;
+        var showVouchers = canReceiptVouchers || canDisbursementVouchers || canPaymentVouchers || canReceiptVouchersCreate || canDisbursementVouchersCreate || canPaymentVouchersCreate;
         var showAccountManagement = canBusinessStatementBulk || canBusinessRetStatementBulk || canBusnissShipmentsReturn || canBusnissStatment || canDriverPayment || canDriverStatment || canPrintSlip || canReceivePayments || canReceiveRetPayments || canUserPayment;
 
         var currentController = ViewContext.RouteData.Values["controller"]?.ToString()?.ToLower();
         var currentAction = ViewContext.RouteData.Values["action"]?.ToString()?.ToLower();
         var accountsActive = currentController == "accounts";
         var operationsActive = currentController == "cashboxclosures" || currentController == "expenses" || currentController == "transfers";
-        var vouchersActive = currentController == "receiptvouchers" || currentController == "disbursementvouchers";
+        var vouchersActive = currentController == "receiptvouchers" || currentController == "disbursementvouchers" || currentController == "paymentvouchers";
         var accountMgmtActive = currentController == "accountmanagement";
         var journalActive = currentController == "journalentries";
         var reportsActive = currentController == "reports";
@@ -125,6 +127,14 @@
                             @if (canDisbursementVouchersCreate)
                             {
                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "DisbursementVouchers")"><i class="fas fa-plus"></i> إضافة سند صرف</a></li>
+                            }
+                            @if (canPaymentVouchers)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "PaymentVouchers")"><i class="fas fa-list"></i> سندات الدفع</a></li>
+                            }
+                            @if (canPaymentVouchersCreate)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "PaymentVouchers")"><i class="fas fa-plus"></i> إضافة سند دفع</a></li>
                             }
                         </ul>
                     </li>
