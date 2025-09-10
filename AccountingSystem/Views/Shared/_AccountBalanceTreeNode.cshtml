@@ -26,12 +26,14 @@
                     <span class="account-name">@node.NameAr</span>
                     <span class="text-muted ms-1">(@node.CurrencyCode)</span>
                 }
-                @{ var selectedCurrencyCode = ViewData["SelectedCurrencyCode"] as string ?? string.Empty;
-                   var baseCurrencyCode = ViewData["BaseCurrencyCode"] as string ?? string.Empty; }
+                @{
+                    var selectedCurrencyCode = ViewData["SelectedCurrencyCode"] as string ?? string.Empty;
+                    var baseCurrencyCode = ViewData["BaseCurrencyCode"] as string ?? string.Empty;
+                }
                 <span class="ms-auto text-nowrap">
                     <span title="رصيد عملة الحساب">@node.Balance.ToString("N2")</span>
-                    <span title="الرصيد بالعملة المختارة" class="text-primary">@node.BalanceSelected.ToString("N2") @selectedCurrencyCode</span>
-                    <span title="الرصيد بالعملة الأساسية" class="text-muted">@node.BalanceBase.ToString("N2") @baseCurrencyCode</span>
+                    <span title="الرصيد بالعملة المختارة" class="text-primary">(@node.BalanceSelected.ToString("N2") @selectedCurrencyCode)</span>
+                    <span title="الرصيد بالعملة الأساسية" class="text-muted">(@node.BalanceBase.ToString("N2") @baseCurrencyCode)</span>
                 </span>
             </div>
         </div>

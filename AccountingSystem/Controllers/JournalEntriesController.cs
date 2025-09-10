@@ -195,7 +195,7 @@ namespace AccountingSystem.Controllers
             var entry = await _context.JournalEntries
                 .Include(j => j.Branch)
                 .Include(j => j.Lines)
-                    .ThenInclude(l => l.Account)
+                    .ThenInclude(l => l.Account).ThenInclude(c => c.Currency)
                 .FirstOrDefaultAsync(j => j.Id == id);
 
             if (entry == null)
@@ -214,7 +214,7 @@ namespace AccountingSystem.Controllers
                 {
                     AccountId = l.AccountId,
                     AccountCode = l.Account.Code,
-                    AccountName = $"{l.Account.NameAr} ({l.Account.Currency.Code})",
+                    AccountName = $"{l.Account.NameAr} ({l.Account?.Currency?.Code})",
                     Description = l.Description ?? string.Empty,
                     DebitAmount = l.DebitAmount,
                     CreditAmount = l.CreditAmount
