@@ -23,34 +23,48 @@ namespace AccountingSystem.Controllers
         }
 
         [Authorize(Policy = "cashclosures.create")]
-        public async Task<IActionResult> Create()
+        public async Task<IActionResult> Create(int? accountId)
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null || user.PaymentAccountId == null || user.PaymentBranchId == null)
+            if (user == null)
                 return NotFound();
 
-            var account = await _context.Accounts.FindAsync(user.PaymentAccountId);
-            var branch = await _context.Branches.FindAsync(user.PaymentBranchId);
-            if (account == null)
+            var accounts = await _context.UserPaymentAccounts
+                .Where(u => u.UserId == user.Id)
+                .Include(u => u.Account).ThenInclude(a => a.Branch)
+                .Select(u => u.Account)
+                .ToListAsync();
+
+            if (accounts.Count == 0)
+                return NotFound();
+
+            var selectedAccount = accounts.FirstOrDefault(a => a.Id == (accountId ?? accounts.First().Id));
+            if (selectedAccount == null)
                 return NotFound();
 
             var today = DateTime.Today;
             var todayTransactions = await _context.JournalEntryLines
                 .Include(l => l.JournalEntry)
-                .Where(l => l.AccountId == account.Id)
+                .Where(l => l.AccountId == selectedAccount.Id)
                 .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
                 .Where(l => l.JournalEntry.Date >= today && l.JournalEntry.Date < today.AddDays(1))
                 .SumAsync(l => l.DebitAmount - l.CreditAmount);
 
-            var openingBalance = account.CurrentBalance - todayTransactions;
+            var openingBalance = selectedAccount.CurrentBalance - todayTransactions;
 
             var model = new CashBoxClosureCreateViewModel
             {
-                AccountName = account?.NameAr ?? string.Empty,
-                BranchName = branch?.NameAr ?? string.Empty,
+                AccountId = selectedAccount.Id,
+                Accounts = accounts.Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = $"{a.Code} - {a.NameAr}"
+                }).ToList(),
+                AccountName = selectedAccount.NameAr,
+                BranchName = selectedAccount.Branch?.NameAr ?? string.Empty,
                 OpeningBalance = openingBalance,
                 TodayTransactions = todayTransactions,
-                CumulativeBalance = account.CurrentBalance
+                CumulativeBalance = selectedAccount.CurrentBalance
             };
 
             return View(model);
@@ -62,38 +76,59 @@ namespace AccountingSystem.Controllers
         public async Task<IActionResult> Create(CashBoxClosureCreateViewModel model)
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null || user.PaymentAccountId == null || user.PaymentBranchId == null)
+            if (user == null || user.PaymentBranchId == null)
                 return NotFound();
 
-            var account = await _context.Accounts.FindAsync(user.PaymentAccountId);
-            var branch = await _context.Branches.FindAsync(user.PaymentBranchId);
+            var accounts = await _context.UserPaymentAccounts
+                .Where(u => u.UserId == user.Id)
+                .Include(u => u.Account).ThenInclude(a => a.Branch)
+                .Select(u => u.Account)
+                .ToListAsync();
+
+            var account = accounts.FirstOrDefault(a => a.Id == model.AccountId);
             if (account == null)
-                return NotFound();
+                ModelState.AddModelError("AccountId", "الحساب غير موجود");
 
-            var today = DateTime.Today;
-            var todayTransactions = await _context.JournalEntryLines
-                .Include(l => l.JournalEntry)
-                .Where(l => l.AccountId == account.Id)
-                .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
-                .Where(l => l.JournalEntry.Date >= today && l.JournalEntry.Date < today.AddDays(1))
-                .SumAsync(l => l.DebitAmount - l.CreditAmount);
+            decimal todayTransactions = 0m;
+            decimal openingBalance = 0m;
 
-            var openingBalance = account.CurrentBalance - todayTransactions;
+            if (account != null)
+            {
+                var today = DateTime.Today;
+                todayTransactions = await _context.JournalEntryLines
+                    .Include(l => l.JournalEntry)
+                    .Where(l => l.AccountId == account.Id)
+                    .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
+                    .Where(l => l.JournalEntry.Date >= today && l.JournalEntry.Date < today.AddDays(1))
+                    .SumAsync(l => l.DebitAmount - l.CreditAmount);
+
+                openingBalance = account.CurrentBalance - todayTransactions;
+            }
 
             if (!ModelState.IsValid)
             {
-                model.AccountName = account.NameAr;
-                model.BranchName = branch?.NameAr ?? string.Empty;
-                model.OpeningBalance = openingBalance;
-                model.TodayTransactions = todayTransactions;
-                model.CumulativeBalance = account.CurrentBalance;
+                model.Accounts = accounts.Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = $"{a.Code} - {a.NameAr}"
+                }).ToList();
+
+                if (account != null)
+                {
+                    model.AccountName = account.NameAr;
+                    model.BranchName = account.Branch?.NameAr ?? string.Empty;
+                    model.OpeningBalance = openingBalance;
+                    model.TodayTransactions = todayTransactions;
+                    model.CumulativeBalance = account.CurrentBalance;
+                }
+
                 return View(model);
             }
 
             var closure = new CashBoxClosure
             {
                 UserId = user.Id,
-                AccountId = account.Id,
+                AccountId = account!.Id,
                 BranchId = user.PaymentBranchId.Value,
                 CountedAmount = model.CountedAmount,
                 OpeningBalance = openingBalance,
