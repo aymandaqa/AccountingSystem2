@@ -22,7 +22,7 @@
                 <option value="false">غير نقدي</option>
             </select>
         </div>
-        <div class="col-md-6" id="accountContainer" style="display:none;">
+        <div class="col-md-6" id="accountContainer">
             <label class="form-label">الحساب</label>
             <select asp-for="AccountId" class="form-select" id="accountSelect">
                 @foreach (var a in ViewBag.Accounts)
@@ -62,8 +62,6 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const supplierSelect = document.getElementById('supplierSelect');
-            const paymentType = document.getElementById('paymentType');
-            const accountContainer = document.getElementById('accountContainer');
             const accountSelect = document.getElementById('accountSelect');
             const currencyDisplay = document.getElementById('currencyDisplay');
             const currencyId = document.getElementById('currencyId');
@@ -73,10 +71,6 @@
                 currencyDisplay.value = option.getAttribute('data-currency-code') || '';
                 currencyId.value = option.getAttribute('data-currency-id') || '';
                 filterAccounts();
-            }
-
-            function toggleAccount() {
-                accountContainer.style.display = paymentType.value === 'true' ? 'none' : 'block';
             }
 
             function filterAccounts() {
@@ -91,9 +85,7 @@
             }
 
             supplierSelect.addEventListener('change', updateCurrency);
-            paymentType.addEventListener('change', toggleAccount);
             updateCurrency();
-            toggleAccount();
         });
     </script>
 }

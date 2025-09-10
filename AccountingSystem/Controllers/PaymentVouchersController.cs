@@ -76,21 +76,24 @@ namespace AccountingSystem.Controllers
             if (supplier?.Account == null)
                 ModelState.AddModelError("SupplierId", "المورد غير موجود");
 
-            Account? sourceAccount = null;
+            Account? selectedAccount = await _context.Accounts.FindAsync(model.AccountId);
+            var settingAccount = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "SupplierPaymentsParentAccountId");
+            if (selectedAccount == null || settingAccount == null || !int.TryParse(settingAccount.Value, out var parentId) || selectedAccount.ParentId != parentId)
+                ModelState.AddModelError("AccountId", "الحساب غير صالح");
+
+            Account? cashAccount = null;
             if (model.IsCash)
             {
-                sourceAccount = await _context.Accounts.FindAsync(user.PaymentAccountId.Value);
-            }
-            else
-            {
-                sourceAccount = await _context.Accounts.FindAsync(model.AccountId);
-                var setting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "SupplierPaymentsParentAccountId");
-                if (sourceAccount == null || setting == null || !int.TryParse(setting.Value, out var parentId) || sourceAccount.ParentId != parentId)
-                    ModelState.AddModelError("AccountId", "الحساب غير صالح");
+                cashAccount = await _context.Accounts.FindAsync(user.PaymentAccountId.Value);
             }
 
-            if (supplier?.Account != null && sourceAccount != null && supplier.Account.CurrencyId != sourceAccount.CurrencyId)
-                ModelState.AddModelError("SupplierId", "يجب أن تكون الحسابات بنفس العملة");
+            if (supplier?.Account != null && selectedAccount != null)
+            {
+                if (supplier.Account.CurrencyId != selectedAccount.CurrencyId)
+                    ModelState.AddModelError("SupplierId", "يجب أن تكون الحسابات بنفس العملة");
+                if (model.IsCash && cashAccount != null && selectedAccount.CurrencyId != cashAccount.CurrencyId)
+                    ModelState.AddModelError("AccountId", "يجب أن تكون الحسابات بنفس العملة");
+            }
 
             if (!ModelState.IsValid)
             {
@@ -129,8 +132,14 @@ namespace AccountingSystem.Controllers
             var lines = new List<JournalEntryLine>
             {
                 new JournalEntryLine { AccountId = supplier.AccountId!.Value, DebitAmount = model.Amount },
-                new JournalEntryLine { AccountId = model.IsCash ? user.PaymentAccountId.Value : model.AccountId!.Value, CreditAmount = model.Amount }
+                new JournalEntryLine { AccountId = model.AccountId!.Value, CreditAmount = model.Amount }
             };
+
+            if (model.IsCash)
+            {
+                lines.Add(new JournalEntryLine { AccountId = model.AccountId!.Value, DebitAmount = model.Amount });
+                lines.Add(new JournalEntryLine { AccountId = user.PaymentAccountId.Value, CreditAmount = model.Amount });
+            }
 
             await _journalEntryService.CreateJournalEntryAsync(
                 model.Date,
