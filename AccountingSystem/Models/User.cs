@@ -30,6 +30,7 @@ namespace AccountingSystem.Models
         public virtual ICollection<UserBranch> UserBranches { get; set; } = new List<UserBranch>();
         public virtual ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
         public virtual ICollection<JournalEntry> CreatedJournalEntries { get; set; } = new List<JournalEntry>();
+        public virtual ICollection<UserPaymentAccount> UserPaymentAccounts { get; set; } = new List<UserPaymentAccount>();
         public virtual Account? PaymentAccount { get; set; }
         public virtual Branch? PaymentBranch { get; set; }
         public virtual ICollection<Expense> Expenses { get; set; } = new List<Expense>();

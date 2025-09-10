@@ -35,13 +35,16 @@
             </select>
             <span asp-validation-for="PaymentBranchId" class="text-danger"></span>
         </div>
-        <div class="mb-3">
-            <label asp-for="PaymentAccountId" class="form-label"></label>
-            <select asp-for="PaymentAccountId" asp-items="Model.PaymentAccounts" class="form-select">
-                <option value="">-- اختر حساب الدفع --</option>
-            </select>
-            <span asp-validation-for="PaymentAccountId" class="text-danger"></span>
-        </div>
+        @for (int i = 0; i < Model.CurrencyAccounts.Count; i++)
+        {
+            <div class="mb-3">
+                <label class="form-label">حساب الدفع - @Model.CurrencyAccounts[i].CurrencyName</label>
+                <select asp-for="CurrencyAccounts[i].AccountId" asp-items="Model.CurrencyAccounts[i].Accounts" class="form-select">
+                    <option value="">-- اختر حساب الدفع --</option>
+                </select>
+                <span asp-validation-for="CurrencyAccounts[i].AccountId" class="text-danger"></span>
+            </div>
+        }
         <div class="mb-3">
             <label asp-for="ExpenseLimit" class="form-label"></label>
             <input asp-for="ExpenseLimit" class="form-control" />
