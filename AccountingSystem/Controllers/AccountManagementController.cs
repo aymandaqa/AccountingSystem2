@@ -9,20 +9,28 @@ using System.Data;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
+using AccountingSystem.Services;
+using AccountingSystem.Models;
 
 namespace Roadfn.Controllers
 {
     public class AccountManagementController : Controller
     {
         private RoadFnDbContext _context;
+        private ApplicationDbContext _accontext;
         private readonly IWebHostEnvironment _env;
         private readonly IConfiguration iConfig;
+        private readonly IJournalEntryService _journalEntryService;
+        private readonly IAccountService _accountService;
 
-        public AccountManagementController(RoadFnDbContext context, IWebHostEnvironment env, IConfiguration iConfig)
+        public AccountManagementController(RoadFnDbContext context, IWebHostEnvironment env, IConfiguration iConfig, IJournalEntryService journalEntryService, IAccountService accountService, ApplicationDbContext accontext)
         {
             _context = context;
             _env = env;
             this.iConfig = iConfig;
+            _journalEntryService = journalEntryService;
+            _accountService = accountService;
+            _accontext = accontext;
         }
 
         [Authorize(Policy = "accountmanagement.driverstatment")]
@@ -1049,7 +1057,8 @@ namespace Roadfn.Controllers
                             ComisionValue = shipmentsPay.CommissionPerItem,
                             ShipmentId = shipmentsPay.ShipmentId,
                             ShipmentTrackingNo = shipmentsPay.ShipmentTrackingNo,
-                            DriverExtraComisionValue = shipmentsPay.DriverExtraComisionValue
+                            DriverExtraComisionValue = shipmentsPay.DriverExtraComisionValue,
+                            CompanyRevenueValue = shipmentsPay.ShipmentCod - shipmentsPay.ShipmentPrice,
                         });
                     listpay.Add(shipmentsPay);
                 }
@@ -1063,6 +1072,68 @@ namespace Roadfn.Controllers
                 driverPaymentHeader.EntryUserId = Convert.ToInt32(userId);
                 _context.DriverPaymentHeaders.Update(driverPaymentHeader);
                 await _context.SaveChangesAsync();
+
+
+                foreach (var item in listpay)
+                {
+
+                    #region driver account
+                    var setting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "DriverParentAccountId");
+                    var acc = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == setting.Value);
+                    var driver = await _context.Drives.FirstOrDefaultAsync(t => t.Id == driverPaymentHeader.DriverId);
+
+
+                    var ac = await _accountService.CreateAccountAsync(driver.Id + "_" + driver.FirstName + " " + driver.FamilyName + " " + driver.Phone1, acc.Id);
+                    var dfacc = await _accontext.DriverMappingAccounts.FirstOrDefaultAsync(t => t.DriverId == driver.Id.ToString());
+                    if (dfacc == null)
+                    {
+                        await _accontext.DriverMappingAccounts.AddAsync(new DriverMappingAccount
+                        {
+                            DriverId = driver.Id.ToString(),
+                            AccountId = ac.Id.ToString(),
+                            AccountCode = ac.Code,
+                        });
+                    }
+                    #endregion
+
+
+                    #region customer account
+
+                    var sh = await _context.Shipments.FindAsync(Convert.ToInt32(item.ShipmentId));
+                    var Csetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "CustomerParentAccountId");
+                    var Cacc = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == Csetting.Value);
+                    var customer = await _context.Users.FirstOrDefaultAsync(t => t.Id == sh.BusinessUserId);
+
+
+                    var Cac = await _accountService.CreateAccountAsync(customer.Id + "_" + customer.FirstName + " " + customer.LastName + " " + customer.MobileNo1, acc.Id);
+
+                    var Cdfacc = await _accontext.CusomerMappingAccounts.FirstOrDefaultAsync(t => t.CustomerId == customer.Id.ToString());
+                    if (Cdfacc == null)
+                    {
+                        await _accontext.CusomerMappingAccounts.AddAsync(new CusomerMappingAccount
+                        {
+                            CustomerId = customer.Id.ToString(),
+                            AccountId = ac.Id.ToString(),
+                            AccountCode = ac.Code,
+                        });
+                    }
+                    //var lines = new List<JournalEntryLine>
+                    //                {
+                    //                    new JournalEntryLine { AccountId = supplier.AccountId!.Value, DebitAmount = model.Amount },
+                    //                    new JournalEntryLine { AccountId = model.AccountId!.Value, CreditAmount = model.Amount }
+                    //                };
+
+
+                    //await _journalEntryService.CreateJournalEntryAsync(
+                    //                                         model.Date,
+                    //                                         model.Notes == null ? "سند دفع" : "سند دفع" + Environment.NewLine + model.Notes,
+                    //                                         user.PaymentBranchId.Value,
+                    //                                         user.Id,
+                    //                                         lines,
+                    //                                         JournalEntryStatus.Posted);
+
+                    #endregion
+                }
 
 
 

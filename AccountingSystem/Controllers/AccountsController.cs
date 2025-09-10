@@ -88,6 +88,8 @@ namespace AccountingSystem.Controllers
                 .Include(a => a.Children).ThenInclude(c => c.Children).ThenInclude(c => c.Currency)
                 .Include(a => a.Children).ThenInclude(c => c.Children).ThenInclude(c => c.Children).ThenInclude(c => c.Currency)
                 .Include(a => a.Children).ThenInclude(c => c.Children).ThenInclude(c => c.Children).ThenInclude(c => c.Children).ThenInclude(c => c.Currency)
+                .Include(a => a.Children).ThenInclude(c => c.Children).ThenInclude(c => c.Children).ThenInclude(c => c.Children).ThenInclude(c => c.Children).ThenInclude(c => c.Currency)
+                .Include(a => a.Children).ThenInclude(c => c.Children).ThenInclude(c => c.Children).ThenInclude(c => c.Children).ThenInclude(c => c.Children).ThenInclude(c => c.Children).ThenInclude(c => c.Currency)
                 .Where(a => a.ParentId == null && a.IsActive)
                 .OrderBy(a => a.Code)
                 .ToListAsync();

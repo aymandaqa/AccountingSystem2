@@ -154,7 +154,7 @@
                                 <div class="card border-success">
                                     <div class="card-body text-center">
                                         <h6 class="card-title">إجمالي المدين</h6>
-                                        <h4 class="text-success">@Model.TotalDebit.ToString("N2") @Model.CurrencyCode <small class="text-muted">(@Model.TotalDebitBase.ToString("N2") @Model.BaseCurrencyCode)</small></h4>
+                                        <h4 class="text-success">(@Model.TotalDebit.ToString("N2") @Model.CurrencyCode) <small class="text-muted">(@Model.TotalDebitBase.ToString("N2") @Model.BaseCurrencyCode)</small></h4>
                                     </div>
                                 </div>
                             </div>
@@ -162,7 +162,7 @@
                                 <div class="card border-danger">
                                     <div class="card-body text-center">
                                         <h6 class="card-title">إجمالي الدائن</h6>
-                                        <h4 class="text-danger">@Model.TotalCredit.ToString("N2") @Model.CurrencyCode <small class="text-muted">(@Model.TotalCreditBase.ToString("N2") @Model.BaseCurrencyCode)</small></h4>
+                                        <h4 class="text-danger">(@Model.TotalCredit.ToString("N2") @Model.CurrencyCode) <small class="text-muted">(@Model.TotalCreditBase.ToString("N2") @Model.BaseCurrencyCode)</small></h4>
                                     </div>
                                 </div>
                             </div>
@@ -170,7 +170,7 @@
                                 <div class="card border-primary">
                                     <div class="card-body text-center">
                                         <h6 class="card-title">صافي الحركة</h6>
-                                        <h4 class="text-primary">@((Model.TotalDebit - Model.TotalCredit).ToString("N2")) @Model.CurrencyCode <small class="text-muted">(@(Model.TotalDebitBase - Model.TotalCreditBase).ToString("N2") @Model.BaseCurrencyCode)</small></h4>
+                                        <h4 class="text-primary">(@((Model.TotalDebit - Model.TotalCredit).ToString("N2")) @Model.CurrencyCode) <small class="text-muted">(@((Model.TotalDebitBase - Model.TotalCreditBase).ToString("N2")) @Model.BaseCurrencyCode)</small></h4>
                                     </div>
                                 </div>
                             </div>

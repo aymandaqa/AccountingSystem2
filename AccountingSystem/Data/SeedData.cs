@@ -112,7 +112,7 @@ namespace AccountingSystem.Data
                 new Permission { Name = "receiptvouchers.create", DisplayName = "إنشاء سند قبض", Category = "السندات" },
                 new Permission { Name = "disbursementvouchers.view", DisplayName = " سندات الصرف", Category = "السندات" },
                 new Permission { Name = "disbursementvouchers.create", DisplayName = "إنشاء سند صرف", Category = "السندات" },
-                new Permission { Name = "paymentvouchers.view", DisplayName = "سندات الدفع", Category = "السندات" },
+                new Permission { Name = "paymentvouchers.view", DisplayName = "سندات  الدفع", Category = "السندات" },
                 new Permission { Name = "paymentvouchers.create", DisplayName = "إنشاء سند دفع", Category = "السندات" },
                 new Permission { Name = "suppliers.view", DisplayName = "عرض الموردين", Category = "الموردين" },
                 new Permission { Name = "suppliers.create", DisplayName = "إنشاء الموردين", Category = "الموردين" },

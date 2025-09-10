@@ -101,8 +101,8 @@
                         <li class="nav-item"><a class="nav-link" href="@Url.Action("Pending", "CashBoxClosures")"><i class="fas fa-sitemap"></i> جرد الصندوق مواقة</a></li>
                         <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "CashBoxClosures")"><i class="fas fa-sitemap"></i> جرد الصندوق</a></li>
                         <li class="nav-item"><a class="nav-link" href="@Url.Action("Report", "CashBoxClosures")"><i class="fas fa-file-alt"></i> تقرير إغلاقات الصندوق</a></li>
-                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Expenses")"><i class="fas fa-money-bill"></i> المصاريف</a></li>
-                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "transfers")"><i class="fas fa-exchange"></i> الحوالات</a></li>
+                        @*                         <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Expenses")"><i class="fas fa-money-bill"></i> المصاريف</a></li>
+ *@                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "transfers")"><i class="fas fa-exchange"></i> الحوالات</a></li>
                     </ul>
                 </li>
                 @if (showVouchers)
@@ -112,29 +112,29 @@
                             <i class="fas fa-file-invoice-dollar"></i> السندات
                         </a>
                         <ul class="collapse nav flex-column ms-3 @(vouchersActive ? "show" : "")" id="vouchersMenu">
-                            @if (canReceiptVouchers)
+                            @*   @if (canReceiptVouchers)
                             {
                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "ReceiptVouchers")"><i class="fas fa-list"></i> سندات القبض</a></li>
                             }
                             @if (canReceiptVouchersCreate)
                             {
                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "ReceiptVouchers")"><i class="fas fa-plus"></i> إضافة سند قبض</a></li>
-                            }
+                            }*@
                             @if (canDisbursementVouchers)
                             {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "DisbursementVouchers")"><i class="fas fa-list"></i> سندات الصرف</a></li>
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "DisbursementVouchers")"><i class="fas fa-list"></i> سندات دفع</a></li>
                             }
                             @if (canDisbursementVouchersCreate)
                             {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "DisbursementVouchers")"><i class="fas fa-plus"></i> إضافة سند صرف</a></li>
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "DisbursementVouchers")"><i class="fas fa-plus"></i> إضافة سند دفع</a></li>
                             }
                             @if (canPaymentVouchers)
                             {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "PaymentVouchers")"><i class="fas fa-list"></i> سندات الدفع</a></li>
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "PaymentVouchers")"><i class="fas fa-list"></i> سندات المصاريف</a></li>
                             }
                             @if (canPaymentVouchersCreate)
                             {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "PaymentVouchers")"><i class="fas fa-plus"></i> إضافة سند دفع</a></li>
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "PaymentVouchers")"><i class="fas fa-plus"></i> إضافة سند صرف</a></li>
                             }
                         </ul>
                     </li>

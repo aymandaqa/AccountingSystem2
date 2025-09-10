@@ -15,6 +15,7 @@ namespace Roadfn.Models
 
         [Display(Name = "قيمة العمولة")]
         public decimal? ComisionValue { get; set; }
+        public decimal? CompanyRevenueValue { get; set; }
         public decimal? DriverExtraComisionValue { get; set; }
     }
 }

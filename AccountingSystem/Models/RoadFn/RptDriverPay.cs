@@ -36,6 +36,7 @@ namespace Roadfn.Models
 
         [Display(Name = "العمولة")]
         public decimal? CommissionPerItem { get; set; }
+        public decimal? ShipmentPrice { get; set; }
         public decimal? PaidAmountFromShipmentFees { get; set; }
         public decimal? DriverExtraComisionValue { get; set; }
         public decimal? ShipmentCod { get; set; }

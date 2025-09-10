@@ -21,6 +21,8 @@ namespace AccountingSystem.Data
             _httpContextAccessor = httpContextAccessor;
         }
 
+        public DbSet<CusomerMappingAccount> CusomerMappingAccounts { get; set; }
+        public DbSet<DriverMappingAccount> DriverMappingAccounts { get; set; }
         public DbSet<Branch> Branches { get; set; }
         public DbSet<CostCenter> CostCenters { get; set; }
         public DbSet<Account> Accounts { get; set; }

@@ -131,19 +131,19 @@ namespace AccountingSystem.Controllers
 
             var lines = new List<JournalEntryLine>
             {
-                new JournalEntryLine { AccountId = supplier.AccountId!.Value, DebitAmount = model.Amount },
-                new JournalEntryLine { AccountId = model.AccountId!.Value, CreditAmount = model.Amount }
+                new JournalEntryLine { AccountId =model.AccountId!.Value , DebitAmount = model.Amount },
+                new JournalEntryLine { AccountId = supplier.AccountId!.Value, CreditAmount = model.Amount }
             };
 
             if (model.IsCash)
             {
-                lines.Add(new JournalEntryLine { AccountId = model.AccountId!.Value, DebitAmount = model.Amount });
+                lines.Add(new JournalEntryLine { AccountId = supplier.AccountId!.Value, DebitAmount = model.Amount });
                 lines.Add(new JournalEntryLine { AccountId = user.PaymentAccountId.Value, CreditAmount = model.Amount });
             }
 
             await _journalEntryService.CreateJournalEntryAsync(
                 model.Date,
-                model.Notes ?? "سند دفع",
+                model.Notes == null ? "سند دفع" : "سند دفع" + Environment.NewLine + model.Notes,
                 user.PaymentBranchId.Value,
                 user.Id,
                 lines,

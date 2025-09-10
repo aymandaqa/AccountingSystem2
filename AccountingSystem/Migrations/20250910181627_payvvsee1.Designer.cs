@@ -4,6 +4,7 @@ using AccountingSystem.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AccountingSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250910181627_payvvsee1")]
+    partial class payvvsee1
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -347,22 +350,6 @@ namespace AccountingSystem.Migrations
                         });
                 });
 
-            modelBuilder.Entity("AccountingSystem.Models.CusomerMappingAccount", b =>
-                {
-                    b.Property<string>("CustomerId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("AccountCode")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("AccountId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("CustomerId");
-
-                    b.ToTable("CusomerMappingAccounts");
-                });
-
             modelBuilder.Entity("AccountingSystem.Models.DisbursementVoucher", b =>
                 {
                     b.Property<int>("Id")
@@ -403,22 +390,6 @@ namespace AccountingSystem.Migrations
                     b.HasIndex("CurrencyId");
 
                     b.ToTable("DisbursementVouchers");
-                });
-
-            modelBuilder.Entity("AccountingSystem.Models.DriverMappingAccount", b =>
-                {
-                    b.Property<string>("DriverId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("AccountCode")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("AccountId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("DriverId");
-
-                    b.ToTable("DriverMappingAccounts");
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.Expense", b =>
@@ -665,6 +636,7 @@ namespace AccountingSystem.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("CreatedById")
+                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("CurrencyId")
@@ -1811,7 +1783,9 @@ namespace AccountingSystem.Migrations
 
                     b.HasOne("AccountingSystem.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("AccountingSystem.Models.Currency", "Currency")
                         .WithMany()
