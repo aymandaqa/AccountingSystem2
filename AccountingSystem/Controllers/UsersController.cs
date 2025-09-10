@@ -207,14 +207,16 @@ namespace AccountingSystem.Controllers
             model.CurrencyAccounts = new List<UserCurrencyAccountViewModel>();
             foreach (var currency in currencies)
             {
-                var accounts = await _context.Accounts
+                var accountList = await _context.Accounts
                     .Where(a => a.CanPostTransactions && a.CurrencyId == currency.Id)
-                    .Select(a => new SelectListItem
-                    {
-                        Value = a.Id.ToString(),
-                        Text = $"{a.Code} - {a.NameAr}",
-                        Selected = userAccounts.Any(ua => ua.CurrencyId == currency.Id && ua.AccountId == a.Id)
-                    }).ToListAsync();
+                    .ToListAsync();
+
+                var accounts = accountList.Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = $"{a.Code} - {a.NameAr}",
+                    Selected = userAccounts.Any(ua => ua.CurrencyId == currency.Id && ua.AccountId == a.Id)
+                }).ToList();
                 model.CurrencyAccounts.Add(new UserCurrencyAccountViewModel
                 {
                     CurrencyId = currency.Id,
@@ -313,14 +315,16 @@ namespace AccountingSystem.Controllers
             model.CurrencyAccounts = new List<UserCurrencyAccountViewModel>();
             foreach (var currency in currenciesEdit)
             {
-                var accounts = await _context.Accounts
+                var accountList = await _context.Accounts
                     .Where(a => a.CanPostTransactions && a.CurrencyId == currency.Id)
-                    .Select(a => new SelectListItem
-                    {
-                        Value = a.Id.ToString(),
-                        Text = $"{a.Code} - {a.NameAr}",
-                        Selected = userAccountsEdit.Any(ua => ua.CurrencyId == currency.Id && ua.AccountId == a.Id)
-                    }).ToListAsync();
+                    .ToListAsync();
+
+                var accounts = accountList.Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = $"{a.Code} - {a.NameAr}",
+                    Selected = userAccountsEdit.Any(ua => ua.CurrencyId == currency.Id && ua.AccountId == a.Id)
+                }).ToList();
                 model.CurrencyAccounts.Add(new UserCurrencyAccountViewModel
                 {
                     CurrencyId = currency.Id,
