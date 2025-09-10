@@ -6,6 +6,11 @@ namespace AccountingSystem.ViewModels
     public class CashBoxClosureCreateViewModel
     {
         [Required]
+        public int AccountId { get; set; }
+
+        public List<SelectListItem> Accounts { get; set; } = new();
+
+        [Required]
         [Display(Name = "المبلغ المعدود")]
         public decimal CountedAmount { get; set; }
 

@@ -38,9 +38,11 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "receiptvouchers.create")]
         public async Task<IActionResult> Create()
         {
-            ViewBag.Accounts = await _context.Accounts
-                .Where(a => a.CanPostTransactions)
-                .Select(a => new { a.Id, a.Code, a.NameAr, a.CurrencyId, CurrencyCode = a.Currency.Code })
+            var user = await _userManager.GetUserAsync(User);
+            ViewBag.Accounts = await _context.UserPaymentAccounts
+                .Where(u => u.UserId == user!.Id)
+                .Include(u => u.Account).ThenInclude(a => a.Currency)
+                .Select(u => new { u.Account.Id, u.Account.Code, u.Account.NameAr, u.Account.CurrencyId, CurrencyCode = u.Account.Currency.Code })
                 .ToListAsync();
             return View(new ReceiptVoucher { Date = DateTime.Now });
         }
@@ -54,8 +56,9 @@ namespace AccountingSystem.Controllers
             if (user == null || user.PaymentAccountId == null || user.PaymentBranchId == null)
                 return Challenge();
 
+            var allowed = await _context.UserPaymentAccounts.AnyAsync(u => u.UserId == user.Id && u.AccountId == model.AccountId);
             var account = await _context.Accounts.FindAsync(model.AccountId);
-            if (account == null)
+            if (account == null || !allowed)
                 ModelState.AddModelError("AccountId", "الحساب غير موجود");
             else
                 model.CurrencyId = account.CurrencyId;
@@ -66,9 +69,10 @@ namespace AccountingSystem.Controllers
 
             if (!ModelState.IsValid)
             {
-                ViewBag.Accounts = await _context.Accounts
-                    .Where(a => a.CanPostTransactions)
-                    .Select(a => new { a.Id, a.Code, a.NameAr, a.CurrencyId, CurrencyCode = a.Currency.Code })
+                ViewBag.Accounts = await _context.UserPaymentAccounts
+                    .Where(u => u.UserId == user.Id)
+                    .Include(u => u.Account).ThenInclude(a => a.Currency)
+                    .Select(u => new { u.Account.Id, u.Account.Code, u.Account.NameAr, u.Account.CurrencyId, CurrencyCode = u.Account.Currency.Code })
                     .ToListAsync();
                 return View(model);
             }

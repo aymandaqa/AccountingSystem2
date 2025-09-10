@@ -28,6 +28,15 @@ namespace AccountingSystem.Services
             if (lines == null || !lines.Any())
                 throw new System.ArgumentException("Entry must contain at least one line", nameof(lines));
 
+            var accountIds = lines.Select(l => l.AccountId).Distinct().ToList();
+            var currencies = await _context.Accounts
+                .Where(a => accountIds.Contains(a.Id))
+                .Select(a => a.CurrencyId)
+                .Distinct()
+                .ToListAsync();
+            if (currencies.Count > 1)
+                throw new System.ArgumentException("All accounts must have the same currency", nameof(lines));
+
             var entry = new JournalEntry
             {
                 Number = await GenerateJournalEntryNumber(),
