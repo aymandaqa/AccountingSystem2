@@ -60,12 +60,18 @@ namespace AccountingSystem.Controllers
                     Value = b.Id.ToString(),
                     Text = b.NameAr
                 }).ToListAsync();
-            model.PaymentAccounts = await _context.Accounts
-                .Where(a => a.CanPostTransactions)
-                .Select(a => new SelectListItem
+            model.CurrencyAccounts = await _context.Currencies
+                .Select(c => new UserCurrencyAccountViewModel
                 {
-                    Value = a.Id.ToString(),
-                    Text = $"{a.Code} - {a.NameAr}"
+                    CurrencyId = c.Id,
+                    CurrencyName = c.Name,
+                    Accounts = _context.Accounts
+                        .Where(a => a.CanPostTransactions && a.CurrencyId == c.Id)
+                        .Select(a => new SelectListItem
+                        {
+                            Value = a.Id.ToString(),
+                            Text = $"{a.Code} - {a.NameAr}"
+                        }).ToList()
                 }).ToListAsync();
             return View(model);
         }
@@ -84,10 +90,19 @@ namespace AccountingSystem.Controllers
                     FirstName = model.FirstName,
                     LastName = model.LastName,
                     IsActive = model.IsActive,
-                    PaymentAccountId = model.PaymentAccountId,
                     PaymentBranchId = model.PaymentBranchId,
                     ExpenseLimit = model.ExpenseLimit
                 };
+
+                var baseCurrencyId = await _context.Currencies
+                    .Where(c => c.IsBase)
+                    .Select(c => c.Id)
+                    .FirstOrDefaultAsync();
+                var baseAccount = model.CurrencyAccounts.FirstOrDefault(ca => ca.CurrencyId == baseCurrencyId);
+                if (baseAccount?.AccountId != null)
+                {
+                    user.PaymentAccountId = baseAccount.AccountId;
+                }
 
                 var result = await _userManager.CreateAsync(user, model.Password);
                 if (result.Succeeded)
@@ -100,6 +115,18 @@ namespace AccountingSystem.Controllers
                             BranchId = branchId,
                             IsDefault = branchId == model.BranchIds.FirstOrDefault()
                         });
+                    }
+                    foreach (var ca in model.CurrencyAccounts)
+                    {
+                        if (ca.AccountId.HasValue)
+                        {
+                            _context.UserPaymentAccounts.Add(new UserPaymentAccount
+                            {
+                                UserId = user.Id,
+                                CurrencyId = ca.CurrencyId,
+                                AccountId = ca.AccountId.Value
+                            });
+                        }
                     }
                     await _context.SaveChangesAsync();
                     return RedirectToAction(nameof(Index));
@@ -120,12 +147,18 @@ namespace AccountingSystem.Controllers
                     Value = b.Id.ToString(),
                     Text = b.NameAr
                 }).ToListAsync();
-            model.PaymentAccounts = await _context.Accounts
-                .Where(a => a.CanPostTransactions)
-                .Select(a => new SelectListItem
+            model.CurrencyAccounts = await _context.Currencies
+                .Select(c => new UserCurrencyAccountViewModel
                 {
-                    Value = a.Id.ToString(),
-                    Text = $"{a.Code} - {a.NameAr}"
+                    CurrencyId = c.Id,
+                    CurrencyName = c.Name,
+                    Accounts = _context.Accounts
+                        .Where(a => a.CanPostTransactions && a.CurrencyId == c.Id)
+                        .Select(a => new SelectListItem
+                        {
+                            Value = a.Id.ToString(),
+                            Text = $"{a.Code} - {a.NameAr}"
+                        }).ToList()
                 }).ToListAsync();
             return View(model);
         }
@@ -149,7 +182,6 @@ namespace AccountingSystem.Controllers
                     .Where(ub => ub.UserId == id)
                     .Select(ub => ub.BranchId)
                     .ToListAsync(),
-                PaymentAccountId = user.PaymentAccountId,
                 PaymentBranchId = user.PaymentBranchId,
                 ExpenseLimit = user.ExpenseLimit
             };
@@ -168,14 +200,29 @@ namespace AccountingSystem.Controllers
                     Text = b.NameAr,
                     Selected = b.Id == model.PaymentBranchId
                 }).ToListAsync();
-            model.PaymentAccounts = await _context.Accounts
-                .Where(a => a.CanPostTransactions)
-                .Select(a => new SelectListItem
+            var userAccounts = await _context.UserPaymentAccounts
+                .Where(upa => upa.UserId == id)
+                .ToListAsync();
+            var currencies = await _context.Currencies.ToListAsync();
+            model.CurrencyAccounts = new List<UserCurrencyAccountViewModel>();
+            foreach (var currency in currencies)
+            {
+                var accounts = await _context.Accounts
+                    .Where(a => a.CanPostTransactions && a.CurrencyId == currency.Id)
+                    .Select(a => new SelectListItem
+                    {
+                        Value = a.Id.ToString(),
+                        Text = $"{a.Code} - {a.NameAr}",
+                        Selected = userAccounts.Any(ua => ua.CurrencyId == currency.Id && ua.AccountId == a.Id)
+                    }).ToListAsync();
+                model.CurrencyAccounts.Add(new UserCurrencyAccountViewModel
                 {
-                    Value = a.Id.ToString(),
-                    Text = $"{a.Code} - {a.NameAr}",
-                    Selected = a.Id == model.PaymentAccountId
-                }).ToListAsync();
+                    CurrencyId = currency.Id,
+                    CurrencyName = currency.Name,
+                    AccountId = userAccounts.FirstOrDefault(ua => ua.CurrencyId == currency.Id)?.AccountId,
+                    Accounts = accounts
+                });
+            }
 
             return View(model);
         }
@@ -195,9 +242,15 @@ namespace AccountingSystem.Controllers
             user.FirstName = model.FirstName;
             user.LastName = model.LastName;
             user.IsActive = model.IsActive;
-            user.PaymentAccountId = model.PaymentAccountId;
             user.PaymentBranchId = model.PaymentBranchId;
             user.ExpenseLimit = model.ExpenseLimit;
+
+            var baseCurrencyIdEdit = await _context.Currencies
+                .Where(c => c.IsBase)
+                .Select(c => c.Id)
+                .FirstOrDefaultAsync();
+            var baseAccountEdit = model.CurrencyAccounts.FirstOrDefault(ca => ca.CurrencyId == baseCurrencyIdEdit);
+            user.PaymentAccountId = baseAccountEdit?.AccountId;
 
             var result = await _userManager.UpdateAsync(user);
             if (result.Succeeded)
@@ -215,6 +268,22 @@ namespace AccountingSystem.Controllers
                         BranchId = branchId,
                         IsDefault = branchId == model.BranchIds.FirstOrDefault()
                     });
+                }
+                var existingAccounts = await _context.UserPaymentAccounts
+                    .Where(upa => upa.UserId == user.Id)
+                    .ToListAsync();
+                _context.UserPaymentAccounts.RemoveRange(existingAccounts);
+                foreach (var ca in model.CurrencyAccounts)
+                {
+                    if (ca.AccountId.HasValue)
+                    {
+                        _context.UserPaymentAccounts.Add(new UserPaymentAccount
+                        {
+                            UserId = user.Id,
+                            CurrencyId = ca.CurrencyId,
+                            AccountId = ca.AccountId.Value
+                        });
+                    }
                 }
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
@@ -237,14 +306,29 @@ namespace AccountingSystem.Controllers
                     Text = b.NameAr,
                     Selected = b.Id == model.PaymentBranchId
                 }).ToListAsync();
-            model.PaymentAccounts = await _context.Accounts
-                .Where(a => a.CanPostTransactions)
-                .Select(a => new SelectListItem
+            var userAccountsEdit = await _context.UserPaymentAccounts
+                .Where(upa => upa.UserId == model.Id)
+                .ToListAsync();
+            var currenciesEdit = await _context.Currencies.ToListAsync();
+            model.CurrencyAccounts = new List<UserCurrencyAccountViewModel>();
+            foreach (var currency in currenciesEdit)
+            {
+                var accounts = await _context.Accounts
+                    .Where(a => a.CanPostTransactions && a.CurrencyId == currency.Id)
+                    .Select(a => new SelectListItem
+                    {
+                        Value = a.Id.ToString(),
+                        Text = $"{a.Code} - {a.NameAr}",
+                        Selected = userAccountsEdit.Any(ua => ua.CurrencyId == currency.Id && ua.AccountId == a.Id)
+                    }).ToListAsync();
+                model.CurrencyAccounts.Add(new UserCurrencyAccountViewModel
                 {
-                    Value = a.Id.ToString(),
-                    Text = $"{a.Code} - {a.NameAr}",
-                    Selected = a.Id == model.PaymentAccountId
-                }).ToListAsync();
+                    CurrencyId = currency.Id,
+                    CurrencyName = currency.Name,
+                    AccountId = userAccountsEdit.FirstOrDefault(ua => ua.CurrencyId == currency.Id)?.AccountId,
+                    Accounts = accounts
+                });
+            }
             return View(model);
         }
 

@@ -38,6 +38,7 @@ namespace AccountingSystem.Data
         public DbSet<DisbursementVoucher> DisbursementVouchers { get; set; }
         public DbSet<Supplier> Suppliers { get; set; }
         public DbSet<SystemSetting> SystemSettings { get; set; }
+        public DbSet<UserPaymentAccount> UserPaymentAccounts { get; set; }
 
         public override int SaveChanges()
         {
@@ -387,6 +388,26 @@ namespace AccountingSystem.Data
                 entity.HasOne(u => u.PaymentBranch)
                     .WithMany()
                     .HasForeignKey(u => u.PaymentBranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<UserPaymentAccount>(entity =>
+            {
+                entity.HasKey(e => new { e.UserId, e.CurrencyId });
+
+                entity.HasOne(e => e.User)
+                    .WithMany(u => u.UserPaymentAccounts)
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Currency)
+                    .WithMany()
+                    .HasForeignKey(e => e.CurrencyId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Account)
+                    .WithMany()
+                    .HasForeignKey(e => e.AccountId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
