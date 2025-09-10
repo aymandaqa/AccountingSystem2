@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
+using AccountingSystem.Services;
+using System.Collections.Generic;
 
 namespace AccountingSystem.Controllers
 {
@@ -12,11 +14,13 @@ namespace AccountingSystem.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<User> _userManager;
+        private readonly IJournalEntryService _journalEntryService;
 
-        public ReceiptVouchersController(ApplicationDbContext context, UserManager<User> userManager)
+        public ReceiptVouchersController(ApplicationDbContext context, UserManager<User> userManager, IJournalEntryService journalEntryService)
         {
             _context = context;
             _userManager = userManager;
+            _journalEntryService = journalEntryService;
         }
 
         public async Task<IActionResult> Index()
@@ -76,60 +80,21 @@ namespace AccountingSystem.Controllers
             model.CreatedById = user.Id;
             _context.ReceiptVouchers.Add(model);
 
-            var number = await GenerateJournalEntryNumber();
-            var entry = new JournalEntry
+            var lines = new List<JournalEntryLine>
             {
-                Number = number,
-                Date = model.Date,
-                Description = model.Notes ?? "سند قبض",
-                BranchId = user.PaymentBranchId.Value,
-                CreatedById = user.Id,
-                TotalDebit = model.Amount,
-                TotalCredit = model.Amount,
-                Status = JournalEntryStatus.Posted
+                new JournalEntryLine { AccountId = user.PaymentAccountId.Value, DebitAmount = model.Amount },
+                new JournalEntryLine { AccountId = model.AccountId, CreditAmount = model.Amount }
             };
-            entry.Lines.Add(new JournalEntryLine { AccountId = user.PaymentAccountId.Value, DebitAmount = model.Amount });
-            entry.Lines.Add(new JournalEntryLine { AccountId = model.AccountId, CreditAmount = model.Amount });
 
-            _context.JournalEntries.Add(entry);
-            await UpdateAccountBalances(entry);
-            await _context.SaveChangesAsync();
+            await _journalEntryService.CreateJournalEntryAsync(
+                model.Date,
+                model.Notes ?? "سند قبض",
+                user.PaymentBranchId.Value,
+                user.Id,
+                lines,
+                JournalEntryStatus.Posted);
 
             return RedirectToAction(nameof(Index));
-        }
-
-        private async Task<string> GenerateJournalEntryNumber()
-        {
-            var year = DateTime.Now.Year;
-            var lastEntry = await _context.JournalEntries
-                .Where(j => j.Date.Year == year)
-                .OrderByDescending(j => j.Number)
-                .FirstOrDefaultAsync();
-
-            if (lastEntry == null)
-                return $"JE{year}001";
-
-            var lastNumber = lastEntry.Number.Substring(6);
-            if (int.TryParse(lastNumber, out int number))
-                return $"JE{year}{(number + 1):D3}";
-
-            return $"JE{year}001";
-        }
-
-        private async Task UpdateAccountBalances(JournalEntry entry)
-        {
-            foreach (var line in entry.Lines)
-            {
-                var account = await _context.Accounts.FindAsync(line.AccountId);
-                if (account == null) continue;
-
-                var netAmount = account.Nature == AccountNature.Debit
-                    ? line.DebitAmount - line.CreditAmount
-                    : line.CreditAmount - line.DebitAmount;
-
-                account.CurrentBalance += netAmount;
-                account.UpdatedAt = DateTime.Now;
-            }
         }
     }
 }
