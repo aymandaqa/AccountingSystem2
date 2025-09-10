@@ -1,9 +1,11 @@
 @model TrialBalanceViewModel
 @using AccountingSystem.ViewModels
+@using System.Linq
 
 @{
     ViewData["Title"] = "ميزان المراجعة";
     Layout = "~/Views/Shared/_AccountingLayout.cshtml";
+    var hasMismatch = Model.Accounts.Any(a => a.DebitBalance != 0 && a.CreditBalance != 0);
 }
 
 <div class="container-fluid">
@@ -76,7 +78,8 @@
                             <tbody>
                                 @foreach (var account in Model.Accounts)
                                 {
-                                    <tr>
+                                    var isMismatch = account.DebitBalance != 0 && account.CreditBalance != 0;
+                                    <tr class="@(isMismatch ? "table-danger" : string.Empty)">
                                         <td>@account.AccountCode</td>
                                         <td>@account.AccountName</td>
                                         <td>@account.DebitBalance.ToString("N2")</td>
@@ -86,7 +89,7 @@
                                     </tr>
                                 }
                             </tbody>
-                            <tfoot class="table-secondary">
+                            <tfoot class="@(Model.TotalDebits == Model.TotalCredits ? "table-secondary" : "table-danger")">
                                 <tr>
                                     <th colspan="2">الإجمالي</th>
                                     <th>@Model.TotalDebits.ToString("N2")</th>
@@ -98,6 +101,13 @@
                         </table>
                     </div>
 
+                    @if (hasMismatch)
+                    {
+                        <div class="alert alert-danger mt-3">
+                            توجد قيود غير متطابقة تم تمييزها باللون الأحمر.
+                        </div>
+                    }
+
                     <!-- معلومات إضافية -->
                     <div class="row mt-3">
                         <div class="col-md-6">
@@ -107,7 +117,7 @@
                         </div>
                         <div class="col-md-6">
                             <div class="alert @(Model.TotalDebits == Model.TotalCredits ? "alert-success" : "alert-danger")">
-                                <strong>حالة التوازن:</strong> 
+                                <strong>حالة التوازن:</strong>
                                 @if (Model.TotalDebits == Model.TotalCredits)
                                 {
                                     <span>متوازن ✓</span>
