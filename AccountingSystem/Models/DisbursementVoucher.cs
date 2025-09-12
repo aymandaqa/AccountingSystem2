@@ -27,7 +27,6 @@ namespace AccountingSystem.Models
         [StringLength(500)]
         public string? Notes { get; set; }
 
-        [Required]
         public string CreatedById { get; set; } = string.Empty;
 
         public virtual Supplier Supplier { get; set; } = null!;
