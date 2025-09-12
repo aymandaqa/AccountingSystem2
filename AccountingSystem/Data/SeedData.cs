@@ -295,6 +295,11 @@ namespace AccountingSystem.Data
                 context.SystemSettings.Add(new SystemSetting { Key = "SupplierPaymentsParentAccountId", Value = null });
             }
 
+            if (!context.SystemSettings.Any(s => s.Key == "CashBoxDifferenceAccountId"))
+            {
+                context.SystemSettings.Add(new SystemSetting { Key = "CashBoxDifferenceAccountId", Value = null });
+            }
+
             await context.SaveChangesAsync();
         }
 

@@ -4,9 +4,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Text;
+using System.Collections.Generic;
+using System;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
+using AccountingSystem.Services;
 
 namespace AccountingSystem.Controllers
 {
@@ -15,11 +18,13 @@ namespace AccountingSystem.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<User> _userManager;
+        private readonly IJournalEntryService _journalEntryService;
 
-        public CashBoxClosuresController(ApplicationDbContext context, UserManager<User> userManager)
+        public CashBoxClosuresController(ApplicationDbContext context, UserManager<User> userManager, IJournalEntryService journalEntryService)
         {
             _context = context;
             _userManager = userManager;
+            _journalEntryService = journalEntryService;
         }
 
         [Authorize(Policy = "cashclosures.create")]
@@ -263,12 +268,63 @@ namespace AccountingSystem.Controllers
             if (closure == null)
                 return NotFound();
 
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return NotFound();
+
             var account = await _context.Accounts.FindAsync(closure.AccountId);
+            if (account == null)
+                return NotFound();
+
+            var difference = closure.CountedAmount - (account.CurrentBalance - closure.OpeningBalance);
+            if (!matched && difference != 0)
+            {
+                var setting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "CashBoxDifferenceAccountId");
+                if (setting == null || !int.TryParse(setting.Value, out var diffAccountId))
+                    return BadRequest("لم يتم إعداد حساب الفروقات");
+
+                var lines = new List<JournalEntryLine>();
+                if (difference > 0)
+                {
+                    lines.Add(new JournalEntryLine { AccountId = closure.AccountId, DebitAmount = difference });
+                    lines.Add(new JournalEntryLine { AccountId = diffAccountId, CreditAmount = difference });
+                }
+                else
+                {
+                    var absDiff = Math.Abs(difference);
+                    lines.Add(new JournalEntryLine { AccountId = diffAccountId, DebitAmount = absDiff });
+                    lines.Add(new JournalEntryLine { AccountId = closure.AccountId, CreditAmount = absDiff });
+                }
+
+                await _journalEntryService.CreateJournalEntryAsync(
+                    DateTime.Now,
+                    "فرق إغلاق صندوق",
+                    closure.BranchId,
+                    user.Id,
+                    lines,
+                    JournalEntryStatus.Posted);
+            }
+
+            closure.ClosingBalance = account.CurrentBalance;
+
+            var zeroLines = new List<JournalEntryLine>
+            {
+                new JournalEntryLine { AccountId = closure.AccountId, DebitAmount = closure.ClosingBalance },
+                new JournalEntryLine { AccountId = closure.AccountId, CreditAmount = closure.ClosingBalance }
+            };
+
+            await _journalEntryService.CreateJournalEntryAsync(
+                DateTime.Now,
+                "إغلاق صندوق",
+                closure.BranchId,
+                user.Id,
+                zeroLines,
+                JournalEntryStatus.Posted);
+
             closure.Status = matched ? CashBoxClosureStatus.ApprovedMatched : CashBoxClosureStatus.ApprovedWithDifference;
             closure.Reason = reason;
             closure.ApprovedAt = DateTime.Now;
             closure.ClosingDate = DateTime.Now;
-            closure.ClosingBalance = account?.CurrentBalance ?? closure.ClosingBalance;
 
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Pending));
