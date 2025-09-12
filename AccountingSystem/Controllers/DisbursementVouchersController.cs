@@ -28,7 +28,7 @@ namespace AccountingSystem.Controllers
             var user = await _userManager.GetUserAsync(User);
             var vouchers = await _context.DisbursementVouchers
                 .Where(v => v.CreatedById == user!.Id)
-                .Include(v => v.Account)
+                .Include(v => v.Supplier)
                 .Include(v => v.Currency)
                 .OrderByDescending(v => v.Date)
                 .ToListAsync();
@@ -39,10 +39,9 @@ namespace AccountingSystem.Controllers
         public async Task<IActionResult> Create()
         {
             var user = await _userManager.GetUserAsync(User);
-            ViewBag.Accounts = await _context.UserPaymentAccounts
-                .Where(u => u.UserId == user!.Id)
-                .Include(u => u.Account).ThenInclude(a => a.Currency)
-                .Select(u => new { u.Account.Id, u.Account.Code, u.Account.NameAr, u.Account.CurrencyId, CurrencyCode = u.Account.Currency.Code })
+            ViewBag.Suppliers = await _context.Suppliers
+                .Include(s => s.Account).ThenInclude(a => a.Currency)
+                .Select(s => new { s.Id, s.NameAr, CurrencyId = s.Account!.CurrencyId, CurrencyCode = s.Account.Currency.Code })
                 .ToListAsync();
             return View(new DisbursementVoucher { Date = DateTime.Now });
         }
@@ -56,23 +55,26 @@ namespace AccountingSystem.Controllers
             if (user == null || user.PaymentAccountId == null || user.PaymentBranchId == null)
                 return Challenge();
 
-            var allowed = await _context.UserPaymentAccounts.AnyAsync(u => u.UserId == user.Id && u.AccountId == model.AccountId);
-            var account = await _context.Accounts.FindAsync(model.AccountId);
-            if (account == null || !allowed)
-                ModelState.AddModelError("AccountId", "الحساب غير موجود");
+            var supplier = await _context.Suppliers
+                .Include(s => s.Account)
+                .FirstOrDefaultAsync(s => s.Id == model.SupplierId);
+            if (supplier?.Account == null)
+                ModelState.AddModelError("SupplierId", "المورد غير موجود");
             else
-                model.CurrencyId = account.CurrencyId;
+            {
+                model.AccountId = supplier.AccountId!.Value;
+                model.CurrencyId = supplier.Account.CurrencyId;
+            }
 
             var paymentAccount = await _context.Accounts.FindAsync(user.PaymentAccountId);
-            if (account != null && paymentAccount != null && paymentAccount.CurrencyId != account.CurrencyId)
-                ModelState.AddModelError("AccountId", "يجب أن تكون الحسابات بنفس العملة");
+            if (supplier?.Account != null && paymentAccount != null && paymentAccount.CurrencyId != supplier.Account.CurrencyId)
+                ModelState.AddModelError("SupplierId", "يجب أن تكون الحسابات بنفس العملة");
 
             if (!ModelState.IsValid)
             {
-                ViewBag.Accounts = await _context.UserPaymentAccounts
-                    .Where(u => u.UserId == user.Id)
-                    .Include(u => u.Account).ThenInclude(a => a.Currency)
-                    .Select(u => new { u.Account.Id, u.Account.Code, u.Account.NameAr, u.Account.CurrencyId, CurrencyCode = u.Account.Currency.Code })
+                ViewBag.Suppliers = await _context.Suppliers
+                    .Include(s => s.Account).ThenInclude(a => a.Currency)
+                    .Select(s => new { s.Id, s.NameAr, CurrencyId = s.Account!.CurrencyId, CurrencyCode = s.Account.Currency.Code })
                     .ToListAsync();
                 return View(model);
             }
