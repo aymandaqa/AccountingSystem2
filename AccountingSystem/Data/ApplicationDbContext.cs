@@ -347,6 +347,10 @@ namespace AccountingSystem.Data
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.ExchangeRate).HasColumnType("decimal(18,6)");
+                entity.HasOne(e => e.Supplier)
+                    .WithMany()
+                    .HasForeignKey(e => e.SupplierId)
+                    .OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(e => e.Account)
                     .WithMany()
                     .HasForeignKey(e => e.AccountId)

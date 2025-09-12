@@ -10,7 +10,7 @@
         <thead class="table-dark">
             <tr>
                 <th>التاريخ</th>
-                <th>الحساب</th>
+                <th>المورد</th>
                 <th>العملة</th>
                 <th>سعر الصرف</th>
                 <th>المبلغ</th>
@@ -21,7 +21,7 @@
             {
                 <tr>
                     <td>@v.Date.ToString("yyyy-MM-dd")</td>
-                    <td>@v.Account.NameAr</td>
+                    <td>@v.Supplier.NameAr</td>
                     <td>@v.Currency.Code</td>
                     <td>@v.ExchangeRate.ToString("N6")</td>
                     <td>@v.Amount.ToString("N2")</td>

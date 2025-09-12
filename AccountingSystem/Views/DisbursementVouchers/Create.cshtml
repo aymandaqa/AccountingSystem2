@@ -12,12 +12,12 @@
             <input type="hidden" asp-for="CurrencyId" id="currencyId" />
         </div>
         <div class="col-md-6">
-            <label class="form-label">الحساب</label>
-            <select asp-for="AccountId" class="form-select" id="accountSelect">
-                @foreach (var a in ViewBag.Accounts)
+            <label class="form-label">المورد</label>
+            <select asp-for="SupplierId" class="form-select" id="supplierSelect">
+                @foreach (var s in ViewBag.Suppliers)
                 {
-                    <option value="@a.Id" data-currency-id="@a.CurrencyId" data-currency-code="@a.CurrencyCode">
-                        @a.Code - @a.NameAr (@a.CurrencyCode)
+                    <option value="@s.Id" data-currency-id="@s.CurrencyId" data-currency-code="@s.CurrencyCode">
+                        @s.NameAr (@s.CurrencyCode)
                     </option>
                 }
             </select>
@@ -47,17 +47,17 @@
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const accountSelect = document.getElementById('accountSelect');
+            const supplierSelect = document.getElementById('supplierSelect');
             const currencyDisplay = document.getElementById('currencyDisplay');
             const currencyId = document.getElementById('currencyId');
 
             function updateCurrency() {
-                const option = accountSelect.options[accountSelect.selectedIndex];
+                const option = supplierSelect.options[supplierSelect.selectedIndex];
                 currencyDisplay.value = option.getAttribute('data-currency-code') || '';
                 currencyId.value = option.getAttribute('data-currency-id') || '';
             }
 
-            accountSelect.addEventListener('change', updateCurrency);
+            supplierSelect.addEventListener('change', updateCurrency);
             updateCurrency();
         });
     </script>
