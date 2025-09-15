@@ -277,23 +277,28 @@ namespace AccountingSystem.Controllers
                 return NotFound();
 
             var difference = closure.CountedAmount - (account.CurrentBalance - closure.OpeningBalance);
-            if (!matched && difference != 0)
+            if (difference != 0)
             {
                 var setting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "CashBoxDifferenceAccountId");
-                if (setting == null || !int.TryParse(setting.Value, out var diffAccountId))
+                if (setting == null)
                     return BadRequest("لم يتم إعداد حساب الفروقات");
 
+
+                var diffAccountId = 0;
                 var lines = new List<JournalEntryLine>();
+
+                var accdiff = await _context.Accounts.FirstOrDefaultAsync(t => t.Code == setting.Value);
+                diffAccountId = accdiff.Id;
                 if (difference > 0)
                 {
-                    lines.Add(new JournalEntryLine { AccountId = closure.AccountId, DebitAmount = difference });
-                    lines.Add(new JournalEntryLine { AccountId = diffAccountId, CreditAmount = difference });
+                    lines.Add(new JournalEntryLine { AccountId = closure.AccountId, CreditAmount = difference });
+                    lines.Add(new JournalEntryLine { AccountId = diffAccountId, DebitAmount = difference });
                 }
                 else
                 {
                     var absDiff = Math.Abs(difference);
-                    lines.Add(new JournalEntryLine { AccountId = diffAccountId, DebitAmount = absDiff });
-                    lines.Add(new JournalEntryLine { AccountId = closure.AccountId, CreditAmount = absDiff });
+                    lines.Add(new JournalEntryLine { AccountId = diffAccountId, CreditAmount = absDiff });
+                    lines.Add(new JournalEntryLine { AccountId = closure.AccountId, DebitAmount = absDiff });
                 }
 
                 await _journalEntryService.CreateJournalEntryAsync(
@@ -309,8 +314,8 @@ namespace AccountingSystem.Controllers
 
             var zeroLines = new List<JournalEntryLine>
             {
-                new JournalEntryLine { AccountId = closure.AccountId, DebitAmount = closure.ClosingBalance },
-                new JournalEntryLine { AccountId = closure.AccountId, CreditAmount = closure.ClosingBalance }
+                new JournalEntryLine { AccountId = closure.AccountId, DebitAmount = closure.ClosingBalance,Description=  "إغلاق صندوق", },
+                new JournalEntryLine { AccountId = closure.AccountId, CreditAmount = closure.ClosingBalance,Description=  "إغلاق صندوق",}
             };
 
             await _journalEntryService.CreateJournalEntryAsync(

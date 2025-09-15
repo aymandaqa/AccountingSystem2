@@ -55,7 +55,7 @@ namespace AccountingSystem.Services
                 entry.Lines.Add(new JournalEntryLine
                 {
                     AccountId = line.AccountId,
-                    Description = line.Description,
+                    Description = string.IsNullOrWhiteSpace(line.Description) ? entry.Description : line.Description,
                     DebitAmount = line.DebitAmount,
                     CreditAmount = line.CreditAmount
                 });
