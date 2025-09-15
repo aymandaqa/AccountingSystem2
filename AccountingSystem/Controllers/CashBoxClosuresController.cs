@@ -276,19 +276,23 @@ namespace AccountingSystem.Controllers
             if (account == null)
                 return NotFound();
 
-            var difference = closure.CountedAmount - (account.CurrentBalance - closure.OpeningBalance);
+            var currentBalance = account.CurrentBalance;
+            var difference = currentBalance - closure.CountedAmount;
             if (difference != 0)
             {
                 var setting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "CashBoxDifferenceAccountId");
-                if (setting == null)
+                if (setting == null || string.IsNullOrWhiteSpace(setting.Value))
                     return BadRequest("لم يتم إعداد حساب الفروقات");
 
+                var diffAccount = await _context.Accounts
+                    .FirstOrDefaultAsync(t => t.Code == setting.Value || t.Id.ToString() == setting.Value);
 
-                var diffAccountId = 0;
+                if (diffAccount == null)
+                    return BadRequest("لم يتم العثور على حساب الفروقات المحدد");
+
+                var diffAccountId = diffAccount.Id;
                 var lines = new List<JournalEntryLine>();
 
-                var accdiff = await _context.Accounts.FirstOrDefaultAsync(t => t.Code == setting.Value);
-                diffAccountId = accdiff.Id;
                 if (difference > 0)
                 {
                     lines.Add(new JournalEntryLine { AccountId = closure.AccountId, CreditAmount = difference });
@@ -310,7 +314,7 @@ namespace AccountingSystem.Controllers
                     JournalEntryStatus.Posted);
             }
 
-            closure.ClosingBalance = account.CurrentBalance;
+            closure.ClosingBalance = closure.CountedAmount;
 
             var zeroLines = new List<JournalEntryLine>
             {
