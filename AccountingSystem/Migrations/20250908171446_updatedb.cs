@@ -5,7 +5,7 @@
 namespace AccountingSystem.Migrations
 {
     /// <inheritdoc />
-    public partial class updatedb : Migration
+    public partial class UpdateDb : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

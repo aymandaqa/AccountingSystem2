@@ -5,7 +5,7 @@
 namespace AccountingSystem.Migrations
 {
     /// <inheritdoc />
-    public partial class payvvsee1 : Migration
+    public partial class Payvvsee1 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
