@@ -95,7 +95,6 @@ namespace Roadfn.Controllers
                         Name = c.SenderName
                     };
             var Data = await t.ToListAsync();
-            var count = Data.Count();
             if (dm.where != null)
             {
                 Data = (from cust in Data
@@ -116,7 +115,6 @@ namespace Roadfn.Controllers
                         Name = c.IUser
                     };
             var Data = await t.ToListAsync();
-            var count = Data.Count();
             if (dm.where != null)
             {
                 Data = (from cust in Data
@@ -137,7 +135,6 @@ namespace Roadfn.Controllers
                         Name = c.SenderName
                     };
             var Data = await t.ToListAsync();
-            var count = Data.Count();
             if (dm.where != null)
             {
                 Data = (from cust in Data
@@ -157,8 +154,7 @@ namespace Roadfn.Controllers
                         Id = c.DriverID,
                         Name = c.DriverName
                     };
-            var Data = t.ToList();
-            var count = Data.Count();
+            var Data = await t.ToListAsync();
             if (dm.where != null)
             {
                 Data = (from cust in Data
@@ -967,7 +963,7 @@ namespace Roadfn.Controllers
             }
             return dm.RequiresCounts ? Json(new { result = DataSource, count = count }) : Json(DataSource);
         }
-        public async Task<IActionResult> UrlDatasourceRPTPaymentHistoryDriver([FromBody] DataManagerRequest dm, int? DriverID, DateTime? fromDate, DateTime? toDate)
+        public IActionResult UrlDatasourceRPTPaymentHistoryDriver([FromBody] DataManagerRequest dm, int? DriverID, DateTime? fromDate, DateTime? toDate)
         {
             if (fromDate == null && toDate == null)
             {
@@ -1000,7 +996,7 @@ namespace Roadfn.Controllers
             }
             return dm.RequiresCounts ? Json(new { result = DataSource, count = count }) : Json(DataSource);
         }
-        public async Task<IActionResult> UrlDatasourceRPTPaymentHistoryUser([FromBody] DataManagerRequest dm, int? userID, DateTime? fromDate, DateTime? toDate)
+        public IActionResult UrlDatasourceRPTPaymentHistoryUser([FromBody] DataManagerRequest dm, int? userID, DateTime? fromDate, DateTime? toDate)
         {
             if (fromDate == null && toDate == null)
             {

@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace AccountingSystem.Migrations
 {
     /// <inheritdoc />
-    public partial class updatedb1247 : Migration
+    public partial class UpdateDb1247 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

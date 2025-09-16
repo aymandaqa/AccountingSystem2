@@ -13,7 +13,7 @@ namespace AccountingSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     [Migration("20250910195708_tblmappingacocounts")]
-    partial class tblmappingacocounts
+    partial class TblMappingAcocounts
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

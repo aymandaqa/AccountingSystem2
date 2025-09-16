@@ -5,7 +5,7 @@
 namespace AccountingSystem.Migrations
 {
     /// <inheritdoc />
-    public partial class tblmappingacocounts : Migration
+    public partial class TblMappingAcocounts : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

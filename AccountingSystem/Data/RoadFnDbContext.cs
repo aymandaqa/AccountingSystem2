@@ -1,6 +1,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Metadata;
 using DocumentFormat.OpenXml.Bibliography;
 using DocumentFormat.OpenXml.ExtendedProperties;
 using Roadfn.Models;
@@ -72,14 +73,21 @@ namespace AccountingSystem.Data
                                     entitiesChanges.OldValue = oldValue?.ToString();
                                     entitiesChanges.EntityId = Id;
                                     entitiesChanges.IUser = _user;
-                                    entitiesChanges.TableName = propName.DeclaringEntityType.Name;
+                                    if (propName.DeclaringType is IEntityType entityType)
+                                    {
+                                        entitiesChanges.TableName = entityType.Name;
+                                    }
+                                    else
+                                    {
+                                        entitiesChanges.TableName = propName.DeclaringType?.Name ?? string.Empty;
+                                    }
                                     this.EntitiesChanges.Add(entitiesChanges);
                                 }
                             }
                         }
                         catch (Exception ex)
                         {
-
+                            Console.WriteLine($"Error tracking entity changes: {ex}");
                         }
 
                     }

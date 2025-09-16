@@ -23,7 +23,7 @@
                 <option value="@account.AccountId"
                         data-currency-id="@account.CurrencyId"
                         data-currency-code="@account.CurrencyCode"
-                        @(Model.FromPaymentAccountId == account.AccountId ? "selected=\"selected\"" : "")>
+                        selected="@(Model.FromPaymentAccountId == account.AccountId)">
                     @account.DisplayName
                 </option>
             }
@@ -37,7 +37,7 @@
             <option value="">اختر المستلم</option>
             @foreach (var receiver in Model.Receivers)
             {
-                <option value="@receiver.Value" @(receiver.Selected ? "selected=\"selected\"" : "")>@receiver.Text</option>
+                <option value="@receiver.Value" selected="@receiver.Selected">@receiver.Text</option>
             }
         </select>
         <span asp-validation-for="ReceiverId" class="text-danger"></span>
