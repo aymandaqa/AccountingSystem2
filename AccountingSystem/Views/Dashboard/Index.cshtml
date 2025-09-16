@@ -188,9 +188,9 @@
                         @if (Model.CashBoxes.Any())
                         {
                             var groupedCashBoxes = Model.CashBoxes
-                                .GroupBy(cb => string.IsNullOrWhiteSpace(cb.BranchName) ? "غير محدد" : cb.BranchName)
-                                .OrderBy(g => g.Key)
-                                .ToList();
+                            .GroupBy(cb => string.IsNullOrWhiteSpace(cb.BranchName) ? "غير محدد" : cb.BranchName)
+                            .OrderBy(g => g.Key)
+                            .ToList();
                             <div class="cashbox-tree">
                                 @foreach (var branchGroup in groupedCashBoxes)
                                 {
@@ -496,7 +496,7 @@
             font-size: 0.95rem;
         }
 
-        @media (max-width: 576px) {
+        @@media (max-width: 576px) {
             .cashbox-node-content {
                 flex-direction: column;
                 align-items: flex-start;
