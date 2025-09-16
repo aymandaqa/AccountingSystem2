@@ -1,5 +1,6 @@
 @using AccountingSystem.ViewModels
 @using Microsoft.AspNetCore.Authorization
+@using System.Linq
 @model DashboardViewModel
 @inject IAuthorizationService AuthorizationService
 
@@ -174,38 +175,65 @@
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">
                             <i class="fas fa-cash-register me-2"></i>
                             أرصدة الصناديق
                         </h5>
+                        <button type="button" class="btn btn-sm btn-outline-secondary cashbox-card-toggle" id="cashboxesToggle" aria-expanded="true" aria-controls="cashboxesCardBody" title="إظهار/إخفاء أرصدة الصناديق">
+                            <i class="fas fa-minus"></i>
+                        </button>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body" id="cashboxesCardBody">
                         @if (Model.CashBoxes.Any())
                         {
-                            <table class="table table-bordered">
-                                <thead>
-                                    <tr>
-                                        <th>الفرع</th>
-                                        <th>الحساب</th>
-                                        <th>الرصيد (عملة الحساب)</th>
-                                        <th>الرصيد (@Model.SelectedCurrencyCode)</th>
-                                        <th>الرصيد (@Model.BaseCurrencyCode)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var cb in Model.CashBoxes)
-                                    {
-                                        <tr>
-                                            <td>@cb.BranchName</td>
-                                            <td>@cb.AccountName</td>
-                                            <td>@cb.Balance.ToString("N2")</td>
-                                            <td>@cb.BalanceSelected.ToString("N2")</td>
-                                            <td>@cb.BalanceBase.ToString("N2")</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
+                            var groupedCashBoxes = Model.CashBoxes
+                                .GroupBy(cb => string.IsNullOrWhiteSpace(cb.BranchName) ? "غير محدد" : cb.BranchName)
+                                .OrderBy(g => g.Key)
+                                .ToList();
+                            <div class="cashbox-tree">
+                                @foreach (var branchGroup in groupedCashBoxes)
+                                {
+                                    var branchDisplayName = branchGroup.Key;
+                                    var branchTotalAccount = branchGroup.Sum(cb => cb.Balance);
+                                    var branchTotalSelected = branchGroup.Sum(cb => cb.BalanceSelected);
+                                    var branchTotalBase = branchGroup.Sum(cb => cb.BalanceBase);
+                                    <div class="cashbox-node" data-branch-name="@branchDisplayName">
+                                        <div class="cashbox-node-content">
+                                            <button class="cashbox-toggle" type="button" aria-expanded="true">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                            <div class="cashbox-node-info">
+                                                <div class="cashbox-branch-title">
+                                                    <span class="fw-bold">@branchDisplayName</span>
+                                                    <small class="text-muted">عدد الحسابات: @branchGroup.Count()</small>
+                                                </div>
+                                                <div class="cashbox-branch-values">
+                                                    <span class="cashbox-value" title="إجمالي رصيد عملة الحساب">@branchTotalAccount.ToString("N2")</span>
+                                                    <span class="cashbox-value text-primary" title="إجمالي الرصيد بالعملة المختارة">(@branchTotalSelected.ToString("N2") @Model.SelectedCurrencyCode)</span>
+                                                    <span class="cashbox-value text-muted" title="إجمالي الرصيد بالعملة الأساسية">(@branchTotalBase.ToString("N2") @Model.BaseCurrencyCode)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="cashbox-children">
+                                            @foreach (var cb in branchGroup.OrderBy(c => c.AccountName))
+                                            {
+                                                <div class="cashbox-leaf">
+                                                    <div class="cashbox-leaf-info">
+                                                        <i class="fas fa-wallet text-muted"></i>
+                                                        <span class="cashbox-account-name">@cb.AccountName</span>
+                                                    </div>
+                                                    <div class="cashbox-leaf-values">
+                                                        <span class="cashbox-value" title="رصيد عملة الحساب">@cb.Balance.ToString("N2")</span>
+                                                        <span class="cashbox-value text-primary" title="الرصيد بالعملة المختارة">@cb.BalanceSelected.ToString("N2") @Model.SelectedCurrencyCode</span>
+                                                        <span class="cashbox-value text-muted" title="الرصيد بالعملة الأساسية">@cb.BalanceBase.ToString("N2") @Model.BaseCurrencyCode</span>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
                         }
                         else
                         {
@@ -366,6 +394,127 @@
             .toggle-btn:hover {
                 color: #495057;
             }
+
+        .cashbox-tree {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .cashbox-node {
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            background-color: #ffffff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+        }
+
+        .cashbox-node-content {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background-color: #f8f9fa;
+        }
+
+        .cashbox-toggle {
+            background: none;
+            border: none;
+            color: #6c757d;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+            .cashbox-toggle:hover {
+                color: #0d6efd;
+                background-color: rgba(13, 110, 253, 0.1);
+            }
+
+        .cashbox-card-toggle {
+            min-width: 32px;
+        }
+
+        .cashbox-node-info {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            gap: 0.35rem;
+        }
+
+        .cashbox-branch-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .cashbox-branch-values {
+            display: flex;
+            align-items: baseline;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .cashbox-children {
+            padding: 0.75rem 1rem;
+            border-top: 1px solid #e9ecef;
+            background-color: #fff;
+        }
+
+        .cashbox-leaf {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px dashed #e9ecef;
+            gap: 0.75rem;
+        }
+
+            .cashbox-leaf:last-child {
+                border-bottom: none;
+            }
+
+        .cashbox-leaf-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            color: #212529;
+        }
+
+        .cashbox-leaf-values {
+            display: flex;
+            align-items: baseline;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .cashbox-value {
+            white-space: nowrap;
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 576px) {
+            .cashbox-node-content {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .cashbox-branch-title {
+                flex-wrap: wrap;
+            }
+
+            .cashbox-leaf {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .cashbox-leaf-values {
+                width: 100%;
+            }
+        }
     </style>
 }
 
@@ -401,6 +550,84 @@
         }
 
         $(function () {
+            var storage = null;
+            if (typeof window !== 'undefined') {
+                try {
+                    storage = window.localStorage;
+                } catch (err) {
+                    storage = null;
+                }
+            }
+
+            var $cashboxBody = $('#cashboxesCardBody');
+            var $cashboxToggle = $('#cashboxesToggle');
+            var cardStorageKey = 'dashboard.cashboxes.collapsed';
+
+            if ($cashboxToggle.length) {
+                var isCollapsed = storage && storage.getItem(cardStorageKey) === 'true';
+                if (isCollapsed) {
+                    $cashboxBody.hide();
+                    $cashboxToggle.attr('aria-expanded', 'false').html('<i class="fas fa-plus"></i>');
+                } else {
+                    $cashboxToggle.attr('aria-expanded', 'true').html('<i class="fas fa-minus"></i>');
+                }
+
+                $cashboxToggle.on('click', function () {
+                    var visible = $cashboxBody.is(':visible');
+                    if (visible) {
+                        $cashboxBody.slideUp(200);
+                        $cashboxToggle.attr('aria-expanded', 'false').html('<i class="fas fa-plus"></i>');
+                        if (storage) {
+                            storage.setItem(cardStorageKey, 'true');
+                        }
+                    } else {
+                        $cashboxBody.slideDown(200);
+                        $cashboxToggle.attr('aria-expanded', 'true').html('<i class="fas fa-minus"></i>');
+                        if (storage) {
+                            storage.setItem(cardStorageKey, 'false');
+                        }
+                    }
+                });
+            }
+
+            var branchStoragePrefix = 'dashboard.cashboxes.branch.';
+            $('.cashbox-node').each(function () {
+                var $node = $(this);
+                var branchName = $node.data('branchName') || 'default';
+                var storageKey = branchStoragePrefix + branchName;
+                var $children = $node.find('> .cashbox-children');
+                var $toggle = $node.find('> .cashbox-node-content .cashbox-toggle');
+
+                if (!$toggle.length) {
+                    return;
+                }
+
+                var storedCollapsed = storage && storage.getItem(storageKey) === 'true';
+                if (storedCollapsed) {
+                    $children.hide();
+                    $toggle.attr('aria-expanded', 'false').html('<i class="fas fa-plus"></i>');
+                } else {
+                    $toggle.attr('aria-expanded', 'true').html('<i class="fas fa-minus"></i>');
+                }
+
+                $toggle.on('click', function () {
+                    var isVisible = $children.is(':visible');
+                    if (isVisible) {
+                        $children.slideUp(200);
+                        $toggle.attr('aria-expanded', 'false').html('<i class="fas fa-plus"></i>');
+                        if (storage) {
+                            storage.setItem(storageKey, 'true');
+                        }
+                    } else {
+                        $children.slideDown(200);
+                        $toggle.attr('aria-expanded', 'true').html('<i class="fas fa-minus"></i>');
+                        if (storage) {
+                            storage.setItem(storageKey, 'false');
+                        }
+                    }
+                });
+            });
+
             $('.toggle-btn').on('click', function () {
                 var $this = $(this);
                 var $children = $this.closest('.tree-node').find('> .tree-children');
@@ -412,10 +639,9 @@
                     $this.html('<i class="fas fa-minus"></i>');
                 }
             });
+
+            $('.tree-node[data-level="0"] .toggle-btn').trigger('click');
         });
-        $(document).ready(function () {
-                    $('.tree-node[data-level="0"] .toggle-btn').click();
-                      });
     </script>
 }
 
