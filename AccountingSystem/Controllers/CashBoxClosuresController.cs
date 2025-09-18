@@ -290,19 +290,42 @@ namespace AccountingSystem.Controllers
                 if (diffAccount == null)
                     return BadRequest("لم يتم العثور على حساب الفروقات المحدد");
 
+                if (diffAccount.CurrencyId != account.CurrencyId)
+                    return BadRequest("يجب أن تكون عملة حساب الفروقات مطابقة لعملة الحساب المغلق");
+
                 var diffAccountId = diffAccount.Id;
                 var lines = new List<JournalEntryLine>();
 
                 if (difference > 0)
                 {
-                    lines.Add(new JournalEntryLine { AccountId = closure.AccountId, CreditAmount = difference });
-                    lines.Add(new JournalEntryLine { AccountId = diffAccountId, DebitAmount = difference });
+                    lines.Add(new JournalEntryLine
+                    {
+                        AccountId = closure.AccountId,
+                        CreditAmount = difference,
+                        Description = "قيد تسوية فرق إغلاق الصندوق"
+                    });
+                    lines.Add(new JournalEntryLine
+                    {
+                        AccountId = diffAccountId,
+                        DebitAmount = difference,
+                        Description = "قيد تسوية فرق إغلاق الصندوق"
+                    });
                 }
                 else
                 {
                     var absDiff = Math.Abs(difference);
-                    lines.Add(new JournalEntryLine { AccountId = diffAccountId, CreditAmount = absDiff });
-                    lines.Add(new JournalEntryLine { AccountId = closure.AccountId, DebitAmount = absDiff });
+                    lines.Add(new JournalEntryLine
+                    {
+                        AccountId = diffAccountId,
+                        CreditAmount = absDiff,
+                        Description = "قيد تسوية فرق إغلاق الصندوق"
+                    });
+                    lines.Add(new JournalEntryLine
+                    {
+                        AccountId = closure.AccountId,
+                        DebitAmount = absDiff,
+                        Description = "قيد تسوية فرق إغلاق الصندوق"
+                    });
                 }
 
                 await _journalEntryService.CreateJournalEntryAsync(
@@ -311,15 +334,19 @@ namespace AccountingSystem.Controllers
                     closure.BranchId,
                     user.Id,
                     lines,
-                    JournalEntryStatus.Posted);
+                    JournalEntryStatus.Posted,
+                    reference: $"CashBoxClosure:{closure.Id}");
+
+                account.CurrentBalance = closure.CountedAmount;
+                account.UpdatedAt = DateTime.Now;
             }
 
             closure.ClosingBalance = closure.CountedAmount;
 
             var zeroLines = new List<JournalEntryLine>
             {
-                new JournalEntryLine { AccountId = closure.AccountId, DebitAmount = closure.ClosingBalance,Description=  "إغلاق صندوق", },
-                new JournalEntryLine { AccountId = closure.AccountId, CreditAmount = closure.ClosingBalance,Description=  "إغلاق صندوق",}
+                new JournalEntryLine { AccountId = closure.AccountId, DebitAmount = closure.ClosingBalance,Description=  "إغلاق صندوق" },
+                new JournalEntryLine { AccountId = closure.AccountId, CreditAmount = closure.ClosingBalance,Description=  "إغلاق صندوق" }
             };
 
             await _journalEntryService.CreateJournalEntryAsync(
@@ -328,7 +355,8 @@ namespace AccountingSystem.Controllers
                 closure.BranchId,
                 user.Id,
                 zeroLines,
-                JournalEntryStatus.Posted);
+                JournalEntryStatus.Posted,
+                reference: $"CashBoxClosure:{closure.Id}");
 
             closure.Status = matched ? CashBoxClosureStatus.ApprovedMatched : CashBoxClosureStatus.ApprovedWithDifference;
             closure.Reason = reason;
