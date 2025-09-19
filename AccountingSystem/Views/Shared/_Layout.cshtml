@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/AccountingSystem.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/slickgrid/slick.grid.css" />
+    <link rel="stylesheet" href="~/lib/slickgrid/slick-default-theme.css" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
@@ -50,6 +52,11 @@
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/slickgrid/jquery.event.drag-2.3.0.js"></script>
+    <script src="~/lib/slickgrid/slick.core.js"></script>
+    <script src="~/lib/slickgrid/slick.grid.js"></script>
+    <script src="~/lib/slickgrid/slick.dataview.js"></script>
+    <script src="~/lib/slickgrid/plugins/slick.rowselectionmodel.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
