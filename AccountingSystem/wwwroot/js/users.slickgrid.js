@@ -171,14 +171,15 @@
                 }
             })
                 .done(function (response) {
-                    const items = (response.items || []).map(function (item) {
+                    const rawItems = response ? (response.items ?? response.Items ?? []) : [];
+                    const items = rawItems.map(function (item) {
                         return {
-                            id: item.id,
-                            email: item.email,
-                            fullName: item.fullName,
-                            isActive: item.isActive,
-                            lastLoginAt: item.lastLoginAt,
-                            lastLoginFormatted: formatDate(item.lastLoginAt)
+                            id: item.id ?? item.Id,
+                            email: item.email ?? item.Email,
+                            fullName: item.fullName ?? item.FullName,
+                            isActive: item.isActive ?? item.IsActive,
+                            lastLoginAt: item.lastLoginAt ?? item.LastLoginAt,
+                            lastLoginFormatted: formatDate(item.lastLoginAt ?? item.LastLoginAt)
                         };
                     });
 
@@ -189,7 +190,8 @@
                     grid.render();
 
                     $emptyPlaceholder.toggleClass("d-none", items.length > 0);
-                    updatePager(response.totalCount || 0);
+                    const totalCount = response ? (response.totalCount ?? response.TotalCount ?? 0) : 0;
+                    updatePager(totalCount);
                 })
                 .fail(function () {
                     alert("حدث خطأ أثناء تحميل بيانات المستخدمين.");
