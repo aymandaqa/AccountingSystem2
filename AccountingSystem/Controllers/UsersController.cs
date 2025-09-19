@@ -29,19 +29,70 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "users.view")]
 
 
-        public async Task<IActionResult> Index()
+        public IActionResult Index()
         {
-            var users = await _userManager.Users
+            return View();
+        }
+
+        [Authorize(Policy = "users.view")]
+        [HttpGet]
+        public async Task<IActionResult> GridData([FromQuery] SlickGridRequest request)
+        {
+            var sanitizedPage = request.GetValidatedPage();
+            var sanitizedPageSize = request.GetValidatedPageSize();
+
+            var query = _userManager.Users
+                .AsNoTracking()
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(request.Search))
+            {
+                var term = request.Search.Trim();
+                var likeExpression = $"%{term}%";
+                query = query.Where(u =>
+                    EF.Functions.Like(u.Email ?? string.Empty, likeExpression) ||
+                    EF.Functions.Like(u.FirstName, likeExpression) ||
+                    EF.Functions.Like(u.LastName, likeExpression));
+            }
+
+            query = (request.SortField?.ToLowerInvariant()) switch
+            {
+                "fullname" => request.IsDescending
+                    ? query.OrderByDescending(u => u.FirstName).ThenByDescending(u => u.LastName)
+                    : query.OrderBy(u => u.FirstName).ThenBy(u => u.LastName),
+                "isactive" => request.IsDescending
+                    ? query.OrderByDescending(u => u.IsActive)
+                    : query.OrderBy(u => u.IsActive),
+                "lastloginat" => request.IsDescending
+                    ? query.OrderByDescending(u => u.LastLoginAt)
+                    : query.OrderBy(u => u.LastLoginAt),
+                _ => request.IsDescending
+                    ? query.OrderByDescending(u => u.Email)
+                    : query.OrderBy(u => u.Email)
+            };
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .Skip((sanitizedPage - 1) * sanitizedPageSize)
+                .Take(sanitizedPageSize)
                 .Select(u => new UserListViewModel
                 {
                     Id = u.Id,
                     Email = u.Email ?? string.Empty,
-                    FullName = u.FullName ?? string.Empty,
+                    FullName = u.FirstName + " " + u.LastName,
                     IsActive = u.IsActive,
                     LastLoginAt = u.LastLoginAt
-                }).ToListAsync();
+                })
+                .ToListAsync();
 
-            return View(users);
+            var response = new SlickGridResponse<UserListViewModel>
+            {
+                TotalCount = totalCount,
+                Items = items
+            };
+
+            return Json(response);
         }
 
         [Authorize(Policy = "users.create")]
@@ -409,6 +460,11 @@ namespace AccountingSystem.Controllers
 
             user.IsActive = !user.IsActive;
             await _userManager.UpdateAsync(user);
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return Json(new { success = true, isActive = user.IsActive });
+            }
+
             return RedirectToAction(nameof(Index));
         }
 
