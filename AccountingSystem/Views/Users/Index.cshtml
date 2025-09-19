@@ -1,4 +1,3 @@
-@model IEnumerable<AccountingSystem.ViewModels.UserListViewModel>
 @{
     ViewData["Title"] = "المستخدمون";
 }
@@ -8,39 +7,92 @@
     <a class="btn btn-success" asp-action="Create"><i class="fas fa-plus"></i> مستخدم جديد</a>
 </div>
 
-<table class="table table-bordered table-striped">
-    <thead>
-        <tr>
-            <th>البريد الإلكتروني</th>
-            <th>الاسم</th>
-            <th>نشط</th>
-            <th>آخر تسجيل دخول</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-    @foreach (var user in Model)
-    {
-        <tr>
-            <td>@user.Email</td>
-            <td>@user.FullName</td>
-            <td>@(user.IsActive ? "نعم" : "لا")</td>
-            <td>@(user.LastLoginAt?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
-            <td>
-                <a class="btn btn-sm btn-warning" asp-action="Edit" asp-route-id="@user.Id"><i class="fas fa-edit"></i></a>
-                <a class="btn btn-sm btn-primary" asp-action="ManagePermissions" asp-route-id="@user.Id">
-                    <i class="fas fa-key"></i> الصلاحيات
-                </a>
-                <a class="btn btn-sm btn-secondary" asp-action="ResetPassword" asp-route-id="@user.Id">
-                    <i class="fas fa-lock"></i> كلمة مرور جديدة
-                </a>
-                <form asp-action="ToggleActive" asp-route-id="@user.Id" method="post" class="d-inline">
-                    <button type="submit" class="btn btn-sm @(user.IsActive ? "btn-danger" : "btn-success")">
-                        <i class="fas @(user.IsActive ? "fa-user-slash" : "fa-user")"></i> @(user.IsActive ? "إيقاف" : "تفعيل")
+<form id="usersAntiForgery" method="post" class="d-none">
+    @Html.AntiForgeryToken()
+</form>
+
+<div class="card shadow-sm">
+    <div class="card-body" dir="rtl">
+        <div class="row gy-2 gx-3 align-items-center mb-3">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <input type="text" id="usersSearch" class="form-control" placeholder="ابحث بالبريد الإلكتروني أو الاسم..." />
+                    <button type="button" class="btn btn-primary" id="usersSearchBtn" title="بحث">
+                        <i class="fas fa-search"></i>
                     </button>
-                </form>
-            </td>
-        </tr>
-    }
-    </tbody>
-</table>
+                    <button type="button" class="btn btn-outline-secondary" id="usersResetBtn" title="إعادة تعيين البحث">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-6 d-flex justify-content-md-end">
+                <div class="btn-group" role="group" aria-label="التنقل بين الصفحات">
+                    <button type="button" class="btn btn-outline-primary" id="usersPrevPage">
+                        <i class="fas fa-angle-right"></i> السابق
+                    </button>
+                    <span class="btn btn-light border" id="usersPageInfo">صفحة 1 من 1</span>
+                    <button type="button" class="btn btn-outline-primary" id="usersNextPage">
+                        التالي <i class="fas fa-angle-left"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="usersGridWrapper" class="position-relative">
+            <div id="usersGrid" class="slickgrid-container border rounded"></div>
+            <div id="usersGridEmpty" class="text-center text-muted py-5 d-none">
+                لا توجد بيانات لعرضها.
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/slickgrid/2.4.26/slick.grid.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/slickgrid/2.4.26/slick-default-theme.min.css" />
+    <style>
+        #usersGrid {
+            width: 100%;
+            height: 480px;
+            background-color: #fff;
+            position: relative;
+        }
+
+        #usersGrid.loading::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-color: rgba(255, 255, 255, 0.75);
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 30" preserveAspectRatio="xMidYMid meet"><circle cx="15" cy="15" r="15" fill="%23007bff"><animate attributeName="opacity" dur="1s" repeatCount="indefinite" values="0;1;0" begin="0"/></circle><circle cx="60" cy="15" r="15" fill="%23007bff" opacity="0"><animate attributeName="opacity" dur="1s" repeatCount="indefinite" values="0;1;0" begin="0.2"/></circle><circle cx="105" cy="15" r="15" fill="%23007bff" opacity="0"><animate attributeName="opacity" dur="1s" repeatCount="indefinite" values="0;1;0" begin="0.4"/></circle></svg>');
+            background-repeat: no-repeat;
+            background-position: center;
+            z-index: 10;
+        }
+
+        .slickgrid-container .slick-header-columns,
+        .slickgrid-container .slick-row {
+            direction: rtl;
+        }
+
+        .slickgrid-container .slick-cell {
+            text-align: right;
+        }
+
+        #usersGridWrapper {
+            min-height: 200px;
+        }
+
+        #usersPageInfo {
+            pointer-events: none;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/slickgrid/2.4.26/lib/jquery.event.drag-2.3.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/slickgrid/2.4.26/slick.core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/slickgrid/2.4.26/slick.grid.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/slickgrid/2.4.26/slick.dataview.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/slickgrid/2.4.26/plugins/slick.rowselectionmodel.min.js"></script>
+    <script src="~/js/users.slickgrid.js" asp-append-version="true"></script>
+}
