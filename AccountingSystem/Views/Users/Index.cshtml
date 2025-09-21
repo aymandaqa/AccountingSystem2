@@ -43,7 +43,14 @@
                             }
                             @foreach (var size in pageSizes)
                             {
-                                <option value="@size" @(size == Model.PageSize ? "selected" : null)>@size</option>
+                                if (size == Model.PageSize)
+                                {
+                                    <option value="@size" selected="selected">@size</option>
+                                }
+                                else
+                                {
+                                    <option value="@size">@size</option>
+                                }
                             }
                         </select>
                     </div>
