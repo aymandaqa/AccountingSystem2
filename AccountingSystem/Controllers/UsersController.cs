@@ -5,8 +5,11 @@ using Microsoft.EntityFrameworkCore;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
-using System.Linq;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Syncfusion.EJ2.Base;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace AccountingSystem.Controllers
 {
@@ -23,76 +26,59 @@ namespace AccountingSystem.Controllers
             _context = context;
         }
 
-
-
-
         [Authorize(Policy = "users.view")]
-
-
         public IActionResult Index()
         {
             return View();
         }
 
         [Authorize(Policy = "users.view")]
-        [HttpGet]
-        public async Task<IActionResult> GridData([FromQuery] SlickGridRequest request)
+        public async Task<IActionResult> GridData([FromBody] DataManagerRequest request)
         {
-            var sanitizedPage = request.GetValidatedPage();
-            var sanitizedPageSize = request.GetValidatedPageSize();
+            request ??= new DataManagerRequest();
 
-            var query = _userManager.Users
+            var users = await _userManager.Users
                 .AsNoTracking()
-                .AsQueryable();
-
-            if (!string.IsNullOrWhiteSpace(request.Search))
-            {
-                var term = request.Search.Trim();
-                var likeExpression = $"%{term}%";
-                query = query.Where(u =>
-                    EF.Functions.Like(u.Email ?? string.Empty, likeExpression) ||
-                    EF.Functions.Like(u.FirstName, likeExpression) ||
-                    EF.Functions.Like(u.LastName, likeExpression));
-            }
-
-            query = (request.SortField?.ToLowerInvariant()) switch
-            {
-                "fullname" => request.IsDescending
-                    ? query.OrderByDescending(u => u.FirstName).ThenByDescending(u => u.LastName)
-                    : query.OrderBy(u => u.FirstName).ThenBy(u => u.LastName),
-                "isactive" => request.IsDescending
-                    ? query.OrderByDescending(u => u.IsActive)
-                    : query.OrderBy(u => u.IsActive),
-                "lastloginat" => request.IsDescending
-                    ? query.OrderByDescending(u => u.LastLoginAt)
-                    : query.OrderBy(u => u.LastLoginAt),
-                _ => request.IsDescending
-                    ? query.OrderByDescending(u => u.Email)
-                    : query.OrderBy(u => u.Email)
-            };
-
-            var totalCount = await query.CountAsync();
-
-            var items = await query
-                .Skip((sanitizedPage - 1) * sanitizedPageSize)
-                .Take(sanitizedPageSize)
                 .Select(u => new UserListViewModel
                 {
                     Id = u.Id,
                     Email = u.Email ?? string.Empty,
-                    FullName = u.FirstName + " " + u.LastName,
+                    FullName = (u.FirstName ?? string.Empty) + " " + (u.LastName ?? string.Empty),
                     IsActive = u.IsActive,
                     LastLoginAt = u.LastLoginAt
                 })
                 .ToListAsync();
 
-            var response = new SlickGridResponse<UserListViewModel>
-            {
-                TotalCount = totalCount,
-                Items = items
-            };
+            IEnumerable<UserListViewModel> data = users;
+            var operation = new DataOperations();
 
-            return Json(response);
+            if (request.Search != null && request.Search.Count > 0)
+            {
+                data = operation.PerformSearching(data, request.Search).Cast<UserListViewModel>();
+            }
+
+            if (request.Sorted != null && request.Sorted.Count > 0)
+            {
+                data = operation.PerformSorting(data, request.Sorted).Cast<UserListViewModel>();
+            }
+            else
+            {
+                data = data.OrderBy(u => u.Email, StringComparer.OrdinalIgnoreCase);
+            }
+
+            var count = data.Count();
+
+            if (request.Skip != 0)
+            {
+                data = operation.PerformSkip(data, request.Skip).Cast<UserListViewModel>();
+            }
+
+            if (request.Take != 0)
+            {
+                data = operation.PerformTake(data, request.Take).Cast<UserListViewModel>();
+            }
+
+            return Json(new { result = data, count });
         }
 
         [Authorize(Policy = "users.create")]

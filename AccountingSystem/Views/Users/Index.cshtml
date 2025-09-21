@@ -38,48 +38,38 @@
             </div>
         </div>
 
-        <div id="usersGridWrapper" class="position-relative">
-            <div id="usersGrid" class="slickgrid-container border rounded"></div>
-            <div id="usersGridEmpty" class="text-center text-muted py-5 d-none">
-                لا توجد بيانات لعرضها.
-            </div>
-        </div>
+        <div id="usersGrid" class="users-grid border rounded"></div>
     </div>
 </div>
 
 @section Styles {
-    <link rel="stylesheet" href="~/lib/slickgrid/slick.grid.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/lib/slickgrid/slick-default-theme.css" asp-append-version="true" />
     <style>
         #usersGrid {
+            min-height: 300px;
             width: 100%;
-            height: 480px;
-            background-color: #fff;
-            position: relative;
         }
 
-        #usersGrid.loading::after {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background-color: rgba(255, 255, 255, 0.75);
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 30" preserveAspectRatio="xMidYMid meet"><circle cx="15" cy="15" r="15" fill="%23007bff"><animate attributeName="opacity" dur="1s" repeatCount="indefinite" values="0;1;0" begin="0"/></circle><circle cx="60" cy="15" r="15" fill="%23007bff" opacity="0"><animate attributeName="opacity" dur="1s" repeatCount="indefinite" values="0;1;0" begin="0.2"/></circle><circle cx="105" cy="15" r="15" fill="%23007bff" opacity="0"><animate attributeName="opacity" dur="1s" repeatCount="indefinite" values="0;1;0" begin="0.4"/></circle></svg>');
-            background-repeat: no-repeat;
-            background-position: center;
-            z-index: 10;
-        }
-
-        .slickgrid-container .slick-header-columns,
-        .slickgrid-container .slick-row {
+        #usersGrid .e-grid {
             direction: rtl;
+            font-size: 0.95rem;
         }
 
-        .slickgrid-container .slick-cell {
+        #usersGrid .e-grid .e-headercelldiv,
+        #usersGrid .e-grid .e-rowcell {
             text-align: right;
         }
 
-        #usersGridWrapper {
-            min-height: 200px;
+        #usersGrid .e-grid .e-rowcell .badge {
+            font-size: 0.85rem;
+        }
+
+        #usersGrid .e-grid .user-actions .btn {
+            min-width: 36px;
+        }
+
+        #usersGrid .e-grid .e-emptyrecord {
+            padding: 3rem 1rem;
+            color: #6c757d;
         }
 
         #usersPageInfo {
@@ -89,10 +79,5 @@
 }
 
 @section Scripts {
-    <script src="~/lib/slickgrid/jquery.event.drag-2.3.0.js" asp-append-version="true"></script>
-    <script src="~/lib/slickgrid/slick.core.js" asp-append-version="true"></script>
-    <script src="~/lib/slickgrid/slick.grid.js" asp-append-version="true"></script>
-    <script src="~/lib/slickgrid/slick.dataview.js" asp-append-version="true"></script>
-    <script src="~/lib/slickgrid/plugins/slick.rowselectionmodel.js" asp-append-version="true"></script>
-    <script src="~/js/users.slickgrid.js" asp-append-version="true"></script>
+    <script src="~/js/users.syncfusion.js" asp-append-version="true"></script>
 }
