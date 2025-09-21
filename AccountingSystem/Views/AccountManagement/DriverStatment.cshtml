@@ -41,12 +41,10 @@
 
                         </div>
                         <div class="col-xs-6 col-sm-6">
-                            <ejs-dropdownlist id="CompanyBranches" name="CompanyBranches" Query="new ej.data.Query()"
-                                              allowFiltering="true" dataSource="@ViewBag.CompanyBranches" placeholder="الفرع" change="GetDriver">
-
-
-                                <e-dropdownlist-fields text="BranchName" value="Id"></e-dropdownlist-fields>
-                            </ejs-dropdownlist>
+                            <ejs-multiselect id="CompanyBranches" name="CompanyBranches" Query="new ej.data.Query()"
+                                             allowFiltering="true" dataSource="@ViewBag.CompanyBranches" placeholder="الفروع" change="GetDriver" mode="Box">
+                                <e-multiselect-fields text="BranchName" value="Id"></e-multiselect-fields>
+                            </ejs-multiselect>
                         </div>
 
                         <div class="table-responsive col-12" id="bodytarg2">
@@ -300,11 +298,13 @@
 
     function GetDriver() {
 
-        var Driver = document.getElementById('Driver').ej2_instances[0]; // Grid instance
-        Driver.value = null;
-        var CompanyBranches = document.getElementById('CompanyBranches').ej2_instances[0]; // Grid instance
-        Driver.dataSource = new ej.data.DataManager({
-            url: '/AccountManagement/GetDrivers?Id=' + CompanyBranches.value,
+        var driver = document.getElementById('Driver').ej2_instances[0]; // Grid instance
+        driver.value = null;
+        var companyBranches = document.getElementById('CompanyBranches').ej2_instances[0]; // Grid instance
+        var selectedBranches = companyBranches.value || [];
+        var queryString = selectedBranches.length > 0 ? '?ids=' + encodeURIComponent(selectedBranches.join(',')) : '';
+        driver.dataSource = new ej.data.DataManager({
+            url: '/AccountManagement/GetDrivers' + queryString,
             adaptor: new ej.data.UrlAdaptor()
         });
     }
