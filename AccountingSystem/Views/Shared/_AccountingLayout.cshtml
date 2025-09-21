@@ -148,16 +148,16 @@
                         <ul class="collapse nav flex-column ms-3 @(accountMgmtActive ? "show" : "")" id="accountMgmtMenu">
                             @if (canBusinessRetStatementBulk)
                             {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("BusinessRetStatementBulk", "AccountManagement")">اصدار كلي لفاتورة طرود مرتجعه</a></li>
-                            }
+                                @*                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("BusinessRetStatementBulk", "AccountManagement")">اصدار كلي لفاتورة طرود مرتجعه</a></li>
+ *@             }
                             @if (canBusinessStatementBulk)
                             {
                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("BusinessStatementBulk", "AccountManagement")">حساب العميل كلي</a></li>
                             }
                             @if (canBusnissShipmentsReturn)
                             {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("BusnissShipmentsReturn", "AccountManagement")">اغلاق طرود مرتجعه</a></li>
-                            }
+                                @*                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("BusnissShipmentsReturn", "AccountManagement")">اغلاق طرود مرتجعه</a></li>
+ *@             }
                             @if (canBusnissStatment)
                             {
                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("BusnissStatment", "AccountManagement")">حساب العميل</a></li>
@@ -172,16 +172,16 @@
                             }
                             @if (canPrintSlip)
                             {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("PrintSlip", "AccountManagement")">طباعة ايصال</a></li>
-                            }
+                                @*                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("PrintSlip", "AccountManagement")">طباعة ايصال</a></li>
+ *@             }
                             @if (canReceivePayments)
                             {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("ReceivePayments", "AccountManagement")">تسليم فواتير</a></li>
-                            }
+                                @*                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("ReceivePayments", "AccountManagement")">تسليم فواتير</a></li>
+ *@             }
                             @if (canReceiveRetPayments)
                             {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("ReceiveRetPayments", "AccountManagement")">تسليم فواتير طرود مرتجعه</a></li>
-                            }
+                                @*                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("ReceiveRetPayments", "AccountManagement")">تسليم فواتير طرود مرتجعه</a></li>
+ *@             }
                             @if (canUserPayment)
                             {
                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("UserPayment", "AccountManagement")">دفعات العميل</a></li>
