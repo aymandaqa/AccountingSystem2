@@ -1,5 +1,11 @@
+@model AccountingSystem.ViewModels.UsersIndexViewModel
+
 @{
     ViewData["Title"] = "المستخدمون";
+    var startItem = Model.TotalCount == 0 ? 0 : ((Model.CurrentPage - 1) * Model.PageSize) + 1;
+    var endItem = Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalCount);
+    var pageSizes = new[] { 10, 20, 50, 100 };
+    var hasCustomPageSize = Array.IndexOf(pageSizes, Model.PageSize) >= 0;
 }
 
 <h1 class="mb-4">المستخدمون</h1>
@@ -13,71 +19,143 @@
 
 <div class="card shadow-sm">
     <div class="card-body" dir="rtl">
-        <div class="row gy-2 gx-3 align-items-center mb-3">
-            <div class="col-md-6">
-                <div class="input-group">
-                    <input type="text" id="usersSearch" class="form-control" placeholder="ابحث بالبريد الإلكتروني أو الاسم..." />
-                    <button type="button" class="btn btn-primary" id="usersSearchBtn" title="بحث">
-                        <i class="fas fa-search"></i>
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary" id="usersResetBtn" title="إعادة تعيين البحث">
-                        <i class="fas fa-times"></i>
-                    </button>
+        <form id="usersFilterForm" method="get" asp-action="Index" class="mb-4">
+            <input type="hidden" name="page" value="1" />
+            <div class="row gy-2 gx-3 align-items-center">
+                <div class="col-lg-6">
+                    <div class="input-group">
+                        <input type="text" name="searchTerm" value="@Model.SearchTerm" class="form-control" placeholder="ابحث بالبريد الإلكتروني أو الاسم..." />
+                        <button type="submit" class="btn btn-primary" title="بحث">
+                            <i class="fas fa-search"></i>
+                        </button>
+                        <a class="btn btn-outline-secondary" href="@Url.Action("Index")" title="إعادة تعيين البحث">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text">عدد العناصر</span>
+                        <select class="form-select" name="pageSize" onchange="this.form.submit()">
+                            @if (!hasCustomPageSize)
+                            {
+                                <option value="@Model.PageSize" selected>@Model.PageSize</option>
+                            }
+                            @foreach (var size in pageSizes)
+                            {
+                                <option value="@size" @(size == Model.PageSize ? "selected" : null)>@size</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 text-lg-end text-md-start">
+                    <div class="text-muted small">
+                        @if (Model.TotalCount > 0)
+                        {
+                            <span>عرض @startItem - @endItem من @Model.TotalCount مستخدم</span>
+                        }
+                        else
+                        {
+                            <span>لا توجد بيانات لعرضها</span>
+                        }
+                    </div>
                 </div>
             </div>
-            <div class="col-md-6 d-flex justify-content-md-end">
-                <div class="btn-group" role="group" aria-label="التنقل بين الصفحات">
-                    <button type="button" class="btn btn-outline-primary" id="usersPrevPage">
-                        <i class="fas fa-angle-right"></i> السابق
-                    </button>
-                    <span class="btn btn-light border" id="usersPageInfo">صفحة 1 من 1</span>
-                    <button type="button" class="btn btn-outline-primary" id="usersNextPage">
-                        التالي <i class="fas fa-angle-left"></i>
-                    </button>
-                </div>
-            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle" id="usersTable">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">البريد الإلكتروني</th>
+                        <th scope="col">الاسم</th>
+                        <th scope="col" class="text-center">نشط</th>
+                        <th scope="col">آخر تسجيل دخول</th>
+                        <th scope="col" class="text-center">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Users.Count > 0)
+                    {
+                        foreach (var user in Model.Users)
+                        {
+                            <tr>
+                                <td>@user.Email</td>
+                                <td>@user.FullName</td>
+                                <td class="text-center">
+                                    <span class="badge @(user.IsActive ? "bg-success" : "bg-secondary") js-user-status">@(user.IsActive ? "نعم" : "لا")</span>
+                                </td>
+                                <td>
+                                    @(user.LastLoginAt.HasValue ? user.LastLoginAt.Value.ToString("yyyy/MM/dd HH:mm") : "-")
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm user-actions" role="group">
+                                        <a class="btn btn-warning" asp-action="Edit" asp-route-id="@user.Id" title="تعديل"><i class="fas fa-edit"></i></a>
+                                        <a class="btn btn-primary" asp-action="ManagePermissions" asp-route-id="@user.Id" title="الصلاحيات"><i class="fas fa-key"></i></a>
+                                        <a class="btn btn-secondary" asp-action="ResetPassword" asp-route-id="@user.Id" title="إعادة ضبط كلمة المرور"><i class="fas fa-lock"></i></a>
+                                        <button type="button" class="btn @(user.IsActive ? "btn-danger" : "btn-success") js-toggle-user" data-id="@user.Id">
+                                            <i class="fas @(user.IsActive ? "fa-user-slash" : "fa-user")"></i> @(user.IsActive ? "إيقاف" : "تفعيل")
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-5">لا توجد بيانات لعرضها.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
 
-        <div id="usersGrid" class="users-grid border rounded"></div>
+        <nav aria-label="صفحات المستخدمين" class="mt-3">
+            <ul class="pagination justify-content-center">
+                <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : null)">
+                    <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage - 1)" asp-route-searchTerm="@Model.SearchTerm" asp-route-pageSize="@Model.PageSize">
+                        <span aria-hidden="true">&laquo;</span> السابق
+                    </a>
+                </li>
+                @{
+                    var startPage = Math.Max(1, Model.CurrentPage - 2);
+                    var endPage = Math.Min(Model.TotalPages, Model.CurrentPage + 2);
+                    if (endPage - startPage < 4)
+                    {
+                        var adjustment = 4 - (endPage - startPage);
+                        startPage = Math.Max(1, startPage - adjustment);
+                        endPage = Math.Min(Model.TotalPages, startPage + 4);
+                    }
+                    for (var pageNumber = startPage; pageNumber <= endPage; pageNumber++)
+                    {
+                        <li class="page-item @(pageNumber == Model.CurrentPage ? "active" : null)">
+                            <a class="page-link" asp-action="Index" asp-route-page="@pageNumber" asp-route-searchTerm="@Model.SearchTerm" asp-route-pageSize="@Model.PageSize">@pageNumber</a>
+                        </li>
+                    }
+                }
+                <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : null)">
+                    <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage + 1)" asp-route-searchTerm="@Model.SearchTerm" asp-route-pageSize="@Model.PageSize">
+                        التالي <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
     </div>
 </div>
 
 @section Styles {
     <style>
-        #usersGrid {
-            min-height: 300px;
-            width: 100%;
+        #usersTable tbody tr td {
+            vertical-align: middle;
         }
 
-        #usersGrid .e-grid {
-            direction: rtl;
-            font-size: 0.95rem;
-        }
-
-        #usersGrid .e-grid .e-headercelldiv,
-        #usersGrid .e-grid .e-rowcell {
-            text-align: right;
-        }
-
-        #usersGrid .e-grid .e-rowcell .badge {
-            font-size: 0.85rem;
-        }
-
-        #usersGrid .e-grid .user-actions .btn {
+        #usersTable .user-actions .btn {
             min-width: 36px;
-        }
-
-        #usersGrid .e-grid .e-emptyrecord {
-            padding: 3rem 1rem;
-            color: #6c757d;
-        }
-
-        #usersPageInfo {
-            pointer-events: none;
         }
     </style>
 }
 
 @section Scripts {
-    <script src="~/js/users.syncfusion.js" asp-append-version="true"></script>
+    <script src="~/js/users.table.js" asp-append-version="true"></script>
 }

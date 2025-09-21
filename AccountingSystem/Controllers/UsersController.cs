@@ -6,7 +6,6 @@ using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Syncfusion.EJ2.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,18 +26,41 @@ namespace AccountingSystem.Controllers
         }
 
         [Authorize(Policy = "users.view")]
-        public IActionResult Index()
+        public async Task<IActionResult> Index(string? searchTerm, int page = 1, int pageSize = 20)
         {
-            return View();
-        }
+            page = Math.Max(page, 1);
+            pageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
 
-        [Authorize(Policy = "users.view")]
-        public async Task<IActionResult> GridData([FromBody] DataManagerRequest request)
-        {
-            request ??= new DataManagerRequest();
+            var query = _userManager.Users.AsNoTracking();
 
-            var users = await _userManager.Users
-                .AsNoTracking()
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var trimmed = searchTerm.Trim();
+                var likeExpression = $"%{trimmed}%";
+
+                query = query.Where(u =>
+                    (u.Email != null && EF.Functions.Like(u.Email, likeExpression)) ||
+                    EF.Functions.Like((u.FirstName ?? string.Empty) + " " + (u.LastName ?? string.Empty), likeExpression));
+            }
+
+            var totalCount = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+            if (totalPages == 0)
+            {
+                totalPages = 1;
+            }
+
+            if (page > totalPages)
+            {
+                page = totalPages;
+            }
+
+            var skip = (page - 1) * pageSize;
+
+            var users = await query
+                .OrderBy(u => u.Email)
+                .Skip(skip)
+                .Take(pageSize)
                 .Select(u => new UserListViewModel
                 {
                     Id = u.Id,
@@ -49,36 +71,17 @@ namespace AccountingSystem.Controllers
                 })
                 .ToListAsync();
 
-            IEnumerable<UserListViewModel> data = users;
-            var operation = new DataOperations();
-
-            if (request.Search != null && request.Search.Count > 0)
+            var model = new UsersIndexViewModel
             {
-                data = operation.PerformSearching(data, request.Search).Cast<UserListViewModel>();
-            }
+                Users = users,
+                SearchTerm = searchTerm?.Trim() ?? string.Empty,
+                CurrentPage = page,
+                PageSize = pageSize,
+                TotalPages = totalPages,
+                TotalCount = totalCount
+            };
 
-            if (request.Sorted != null && request.Sorted.Count > 0)
-            {
-                data = operation.PerformSorting(data, request.Sorted).Cast<UserListViewModel>();
-            }
-            else
-            {
-                data = data.OrderBy(u => u.Email, StringComparer.OrdinalIgnoreCase);
-            }
-
-            var count = data.Count();
-
-            if (request.Skip != 0)
-            {
-                data = operation.PerformSkip(data, request.Skip).Cast<UserListViewModel>();
-            }
-
-            if (request.Take != 0)
-            {
-                data = operation.PerformTake(data, request.Take).Cast<UserListViewModel>();
-            }
-
-            return Json(new { result = data, count });
+            return View(model);
         }
 
         [Authorize(Policy = "users.create")]

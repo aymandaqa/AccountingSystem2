@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -10,6 +11,16 @@ namespace AccountingSystem.ViewModels
         public string FullName { get; set; } = string.Empty;
         public bool IsActive { get; set; }
         public DateTime? LastLoginAt { get; set; }
+    }
+
+    public class UsersIndexViewModel
+    {
+        public List<UserListViewModel> Users { get; set; } = new List<UserListViewModel>();
+        public string SearchTerm { get; set; } = string.Empty;
+        public int CurrentPage { get; set; }
+        public int TotalPages { get; set; }
+        public int PageSize { get; set; }
+        public int TotalCount { get; set; }
     }
 
     public class PermissionSelectionViewModel
