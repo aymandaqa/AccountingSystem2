@@ -33,16 +33,46 @@
         </div>
         <div class="mb-3">
             <label class="form-label">الفروع</label>
-            <select asp-for="BranchIds" asp-items="Model.Branches" class="form-select" multiple></select>
+            <div class="row g-2">
+                @foreach (var branch in Model.Branches)
+                {
+                    <div class="col-md-4 col-sm-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="BranchIds" value="@branch.Value" id="branch_@branch.Value" @(branch.Selected ? "checked" : string.Empty) />
+                            <label class="form-check-label" for="branch_@branch.Value">@branch.Text</label>
+                        </div>
+                    </div>
+                }
+            </div>
             <span asp-validation-for="BranchIds" class="text-danger"></span>
         </div>
         <div class="mb-3">
             <label class="form-label">فروع حساب السائق</label>
-            <select asp-for="DriverAccountBranchIds" asp-items="Model.DriverBranches" class="form-select" multiple></select>
+            <div class="row g-2">
+                @foreach (var branch in Model.DriverBranches)
+                {
+                    <div class="col-md-4 col-sm-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="DriverAccountBranchIds" value="@branch.Value" id="driver-branch_@branch.Value" @(branch.Selected ? "checked" : string.Empty) />
+                            <label class="form-check-label" for="driver-branch_@branch.Value">@branch.Text</label>
+                        </div>
+                    </div>
+                }
+            </div>
         </div>
         <div class="mb-3">
             <label class="form-label">فروع حساب البزنس</label>
-            <select asp-for="BusinessAccountBranchIds" asp-items="Model.BusinessBranches" class="form-select" multiple></select>
+            <div class="row g-2">
+                @foreach (var branch in Model.BusinessBranches)
+                {
+                    <div class="col-md-4 col-sm-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="BusinessAccountBranchIds" value="@branch.Value" id="business-branch_@branch.Value" @(branch.Selected ? "checked" : string.Empty) />
+                            <label class="form-check-label" for="business-branch_@branch.Value">@branch.Text</label>
+                        </div>
+                    </div>
+                }
+            </div>
         </div>
         <div class="mb-3">
             <label asp-for="PaymentBranchId" class="form-label"></label>

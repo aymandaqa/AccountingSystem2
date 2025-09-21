@@ -90,11 +90,13 @@ namespace AccountingSystem.Controllers
         public async Task<IActionResult> Create()
         {
             var model = new CreateUserViewModel();
+            var selectedBranchIds = new HashSet<int>(model.BranchIds ?? new List<int>());
             model.Branches = await _context.Branches
                 .Select(b => new SelectListItem
                 {
                     Value = b.Id.ToString(),
-                    Text = b.NameAr
+                    Text = b.NameAr,
+                    Selected = selectedBranchIds.Contains(b.Id)
                 }).ToListAsync();
             model.PaymentBranches = await _context.Branches
                 .Select(b => new SelectListItem
@@ -125,6 +127,10 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "users.create")]
         public async Task<IActionResult> Create(CreateUserViewModel model)
         {
+            model.BranchIds ??= new List<int>();
+            model.DriverAccountBranchIds ??= new List<int>();
+            model.BusinessAccountBranchIds ??= new List<int>();
+
             if (ModelState.IsValid)
             {
                 var user = new User
@@ -181,11 +187,13 @@ namespace AccountingSystem.Controllers
                 foreach (var error in result.Errors)
                     ModelState.AddModelError(string.Empty, error.Description);
             }
+            var selectedBranchIds = new HashSet<int>(model.BranchIds ?? new List<int>());
             model.Branches = await _context.Branches
                 .Select(b => new SelectListItem
                 {
                     Value = b.Id.ToString(),
-                    Text = b.NameAr
+                    Text = b.NameAr,
+                    Selected = selectedBranchIds.Contains(b.Id)
                 }).ToListAsync();
             model.PaymentBranches = await _context.Branches
                 .Select(b => new SelectListItem
@@ -286,7 +294,15 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "users.edit")]
         public async Task<IActionResult> Edit(EditUserViewModel model)
         {
-            if (!ModelState.IsValid) return View(model);
+            model.BranchIds ??= new List<int>();
+            model.DriverAccountBranchIds ??= new List<int>();
+            model.BusinessAccountBranchIds ??= new List<int>();
+
+            if (!ModelState.IsValid)
+            {
+                await PopulateEditSelectionsAsync(model);
+                return View(model);
+            }
 
             var user = await _userManager.FindByIdAsync(model.Id);
             if (user == null) return NotFound();
@@ -348,47 +364,7 @@ namespace AccountingSystem.Controllers
             foreach (var error in result.Errors)
                 ModelState.AddModelError(string.Empty, error.Description);
 
-            model.Branches = await _context.Branches
-                .Select(b => new SelectListItem
-                {
-                    Value = b.Id.ToString(),
-                    Text = b.NameAr,
-                    Selected = model.BranchIds.Contains(b.Id)
-                }).ToListAsync();
-            model.PaymentBranches = await _context.Branches
-                .Select(b => new SelectListItem
-                {
-                    Value = b.Id.ToString(),
-                    Text = b.NameAr,
-                    Selected = b.Id == model.PaymentBranchId
-                }).ToListAsync();
-            model.DriverBranches = await BuildCompanyBranchSelectListAsync(model.DriverAccountBranchIds ?? new List<int>());
-            model.BusinessBranches = await BuildCompanyBranchSelectListAsync(model.BusinessAccountBranchIds ?? new List<int>());
-            var userAccountsEdit = await _context.UserPaymentAccounts
-                .Where(upa => upa.UserId == model.Id)
-                .ToListAsync();
-            var currenciesEdit = await _context.Currencies.ToListAsync();
-            model.CurrencyAccounts = new List<UserCurrencyAccountViewModel>();
-            foreach (var currency in currenciesEdit)
-            {
-                var accountList = await _context.Accounts
-                    .Where(a => a.CanPostTransactions && a.CurrencyId == currency.Id)
-                    .ToListAsync();
-
-                var accounts = accountList.Select(a => new SelectListItem
-                {
-                    Value = a.Id.ToString(),
-                    Text = $"{a.Code} - {a.NameAr}",
-                    Selected = userAccountsEdit.Any(ua => ua.CurrencyId == currency.Id && ua.AccountId == a.Id)
-                }).ToList();
-                model.CurrencyAccounts.Add(new UserCurrencyAccountViewModel
-                {
-                    CurrencyId = currency.Id,
-                    CurrencyName = currency.Name,
-                    AccountId = userAccountsEdit.FirstOrDefault(ua => ua.CurrencyId == currency.Id)?.AccountId,
-                    Accounts = accounts
-                });
-            }
+            await PopulateEditSelectionsAsync(model);
             return View(model);
         }
 
@@ -425,6 +401,59 @@ namespace AccountingSystem.Controllers
                 .ToList();
 
             return normalized.Count == 0 ? null : string.Join(",", normalized);
+        }
+
+        private async Task PopulateEditSelectionsAsync(EditUserViewModel model)
+        {
+            var selectedBranchIds = new HashSet<int>(model.BranchIds ?? new List<int>());
+
+            model.Branches = await _context.Branches
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = b.NameAr,
+                    Selected = selectedBranchIds.Contains(b.Id)
+                }).ToListAsync();
+
+            model.PaymentBranches = await _context.Branches
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = b.NameAr,
+                    Selected = b.Id == model.PaymentBranchId
+                }).ToListAsync();
+
+            model.DriverBranches = await BuildCompanyBranchSelectListAsync(model.DriverAccountBranchIds ?? new List<int>());
+            model.BusinessBranches = await BuildCompanyBranchSelectListAsync(model.BusinessAccountBranchIds ?? new List<int>());
+
+            var userAccounts = await _context.UserPaymentAccounts
+                .Where(upa => upa.UserId == model.Id)
+                .ToListAsync();
+
+            var currencies = await _context.Currencies.ToListAsync();
+            model.CurrencyAccounts = new List<UserCurrencyAccountViewModel>();
+
+            foreach (var currency in currencies)
+            {
+                var accountList = await _context.Accounts
+                    .Where(a => a.CanPostTransactions && a.CurrencyId == currency.Id)
+                    .ToListAsync();
+
+                var accounts = accountList.Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = $"{a.Code} - {a.NameAr}",
+                    Selected = userAccounts.Any(ua => ua.CurrencyId == currency.Id && ua.AccountId == a.Id)
+                }).ToList();
+
+                model.CurrencyAccounts.Add(new UserCurrencyAccountViewModel
+                {
+                    CurrencyId = currency.Id,
+                    CurrencyName = currency.Name,
+                    AccountId = userAccounts.FirstOrDefault(ua => ua.CurrencyId == currency.Id)?.AccountId,
+                    Accounts = accounts
+                });
+            }
         }
 
         private async Task<List<SelectListItem>> BuildCompanyBranchSelectListAsync(IEnumerable<int>? selectedIds)
