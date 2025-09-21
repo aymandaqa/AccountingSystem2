@@ -18,11 +18,13 @@ namespace AccountingSystem.Controllers
     {
         private readonly UserManager<User> _userManager;
         private readonly ApplicationDbContext _context;
+        private readonly RoadFnDbContext _roadContext;
 
-        public UsersController(UserManager<User> userManager, ApplicationDbContext context)
+        public UsersController(UserManager<User> userManager, ApplicationDbContext context, RoadFnDbContext roadContext)
         {
             _userManager = userManager;
             _context = context;
+            _roadContext = roadContext;
         }
 
         [Authorize(Policy = "users.view")]
@@ -100,6 +102,8 @@ namespace AccountingSystem.Controllers
                     Value = b.Id.ToString(),
                     Text = b.NameAr
                 }).ToListAsync();
+            model.DriverBranches = await BuildCompanyBranchSelectListAsync(Enumerable.Empty<int>());
+            model.BusinessBranches = await BuildCompanyBranchSelectListAsync(Enumerable.Empty<int>());
             model.CurrencyAccounts = await _context.Currencies
                 .Select(c => new UserCurrencyAccountViewModel
                 {
@@ -131,7 +135,9 @@ namespace AccountingSystem.Controllers
                     LastName = model.LastName,
                     IsActive = model.IsActive,
                     PaymentBranchId = model.PaymentBranchId,
-                    ExpenseLimit = model.ExpenseLimit
+                    ExpenseLimit = model.ExpenseLimit,
+                    DriverAccountBranchIds = ConvertIdsToString(model.DriverAccountBranchIds),
+                    BusinessAccountBranchIds = ConvertIdsToString(model.BusinessAccountBranchIds)
                 };
 
                 var baseCurrencyId = await _context.Currencies
@@ -187,6 +193,8 @@ namespace AccountingSystem.Controllers
                     Value = b.Id.ToString(),
                     Text = b.NameAr
                 }).ToListAsync();
+            model.DriverBranches = await BuildCompanyBranchSelectListAsync(model.DriverAccountBranchIds ?? new List<int>());
+            model.BusinessBranches = await BuildCompanyBranchSelectListAsync(model.BusinessAccountBranchIds ?? new List<int>());
             model.CurrencyAccounts = await _context.Currencies
                 .Select(c => new UserCurrencyAccountViewModel
                 {
@@ -223,7 +231,9 @@ namespace AccountingSystem.Controllers
                     .Select(ub => ub.BranchId)
                     .ToListAsync(),
                 PaymentBranchId = user.PaymentBranchId,
-                ExpenseLimit = user.ExpenseLimit
+                ExpenseLimit = user.ExpenseLimit,
+                DriverAccountBranchIds = ParseIds(user.DriverAccountBranchIds),
+                BusinessAccountBranchIds = ParseIds(user.BusinessAccountBranchIds)
             };
 
             model.Branches = await _context.Branches
@@ -240,6 +250,8 @@ namespace AccountingSystem.Controllers
                     Text = b.NameAr,
                     Selected = b.Id == model.PaymentBranchId
                 }).ToListAsync();
+            model.DriverBranches = await BuildCompanyBranchSelectListAsync(model.DriverAccountBranchIds);
+            model.BusinessBranches = await BuildCompanyBranchSelectListAsync(model.BusinessAccountBranchIds);
             var userAccounts = await _context.UserPaymentAccounts
                 .Where(upa => upa.UserId == id)
                 .ToListAsync();
@@ -286,6 +298,8 @@ namespace AccountingSystem.Controllers
             user.IsActive = model.IsActive;
             user.PaymentBranchId = model.PaymentBranchId;
             user.ExpenseLimit = model.ExpenseLimit;
+            user.DriverAccountBranchIds = ConvertIdsToString(model.DriverAccountBranchIds);
+            user.BusinessAccountBranchIds = ConvertIdsToString(model.BusinessAccountBranchIds);
 
             var baseCurrencyIdEdit = await _context.Currencies
                 .Where(c => c.IsBase)
@@ -348,6 +362,8 @@ namespace AccountingSystem.Controllers
                     Text = b.NameAr,
                     Selected = b.Id == model.PaymentBranchId
                 }).ToListAsync();
+            model.DriverBranches = await BuildCompanyBranchSelectListAsync(model.DriverAccountBranchIds ?? new List<int>());
+            model.BusinessBranches = await BuildCompanyBranchSelectListAsync(model.BusinessAccountBranchIds ?? new List<int>());
             var userAccountsEdit = await _context.UserPaymentAccounts
                 .Where(upa => upa.UserId == model.Id)
                 .ToListAsync();
@@ -374,6 +390,56 @@ namespace AccountingSystem.Controllers
                 });
             }
             return View(model);
+        }
+
+        private static List<int> ParseIds(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return new List<int>();
+            }
+
+            return value
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(token =>
+                {
+                    var trimmed = token.Trim();
+                    return int.TryParse(trimmed, out var parsed) ? (int?)parsed : null;
+                })
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .Distinct()
+                .ToList();
+        }
+
+        private static string? ConvertIdsToString(IEnumerable<int>? ids)
+        {
+            if (ids == null)
+            {
+                return null;
+            }
+
+            var normalized = ids
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+
+            return normalized.Count == 0 ? null : string.Join(",", normalized);
+        }
+
+        private async Task<List<SelectListItem>> BuildCompanyBranchSelectListAsync(IEnumerable<int>? selectedIds)
+        {
+            var selectedSet = new HashSet<int>(selectedIds ?? Enumerable.Empty<int>());
+
+            return await _roadContext.CompanyBranches
+                .OrderBy(b => b.BranchName)
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = b.BranchName ?? string.Empty,
+                    Selected = selectedSet.Contains(b.Id)
+                })
+                .ToListAsync();
         }
 
         [Authorize(Policy = "users.edit")]
