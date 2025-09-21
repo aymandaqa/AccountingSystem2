@@ -37,6 +37,14 @@
             <span asp-validation-for="BranchIds" class="text-danger"></span>
         </div>
         <div class="mb-3">
+            <label class="form-label">فروع حساب السائق</label>
+            <select asp-for="DriverAccountBranchIds" asp-items="Model.DriverBranches" class="form-select" multiple></select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">فروع حساب البزنس</label>
+            <select asp-for="BusinessAccountBranchIds" asp-items="Model.BusinessBranches" class="form-select" multiple></select>
+        </div>
+        <div class="mb-3">
             <label asp-for="PaymentBranchId" class="form-label"></label>
             <select asp-for="PaymentBranchId" asp-items="Model.PaymentBranches" class="form-select">
                 <option value="">-- اختر فرع الدفع --</option>

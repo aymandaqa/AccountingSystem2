@@ -24,6 +24,8 @@ namespace AccountingSystem.Models
 
         public int? PaymentAccountId { get; set; }
         public int? PaymentBranchId { get; set; }
+        public string? DriverAccountBranchIds { get; set; }
+        public string? BusinessAccountBranchIds { get; set; }
         public decimal ExpenseLimit { get; set; } = 0;
 
         // Navigation properties

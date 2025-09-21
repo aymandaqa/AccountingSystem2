@@ -63,8 +63,12 @@ namespace AccountingSystem.ViewModels
         public List<int> BranchIds { get; set; } = new List<int>();
         public int? PaymentBranchId { get; set; }
         public decimal ExpenseLimit { get; set; }
+        public List<int> DriverAccountBranchIds { get; set; } = new List<int>();
+        public List<int> BusinessAccountBranchIds { get; set; } = new List<int>();
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> PaymentBranches { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> DriverBranches { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> BusinessBranches { get; set; } = new List<SelectListItem>();
         public List<UserCurrencyAccountViewModel> CurrencyAccounts { get; set; } = new List<UserCurrencyAccountViewModel>();
     }
 
@@ -90,8 +94,12 @@ namespace AccountingSystem.ViewModels
         public List<int> BranchIds { get; set; } = new List<int>();
         public int? PaymentBranchId { get; set; }
         public decimal ExpenseLimit { get; set; }
+        public List<int> DriverAccountBranchIds { get; set; } = new List<int>();
+        public List<int> BusinessAccountBranchIds { get; set; } = new List<int>();
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> PaymentBranches { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> DriverBranches { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> BusinessBranches { get; set; } = new List<SelectListItem>();
         public List<UserCurrencyAccountViewModel> CurrencyAccounts { get; set; } = new List<UserCurrencyAccountViewModel>();
     }
 
