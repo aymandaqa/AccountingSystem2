@@ -1,29 +1,141 @@
 @model AccountingSystem.ViewModels.ManageUserPermissionsViewModel
+@using System.Linq
 @{
     ViewData["Title"] = "صلاحيات المستخدم";
+    var groupedPermissions = Model.Permissions
+        .Select((permission, index) => new { Permission = permission, Index = index })
+        .GroupBy(x => x.Permission.Category)
+        .OrderBy(group => group.Key)
+        .ToList();
 }
 
-<h1 class="mb-4">صلاحيات المستخدم - @Model.UserName</h1>
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-10 col-xl-9">
+        <form asp-action="ManagePermissions" method="post" class="mb-4">
+            <input type="hidden" asp-for="UserId" />
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                        <div>
+                            <h1 class="h4 mb-1">صلاحيات المستخدم</h1>
+                            <p class="text-muted mb-0">@Model.UserName</p>
+                        </div>
+                        <span class="badge bg-light text-primary border fw-semibold px-3 py-2">
+                            إجمالي الصلاحيات: @Model.Permissions.Count
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <label for="permissionSearch" class="form-label fw-semibold">ابحث في الصلاحيات</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
+                            <input type="search" id="permissionSearch" class="form-control" placeholder="ابحث باسم الصلاحية أو الفئة" autocomplete="off" />
+                        </div>
+                    </div>
 
-<form asp-action="ManagePermissions" method="post">
-    <input type="hidden" asp-for="UserId" />
-    @for (int i = 0; i < Model.Permissions.Count; i++)
-    {
-        var perm = Model.Permissions[i];
-        if (i == 0 || Model.Permissions[i - 1].Category != perm.Category)
-        {
-            <h5 class="mt-3">@perm.Category</h5>
-        }
-        <div class="form-check ms-3">
-            <input asp-for="Permissions[i].IsGranted" class="form-check-input" />
-            <input asp-for="Permissions[i].PermissionId" type="hidden" />
-            <input asp-for="Permissions[i].DisplayName" type="hidden" />
-            <input asp-for="Permissions[i].Category" type="hidden" />
-            <label class="form-check-label" asp-for="Permissions[i].IsGranted">@perm.DisplayName</label>
-        </div>
-    }
-    <div class="mt-4">
-        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ</button>
-        <a asp-action="Index" class="btn btn-secondary">عودة</a>
+                    <div class="accordion" id="permissionAccordion">
+                        @for (int categoryIndex = 0; categoryIndex < groupedPermissions.Count; categoryIndex++)
+                        {
+                            var categoryGroup = groupedPermissions[categoryIndex];
+                            var collapseId = $"permissionCategory{categoryIndex}";
+                            var headingId = $"permissionHeading{categoryIndex}";
+                            <div class="accordion-item permission-category mb-2" data-category-name="@categoryGroup.Key.ToLowerInvariant()">
+                                <h2 class="accordion-header" id="@headingId">
+                                    <button class="accordion-button @((categoryIndex == 0) ? string.Empty : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId" aria-expanded="@(categoryIndex == 0 ? "true" : "false")" aria-controls="@collapseId">
+                                        <span class="fw-semibold">@categoryGroup.Key</span>
+                                        <span class="badge bg-secondary ms-3 permission-count">@categoryGroup.Count()</span>
+                                    </button>
+                                </h2>
+                                <div id="@collapseId" class="accordion-collapse collapse @((categoryIndex == 0) ? "show" : string.Empty)" aria-labelledby="@headingId" data-bs-parent="#permissionAccordion">
+                                    <div class="accordion-body">
+                                        <div class="row g-3">
+                                            @foreach (var entry in categoryGroup)
+                                            {
+                                                var permission = entry.Permission;
+                                                var index = entry.Index;
+                                                var searchData = $"{permission.DisplayName} {permission.Category}".ToLowerInvariant();
+                                                <div class="col-sm-6 permission-item" data-permission-text="@searchData">
+                                                    <div class="form-check rounded border p-3 h-100 shadow-sm">
+                                                        <input asp-for="Permissions[index].IsGranted" class="form-check-input me-2" />
+                                                        <input asp-for="Permissions[index].PermissionId" type="hidden" />
+                                                        <input asp-for="Permissions[index].DisplayName" type="hidden" />
+                                                        <input asp-for="Permissions[index].Category" type="hidden" />
+                                                        <label class="form-check-label fw-semibold" asp-for="Permissions[index].IsGranted">@permission.DisplayName</label>
+                                                        <div class="text-muted small mt-1">ضمن فئة: @permission.Category</div>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div id="noResultsMessage" class="alert alert-light border d-none text-center mt-4" role="status">
+                        لا توجد صلاحيات مطابقة لبحثك.
+                    </div>
+                </div>
+                <div class="card-footer bg-white d-flex flex-column flex-sm-row gap-2 justify-content-end">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save ms-1"></i> حفظ</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">عودة</a>
+                </div>
+            </div>
+        </form>
     </div>
-</form>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const searchInput = document.getElementById('permissionSearch');
+            const categories = Array.from(document.querySelectorAll('.permission-category'));
+            const noResultsMessage = document.getElementById('noResultsMessage');
+
+            function updateFilter() {
+                const query = (searchInput.value || '').trim().toLowerCase();
+                let anyVisible = false;
+
+                categories.forEach(category => {
+                    const categoryName = (category.dataset.categoryName || '').toLowerCase();
+                    const items = Array.from(category.querySelectorAll('.permission-item'));
+                    let visibleCount = 0;
+
+                    items.forEach(item => {
+                        const text = (item.dataset.permissionText || '').toLowerCase();
+                        const matches = !query || text.includes(query) || categoryName.includes(query);
+
+                        if (matches) {
+                            item.classList.remove('d-none');
+                            visibleCount++;
+                        } else {
+                            item.classList.add('d-none');
+                        }
+                    });
+
+                    const badge = category.querySelector('.permission-count');
+                    if (badge) {
+                        badge.textContent = visibleCount;
+                    }
+
+                    if (visibleCount > 0) {
+                        category.classList.remove('d-none');
+                        anyVisible = true;
+                    } else {
+                        category.classList.add('d-none');
+                    }
+                });
+
+                if (noResultsMessage) {
+                    noResultsMessage.classList.toggle('d-none', anyVisible);
+                }
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', updateFilter);
+                updateFilter();
+            }
+        });
+    </script>
+}
