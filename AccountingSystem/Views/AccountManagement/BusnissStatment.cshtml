@@ -57,10 +57,12 @@
                                 </ejs-dropdownlist>
                                 </div>    </div>*@
                                 <div class="col-xs-6 col-sm-3">
-                                    <ejs-multiselect id="CompanyBranches" name="CompanyBranches" Query="new ej.data.Query()"
-                                                     allowFiltering="true" dataSource="@ViewBag.CompanyBranches" placeholder="الفروع" change="GetBus" mode="Box">
-                                        <e-multiselect-fields text="BranchName" value="Id"></e-multiselect-fields>
-                                    </ejs-multiselect>
+                                    <ejs-dropdownlist id="CompanyBranches" name="CompanyBranches" Query="new ej.data.Query()"
+                                                      allowFiltering="true" dataSource="@ViewBag.CompanyBranches" placeholder="الفرع" change="GetBus">
+
+
+                                        <e-dropdownlist-fields text="BranchName" value="Id"></e-dropdownlist-fields>
+                                    </ejs-dropdownlist>
                                 </div>
                                 <div class="col-xs-6 col-sm-3">
                                     <ejs-dropdownlist id="User" name="User" Query="new ej.data.Query()"
@@ -295,10 +297,8 @@
         var User = document.getElementById('User').ej2_instances[0]; // Grid instance
         User.value = null;
         var CompanyBranches = document.getElementById('CompanyBranches').ej2_instances[0]; // Grid instance
-        var selectedBranches = CompanyBranches.value || [];
-        var queryString = selectedBranches.length > 0 ? '?branchIds=' + encodeURIComponent(selectedBranches.join(',')) : '';
         User.dataSource = new ej.data.DataManager({
-            url: '/AccountManagement/GetBusnissUser' + queryString,
+            url: '/AccountManagement/GetBusnissUser?branchId=' + CompanyBranches.value,
             adaptor: new ej.data.UrlAdaptor()
         });
     }

@@ -85,50 +85,25 @@ namespace Roadfn.Controllers
             ViewBag.CompanyBranches = await _context.CompanyBranches.ToListAsync();
             return View();
         }
-        public async Task<IActionResult> GetBusnissUser([FromBody] Data dm, string? branchIds, int branchId = 0)
+        public async Task<IActionResult> GetBusnissUser([FromBody] Data dm, int branchId)
         {
-            var selectedBranchIds = ParseIdList(branchIds);
-
-            if (branchId != 0 && !selectedBranchIds.Contains(branchId))
+            var t = from c in _context.BusinessStatementBulk
+                    where c.CompanyBranchID == branchId
+                    select new
+                    {
+                        Id = c.SenderId,
+                        Name = c.SenderName
+                    };
+            var Data = await t.ToListAsync();
+            if (dm.where != null)
             {
-                selectedBranchIds.Add(branchId);
+                Data = (from cust in Data
+                        where cust.Name.ToLower().Contains(dm.@where[0].value.ToString())
+                        select cust).ToList();
             }
-
-            selectedBranchIds = selectedBranchIds.Distinct().ToList();
-
-            if (!selectedBranchIds.Any())
-            {
-                return Json(new List<object>());
-            }
-
-            var query = from c in _context.BusinessStatementBulk
-                        where selectedBranchIds.Contains(c.CompanyBranchID)
-                        select new
-                        {
-                            Id = c.SenderId,
-                            Name = c.SenderName
-                        };
-
-            var data = await query.Distinct().ToListAsync();
-
-            if (dm?.where != null && dm.where.Count > 0)
-            {
-                var searchValue = dm.where[0].value?.ToString();
-                if (!string.IsNullOrWhiteSpace(searchValue))
-                {
-                    data = data
-                        .Where(cust => !string.IsNullOrWhiteSpace(cust.Name) &&
-                                       cust.Name.Contains(searchValue, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-                }
-            }
-
-            if (dm?.take > 0)
-            {
-                data = data.Take(dm.take).ToList();
-            }
-
-            return Json(data);
+            if (dm.take != 0)
+                Data = Data.Take(dm.take).ToList();
+            return Json(Data);
         }
         public async Task<IActionResult> GetMBusnissUser([FromBody] Data dm, int user)
         {
@@ -170,50 +145,25 @@ namespace Roadfn.Controllers
                 Data = Data.Take(dm.take).ToList();
             return Json(Data);
         }
-        public async Task<IActionResult> GetDrivers([FromBody] Data dm, string? ids, int? id = null)
+        public async Task<IActionResult> GetDrivers([FromBody] Data dm, int Id = 0)
         {
-            var selectedBranchIds = ParseIdList(ids);
-
-            if (id.HasValue && id.Value != 0 && !selectedBranchIds.Contains(id.Value))
+            var t = from c in _context.DriverPay
+                    where c.BranchID == Id
+                    select new
+                    {
+                        Id = c.DriverID,
+                        Name = c.DriverName
+                    };
+            var Data = await t.ToListAsync();
+            if (dm.where != null)
             {
-                selectedBranchIds.Add(id.Value);
+                Data = (from cust in Data
+                        where cust.Name.ToLower().Contains(dm.@where[0].value.ToString())
+                        select cust).ToList();
             }
-
-            selectedBranchIds = selectedBranchIds.Distinct().ToList();
-
-            if (!selectedBranchIds.Any())
-            {
-                return Json(new List<object>());
-            }
-
-            var query = from c in _context.DriverPay
-                        where selectedBranchIds.Contains(c.BranchID)
-                        select new
-                        {
-                            Id = c.DriverID,
-                            Name = c.DriverName
-                        };
-
-            var data = await query.Distinct().ToListAsync();
-
-            if (dm?.where != null && dm.where.Count > 0)
-            {
-                var searchValue = dm.where[0].value?.ToString();
-                if (!string.IsNullOrWhiteSpace(searchValue))
-                {
-                    data = data
-                        .Where(cust => !string.IsNullOrWhiteSpace(cust.Name) &&
-                                       cust.Name.Contains(searchValue, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-                }
-            }
-
-            if (dm?.take > 0)
-            {
-                data = data.Take(dm.take).ToList();
-            }
-
-            return Json(data);
+            if (dm.take != 0)
+                Data = Data.Take(dm.take).ToList();
+            return Json(Data);
         }
 
         [Authorize(Policy = "accountmanagement.receivepayments")]
@@ -2229,25 +2179,6 @@ namespace Roadfn.Controllers
             //sb.AppendLine("</body>");
             //sb.AppendLine("</html>");
             return sb.ToString();
-        }
-
-        private static List<int> ParseIdList(string? rawIds)
-        {
-            if (string.IsNullOrWhiteSpace(rawIds))
-            {
-                return new List<int>();
-            }
-
-            return rawIds
-                .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(token =>
-                {
-                    var trimmed = token.Trim();
-                    return int.TryParse(trimmed, out var parsed) ? (int?)parsed : null;
-                })
-                .Where(value => value.HasValue)
-                .Select(value => value!.Value)
-                .ToList();
         }
 
     }
