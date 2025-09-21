@@ -170,10 +170,13 @@
     }
 
     <!-- أرصدة الصناديق -->
-    @if (canViewCashBoxes)
-    {
-        <div class="row mb-4">
-            <div class="col-12">
+    <!-- أرصدة الحسابات -->
+
+    <div class="row mb-4">
+
+        @if (canViewCashBoxes)
+        {
+            <div class="col-4">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">
@@ -244,14 +247,11 @@
                     </div>
                 </div>
             </div>
-        </div>
-    }
+        }
 
-    <!-- أرصدة الحسابات -->
-    @if (canViewAccounts)
-    {
-        <div class="row mb-4">
-            <div class="col-12">
+        @if (canViewAccounts)
+        {
+            <div class="col-8">
                 <div class="card">
                     <div class="card-header">
                         <h5 class="card-title mb-0">
@@ -278,8 +278,9 @@
                     </div>
                 </div>
             </div>
-        </div>
-    }
+        }
+    </div>
+
 
     <!-- الروابط السريعة -->
     @if (canViewLinks)

@@ -36,7 +36,11 @@ namespace Roadfn.Controllers
         [Authorize(Policy = "accountmanagement.driverstatment")]
         public async Task<IActionResult> DriverStatment()
         {
-            ViewBag.CompanyBranches = await _context.CompanyBranches.ToListAsync();
+
+            var user = await _accontext.Users.FirstOrDefaultAsync(t => t.UserName == User.Identity.Name);
+
+            var br = user.DriverAccountBranchIds.Split(",");
+            ViewBag.CompanyBranches = await _context.CompanyBranches.Where(t => br.Contains(t.Id.ToString())).ToListAsync();
 
             return View();
         }
@@ -64,7 +68,13 @@ namespace Roadfn.Controllers
                     };
             ViewBag.User = await t.ToListAsync();
             ViewBag.InvoiceStatus = await _context.InvoiceStatus.ToListAsync();
-            ViewBag.CompanyBranches = await _context.CompanyBranches.ToListAsync();
+
+            var user = await _accontext.Users.FirstOrDefaultAsync(t => t.UserName == User.Identity.Name);
+
+            var br = user.BusinessAccountBranchIds.Split(",");
+            ViewBag.CompanyBranches = await _context.CompanyBranches.Where(t => br.Contains(t.Id.ToString())).ToListAsync();
+
+
             return View();
         }
         [Authorize(Policy = "accountmanagement.busnissshipmentsreturn")]
@@ -524,7 +534,12 @@ namespace Roadfn.Controllers
                     };
             ViewBag.User = await t.ToListAsync();
             ViewBag.InvoiceStatus = await _context.InvoiceStatus.ToListAsync();
-            ViewBag.CompanyBranches = await _context.CompanyBranches.ToListAsync();
+
+            var user = await _accontext.Users.FirstOrDefaultAsync(t => t.UserName == User.Identity.Name);
+
+            var br = user.BusinessAccountBranchIds.Split(",");
+            ViewBag.CompanyBranches = await _context.CompanyBranches.Where(t => br.Contains(t.Id.ToString())).ToListAsync();
+
             return View();
         }
         [Authorize(Policy = "accountmanagement.businessretstatementbulk")]

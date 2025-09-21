@@ -6,64 +6,72 @@
 }
 
 
-<div class="container-full" id="mains">
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
 
 
-    <!-- Main content -->
-    <section class="content">
-        <div class="row">
-            <div class="col-12">
-                <div class="box">
-                    <div class="box-body">
-                        <div class="table-responsive col-12" id="bodytarg2">
-                            <table class="table" style="font-size:15px; color:#1dbfc1">
-                                <tbody>
-                                    <tr>
-                                        <th style="width:100%">
-                                            <button class="btn btn-primary btn-sm" id="Excel" onclick="ExportExcel()">  <i class="ti-layout"></i> اكسل</button>
-                                            <button class="btn btn-primary btn-sm" onclick="print()" id="Print">  <i class="ti-printer"></i> طباعة</button>
+            <!-- Main content -->
+            <section class="content">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="box">
+                            <div class="box-body">
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="table-responsive col-12" id="bodytarg2">
+                                            <table class="table" style="font-size:15px; color:#1dbfc1">
+                                                <tbody>
+                                                    <tr>
+                                                        <th style="width:100%">
+                                                            <button class="btn btn-primary btn-sm" id="Excel" onclick="ExportExcel()">  <i class="ti-layout"></i> اكسل</button>
+                                                            <button class="btn btn-primary btn-sm" onclick="print()" id="Print">  <i class="ti-printer"></i> طباعة</button>
 
-                                            <button class="btn btn-primary btn-sm" id="pay" onclick="pay()">  <i class="ti-money"></i> دفع</button>
+                                                            <button class="btn btn-primary btn-sm" id="pay" onclick="pay()">  <i class="ti-money"></i> قبض تحصيل</button>
 
-                                            <button class="btn btn-primary btn-sm" id="reload" onclick="Refresh()">  <i class="ti-reload"></i> تحديث</button>
-                                        </th>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <ejs-dropdownlist id="Driver" name="Driver" Query="new ej.data.Query()"
-                                              allowFiltering="true" placeholder="السائق" change="GetDriverStmt">
-                                <e-data-manager adaptor="UrlAdaptor" url="/AccountManagement/GetDrivers/"></e-data-manager>
+                                                            <button class="btn btn-primary btn-sm" id="reload" onclick="Refresh()">  <i class="ti-reload"></i> تحديث</button>
+                                                        </th>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
 
-                                <e-dropdownlist-fields text="Name" value="Id"></e-dropdownlist-fields>
-                            </ejs-dropdownlist>
-
-                        </div>
-                        <div class="col-xs-6 col-sm-6">
-                            <ejs-dropdownlist id="CompanyBranches" name="CompanyBranches" Query="new ej.data.Query()"
-                                              allowFiltering="true" dataSource="@ViewBag.CompanyBranches" placeholder="الفرع" change="GetDriver">
+                                    <div class="col-3">
+                                        <ejs-dropdownlist id="CompanyBranches" name="CompanyBranches" Query="new ej.data.Query()"
+                                                          allowFiltering="true" dataSource="@ViewBag.CompanyBranches" placeholder="الفرع" change="GetDriver">
 
 
-                                <e-dropdownlist-fields text="BranchName" value="Id"></e-dropdownlist-fields>
-                            </ejs-dropdownlist>
-                        </div>
+                                            <e-dropdownlist-fields text="BranchName" value="Id"></e-dropdownlist-fields>
+                                        </ejs-dropdownlist>
+                                    </div>
 
-                        <div class="table-responsive col-12" id="bodytarg2">
-                            <table class="table" style="font-size:15px; color:#1dbfc1">
-                                <tbody>
-                                    <tr>
-                                        @*     @if (User.IsInRole(Roadfn.Controllers.Role.superAdmin))
+                                    <div class="col-3">
+                                        <ejs-dropdownlist id="Driver" name="Driver" Query="new ej.data.Query()"
+                                                          allowFiltering="true" placeholder="السائق" change="GetDriverStmt">
+                                            <e-data-manager adaptor="UrlAdaptor" url="/AccountManagement/GetDrivers/"></e-data-manager>
+
+                                            <e-dropdownlist-fields text="Name" value="Id"></e-dropdownlist-fields>
+                                        </ejs-dropdownlist>
+
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="table-responsive  " id="bodytarg2">
+                                            <table class="table" style="font-size:15px; color:#1dbfc1">
+                                                <tbody>
+                                                    <tr>
+                                                        @*     @if (User.IsInRole(Roadfn.Controllers.Role.superAdmin))
                                         { *@
-                                        <th style="width:100%">
-                                            عدد الطرود  : <label id="shipRetCount"></label> &nbsp;&nbsp;
-                                            مجموع العمولة : <label id="commSum"></label> &nbsp;&nbsp;
-                                            مجموع الرسوم الاضافية : <label id="ShipmentExtraFee"></label> &nbsp;&nbsp;
-                                            مجموع مبالغ الطرود : <label id="shipTotSum"></label> &nbsp;&nbsp;
-                                            الصافي : <label id="total"></label> &nbsp;&nbsp;
+                                                        <th style="width:100%">
+                                                            عدد الطرود  : <label id="shipRetCount"></label> &nbsp;&nbsp;
+                                                            مجموع العمولة : <label id="commSum"></label> &nbsp;&nbsp;
+                                                            مجموع الرسوم الاضافية : <label id="ShipmentExtraFee"></label> &nbsp;&nbsp;
+                                                            مجموع مبالغ الطرود : <label id="shipTotSum"></label> &nbsp;&nbsp;
+                                                            الصافي : <label id="total"></label> &nbsp;&nbsp;
 
-                                        </th>
-                                        @*   }
+                                                        </th>
+                                                        @*   }
                                         else
                                         {
                                             <th style="width:100%">
@@ -77,90 +85,102 @@
                                         } *@
 
 
-                                    </tr>
-                                </tbody>
-                            </table>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col-12">
+                                        <ejs-grid id="Grid" width="100%"
+                                                  allowExcelExport="true" allowPdfExport="true"
+                                                  enableStickyHeader="true" height="400px" gridLines="Both"
+                                                  enableRtl="@rtl" allowPaging="false" allowSorting="true" allowFiltering="true"
+                                                  allowTextWrap="true"
+                                                  allowSelection="true" rowSelected="rowSelected" recordClick="recordClick"
+                                                  toolbar="@(new List<string>() {   "Edit", "Cancel", "Update"  })">
+                                            <e-data-manager url="/AccountManagement/UrlDatasourceDriverStatment?DriverId=0"
+                                                            updateUrl="/AccountManagement/update"
+                                                            adaptor="UrlAdaptor"></e-data-manager>
+                                            <e-grid-editSettings allowEditing="true"></e-grid-editSettings>
+
+                                            <e-grid-filterSettings type="Excel"></e-grid-filterSettings>
+                                            <e-grid-aggregates>
+                                                <e-grid-aggregate>
+                                                    <e-aggregate-columns>
+                                                        <e-aggregate-column field="ShipmentTrackingNo" type="Count" footerTemplate="Count Of Shipments:(${Count})"></e-aggregate-column>
+                                                        <e-aggregate-column field="CommissionPerItem" type="Sum" footerTemplate="Sum of Commission:(${Sum})"></e-aggregate-column>
+                                                        <e-aggregate-column field="ShipmentTotal" type="Sum" footerTemplate="Sum of Shipment Total:(${Sum})"></e-aggregate-column>
+                                                    </e-aggregate-columns>
+                                                </e-grid-aggregate>
+                                            </e-grid-aggregates>
+                                            <e-grid-columns>
+                                                <e-grid-column type="checkbox" width="50"></e-grid-column>
+                                                <e-grid-column field="Id" headerText="ID" allowEditing="false" Visible="false" isPrimaryKey="true"></e-grid-column>
+                                                @*<e-grid-column field="CityCode" headerText="City Code" width="120"></e-grid-column>*@
+                                                <e-grid-column field="ShipmentTrackingNo" allowEditing="false" template="#ShipmentTrackingNo" headerText="رقم تتبع الشحنة" width="120"></e-grid-column>
+                                                <e-grid-column field="ShipmentId" allowEditing="false" Visible="false" headerText="ShipmentId" width="120"></e-grid-column>
+                                                <e-grid-column field="EntryDate" allowEditing="false" customFormat="@(new { type ="date", format="dd/MM/yyyy hh:mm" })" headerText="تاريخ ادخال الشحنة" width="120"></e-grid-column>
+                                                <e-grid-column field="DriverName" allowEditing="false" headerText="اسم السائق" width="120"></e-grid-column>
+                                                <e-grid-column field="ClientName" allowEditing="false" headerText="اسم العميل" width="120"></e-grid-column>
+                                                <e-grid-column field="BranchName" allowEditing="false" headerText="الفرع" width="120"></e-grid-column>
+                                                <e-grid-column field="CityName" allowEditing="false" headerText="اسم المدينة" width="120"></e-grid-column>
+
+                                                <e-grid-column field="AreaName" allowEditing="false" headerText="اسم المنطقة" width="120"></e-grid-column>
+
+                                                <e-grid-column field="PaidAmountFromShipmentFees" allowEditing="false" headerText="المبلغ المدفوع من رسوم التوصيل" width="120"></e-grid-column>
+                                                <e-grid-column field="ShipmentTotal" allowEditing="false" headerText="المجموع الكلي" width="120"></e-grid-column>
+                                                <e-grid-column field="CommissionPerItem" allowEditing="false" headerText="العمولة لكل شحنة" width="120"></e-grid-column>
+                                                <e-grid-column field="DriverExtraComisionValue" allowEditing="true" headerText="عمولةاضافية للسائق" width="120"></e-grid-column>
+                                                <e-grid-column field="ShipmentExtraFees" allowEditing="false" headerText="العمولة الاضافية" width="120"></e-grid-column>
+                                                <e-grid-column field="ShipmentPrice" allowEditing="false" headerText="سعر الشحنه" width="120"></e-grid-column>
+                                                <e-grid-column field="ShipmentCod" allowEditing="false" headerText="الصافي" width="120"></e-grid-column>
+
+                                                <e-grid-column field="OldStatus" allowEditing="false" Visible="false" headerText="الحالة السابقة" width="120"></e-grid-column>
+                                                <e-grid-column field="NewStatus" allowEditing="false" Visible="false" headerText="الحالة الجديدة" width="120"></e-grid-column>
+                                                <e-grid-column field="DriverID" allowEditing="false" Visible="false" headerText="DriverID" width="120"></e-grid-column>
+                                            </e-grid-columns>
+                                        </ejs-grid>
+
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-
-                        <ejs-grid id="Grid" width="100%"
-                                  allowExcelExport="true" allowPdfExport="true"
-                                  enableStickyHeader="true" height="400px" gridLines="Both"
-                                  enableRtl="@rtl" allowPaging="false" allowSorting="true" allowFiltering="true"
-                                  allowTextWrap="true"
-                                  allowSelection="true" rowSelected="rowSelected" recordClick="recordClick"
-                                  toolbar="@(new List<string>() {   "Edit", "Cancel", "Update"  })">
-                            <e-data-manager url="/AccountManagement/UrlDatasourceDriverStatment?DriverId=0"
-                                            updateUrl="/AccountManagement/update"
-                                            adaptor="UrlAdaptor"></e-data-manager>
-                            <e-grid-editSettings allowEditing="true"></e-grid-editSettings>
-
-                            <e-grid-filterSettings type="Excel"></e-grid-filterSettings>
-                            <e-grid-aggregates>
-                                <e-grid-aggregate>
-                                    <e-aggregate-columns>
-                                        <e-aggregate-column field="ShipmentTrackingNo" type="Count" footerTemplate="Count Of Shipments:(${Count})"></e-aggregate-column>
-                                        <e-aggregate-column field="CommissionPerItem" type="Sum" footerTemplate="Sum of Commission:(${Sum})"></e-aggregate-column>
-                                        <e-aggregate-column field="ShipmentTotal" type="Sum" footerTemplate="Sum of Shipment Total:(${Sum})"></e-aggregate-column>
-                                    </e-aggregate-columns>
-                                </e-grid-aggregate>
-                            </e-grid-aggregates>
-                            <e-grid-columns>
-                                <e-grid-column type="checkbox" width="50"></e-grid-column>
-                                <e-grid-column field="Id" headerText="ID" allowEditing="false" Visible="false" isPrimaryKey="true"></e-grid-column>
-                                @*<e-grid-column field="CityCode" headerText="City Code" width="120"></e-grid-column>*@
-                                <e-grid-column field="ShipmentTrackingNo" allowEditing="false" template="#ShipmentTrackingNo" headerText="رقم تتبع الشحنة" width="120"></e-grid-column>
-                                <e-grid-column field="ShipmentId" allowEditing="false" Visible="false" headerText="ShipmentId" width="120"></e-grid-column>
-                                <e-grid-column field="EntryDate" allowEditing="false" customFormat="@(new { type ="date", format="dd/MM/yyyy hh:mm" })" headerText="تاريخ ادخال الشحنة" width="120"></e-grid-column>
-                                <e-grid-column field="DriverName" allowEditing="false" headerText="اسم السائق" width="120"></e-grid-column>
-                                <e-grid-column field="ClientName" allowEditing="false" headerText="اسم العميل" width="120"></e-grid-column>
-                                <e-grid-column field="BranchName" allowEditing="false" headerText="الفرع" width="120"></e-grid-column>
-                                <e-grid-column field="CityName" allowEditing="false" headerText="اسم المدينة" width="120"></e-grid-column>
-
-                                <e-grid-column field="AreaName" allowEditing="false" headerText="اسم المنطقة" width="120"></e-grid-column>
-
-                                <e-grid-column field="PaidAmountFromShipmentFees" allowEditing="false" headerText="المبلغ المدفوع من رسوم التوصيل" width="120"></e-grid-column>
-                                <e-grid-column field="ShipmentTotal" allowEditing="false" headerText="المجموع الكلي" width="120"></e-grid-column>
-                                <e-grid-column field="CommissionPerItem" allowEditing="false" headerText="العمولة لكل شحنة" width="120"></e-grid-column>
-                                <e-grid-column field="DriverExtraComisionValue" allowEditing="true" headerText="عمولةاضافية للسائق" width="120"></e-grid-column>
-                                <e-grid-column field="ShipmentExtraFees" allowEditing="false" headerText="العمولة الاضافية" width="120"></e-grid-column>
-                                <e-grid-column field="ShipmentPrice" allowEditing="false" headerText="ShipmentPrice" width="120"></e-grid-column>
-                                <e-grid-column field="ShipmentCod" allowEditing="false" headerText="الصافي" width="120"></e-grid-column>
-
-                                <e-grid-column field="OldStatus" allowEditing="false" Visible="false" headerText="الحالة السابقة" width="120"></e-grid-column>
-                                <e-grid-column field="NewStatus" allowEditing="false" Visible="false" headerText="الحالة الجديدة" width="120"></e-grid-column>
-                                <e-grid-column field="DriverID" allowEditing="false" Visible="false" headerText="DriverID" width="120"></e-grid-column>
-                            </e-grid-columns>
-                        </ejs-grid>
                     </div>
                 </div>
-            </div>
+            </section>
         </div>
-    </section>
-    @{
-        var defaultanimation = new Syncfusion.EJ2.Popups.DialogAnimationSettings { Effect = Syncfusion.EJ2.Popups.DialogEffect.Fade };
-        var resizeDirectionHandles = new List<string>() { "All" };
-    }
-    <!-- /.content -->
-    <ejs-dialog id="default_dialog"
-                allowDragging="false" isModal="true"
-                resizeHandles="resizeDirectionHandles"
-                enableResize="true" created="onCreated"
-                animationSettings="defaultanimation"
-                width="80%" target="#mains"
-                open="dialogOpen"
-                close="dialogClose"
-                showCloseIcon="true"
-                header="تفاصيل الشحنة">
-        <e-content-template>
-            <div>
-                <div id='detailstab'></div>
 
-            </div>
+    </div>
 
-        </e-content-template>
-
-    </ejs-dialog>
 </div>
+
+@{
+    var defaultanimation = new Syncfusion.EJ2.Popups.DialogAnimationSettings { Effect = Syncfusion.EJ2.Popups.DialogEffect.Fade };
+    var resizeDirectionHandles = new List<string>() { "All" };
+}
+<!-- /.content -->
+<ejs-dialog id="default_dialog"
+            allowDragging="false" isModal="true"
+            resizeHandles="resizeDirectionHandles"
+            enableResize="true" created="onCreated"
+            animationSettings="defaultanimation"
+            width="80%" target="#mains"
+            open="dialogOpen"
+            close="dialogClose"
+            showCloseIcon="true"
+            header="تفاصيل الشحنة">
+    <e-content-template>
+        <div>
+            <div id='detailstab'></div>
+
+        </div>
+
+    </e-content-template>
+
+</ejs-dialog>
+
 <script type="text/x-jsrender" id="ShipmentTrackingNo">
     <div id="${ShipmentTrackingNo}" class="statustemp" style="color:#6610f2;font-weight: bold;" onclick='Shipdetails(${Id},${ShipmentTrackingNo})'>
 
