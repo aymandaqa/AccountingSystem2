@@ -201,6 +201,103 @@ namespace AccountingSystem.Migrations
                     b.ToTable("Branches");
                 });
 
+            modelBuilder.Entity("AccountingSystem.Models.Asset", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AssetNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
+
+                    b.ToTable("Assets");
+                });
+
+            modelBuilder.Entity("AccountingSystem.Models.AssetExpense", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AccountId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("AssetId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CreatedById")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("CurrencyId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("ExchangeRate")
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<int>("ExpenseAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsCash")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("AssetId");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("CurrencyId");
+
+                    b.HasIndex("ExpenseAccountId");
+
+                    b.ToTable("AssetExpenses");
+                });
+
             modelBuilder.Entity("AccountingSystem.Models.CashBoxClosure", b =>
                 {
                     b.Property<int>("Id")
@@ -1176,6 +1273,60 @@ namespace AccountingSystem.Migrations
                             DisplayName = "حذف إعدادات النظام",
                             IsActive = true,
                             Name = "systemsettings.delete"
+                        },
+                        new
+                        {
+                            Id = 48,
+                            Category = "الأصول",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض الأصول",
+                            IsActive = true,
+                            Name = "assets.view"
+                        },
+                        new
+                        {
+                            Id = 49,
+                            Category = "الأصول",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "إنشاء الأصول",
+                            IsActive = true,
+                            Name = "assets.create"
+                        },
+                        new
+                        {
+                            Id = 50,
+                            Category = "الأصول",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "تعديل الأصول",
+                            IsActive = true,
+                            Name = "assets.edit"
+                        },
+                        new
+                        {
+                            Id = 51,
+                            Category = "الأصول",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "حذف الأصول",
+                            IsActive = true,
+                            Name = "assets.delete"
+                        },
+                        new
+                        {
+                            Id = 52,
+                            Category = "الأصول",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض مصاريف الأصول",
+                            IsActive = true,
+                            Name = "assetexpenses.view"
+                        },
+                        new
+                        {
+                            Id = 53,
+                            Category = "الأصول",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "إنشاء مصروف أصل",
+                            IsActive = true,
+                            Name = "assetexpenses.create"
                         });
                 });
 
@@ -1867,6 +2018,59 @@ namespace AccountingSystem.Migrations
                     b.Navigation("Supplier");
                 });
 
+            modelBuilder.Entity("AccountingSystem.Models.Asset", b =>
+                {
+                    b.HasOne("AccountingSystem.Models.Branch", "Branch")
+                        .WithMany("Assets")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+                });
+
+            modelBuilder.Entity("AccountingSystem.Models.AssetExpense", b =>
+                {
+                    b.HasOne("AccountingSystem.Models.Account", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("AccountingSystem.Models.Asset", "Asset")
+                        .WithMany("Expenses")
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AccountingSystem.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AccountingSystem.Models.Currency", "Currency")
+                        .WithMany()
+                        .HasForeignKey("CurrencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AccountingSystem.Models.Account", "ExpenseAccount")
+                        .WithMany()
+                        .HasForeignKey("ExpenseAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+
+                    b.Navigation("Asset");
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Currency");
+
+                    b.Navigation("ExpenseAccount");
+                });
+
             modelBuilder.Entity("AccountingSystem.Models.ReceiptVoucher", b =>
                 {
                     b.HasOne("AccountingSystem.Models.Account", "Account")
@@ -2044,9 +2248,16 @@ namespace AccountingSystem.Migrations
                     b.Navigation("JournalEntryLines");
                 });
 
+            modelBuilder.Entity("AccountingSystem.Models.Asset", b =>
+                {
+                    b.Navigation("Expenses");
+                });
+
             modelBuilder.Entity("AccountingSystem.Models.Branch", b =>
                 {
                     b.Navigation("Accounts");
+
+                    b.Navigation("Assets");
 
                     b.Navigation("JournalEntries");
 

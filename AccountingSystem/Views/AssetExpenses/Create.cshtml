@@ -1,0 +1,146 @@
+@model AccountingSystem.ViewModels.CreateAssetExpenseViewModel
+
+@{
+    ViewData["Title"] = "إضافة مصروف أصل";
+    Layout = "~/Views/Shared/_AccountingLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">إضافة مصروف لأصل</h3>
+        </div>
+        <div class="card-body">
+            <form asp-action="Create" method="post" class="row g-3">
+                <div class="col-12">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="AssetId" class="form-label"></label>
+                    <select asp-for="AssetId" asp-items="Model.Assets" class="form-select"></select>
+                    <span asp-validation-for="AssetId" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="ExpenseAccountId" class="form-label">حساب المصروف</label>
+                    <select asp-for="ExpenseAccountId" class="form-select" id="expenseAccountSelect">
+                        @foreach (var account in Model.ExpenseAccounts)
+                        {
+                            <option value="@account.Id" data-currency-id="@account.CurrencyId" data-currency-code="@account.CurrencyCode" @(account.Id == Model.ExpenseAccountId ? "selected" : string.Empty)>@account.DisplayName</option>
+                        }
+                    </select>
+                    <span asp-validation-for="ExpenseAccountId" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="IsCash" class="form-label"></label>
+                    <select asp-for="IsCash" class="form-select" id="paymentType">
+                        <option value="true" @(Model.IsCash ? "selected" : string.Empty)>نقدي</option>
+                        <option value="false" @(!Model.IsCash ? "selected" : string.Empty)>غير نقدي</option>
+                    </select>
+                </div>
+                <div class="col-md-6" id="settlementContainer">
+                    <label asp-for="AccountId" class="form-label"></label>
+                    <select asp-for="AccountId" class="form-select" id="settlementAccountSelect">
+                        <option value="">-- اختر الحساب --</option>
+                        @foreach (var account in Model.Accounts)
+                        {
+                            <option value="@account.Id" data-currency-id="@account.CurrencyId" data-currency-code="@account.CurrencyCode" @(account.Id == Model.AccountId ? "selected" : string.Empty)>@account.DisplayName</option>
+                        }
+                    </select>
+                    <span asp-validation-for="AccountId" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">العملة</label>
+                    <input type="text" class="form-control" id="currencyDisplay" readonly />
+                    <input type="hidden" asp-for="CurrencyId" id="currencyId" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="ExchangeRate" class="form-label"></label>
+                    <input asp-for="ExchangeRate" class="form-control" />
+                    <span asp-validation-for="ExchangeRate" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Amount" class="form-label"></label>
+                    <input asp-for="Amount" class="form-control" />
+                    <span asp-validation-for="Amount" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Date" class="form-label"></label>
+                    <input asp-for="Date" class="form-control" type="date" />
+                    <span asp-validation-for="Date" class="text-danger"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Notes" class="form-label"></label>
+                    <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="Notes" class="text-danger"></span>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">حفظ</button>
+                    <a asp-action="Index" class="btn btn-secondary">إلغاء</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const expenseSelect = document.getElementById('expenseAccountSelect');
+            const settlementContainer = document.getElementById('settlementContainer');
+            const settlementSelect = document.getElementById('settlementAccountSelect');
+            const paymentType = document.getElementById('paymentType');
+            const currencyDisplay = document.getElementById('currencyDisplay');
+            const currencyId = document.getElementById('currencyId');
+
+            function updateCurrency() {
+                if (!expenseSelect) return;
+                const option = expenseSelect.options[expenseSelect.selectedIndex];
+                const currencyCode = option ? option.getAttribute('data-currency-code') : '';
+                const currencyValue = option ? option.getAttribute('data-currency-id') : '';
+                currencyDisplay.value = currencyCode || '';
+                currencyId.value = currencyValue || '';
+                filterSettlementAccounts(currencyValue);
+            }
+
+            function filterSettlementAccounts(currencyValue) {
+                if (!settlementSelect) return;
+                let firstVisible = null;
+                Array.from(settlementSelect.options).forEach(opt => {
+                    if (!opt.value) {
+                        opt.hidden = false;
+                        return;
+                    }
+                    const matches = !currencyValue || opt.getAttribute('data-currency-id') === currencyValue;
+                    opt.hidden = !matches;
+                    if (matches && !firstVisible) {
+                        firstVisible = opt;
+                    }
+                });
+                if (firstVisible && settlementSelect.value && settlementSelect.options[settlementSelect.selectedIndex].hidden) {
+                    settlementSelect.value = firstVisible.value;
+                }
+            }
+
+            function toggleSettlement() {
+                if (!settlementContainer) return;
+                if (paymentType.value === 'true') {
+                    settlementContainer.classList.add('d-none');
+                } else {
+                    settlementContainer.classList.remove('d-none');
+                    filterSettlementAccounts(currencyId.value);
+                }
+            }
+
+            if (expenseSelect) {
+                expenseSelect.addEventListener('change', updateCurrency);
+            }
+            if (paymentType) {
+                paymentType.addEventListener('change', toggleSettlement);
+            }
+
+            updateCurrency();
+            toggleSettlement();
+        });
+    </script>
+}

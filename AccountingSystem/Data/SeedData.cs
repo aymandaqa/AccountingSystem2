@@ -118,6 +118,12 @@ namespace AccountingSystem.Data
                 new Permission { Name = "suppliers.create", DisplayName = "إنشاء الموردين", Category = "الموردين" },
                 new Permission { Name = "suppliers.edit", DisplayName = "تعديل الموردين", Category = "الموردين" },
                 new Permission { Name = "suppliers.delete", DisplayName = "حذف الموردين", Category = "الموردين" },
+                new Permission { Name = "assets.view", DisplayName = "عرض الأصول", Category = "الأصول" },
+                new Permission { Name = "assets.create", DisplayName = "إنشاء الأصول", Category = "الأصول" },
+                new Permission { Name = "assets.edit", DisplayName = "تعديل الأصول", Category = "الأصول" },
+                new Permission { Name = "assets.delete", DisplayName = "حذف الأصول", Category = "الأصول" },
+                new Permission { Name = "assetexpenses.view", DisplayName = "عرض مصاريف الأصول", Category = "الأصول" },
+                new Permission { Name = "assetexpenses.create", DisplayName = "إنشاء مصروف أصل", Category = "الأصول" },
                 new Permission { Name = "systemsettings.view", DisplayName = "عرض إعدادات النظام", Category = "إعدادات النظام" },
                 new Permission { Name = "systemsettings.create", DisplayName = "إنشاء إعدادات النظام", Category = "إعدادات النظام" },
                 new Permission { Name = "systemsettings.edit", DisplayName = "تعديل إعدادات النظام", Category = "إعدادات النظام" },
@@ -293,6 +299,11 @@ namespace AccountingSystem.Data
             if (!context.SystemSettings.Any(s => s.Key == "SupplierPaymentsParentAccountId"))
             {
                 context.SystemSettings.Add(new SystemSetting { Key = "SupplierPaymentsParentAccountId", Value = null });
+            }
+
+            if (!context.SystemSettings.Any(s => s.Key == "AssetExpensesParentAccountId"))
+            {
+                context.SystemSettings.Add(new SystemSetting { Key = "AssetExpensesParentAccountId", Value = null });
             }
 
             if (!context.SystemSettings.Any(s => s.Key == "CashBoxDifferenceAccountId"))
