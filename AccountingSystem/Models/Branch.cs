@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace AccountingSystem.Models
@@ -39,6 +40,7 @@ namespace AccountingSystem.Models
         public virtual ICollection<UserBranch> UserBranches { get; set; } = new List<UserBranch>();
         public virtual ICollection<Account> Accounts { get; set; } = new List<Account>();
         public virtual ICollection<JournalEntry> JournalEntries { get; set; } = new List<JournalEntry>();
+        public virtual ICollection<Asset> Assets { get; set; } = new List<Asset>();
     }
 }
 

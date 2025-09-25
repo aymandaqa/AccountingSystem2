@@ -42,6 +42,8 @@ namespace AccountingSystem.Data
         public DbSet<Supplier> Suppliers { get; set; }
         public DbSet<SystemSetting> SystemSettings { get; set; }
         public DbSet<UserPaymentAccount> UserPaymentAccounts { get; set; }
+        public DbSet<Asset> Assets { get; set; }
+        public DbSet<AssetExpense> AssetExpenses { get; set; }
 
         public override int SaveChanges()
         {
@@ -180,6 +182,53 @@ namespace AccountingSystem.Data
                 entity.HasOne(e => e.Currency)
                     .WithMany(e => e.Accounts)
                     .HasForeignKey(e => e.CurrencyId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<Asset>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Type).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.AssetNumber).HasMaxLength(100);
+                entity.Property(e => e.Notes).HasMaxLength(500);
+
+                entity.HasOne(e => e.Branch)
+                    .WithMany(b => b.Assets)
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<AssetExpense>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Notes).HasMaxLength(500);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.ExchangeRate).HasColumnType("decimal(18,6)");
+
+                entity.HasOne(e => e.Asset)
+                    .WithMany(a => a.Expenses)
+                    .HasForeignKey(e => e.AssetId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.ExpenseAccount)
+                    .WithMany()
+                    .HasForeignKey(e => e.ExpenseAccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Account)
+                    .WithMany()
+                    .HasForeignKey(e => e.AccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Currency)
+                    .WithMany()
+                    .HasForeignKey(e => e.CurrencyId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.CreatedBy)
+                    .WithMany()
+                    .HasForeignKey(e => e.CreatedById)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -525,7 +574,13 @@ namespace AccountingSystem.Data
                 new Permission { Id = 44, Name = "systemsettings.view", DisplayName = "عرض إعدادات النظام", Category = "إعدادات النظام", CreatedAt = createdAt },
                 new Permission { Id = 45, Name = "systemsettings.create", DisplayName = "إنشاء إعدادات النظام", Category = "إعدادات النظام", CreatedAt = createdAt },
                 new Permission { Id = 46, Name = "systemsettings.edit", DisplayName = "تعديل إعدادات النظام", Category = "إعدادات النظام", CreatedAt = createdAt },
-                new Permission { Id = 47, Name = "systemsettings.delete", DisplayName = "حذف إعدادات النظام", Category = "إعدادات النظام", CreatedAt = createdAt }
+                new Permission { Id = 47, Name = "systemsettings.delete", DisplayName = "حذف إعدادات النظام", Category = "إعدادات النظام", CreatedAt = createdAt },
+                new Permission { Id = 48, Name = "assets.view", DisplayName = "عرض الأصول", Category = "الأصول", CreatedAt = createdAt },
+                new Permission { Id = 49, Name = "assets.create", DisplayName = "إنشاء الأصول", Category = "الأصول", CreatedAt = createdAt },
+                new Permission { Id = 50, Name = "assets.edit", DisplayName = "تعديل الأصول", Category = "الأصول", CreatedAt = createdAt },
+                new Permission { Id = 51, Name = "assets.delete", DisplayName = "حذف الأصول", Category = "الأصول", CreatedAt = createdAt },
+                new Permission { Id = 52, Name = "assetexpenses.view", DisplayName = "عرض مصاريف الأصول", Category = "الأصول", CreatedAt = createdAt },
+                new Permission { Id = 53, Name = "assetexpenses.create", DisplayName = "إنشاء مصروف أصل", Category = "الأصول", CreatedAt = createdAt }
             );
         }
     }

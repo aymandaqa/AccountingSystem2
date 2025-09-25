@@ -1,0 +1,243 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using AccountingSystem.Data;
+using AccountingSystem.Models;
+using AccountingSystem.Services;
+using AccountingSystem.ViewModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
+
+namespace AccountingSystem.Controllers
+{
+    [Authorize(Policy = "assetexpenses.view")]
+    public class AssetExpensesController : Controller
+    {
+        private readonly ApplicationDbContext _context;
+        private readonly UserManager<User> _userManager;
+        private readonly IJournalEntryService _journalEntryService;
+
+        public AssetExpensesController(
+            ApplicationDbContext context,
+            UserManager<User> userManager,
+            IJournalEntryService journalEntryService)
+        {
+            _context = context;
+            _userManager = userManager;
+            _journalEntryService = journalEntryService;
+        }
+
+        public async Task<IActionResult> Index()
+        {
+            var expenses = await _context.AssetExpenses
+                .Include(e => e.Asset).ThenInclude(a => a.Branch)
+                .Include(e => e.ExpenseAccount)
+                .OrderByDescending(e => e.Date)
+                .ToListAsync();
+
+            var model = expenses.Select(e => new AssetExpenseListViewModel
+            {
+                Id = e.Id,
+                AssetName = e.Asset.Name,
+                BranchName = e.Asset.Branch.NameAr,
+                ExpenseAccountName = e.ExpenseAccount.NameAr,
+                Amount = e.Amount,
+                IsCash = e.IsCash,
+                Date = e.Date,
+                Notes = e.Notes
+            }).ToList();
+
+            return View(model);
+        }
+
+        [Authorize(Policy = "assetexpenses.create")]
+        public async Task<IActionResult> Create()
+        {
+            var model = new CreateAssetExpenseViewModel
+            {
+                Date = DateTime.Now,
+                Assets = await GetAssetsAsync(),
+                ExpenseAccounts = await GetExpenseAccountsAsync(),
+                Accounts = await GetSettlementAccountsAsync()
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "assetexpenses.create")]
+        public async Task<IActionResult> Create(CreateAssetExpenseViewModel model)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Challenge();
+            }
+
+            var asset = await _context.Assets
+                .Include(a => a.Branch)
+                .FirstOrDefaultAsync(a => a.Id == model.AssetId);
+            if (asset == null)
+            {
+                ModelState.AddModelError(nameof(model.AssetId), "الأصل غير موجود");
+            }
+
+            Account? expenseAccount = null;
+            var expenseSetting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "AssetExpensesParentAccountId");
+            if (!string.IsNullOrEmpty(expenseSetting?.Value) && int.TryParse(expenseSetting.Value, out var expenseParentId))
+            {
+                expenseAccount = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == model.ExpenseAccountId && a.ParentId == expenseParentId);
+            }
+            else
+            {
+                ModelState.AddModelError(string.Empty, "لم يتم ضبط حسابات مصاريف الأصول في الإعدادات");
+            }
+
+            Account? settlementAccount = null;
+            if (!model.IsCash)
+            {
+                if (model.AccountId == null)
+                {
+                    ModelState.AddModelError(nameof(model.AccountId), "الرجاء اختيار حساب التسوية");
+                }
+                else
+                {
+                    settlementAccount = await _context.Accounts.FindAsync(model.AccountId.Value);
+                    if (settlementAccount == null)
+                    {
+                        ModelState.AddModelError(nameof(model.AccountId), "حساب التسوية غير صالح");
+                    }
+                }
+            }
+
+            if (expenseAccount != null)
+            {
+                model.CurrencyId = expenseAccount.CurrencyId;
+                if (settlementAccount != null && settlementAccount.CurrencyId != expenseAccount.CurrencyId)
+                {
+                    ModelState.AddModelError(nameof(model.AccountId), "يجب أن تكون الحسابات بنفس العملة");
+                }
+                if (model.IsCash && user.PaymentAccountId.HasValue)
+                {
+                    var paymentAccount = await _context.Accounts.FindAsync(user.PaymentAccountId.Value);
+                    if (paymentAccount != null && paymentAccount.CurrencyId != expenseAccount.CurrencyId)
+                    {
+                        ModelState.AddModelError(string.Empty, "يجب أن تكون الحسابات بنفس العملة");
+                    }
+                }
+            }
+
+            if (model.IsCash && (!user.PaymentAccountId.HasValue || !user.PaymentBranchId.HasValue))
+            {
+                ModelState.AddModelError(string.Empty, "لا يوجد حساب/فرع للدفع مضبوط للمستخدم");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                model.Assets = await GetAssetsAsync();
+                model.ExpenseAccounts = await GetExpenseAccountsAsync();
+                model.Accounts = await GetSettlementAccountsAsync();
+                return View(model);
+            }
+
+            if (model.ExchangeRate <= 0)
+            {
+                var currency = await _context.Currencies.FindAsync(model.CurrencyId);
+                model.ExchangeRate = currency?.ExchangeRate ?? 1m;
+            }
+
+            var assetExpense = new AssetExpense
+            {
+                AssetId = model.AssetId,
+                ExpenseAccountId = model.ExpenseAccountId,
+                AccountId = model.IsCash ? null : model.AccountId,
+                CurrencyId = model.CurrencyId,
+                Amount = model.Amount,
+                ExchangeRate = model.ExchangeRate,
+                Date = model.Date,
+                Notes = model.Notes,
+                IsCash = model.IsCash,
+                CreatedById = user.Id
+            };
+
+            _context.AssetExpenses.Add(assetExpense);
+
+            var lines = new List<JournalEntryLine>
+            {
+                new JournalEntryLine { AccountId = assetExpense.ExpenseAccountId, DebitAmount = assetExpense.Amount }
+            };
+
+            if (assetExpense.IsCash)
+            {
+                lines.Add(new JournalEntryLine { AccountId = user.PaymentAccountId!.Value, CreditAmount = assetExpense.Amount });
+            }
+            else if (settlementAccount != null)
+            {
+                lines.Add(new JournalEntryLine { AccountId = settlementAccount.Id, CreditAmount = assetExpense.Amount });
+            }
+
+            await _journalEntryService.CreateJournalEntryAsync(
+                assetExpense.Date,
+                assetExpense.Notes == null ? "مصروف أصل" : "مصروف أصل" + Environment.NewLine + assetExpense.Notes,
+                asset!.BranchId,
+                user.Id,
+                lines,
+                JournalEntryStatus.Posted);
+
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        private async Task<IEnumerable<SelectListItem>> GetAssetsAsync()
+        {
+            return await _context.Assets
+                .Include(a => a.Branch)
+                .OrderBy(a => a.Name)
+                .Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = $"{a.Name} - {a.Branch.NameAr}"
+                }).ToListAsync();
+        }
+
+        private async Task<IEnumerable<AssetExpenseAccountOption>> GetExpenseAccountsAsync()
+        {
+            var setting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "AssetExpensesParentAccountId");
+            if (setting != null && int.TryParse(setting.Value, out var parentId))
+            {
+                return await _context.Accounts
+                    .Where(a => a.ParentId == parentId)
+                    .Include(a => a.Currency)
+                    .OrderBy(a => a.Code)
+                    .Select(a => new AssetExpenseAccountOption
+                    {
+                        Id = a.Id,
+                        DisplayName = $"{a.Code} - {a.NameAr} ({a.Currency.Code})",
+                        CurrencyId = a.CurrencyId,
+                        CurrencyCode = a.Currency.Code
+                    }).ToListAsync();
+            }
+
+            return Enumerable.Empty<AssetExpenseAccountOption>();
+        }
+
+        private async Task<IEnumerable<AssetExpenseAccountOption>> GetSettlementAccountsAsync()
+        {
+            return await _context.Accounts
+                .Include(a => a.Currency)
+                .OrderBy(a => a.Code)
+                .Select(a => new AssetExpenseAccountOption
+                {
+                    Id = a.Id,
+                    DisplayName = $"{a.Code} - {a.NameAr} ({a.Currency.Code})",
+                    CurrencyId = a.CurrencyId,
+                    CurrencyCode = a.Currency.Code
+                }).ToListAsync();
+        }
+    }
+}
