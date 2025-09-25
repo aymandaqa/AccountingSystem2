@@ -10,7 +10,7 @@ namespace Roadfn.Models
         public long? HeaderId { get; set; }
         [Display(Name = "رقم البوليصة")]
 
-        public string ShipmentTrackingNo { get; set; }
+        public string? ShipmentTrackingNo { get; set; }
         public long? ShipmentId { get; set; }
     }
 
@@ -22,7 +22,7 @@ namespace Roadfn.Models
         public long? HeaderId { get; set; }
         [Display(Name = "رقم البوليصة")]
 
-        public string ShipmentTrackingNo { get; set; }
+        public string? ShipmentTrackingNo { get; set; }
         public long? ShipmentId { get; set; }
     }
 }

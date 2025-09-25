@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Roadfn.Models
 {
+
+    [Table("DriverPaymentHeader")]
     public partial class DriverPaymentHeader
     {
         public long Id { get; set; }
@@ -28,6 +31,6 @@ namespace Roadfn.Models
 
         [Display(Name = "المستخدم")]
         public int? EntryUserId { get; set; }
-        public bool? IsSendToInOutTransaction { get; set; }
+        public bool? IsSendTo_IN_OUT_TRANSACTION { get; set; }
     }
 }

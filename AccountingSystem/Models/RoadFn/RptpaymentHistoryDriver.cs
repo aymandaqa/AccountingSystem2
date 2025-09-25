@@ -23,8 +23,8 @@ namespace Roadfn.Models
         public decimal? SumOfComison { get; set; }
         public decimal? Total { get; set; }
         public int? EntryUserId { get; set; }
-        public string DriverName { get; set; }
-        public string EntryUser { get; set; }
+        public string? DriverName { get; set; }
+        public string? EntryUser { get; set; }
         public int? BranchNameId { get; set; }
         public int? shipmentCount { get; set; }
     }

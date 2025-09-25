@@ -13,16 +13,16 @@ namespace Roadfn.Models
         public int? Status { get; set; }
         public int? DriverId { get; set; }
         public int? BranchId { get; set; }
-        public string ClientName { get; set; }
+        public string? ClientName { get; set; }
         public int? ClientCityId { get; set; }
         public int? ClientAreaId { get; set; }
-        public string ClientPhone { get; set; }
-        public string ClientLandLine { get; set; }
+        public string? ClientPhone { get; set; }
+        public string? ClientLandLine { get; set; }
         public int? ToBranch { get; set; }
         public bool? IsUserBusiness { get; set; }
         public int? FromCityId { get; set; }
         public int? BusinessUserId { get; set; }
-        public string SenderName { get; set; }
-        public string SenderTel { get; set; }
+        public string? SenderName { get; set; }
+        public string? SenderTel { get; set; }
     }
 }

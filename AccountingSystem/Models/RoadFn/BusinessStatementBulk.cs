@@ -7,9 +7,9 @@ namespace Roadfn.Models
     {
         [Key]
         public int SenderId { get; set; }
-        public string SenderName { get; set; }
+        public string? SenderName { get; set; }
         public int StatusId { get; set; }
-        public string StatusDesc { get; set; }
+        public string? StatusDesc { get; set; }
         [Column(TypeName = "decimal(18, 2)")]
         public decimal ShipmentFees { get; set; }
         [Column(TypeName = "decimal(18, 2)")]
@@ -26,9 +26,9 @@ namespace Roadfn.Models
     {
         [Key]
         public int SenderId { get; set; }
-        public string SenderName { get; set; }
+        public string? SenderName { get; set; }
         public int StatusId { get; set; }
-        public string StatusDesc { get; set; }
+        public string? StatusDesc { get; set; }
         [Column(TypeName = "decimal(18, 2)")]
         public decimal ShipmentFees { get; set; }
         [Column(TypeName = "decimal(18, 2)")]
@@ -40,16 +40,16 @@ namespace Roadfn.Models
         public int ShipmentsNumber { get; set; }
         public int CompanyBranchID { get; set; }
         public int? UserID { get; set; }
-        public string IUser { get; set; }
+        public string? IUser { get; set; }
     }
     public class BusinessRetStatementBulk
     {
         [Key]
         public Guid Id { get; set; }
         public int SenderId { get; set; }
-        public string SenderName { get; set; }
+        public string? SenderName { get; set; }
         public int StatusId { get; set; }
-        public string StatusDesc { get; set; }
+        public string? StatusDesc { get; set; }
         [Column(TypeName = "decimal(18, 2)")]
         public decimal ShipmentFees { get; set; }
         [Column(TypeName = "decimal(18, 2)")]
@@ -66,9 +66,9 @@ namespace Roadfn.Models
     {
         [Key]
         public int SenderId { get; set; }
-        public string SenderName { get; set; }
+        public string? SenderName { get; set; }
         public int StatusId { get; set; }
-        public string StatusDesc { get; set; }
+        public string? StatusDesc { get; set; }
         [Column(TypeName = "decimal(18, 2)")]
         public decimal ShipmentFees { get; set; }
         [Column(TypeName = "decimal(18, 2)")]

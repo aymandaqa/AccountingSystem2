@@ -30,25 +30,25 @@ namespace Roadfn.Models
     public partial class Employees
     {
         public int Id { get; set; }
-        public string Name { get; set; }
-        public string Mobile { get; set; }
-        public string Address { get; set; }
+        public string? Name { get; set; }
+        public string? Mobile { get; set; }
+        public string? Address { get; set; }
         public decimal? Salary { get; set; }
         public int Branch { get; set; }
-        public string BranchName { get; set; }
+        public string? BranchName { get; set; }
     }
 
     public partial class EmployeeLoans
     {
         public long Id { get; set; }
-        public string EmployeeName { get; set; }
+        public string? EmployeeName { get; set; }
         public int? EmployeeId { get; set; }
         public DateTime Idate { get; set; }
         public decimal Amount { get; set; }
         public decimal? DueAmount { get; set; }
-        public string IUser { get; set; }
-        public string Status { get; set; }
-        public string Note { get; set; }
+        public string? IUser { get; set; }
+        public string? Status { get; set; }
+        public string? Note { get; set; }
     }
 
 
@@ -58,8 +58,8 @@ namespace Roadfn.Models
         public long LoanId { get; set; }
         public DateTime Idate { get; set; }
         public decimal Amount { get; set; }
-        public string IUser { get; set; }
-        public string Status { get; set; }
+        public string? IUser { get; set; }
+        public string? Status { get; set; }
     }
 
 
@@ -68,29 +68,29 @@ namespace Roadfn.Models
         public int Id { get; set; }
 
         [Display(Name = "  مستر ")]
-        public string Title { get; set; }
+        public string? Title { get; set; }
 
         [Display(Name = " الاسم الأول  ")]
-        public string FirstName { get; set; }
+        public string? FirstName { get; set; }
 
         [Display(Name = " اسم العائلة  ")]
-        public string LastName { get; set; }
+        public string? LastName { get; set; }
 
         [Display(Name = "  اسم المستخدم ")]
-        public string UserName { get; set; }
+        public string? UserName { get; set; }
 
         [Display(Name = " كلمة المرور ")]
-        public string UserPassword { get; set; }
+        public string? UserPassword { get; set; }
 
         [Display(Name = "  نوع المستخدم ")]
-        public string UserType { get; set; }
+        public string? UserType { get; set; }
         public int? LanguageId { get; set; }
 
         [Display(Name = " رقم الهاتف 1  ")]
-        public string MobileNo1 { get; set; }
+        public string? MobileNo1 { get; set; }
 
         [Display(Name = "  رقم الهاتف 2 ")]
-        public string MobileNo2 { get; set; }
+        public string? MobileNo2 { get; set; }
 
         [Display(Name = " موظف عند بزنس؟  ")]
         public bool? IsBusinessUser { get; set; }
@@ -98,10 +98,10 @@ namespace Roadfn.Models
         public int? CityId { get; set; }
 
         [Display(Name = "  العنوان ")]
-        public string Address { get; set; }
+        public string? Address { get; set; }
 
         [Display(Name = " الهاتف ")]
-        public string Tel { get; set; }
+        public string? Tel { get; set; }
 
 
         public int? CompanyBranchId { get; set; }
@@ -117,16 +117,16 @@ namespace Roadfn.Models
         public DateTime? LastPasswordChangeDate { get; set; }
         public int? BranchFinancialFundId { get; set; }
         public DateTime? LastLogin { get; set; }
-        public string DeviceToken { get; set; }
-        public string AllowStatus { get; set; }
+        public string? DeviceToken { get; set; }
+        public string? AllowStatus { get; set; }
     }
 
 
     public partial class MobileRole
     {
         public int Id { get; set; }
-        public string RoleName { get; set; }
-        public string RoleNote { get; set; }
+        public string? RoleName { get; set; }
+        public string? RoleNote { get; set; }
     }
 
     public partial class MobileRoleUser

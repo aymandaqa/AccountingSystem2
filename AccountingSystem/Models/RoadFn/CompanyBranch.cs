@@ -9,7 +9,7 @@ namespace Roadfn.Models
         public int Id { get; set; }
 
         [Display(Name = "اسم الفرع")]
-        public string BranchName { get; set; }
+        public string? BranchName { get; set; }
         public int? CityId { get; set; }
     }
 }

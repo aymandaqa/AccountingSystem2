@@ -7,7 +7,7 @@ namespace Roadfn.Models
         public int Id { get; set; }
 
         [Display(Name = "رقم التتبع")]
-        public string ShipmentTrackingNo { get; set; }
+        public string? ShipmentTrackingNo { get; set; }
 
         [Display(Name = "رقم البوليصة")]
         public long? ShipmentId { get; set; }
@@ -16,14 +16,14 @@ namespace Roadfn.Models
         public DateTime? EntryDate { get; set; }
 
         [Display(Name = "اسم السائق")]
-        public string DriverName { get; set; }
+        public string? DriverName { get; set; }
 
         [Display(Name = "اسم المستلم")]
-        public string ClientName { get; set; }
+        public string? ClientName { get; set; }
 
         [Display(Name = "امس المدينة")]
-        public string CityName { get; set; }
-        public string AreaName { get; set; }
+        public string? CityName { get; set; }
+        public string? AreaName { get; set; }
 
         [Display(Name = "المجموع الكلي")]
         public decimal? ShipmentTotal { get; set; }

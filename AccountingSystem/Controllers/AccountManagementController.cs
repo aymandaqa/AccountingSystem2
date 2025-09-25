@@ -1,4 +1,8 @@
 ﻿using AccountingSystem.Data;
+using AccountingSystem.Models;
+using AccountingSystem.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
@@ -8,9 +12,7 @@ using Syncfusion.EJ2.Base;
 using System.Data;
 using System.Security.Claims;
 using System.Text;
-using Microsoft.AspNetCore.Authorization;
-using AccountingSystem.Services;
-using AccountingSystem.Models;
+using User = AccountingSystem.Models.User;
 
 namespace Roadfn.Controllers
 {
@@ -22,8 +24,8 @@ namespace Roadfn.Controllers
         private readonly IConfiguration iConfig;
         private readonly IJournalEntryService _journalEntryService;
         private readonly IAccountService _accountService;
-
-        public AccountManagementController(RoadFnDbContext context, IWebHostEnvironment env, IConfiguration iConfig, IJournalEntryService journalEntryService, IAccountService accountService, ApplicationDbContext accontext)
+        private readonly UserManager<User> _userManager;
+        public AccountManagementController(RoadFnDbContext context, UserManager<User> userManager, IWebHostEnvironment env, IConfiguration iConfig, IJournalEntryService journalEntryService, IAccountService accountService, ApplicationDbContext accontext)
         {
             _context = context;
             _env = env;
@@ -31,6 +33,8 @@ namespace Roadfn.Controllers
             _journalEntryService = journalEntryService;
             _accountService = accountService;
             _accontext = accontext;
+            _userManager = userManager;
+
         }
 
         [Authorize(Policy = "accountmanagement.driverstatment")]
@@ -275,7 +279,7 @@ namespace Roadfn.Controllers
                             ship.DriverId = 0;
                             _context.Shipments.Update(ship);
                             await _context.SaveChangesAsync();
-                            await _context.SessionAddRemarks.AddAsync(sessionAddRemark);
+                            await _context.Session_Add_Remarks.AddAsync(sessionAddRemark);
                             await _context.SaveChangesAsync();
                         }
                     }
@@ -1048,14 +1052,15 @@ namespace Roadfn.Controllers
         [HttpPost]
         public async Task<IActionResult> PayToDriver([FromBody] List<RptDriverPay> rptDriverPay)
         {
-            string userId = User.Claims.SingleOrDefault(x => x.Type.Equals(ClaimTypes.NameIdentifier)).Value;
-            var user = await _context.Users.FindAsync(Convert.ToInt32(userId));
+            //string userId = User.Claims.SingleOrDefault(x => x.Type.Equals(ClaimTypes.NameIdentifier)).Value;
+            //var user = await _context.Users.FindAsync(Convert.ToInt32(userId));
+            var user = await _userManager.GetUserAsync(User);
 
             if (rptDriverPay.Count > 0)
             {
                 var driverPaymentHeader = new DriverPaymentHeader();
                 var driverPayments = new List<DriverPaymentDetail>();
-                await _context.DriverPaymentHeaders.AddAsync(driverPaymentHeader);
+                await _context.DriverPaymentHeader.AddAsync(driverPaymentHeader);
                 await _context.SaveChangesAsync();
                 var listpay = new List<RptDriverPay>();
                 foreach (var item in rptDriverPay)
@@ -1080,13 +1085,22 @@ namespace Roadfn.Controllers
                 driverPaymentHeader.TotalCod = listpay.Sum(t => t.ShipmentTotal) - (listpay.Sum(t => t.CommissionPerItem) + listpay.Sum(t => t.DriverExtraComisionValue));
                 driverPaymentHeader.DriverId = listpay.DistinctBy(t => t.DriverId).FirstOrDefault().DriverId;
                 driverPaymentHeader.PaymentDate = DateTime.Now;
-                driverPaymentHeader.EntryUserId = Convert.ToInt32(userId);
-                _context.DriverPaymentHeaders.Update(driverPaymentHeader);
+                driverPaymentHeader.EntryUserId = 0;// Convert.ToInt32(user.Id);
+                _context.DriverPaymentHeader.Update(driverPaymentHeader);
                 await _context.SaveChangesAsync();
 
 
                 foreach (var item in listpay)
                 {
+
+                    var id = item.Id;
+                    var id1 = item.ShipmentId;
+
+                    var CashAccounts = await _accontext.UserPaymentAccounts.Where(u => u.UserId == user.Id && u.CurrencyId == 1).FirstOrDefaultAsync();
+                    var sh = await _context.Shipments.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(id1));
+                    var bus = await _context.Users.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(sh.BusinessUserId));
+                    var brn = await _context.CompanyBranches.FirstOrDefaultAsync(t => t.Id == bus.CompanyBranchId);
+                    var Accbrn = await _accontext.Branches.FirstOrDefaultAsync(t => t.Code == bus.CompanyBranchId.ToString());
 
                     #region driver account
                     var setting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "DriverParentAccountId");
@@ -1094,29 +1108,28 @@ namespace Roadfn.Controllers
                     var driver = await _context.Drives.FirstOrDefaultAsync(t => t.Id == driverPaymentHeader.DriverId);
 
 
-                    var ac = await _accountService.CreateAccountAsync(driver.Id + "_" + driver.FirstName + " " + driver.FamilyName + " " + driver.Phone1, acc.Id);
+                    var DriverAccount = await _accountService.CreateAccountAsync(driver.Id + "_" + driver.FirstName + " " + driver.FamilyName + " " + driver.Phone1, acc.Id);
                     var dfacc = await _accontext.DriverMappingAccounts.FirstOrDefaultAsync(t => t.DriverId == driver.Id.ToString());
                     if (dfacc == null)
                     {
                         await _accontext.DriverMappingAccounts.AddAsync(new DriverMappingAccount
                         {
                             DriverId = driver.Id.ToString(),
-                            AccountId = ac.Id.ToString(),
-                            AccountCode = ac.Code,
+                            AccountId = DriverAccount.Id.ToString(),
+                            AccountCode = DriverAccount.Code,
                         });
                     }
                     #endregion
 
 
                     #region customer account
-
-                    var sh = await _context.Shipments.FindAsync(Convert.ToInt32(item.ShipmentId));
+                    #region def account
                     var Csetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "CustomerParentAccountId");
                     var Cacc = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == Csetting.Value);
                     var customer = await _context.Users.FirstOrDefaultAsync(t => t.Id == sh.BusinessUserId);
 
 
-                    var Cac = await _accountService.CreateAccountAsync(customer.Id + "_" + customer.FirstName + " " + customer.LastName + " " + customer.MobileNo1, acc.Id);
+                    var CustomerAccount = await _accountService.CreateAccountAsync(customer.Id + "_" + customer.FirstName + " " + customer.LastName + " " + customer.MobileNo1, Cacc.Id);
 
                     var Cdfacc = await _accontext.CusomerMappingAccounts.FirstOrDefaultAsync(t => t.CustomerId == customer.Id.ToString());
                     if (Cdfacc == null)
@@ -1124,24 +1137,101 @@ namespace Roadfn.Controllers
                         await _accontext.CusomerMappingAccounts.AddAsync(new CusomerMappingAccount
                         {
                             CustomerId = customer.Id.ToString(),
-                            AccountId = ac.Id.ToString(),
-                            AccountCode = ac.Code,
+                            AccountId = CustomerAccount.Id.ToString(),
+                            AccountCode = CustomerAccount.Code,
                         });
                     }
-                    //var lines = new List<JournalEntryLine>
-                    //                {
-                    //                    new JournalEntryLine { AccountId = supplier.AccountId!.Value, DebitAmount = model.Amount },
-                    //                    new JournalEntryLine { AccountId = model.AccountId!.Value, CreditAmount = model.Amount }
-                    //                };
 
+                    var RevenueAccountCode = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "RevenueAccountCode");
+                    var RevenueAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == RevenueAccountCode.Value);
+                    #endregion  
 
-                    //await _journalEntryService.CreateJournalEntryAsync(
-                    //                                         model.Date,
-                    //                                         model.Notes == null ? "سند دفع" : "سند دفع" + Environment.NewLine + model.Notes,
-                    //                                         user.PaymentBranchId.Value,
-                    //                                         user.Id,
-                    //                                         lines,
-                    //                                         JournalEntryStatus.Posted);
+                    var Paytxn = item;
+                    var lines = new List<JournalEntryLine>();
+
+                    #region CashAccounts txn
+                    var tottxn = new JournalEntryLine();
+                    tottxn.AccountId = CashAccounts.AccountId;
+                    tottxn.DebitAmount = 0;
+                    tottxn.CreditAmount = 0;
+                    if (Convert.ToDecimal(Paytxn.ShipmentTotal) <= 0)
+                    {
+                        tottxn.DebitAmount = 0;
+                        tottxn.CreditAmount = 0;
+                    }
+                    else
+                    {
+                        tottxn.DebitAmount = Convert.ToDecimal(Paytxn.ShipmentTotal);
+                    }
+                    tottxn.Reference = driverPaymentHeader.Id.ToString();
+                    tottxn.Description = sh.ShipmentTrackingNo;
+                    lines.Add(tottxn);
+                    #endregion
+
+                    #region DriverAttxn txn
+                    var DriverAttxn = new JournalEntryLine();
+                    DriverAttxn.AccountId = DriverAccount.Id;
+                    DriverAttxn.CreditAmount = Convert.ToDecimal(Paytxn.CommissionPerItem);
+                    DriverAttxn.Reference = driverPaymentHeader.Id.ToString();
+                    DriverAttxn.Description = sh.ShipmentTrackingNo;
+                    lines.Add(DriverAttxn);
+                    #endregion
+
+                    #region CustomerAccounttxn txn
+                    var CustomerAccounttxn = new JournalEntryLine();
+                    CustomerAccounttxn.AccountId = CustomerAccount.Id;
+                    CustomerAccounttxn.DebitAmount = 0;
+                    CustomerAccounttxn.CreditAmount = 0;
+                    if (Convert.ToDecimal(Paytxn.ShipmentPrice) <= 0)
+                    {
+                        CustomerAccounttxn.DebitAmount = Convert.ToDecimal(Paytxn.ShipmentPrice) * -1;
+                    }
+                    else
+                    {
+                        CustomerAccounttxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentPrice);
+                    }
+                    CustomerAccounttxn.Reference = driverPaymentHeader.Id.ToString();
+                    CustomerAccounttxn.Description = sh.ShipmentTrackingNo;
+                    lines.Add(CustomerAccounttxn);
+                    #endregion
+
+                    #region RevenueAccounttxn txn
+                    var RevenueAccounttxn = new JournalEntryLine();
+                    RevenueAccounttxn.AccountId = RevenueAccount.Id;
+                    RevenueAccounttxn.DebitAmount = 0;
+                    RevenueAccounttxn.CreditAmount = 0;
+                    if (Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice) <= 0)
+                    {
+                        RevenueAccounttxn.DebitAmount = Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice) * -1;
+                    }
+                    else
+                    {
+                        RevenueAccounttxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice);
+                    }
+                    RevenueAccounttxn.Reference = driverPaymentHeader.Id.ToString();
+                    RevenueAccounttxn.Description = sh.ShipmentTrackingNo;
+                    lines.Add(RevenueAccounttxn);
+                    #endregion 
+
+                    #region pay DriverAttxn txn
+                    var PayDriverAttxn = new JournalEntryLine();
+                    PayDriverAttxn.AccountId = DriverAccount.Id;
+                    PayDriverAttxn.DebitAmount = Convert.ToDecimal(Paytxn.CommissionPerItem);
+                    PayDriverAttxn.Reference = driverPaymentHeader.Id.ToString();
+                    PayDriverAttxn.Description = sh.ShipmentTrackingNo;
+                    lines.Add(PayDriverAttxn);
+                    #endregion
+
+                    #region pay DriverAttxn CashAccounts txn
+                    var PayCashAccountsDriverAttxn = new JournalEntryLine();
+                    PayCashAccountsDriverAttxn.AccountId = CashAccounts.AccountId; ;
+                    PayCashAccountsDriverAttxn.CreditAmount = Convert.ToDecimal(Paytxn.CommissionPerItem);
+                    PayCashAccountsDriverAttxn.Reference = driverPaymentHeader.Id.ToString();
+                    PayCashAccountsDriverAttxn.Description = sh.ShipmentTrackingNo;
+                    lines.Add(PayCashAccountsDriverAttxn);
+                    #endregion 
+
+                    await _journalEntryService.CreateJournalEntryAsync(DateTime.Now, "PayToDriver " + sh.ShipmentTrackingNo, Accbrn.Id, user.Id, lines, JournalEntryStatus.Posted);
 
                     #endregion
                 }
@@ -1160,7 +1250,7 @@ namespace Roadfn.Controllers
                         shipmentLog.ShipmentId = ship.Id;
                         shipmentLog.EntryDate = DateTime.Now;
                         shipmentLog.EntryDateTine = DateTime.Now;
-                        shipmentLog.UserId = Convert.ToInt32(userId);
+                        shipmentLog.UserId = 0;// Convert.ToInt32(userId);
                         shipmentLog.Status = ship.Status;
                         shipmentLog.ClientName = ship.ClientName;
                         shipmentLog.ClientPhone = ship.ClientPhone;
@@ -1176,7 +1266,7 @@ namespace Roadfn.Controllers
                         await _context.SaveChangesAsync();
                         SessionAddRemark sessionAddRemark = new SessionAddRemark();
                         sessionAddRemark.ShipmentId = ship.Id;
-                        sessionAddRemark.UserId = Convert.ToInt32(userId);
+                        sessionAddRemark.UserId = 0;// Convert.ToInt32(userId);
                         sessionAddRemark.EntryDateTime = DateTime.Now;
                         sessionAddRemark.OldStatus = ship.Status;
                         sessionAddRemark.NewStatus = Convert.ToInt32(StatusEnum.InAccounting);
@@ -1186,7 +1276,7 @@ namespace Roadfn.Controllers
                         ship.DriverId = 0;
                         _context.Shipments.Update(ship);
                         await _context.SaveChangesAsync();
-                        await _context.SessionAddRemarks.AddAsync(sessionAddRemark);
+                        await _context.Session_Add_Remarks.AddAsync(sessionAddRemark);
                         await _context.SaveChangesAsync();
 
                     }
@@ -1305,7 +1395,7 @@ namespace Roadfn.Controllers
                         ship.DriverId = 0;
                         _context.Shipments.Update(ship);
                         await _context.SaveChangesAsync();
-                        await _context.SessionAddRemarks.AddAsync(sessionAddRemark);
+                        await _context.Session_Add_Remarks.AddAsync(sessionAddRemark);
                         await _context.SaveChangesAsync();
                     }
                 }
@@ -1640,7 +1730,7 @@ namespace Roadfn.Controllers
                                 ship.DriverId = 0;
                                 _context.Shipments.Update(ship);
                                 await _context.SaveChangesAsync();
-                                await _context.SessionAddRemarks.AddAsync(sessionAddRemark);
+                                await _context.Session_Add_Remarks.AddAsync(sessionAddRemark);
                                 await _context.SaveChangesAsync();
                             }
                         }
@@ -1749,7 +1839,7 @@ namespace Roadfn.Controllers
                 if (!string.IsNullOrWhiteSpace(item1))
                 {
                     var filepath = Path.Combine(_env.WebRootPath, "ReportTemplates", "DrivertPd", "DrivertPd.html");
-                    var header = await _context.DriverPaymentHeaders.FindAsync(Convert.ToInt64(item1));
+                    var header = await _context.DriverPaymentHeader.FindAsync(Convert.ToInt64(item1));
                     if (header == null)
                         return NotFound();
                     var details = await _context.RptDriverPaySlip.Where(t => t.HeaderID == header.Id).ToListAsync();

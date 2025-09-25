@@ -154,9 +154,9 @@ namespace AccountingSystem.Data
         public virtual DbSet<Roadfn.Models.City> Cities { get; set; }
         public virtual DbSet<CompanyBranch> CompanyBranches { get; set; }
         public virtual DbSet<DriverPaymentDetail> DriverPaymentDetails { get; set; }
-        public virtual DbSet<DriverPaymentHeader> DriverPaymentHeaders { get; set; }
+        public virtual DbSet<DriverPaymentHeader> DriverPaymentHeader { get; set; }
         public virtual DbSet<RptDriverPay> RptDriverPay { get; set; }
-        public virtual DbSet<SessionAddRemark> SessionAddRemarks { get; set; }
+        public virtual DbSet<SessionAddRemark> Session_Add_Remarks { get; set; }
         public virtual DbSet<Shipment> Shipments { get; set; }
         public virtual DbSet<ShipmentLog> ShipmentLogs { get; set; }
         public virtual DbSet<Roadfn.Models.User> Users { get; set; }

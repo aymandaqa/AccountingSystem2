@@ -3,11 +3,11 @@
     public partial class ShipmentStatus
     {
         public int Id { get; set; }
-        public string Description { get; set; }
-        public string ArabicDescription { get; set; }
-        public string Icon { get; set; }
+        public string? Description { get; set; }
+        public string? ArabicDescription { get; set; }
+        public string? Icon { get; set; }
         public bool? IsVisibleInTransaction { get; set; }
-        public string ButtunStatusListValid { get; set; }
+        public string? ButtunStatusListValid { get; set; }
         public bool? IsNeedDriverAssign { get; set; }
         public bool? IsNeedLocationOnly { get; set; }
         public bool? IsValidForUser { get; set; }
@@ -21,8 +21,8 @@
         public bool? NeedConfirmation { get; set; }
         public bool? RequiredReceivedFromBranch { get; set; }
         public bool? RequiredTransferToBranch { get; set; }
-        public string LinkToStatusRef { get; set; }
-        public string FullDescription { get; set; }
-        public string IconColore { get; set; }
+        public string? LinkToStatusRef { get; set; }
+        public string? FullDescription { get; set; }
+        public string? IconColore { get; set; }
     }
 }

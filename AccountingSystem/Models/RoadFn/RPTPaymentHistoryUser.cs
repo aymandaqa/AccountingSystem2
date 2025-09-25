@@ -8,14 +8,14 @@
         public DateTime? PaymentDate { get; set; }
         public int? LoginUserID { get; set; }
         public int ShipmentCount { get; set; }
-        public string UserName { get; set; }
+        public string? UserName { get; set; }
         public int? BranchNameId { get; set; }
-        public string BranchName { get; set; }
+        public string? BranchName { get; set; }
         public decimal? TotalFees { get; set; }
         public decimal? ExtraFees { get; set; }
         public int? DriverId { get; set; }
-        public string Driver { get; set; }
-        public string InputUser { get; set; }
+        public string? Driver { get; set; }
+        public string? InputUser { get; set; }
     }
     public class RPTPaymentReturnUsers
     {
@@ -25,13 +25,13 @@
         public DateTime? PaymentDate { get; set; }
         public int? LoginUserID { get; set; }
         public int ShipmentCount { get; set; }
-        public string UserName { get; set; }
+        public string? UserName { get; set; }
         public int? BranchNameId { get; set; }
-        public string BranchName { get; set; }
+        public string? BranchName { get; set; }
         public decimal? TotalFees { get; set; }
         public decimal? ExtraFees { get; set; }
         public int? DriverId { get; set; }
-        public string Driver { get; set; }
-        public string InputUser { get; set; }
+        public string? Driver { get; set; }
+        public string? InputUser { get; set; }
     }
 }

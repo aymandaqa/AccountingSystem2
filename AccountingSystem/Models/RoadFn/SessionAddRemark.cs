@@ -11,7 +11,7 @@ namespace Roadfn.Models
         public long? SessionId { get; set; }
         public long? ShipmentId { get; set; }
         public int? UserId { get; set; }
-        public string Remark { get; set; }
+        public string? Remark { get; set; }
         public int? DriverAssignRemarkId { get; set; }
         public int? OldStatus { get; set; }
         public int? NewStatus { get; set; }
