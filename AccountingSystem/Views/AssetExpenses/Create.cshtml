@@ -25,7 +25,10 @@
                     <select asp-for="ExpenseAccountId" class="form-select" id="expenseAccountSelect">
                         @foreach (var account in Model.ExpenseAccounts)
                         {
-                            <option value="@account.Id" data-currency-id="@account.CurrencyId" data-currency-code="@account.CurrencyCode" @(account.Id == Model.ExpenseAccountId ? "selected" : string.Empty)>@account.DisplayName</option>
+                            <option value="@account.Id" data-currency-id="@account.CurrencyId" data-currency-code="@account.CurrencyCode" @if (account.Id == Model.ExpenseAccountId)
+                                   {
+                                       <text>selected</text>
+                                   }>@account.DisplayName</option>
                         }
                     </select>
                     <span asp-validation-for="ExpenseAccountId" class="text-danger"></span>
@@ -33,8 +36,14 @@
                 <div class="col-md-6">
                     <label asp-for="IsCash" class="form-label"></label>
                     <select asp-for="IsCash" class="form-select" id="paymentType">
-                        <option value="true" @(Model.IsCash ? "selected" : string.Empty)>نقدي</option>
-                        <option value="false" @(!Model.IsCash ? "selected" : string.Empty)>غير نقدي</option>
+                        <option value="true" @if (Model.IsCash)
+                                {
+                                    <text>selected</text>
+                                }>نقدي</option>
+                        <option value="false" @if (!Model.IsCash)
+                                {
+                                    <text>selected</text>
+                                }>غير نقدي</option>
                     </select>
                 </div>
                 <div class="col-md-6" id="settlementContainer">
@@ -43,7 +52,10 @@
                         <option value="">-- اختر الحساب --</option>
                         @foreach (var account in Model.Accounts)
                         {
-                            <option value="@account.Id" data-currency-id="@account.CurrencyId" data-currency-code="@account.CurrencyCode" @(account.Id == Model.AccountId ? "selected" : string.Empty)>@account.DisplayName</option>
+                            <option value="@account.Id" data-currency-id="@account.CurrencyId" data-currency-code="@account.CurrencyCode" @if (account.Id == Model.AccountId)
+                                   {
+                                       <text>selected</text>
+                                   }>@account.DisplayName</option>
                         }
                     </select>
                     <span asp-validation-for="AccountId" class="text-danger"></span>
