@@ -1108,7 +1108,7 @@ namespace Roadfn.Controllers
                     var driver = await _context.Drives.FirstOrDefaultAsync(t => t.Id == driverPaymentHeader.DriverId);
 
 
-                    var DriverAccount = await _accountService.CreateAccountAsync(driver.Id + "_" + driver.FirstName + " " + driver.FamilyName + " " + driver.Phone1, acc.Id);
+                    var DriverAccount = await _accountService.CreateAccountAsync("D_" + driver.Id + "_" + driver.FirstName + " " + driver.FamilyName + " " + driver.Phone1, acc.Id);
                     var dfacc = await _accontext.DriverMappingAccounts.FirstOrDefaultAsync(t => t.DriverId == driver.Id.ToString());
                     if (dfacc == null)
                     {
@@ -1129,7 +1129,7 @@ namespace Roadfn.Controllers
                     var customer = await _context.Users.FirstOrDefaultAsync(t => t.Id == sh.BusinessUserId);
 
 
-                    var CustomerAccount = await _accountService.CreateAccountAsync(customer.Id + "_" + customer.FirstName + " " + customer.LastName + " " + customer.MobileNo1, Cacc.Id);
+                    var CustomerAccount = await _accountService.CreateAccountAsync("B_" + customer.Id + "_" + customer.FirstName + " " + customer.LastName + " " + customer.MobileNo1, Cacc.Id);
 
                     var Cdfacc = await _accontext.CusomerMappingAccounts.FirstOrDefaultAsync(t => t.CustomerId == customer.Id.ToString());
                     if (Cdfacc == null)

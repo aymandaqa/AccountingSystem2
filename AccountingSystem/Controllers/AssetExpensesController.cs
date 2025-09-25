@@ -208,10 +208,12 @@ namespace AccountingSystem.Controllers
         private async Task<IEnumerable<AssetExpenseAccountOption>> GetExpenseAccountsAsync()
         {
             var setting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "AssetExpensesParentAccountId");
-            if (setting != null && int.TryParse(setting.Value, out var parentId))
+            if (setting != null)
             {
+
+                var acc = await _context.Accounts.FirstOrDefaultAsync(t => t.Code == setting.Value);
                 return await _context.Accounts
-                    .Where(a => a.ParentId == parentId)
+                    .Where(a => a.ParentId == acc.Id)
                     .Include(a => a.Currency)
                     .OrderBy(a => a.Code)
                     .Select(a => new AssetExpenseAccountOption

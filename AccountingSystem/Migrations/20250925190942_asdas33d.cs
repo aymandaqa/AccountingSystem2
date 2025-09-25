@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace AccountingSystem.Migrations
 {
     /// <inheritdoc />
-    public partial class AddAssets : Migration
+    public partial class asdas33d : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -69,15 +69,15 @@ namespace AccountingSystem.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_AssetExpenses_Assets_AssetId",
-                        column: x => x.AssetId,
-                        principalTable: "Assets",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
                         name: "FK_AssetExpenses_AspNetUsers_CreatedById",
                         column: x => x.CreatedById,
                         principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_AssetExpenses_Assets_AssetId",
+                        column: x => x.AssetId,
+                        principalTable: "Assets",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
@@ -117,64 +117,11 @@ namespace AccountingSystem.Migrations
                 name: "IX_Assets_BranchId",
                 table: "Assets",
                 column: "BranchId");
-
-            migrationBuilder.InsertData(
-                table: "Permissions",
-                columns: new[] { "Id", "Category", "CreatedAt", "DisplayName", "IsActive", "Name" },
-                values: new object[,]
-                {
-                    { 48, "الأصول", new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), "عرض الأصول", true, "assets.view" },
-                    { 49, "الأصول", new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), "إنشاء الأصول", true, "assets.create" },
-                    { 50, "الأصول", new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), "تعديل الأصول", true, "assets.edit" },
-                    { 51, "الأصول", new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), "حذف الأصول", true, "assets.delete" },
-                    { 52, "الأصول", new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), "عرض مصاريف الأصول", true, "assetexpenses.view" },
-                    { 53, "الأصول", new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), "إنشاء مصروف أصل", true, "assetexpenses.create" }
-                });
-
-            migrationBuilder.InsertData(
-                table: "SystemSettings",
-                columns: new[] { "Key", "Value" },
-                values: new object[] { "AssetExpensesParentAccountId", null });
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DeleteData(
-                table: "Permissions",
-                keyColumn: "Id",
-                keyValue: 48);
-
-            migrationBuilder.DeleteData(
-                table: "Permissions",
-                keyColumn: "Id",
-                keyValue: 49);
-
-            migrationBuilder.DeleteData(
-                table: "Permissions",
-                keyColumn: "Id",
-                keyValue: 50);
-
-            migrationBuilder.DeleteData(
-                table: "Permissions",
-                keyColumn: "Id",
-                keyValue: 51);
-
-            migrationBuilder.DeleteData(
-                table: "Permissions",
-                keyColumn: "Id",
-                keyValue: 52);
-
-            migrationBuilder.DeleteData(
-                table: "Permissions",
-                keyColumn: "Id",
-                keyValue: 53);
-
-            migrationBuilder.DeleteData(
-                table: "SystemSettings",
-                keyColumn: "Key",
-                keyValue: "AssetExpensesParentAccountId");
-
             migrationBuilder.DropTable(
                 name: "AssetExpenses");
 
