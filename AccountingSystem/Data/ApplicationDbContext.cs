@@ -192,10 +192,16 @@ namespace AccountingSystem.Data
                 entity.Property(e => e.Type).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.AssetNumber).HasMaxLength(100);
                 entity.Property(e => e.Notes).HasMaxLength(500);
+                entity.Property(e => e.OpeningBalance).HasColumnType("decimal(18,2)");
 
                 entity.HasOne(e => e.Branch)
                     .WithMany(b => b.Assets)
                     .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Account)
+                    .WithMany()
+                    .HasForeignKey(e => e.AccountId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 

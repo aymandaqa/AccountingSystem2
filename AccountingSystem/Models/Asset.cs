@@ -25,11 +25,17 @@ namespace AccountingSystem.Models
         [StringLength(500)]
         public string? Notes { get; set; }
 
+        public decimal OpeningBalance { get; set; }
+
+        public int? AccountId { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public DateTime? UpdatedAt { get; set; }
 
         public virtual Branch Branch { get; set; } = null!;
+
+        public virtual Account? Account { get; set; }
 
         public virtual ICollection<AssetExpense> Expenses { get; set; } = new List<AssetExpense>();
     }

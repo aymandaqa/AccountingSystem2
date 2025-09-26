@@ -14,6 +14,7 @@ namespace AccountingSystem.ViewModels
         public string BranchName { get; set; } = string.Empty;
         public string? AssetNumber { get; set; }
         public string? Notes { get; set; }
+        public decimal OpeningBalance { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
     }
@@ -44,7 +45,21 @@ namespace AccountingSystem.ViewModels
         [Display(Name = "ملاحظات")]
         public string? Notes { get; set; }
 
+        [Display(Name = "الرصيد الافتتاحي")]
+        [Range(typeof(decimal), "0", "79228162514264337593543950335", ErrorMessage = "قيمة غير صالحة")]
+        public decimal OpeningBalance { get; set; }
+
+        [Required]
+        [Display(Name = "حساب رأس المال")]
+        public int CapitalAccountId { get; set; }
+
+        public int? AccountId { get; set; }
+
+        [Display(Name = "حساب الأصل")]
+        public string? AccountCode { get; set; }
+
         public IEnumerable<SelectListItem> Branches { get; set; } = Enumerable.Empty<SelectListItem>();
+        public IEnumerable<SelectListItem> CapitalAccounts { get; set; } = Enumerable.Empty<SelectListItem>();
     }
 
     public class AssetExpenseListViewModel

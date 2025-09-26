@@ -1,11 +1,15 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
+using AccountingSystem.Services;
 using AccountingSystem.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 
 namespace AccountingSystem.Controllers
 {
@@ -13,10 +17,20 @@ namespace AccountingSystem.Controllers
     public class AssetsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<User> _userManager;
+        private readonly IJournalEntryService _journalEntryService;
+        private readonly IAccountService _accountService;
 
-        public AssetsController(ApplicationDbContext context)
+        public AssetsController(
+            ApplicationDbContext context,
+            UserManager<User> userManager,
+            IJournalEntryService journalEntryService,
+            IAccountService accountService)
         {
             _context = context;
+            _userManager = userManager;
+            _journalEntryService = journalEntryService;
+            _accountService = accountService;
         }
 
         public async Task<IActionResult> Index()
@@ -34,6 +48,7 @@ namespace AccountingSystem.Controllers
                 BranchName = a.Branch.NameAr,
                 AssetNumber = a.AssetNumber,
                 Notes = a.Notes,
+                OpeningBalance = a.OpeningBalance,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt
             }).ToList();
@@ -46,7 +61,8 @@ namespace AccountingSystem.Controllers
         {
             var model = new AssetFormViewModel
             {
-                Branches = await GetBranchesAsync()
+                Branches = await GetBranchesAsync(),
+                CapitalAccounts = await GetCapitalAccountsAsync()
             };
             return View(model);
         }
@@ -56,30 +72,133 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "assets.create")]
         public async Task<IActionResult> Create(AssetFormViewModel model)
         {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Challenge();
+            }
+
+            Account? parentAccount = null;
+            Account? capitalAccount = null;
+
             if (ModelState.IsValid)
             {
+                var parentSetting = await _context.SystemSettings
+                    .FirstOrDefaultAsync(s => s.Key == "AssetsParentAccountCode");
+
+                if (parentSetting == null || string.IsNullOrWhiteSpace(parentSetting.Value))
+                {
+                    ModelState.AddModelError(string.Empty, "لم يتم ضبط حساب الأصول الرئيسي في الإعدادات");
+                }
+                else
+                {
+                    parentAccount = await _context.Accounts
+                        .Include(a => a.Currency)
+                        .FirstOrDefaultAsync(a => a.Code == parentSetting.Value);
+
+                    if (parentAccount == null)
+                    {
+                        ModelState.AddModelError(string.Empty, "حساب الأصول المحدد في الإعدادات غير موجود");
+                    }
+                }
+
+                capitalAccount = await _context.Accounts
+                    .Include(a => a.Currency)
+                    .FirstOrDefaultAsync(a => a.Id == model.CapitalAccountId);
+
+                if (capitalAccount == null)
+                {
+                    ModelState.AddModelError(nameof(model.CapitalAccountId), "حساب رأس المال غير صالح");
+                }
+
+                if (parentAccount != null && capitalAccount != null && parentAccount.CurrencyId != capitalAccount.CurrencyId)
+                {
+                    ModelState.AddModelError(nameof(model.CapitalAccountId), "يجب أن تكون عملة حساب الأصل مطابقة لعملة حساب رأس المال");
+                }
+            }
+
+            if (!ModelState.IsValid)
+            {
+                model.Branches = await GetBranchesAsync();
+                model.CapitalAccounts = await GetCapitalAccountsAsync();
+                return View(model);
+            }
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var (accountId, _) = await _accountService.CreateAccountAsync(model.Name, parentAccount!.Id);
+                var account = await _context.Accounts.FindAsync(accountId);
+                if (account == null)
+                {
+                    throw new InvalidOperationException("تعذر إنشاء حساب الأصل");
+                }
+
+                account.CanHaveChildren = false;
+                account.BranchId = model.BranchId;
+                account.Description = model.Notes;
+                account.OpeningBalance = 0;
+                account.UpdatedAt = DateTime.Now;
+
+                await _context.SaveChangesAsync();
+
                 var asset = new Asset
                 {
                     Name = model.Name,
                     Type = model.Type,
                     BranchId = model.BranchId,
                     AssetNumber = model.AssetNumber,
-                    Notes = model.Notes
+                    Notes = model.Notes,
+                    OpeningBalance = model.OpeningBalance,
+                    AccountId = accountId
                 };
 
                 _context.Assets.Add(asset);
                 await _context.SaveChangesAsync();
+
+                if (model.OpeningBalance > 0)
+                {
+                    var lines = new List<JournalEntryLine>
+                    {
+                        new JournalEntryLine { AccountId = accountId, DebitAmount = model.OpeningBalance },
+                        new JournalEntryLine { AccountId = capitalAccount!.Id, CreditAmount = model.OpeningBalance }
+                    };
+
+                    var description = $"إثبات أصل جديد: {asset.Name}";
+                    if (!string.IsNullOrWhiteSpace(asset.Notes))
+                    {
+                        description += Environment.NewLine + asset.Notes;
+                    }
+
+                    await _journalEntryService.CreateJournalEntryAsync(
+                        DateTime.Now,
+                        description,
+                        asset.BranchId,
+                        user.Id,
+                        lines,
+                        JournalEntryStatus.Posted);
+                }
+
+                await transaction.CommitAsync();
                 return RedirectToAction(nameof(Index));
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                ModelState.AddModelError(string.Empty, "حدث خطأ أثناء إنشاء الأصل. الرجاء المحاولة مرة أخرى");
             }
 
             model.Branches = await GetBranchesAsync();
+            model.CapitalAccounts = await GetCapitalAccountsAsync();
             return View(model);
         }
 
         [Authorize(Policy = "assets.edit")]
         public async Task<IActionResult> Edit(int id)
         {
-            var asset = await _context.Assets.FindAsync(id);
+            var asset = await _context.Assets
+                .Include(a => a.Account)
+                .FirstOrDefaultAsync(a => a.Id == id);
             if (asset == null)
             {
                 return NotFound();
@@ -93,6 +212,9 @@ namespace AccountingSystem.Controllers
                 BranchId = asset.BranchId,
                 AssetNumber = asset.AssetNumber,
                 Notes = asset.Notes,
+                OpeningBalance = asset.OpeningBalance,
+                AccountId = asset.AccountId,
+                AccountCode = asset.Account?.Code,
                 Branches = await GetBranchesAsync()
             };
 
@@ -122,13 +244,32 @@ namespace AccountingSystem.Controllers
                 asset.BranchId = model.BranchId;
                 asset.AssetNumber = model.AssetNumber;
                 asset.Notes = model.Notes;
+                asset.OpeningBalance = model.OpeningBalance;
                 asset.UpdatedAt = DateTime.Now;
+
+                if (asset.AccountId.HasValue)
+                {
+                    var account = await _context.Accounts.FindAsync(asset.AccountId.Value);
+                    if (account != null)
+                    {
+                        account.NameAr = model.Name;
+                        account.NameEn = model.Name;
+                        account.BranchId = model.BranchId;
+                        account.Description = model.Notes;
+                        account.UpdatedAt = DateTime.Now;
+                    }
+                }
 
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
 
             model.Branches = await GetBranchesAsync();
+            if (model.AccountId.HasValue)
+            {
+                var account = await _context.Accounts.FindAsync(model.AccountId.Value);
+                model.AccountCode = account?.Code;
+            }
             return View(model);
         }
 
@@ -172,6 +313,18 @@ namespace AccountingSystem.Controllers
             _context.Assets.Remove(asset);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
+        }
+
+        private async Task<IEnumerable<SelectListItem>> GetCapitalAccountsAsync()
+        {
+            return await _context.Accounts
+                .Where(a => a.AccountType == AccountType.Equity && a.CanPostTransactions)
+                .OrderBy(a => a.Code)
+                .Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = $"{a.Code} - {a.NameAr}"
+                }).ToListAsync();
         }
 
         private async Task<IEnumerable<SelectListItem>> GetBranchesAsync()

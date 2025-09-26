@@ -13,6 +13,7 @@
         <div class="card-body">
             <form asp-action="Edit" method="post" class="row g-3">
                 <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="AccountId" />
                 <div class="col-md-6">
                     <label asp-for="Name" class="form-label"></label>
                     <input asp-for="Name" class="form-control" />
@@ -27,6 +28,15 @@
                     <label asp-for="BranchId" class="form-label"></label>
                     <select asp-for="BranchId" asp-items="Model.Branches" class="form-select"></select>
                     <span asp-validation-for="BranchId" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="OpeningBalance" class="form-label"></label>
+                    <input asp-for="OpeningBalance" class="form-control" readonly />
+                    <span asp-validation-for="OpeningBalance" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="AccountCode" class="form-label"></label>
+                    <input asp-for="AccountCode" class="form-control" readonly />
                 </div>
                 <div class="col-md-6">
                     <label asp-for="AssetNumber" class="form-label"></label>
