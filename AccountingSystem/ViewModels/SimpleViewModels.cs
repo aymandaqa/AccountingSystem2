@@ -399,6 +399,18 @@ namespace AccountingSystem.ViewModels
         public string BranchName { get; set; } = string.Empty;
         public decimal TotalAmount { get; set; }
         public int LinesCount { get; set; }
+        public string StatusDisplay { get; set; } = string.Empty;
+        public string StatusClass { get; set; } = string.Empty;
+        public string DateFormatted { get; set; } = string.Empty;
+        public string DateGroup { get; set; } = string.Empty;
+        public string TotalAmountFormatted { get; set; } = string.Empty;
+        public bool IsDraft { get; set; }
+    }
+
+    public class JournalEntriesIndexViewModel
+    {
+        public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Statuses { get; set; } = new List<SelectListItem>();
     }
 
     // User Index ViewModels
