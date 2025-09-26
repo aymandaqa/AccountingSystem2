@@ -10,6 +10,8 @@ using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 using QuestPDF.Helpers;
 using AccountingSystem.Services;
+using System;
+using System.Security.Claims;
 
 namespace AccountingSystem.Controllers
 {
@@ -29,6 +31,309 @@ namespace AccountingSystem.Controllers
         public IActionResult Index()
         {
             return View();
+        }
+
+        [Authorize(Policy = "reports.dynamic")]
+        public IActionResult DynamicPivot()
+        {
+            var viewModel = new DynamicPivotReportViewModel
+            {
+                ReportTypes = Enum.GetValues<DynamicReportType>()
+                    .Select(t => new SelectListItem
+                    {
+                        Value = t.ToString(),
+                        Text = GetReportTypeDisplayName(t)
+                    })
+                    .ToList()
+            };
+
+            return View(viewModel);
+        }
+
+        [Authorize(Policy = "reports.dynamic")]
+        [HttpGet]
+        public async Task<IActionResult> GetPivotReports(DynamicReportType reportType)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var reports = await _context.PivotReports
+                .AsNoTracking()
+                .Where(r => r.ReportType == reportType && r.CreatedById == userId)
+                .OrderBy(r => r.Name)
+                .Select(r => new PivotReportListItemViewModel
+                {
+                    Id = r.Id,
+                    Name = r.Name,
+                    ReportType = r.ReportType,
+                    UpdatedAt = r.UpdatedAt ?? r.CreatedAt
+                })
+                .ToListAsync();
+
+            return Json(reports);
+        }
+
+        [Authorize(Policy = "reports.dynamic")]
+        [HttpGet]
+        public async Task<IActionResult> GetPivotReport(int id)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var report = await _context.PivotReports
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Id == id && r.CreatedById == userId);
+
+            if (report == null)
+            {
+                return NotFound();
+            }
+
+            return Json(new
+            {
+                report.Id,
+                report.Name,
+                ReportType = report.ReportType.ToString(),
+                report.Layout
+            });
+        }
+
+        [Authorize(Policy = "reports.dynamic")]
+        [HttpGet]
+        public async Task<IActionResult> GetDynamicPivotData(DynamicReportType reportType, DateTime? fromDate, DateTime? toDate)
+        {
+            var from = fromDate ?? DateTime.Today.AddMonths(-1);
+            var to = toDate ?? DateTime.Today;
+
+            switch (reportType)
+            {
+                case DynamicReportType.JournalEntries:
+                    var journalData = await _context.JournalEntryLines
+                        .AsNoTracking()
+                        .Include(l => l.JournalEntry).ThenInclude(e => e.Branch)
+                        .Include(l => l.Account).ThenInclude(a => a.Branch)
+                        .Include(l => l.CostCenter)
+                        .Where(l => l.JournalEntry.Date >= from && l.JournalEntry.Date <= to)
+                        .Select(l => new
+                        {
+                            l.JournalEntryId,
+                            EntryNumber = l.JournalEntry.Number,
+                            EntryDate = l.JournalEntry.Date,
+                            EntryYear = l.JournalEntry.Date.Year,
+                            EntryMonth = l.JournalEntry.Date.Month,
+                            EntryStatus = l.JournalEntry.Status.ToString(),
+                            BranchCode = l.JournalEntry.Branch.Code,
+                            BranchName = l.JournalEntry.Branch.NameAr,
+                            AccountCode = l.Account.Code,
+                            AccountName = l.Account.NameAr,
+                            AccountBranch = l.Account.Branch != null ? l.Account.Branch.NameAr : null,
+                            CostCenter = l.CostCenter != null ? l.CostCenter.NameAr : null,
+                            LineDescription = l.Description,
+                            Reference = l.Reference,
+                            Debit = l.DebitAmount,
+                            Credit = l.CreditAmount
+                        })
+                        .ToListAsync();
+                    return Json(journalData);
+
+                case DynamicReportType.ReceiptVouchers:
+                    var receiptData = await _context.ReceiptVouchers
+                        .AsNoTracking()
+                        .Include(r => r.Account).ThenInclude(a => a.Branch)
+                        .Include(r => r.Currency)
+                        .Include(r => r.CreatedBy)
+                        .Where(r => r.Date >= from && r.Date <= to)
+                        .Select(r => new
+                        {
+                            r.Id,
+                            r.Date,
+                            Year = r.Date.Year,
+                            Month = r.Date.Month,
+                            AccountCode = r.Account.Code,
+                            AccountName = r.Account.NameAr,
+                            BranchCode = r.Account.Branch != null ? r.Account.Branch.Code : null,
+                            BranchName = r.Account.Branch != null ? r.Account.Branch.NameAr : null,
+                            Currency = r.Currency.Code,
+                            r.Amount,
+                            r.ExchangeRate,
+                            AmountBase = r.Amount * r.ExchangeRate,
+                            CreatedBy = r.CreatedBy.UserName,
+                            r.Notes
+                        })
+                        .ToListAsync();
+                    return Json(receiptData);
+
+                case DynamicReportType.PaymentVouchers:
+                    var paymentData = await _context.PaymentVouchers
+                        .AsNoTracking()
+                        .Include(v => v.Supplier)
+                        .Include(v => v.Account).ThenInclude(a => a!.Branch)
+                        .Include(v => v.Currency)
+                        .Include(v => v.CreatedBy)
+                        .Where(v => v.Date >= from && v.Date <= to)
+                        .Select(v => new
+                        {
+                            v.Id,
+                            v.Date,
+                            Year = v.Date.Year,
+                            Month = v.Date.Month,
+                            Supplier = v.Supplier.NameAr,
+                            AccountCode = v.Account != null ? v.Account.Code : null,
+                            AccountName = v.Account != null ? v.Account.NameAr : null,
+                            BranchCode = v.Account != null && v.Account.Branch != null ? v.Account.Branch.Code : null,
+                            BranchName = v.Account != null && v.Account.Branch != null ? v.Account.Branch.NameAr : null,
+                            Currency = v.Currency.Code,
+                            v.Amount,
+                            v.ExchangeRate,
+                            AmountBase = v.Amount * v.ExchangeRate,
+                            CreatedBy = v.CreatedBy.UserName,
+                            v.IsCash,
+                            v.Notes
+                        })
+                        .ToListAsync();
+                    return Json(paymentData);
+
+                case DynamicReportType.DisbursementVouchers:
+                    var disbursementData = await _context.DisbursementVouchers
+                        .AsNoTracking()
+                        .Include(v => v.Supplier)
+                        .Include(v => v.Account).ThenInclude(a => a.Branch)
+                        .Include(v => v.Currency)
+                        .Include(v => v.CreatedBy)
+                        .Where(v => v.Date >= from && v.Date <= to)
+                        .Select(v => new
+                        {
+                            v.Id,
+                            v.Date,
+                            Year = v.Date.Year,
+                            Month = v.Date.Month,
+                            Supplier = v.Supplier.NameAr,
+                            AccountCode = v.Account.Code,
+                            AccountName = v.Account.NameAr,
+                            BranchCode = v.Account.Branch != null ? v.Account.Branch.Code : null,
+                            BranchName = v.Account.Branch != null ? v.Account.Branch.NameAr : null,
+                            Currency = v.Currency.Code,
+                            v.Amount,
+                            v.ExchangeRate,
+                            AmountBase = v.Amount * v.ExchangeRate,
+                            CreatedBy = v.CreatedBy.UserName,
+                            v.Notes
+                        })
+                        .ToListAsync();
+                    return Json(disbursementData);
+
+                default:
+                    return Json(Array.Empty<object>());
+            }
+        }
+
+        [Authorize(Policy = "reports.dynamic")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SavePivotReport([FromBody] SavePivotReportRequest request)
+        {
+            if (request == null)
+            {
+                return BadRequest(new { message = "بيانات غير صالحة" });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Name))
+            {
+                return BadRequest(new { message = "اسم التقرير مطلوب" });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Layout))
+            {
+                return BadRequest(new { message = "لا توجد إعدادات للحفظ" });
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            PivotReport? report;
+            if (request.Id.HasValue)
+            {
+                report = await _context.PivotReports
+                    .FirstOrDefaultAsync(r => r.Id == request.Id.Value && r.CreatedById == userId);
+
+                if (report == null)
+                {
+                    return NotFound();
+                }
+
+                report.Name = request.Name.Trim();
+                report.Layout = request.Layout;
+                report.ReportType = request.ReportType;
+                report.UpdatedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                report = new PivotReport
+                {
+                    Name = request.Name.Trim(),
+                    Layout = request.Layout,
+                    ReportType = request.ReportType,
+                    CreatedById = userId,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.PivotReports.Add(report);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "تم حفظ التقرير بنجاح", report.Id, report.Name });
+        }
+
+        [Authorize(Policy = "reports.dynamic")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeletePivotReport([FromBody] DeletePivotReportRequest request)
+        {
+            if (request == null || request.Id <= 0)
+            {
+                return BadRequest(new { message = "بيانات غير صالحة" });
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var report = await _context.PivotReports
+                .FirstOrDefaultAsync(r => r.Id == request.Id && r.CreatedById == userId);
+
+            if (report == null)
+            {
+                return NotFound();
+            }
+
+            _context.PivotReports.Remove(report);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "تم حذف التقرير" });
+        }
+
+        private static string GetReportTypeDisplayName(DynamicReportType type)
+        {
+            return type switch
+            {
+                DynamicReportType.JournalEntries => "قيود اليومية",
+                DynamicReportType.ReceiptVouchers => "سندات القبض",
+                DynamicReportType.PaymentVouchers => "سندات الدفع",
+                DynamicReportType.DisbursementVouchers => "سندات الصرف",
+                _ => type.ToString()
+            };
         }
 
         // GET: Reports/TrialBalance
