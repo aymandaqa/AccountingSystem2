@@ -68,6 +68,7 @@ namespace AccountingSystem.ViewModels
         public string AssetName { get; set; } = string.Empty;
         public string BranchName { get; set; } = string.Empty;
         public string ExpenseAccountName { get; set; } = string.Empty;
+        public string SupplierName { get; set; } = string.Empty;
         public decimal Amount { get; set; }
         public bool IsCash { get; set; }
         public DateTime Date { get; set; }
@@ -86,6 +87,10 @@ namespace AccountingSystem.ViewModels
 
         [Display(Name = "حساب التسوية")]
         public int? AccountId { get; set; }
+
+        [Required]
+        [Display(Name = "المورد")]
+        public int? SupplierId { get; set; }
 
         [Display(Name = "العملة")]
         public int CurrencyId { get; set; }
@@ -110,12 +115,22 @@ namespace AccountingSystem.ViewModels
         public IEnumerable<SelectListItem> Assets { get; set; } = Enumerable.Empty<SelectListItem>();
         public IEnumerable<AssetExpenseAccountOption> ExpenseAccounts { get; set; } = Enumerable.Empty<AssetExpenseAccountOption>();
         public IEnumerable<AssetExpenseAccountOption> Accounts { get; set; } = Enumerable.Empty<AssetExpenseAccountOption>();
+        public IEnumerable<AssetExpenseSupplierOption> Suppliers { get; set; } = Enumerable.Empty<AssetExpenseSupplierOption>();
     }
 
     public class AssetExpenseAccountOption
     {
         public int Id { get; set; }
         public string DisplayName { get; set; } = string.Empty;
+        public int CurrencyId { get; set; }
+        public string CurrencyCode { get; set; } = string.Empty;
+    }
+
+    public class AssetExpenseSupplierOption
+    {
+        public int Id { get; set; }
+        public string DisplayName { get; set; } = string.Empty;
+        public int AccountId { get; set; }
         public int CurrencyId { get; set; }
         public string CurrencyCode { get; set; } = string.Empty;
     }

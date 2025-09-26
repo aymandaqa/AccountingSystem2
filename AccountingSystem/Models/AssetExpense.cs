@@ -17,6 +17,9 @@ namespace AccountingSystem.Models
         public int? AccountId { get; set; }
 
         [Required]
+        public int SupplierId { get; set; }
+
+        [Required]
         public int CurrencyId { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
@@ -40,6 +43,8 @@ namespace AccountingSystem.Models
         public virtual Account ExpenseAccount { get; set; } = null!;
 
         public virtual Account? Account { get; set; }
+
+        public virtual Supplier Supplier { get; set; } = null!;
 
         public virtual Currency Currency { get; set; } = null!;
 

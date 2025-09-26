@@ -23,6 +23,7 @@
                                 <th>الأصل</th>
                                 <th>الفرع</th>
                                 <th>الحساب</th>
+                                <th>المورد</th>
                                 <th>المبلغ</th>
                                 <th>نوع الدفع</th>
                                 <th>التاريخ</th>
@@ -36,6 +37,7 @@
                                     <td>@item.AssetName</td>
                                     <td>@item.BranchName</td>
                                     <td>@item.ExpenseAccountName</td>
+                                    <td>@item.SupplierName</td>
                                     <td>@item.Amount.ToString("N2")</td>
                                     <td>@(item.IsCash ? "نقدي" : "غير نقدي")</td>
                                     <td>@item.Date.ToString("yyyy-MM-dd")</td>

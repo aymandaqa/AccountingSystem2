@@ -227,6 +227,11 @@ namespace AccountingSystem.Data
                     .HasForeignKey(e => e.AccountId)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                entity.HasOne(e => e.Supplier)
+                    .WithMany()
+                    .HasForeignKey(e => e.SupplierId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
                 entity.HasOne(e => e.Currency)
                     .WithMany()
                     .HasForeignKey(e => e.CurrencyId)
