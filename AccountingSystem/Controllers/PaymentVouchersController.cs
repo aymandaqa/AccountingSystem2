@@ -95,6 +95,8 @@ namespace AccountingSystem.Controllers
                     ModelState.AddModelError("AccountId", "يجب أن تكون الحسابات بنفس العملة");
             }
 
+            ModelState.Remove(nameof(PaymentVoucher.ExchangeRate));
+
             if (!ModelState.IsValid)
             {
                 ViewBag.Suppliers = await _context.Suppliers
@@ -120,11 +122,8 @@ namespace AccountingSystem.Controllers
             }
 
             model.CurrencyId = supplier!.Account!.CurrencyId;
-            if (model.ExchangeRate <= 0)
-            {
-                var currency = await _context.Currencies.FindAsync(model.CurrencyId);
-                model.ExchangeRate = currency?.ExchangeRate ?? 1m;
-            }
+            var currency = await _context.Currencies.FindAsync(model.CurrencyId);
+            model.ExchangeRate = currency?.ExchangeRate ?? 1m;
 
             model.CreatedById = user.Id;
             _context.PaymentVouchers.Add(model);
