@@ -44,6 +44,7 @@ namespace AccountingSystem.Data
         public DbSet<UserPaymentAccount> UserPaymentAccounts { get; set; }
         public DbSet<Asset> Assets { get; set; }
         public DbSet<AssetExpense> AssetExpenses { get; set; }
+        public DbSet<PivotReport> PivotReports { get; set; }
 
         public override int SaveChanges()
         {
@@ -241,6 +242,22 @@ namespace AccountingSystem.Data
                     .WithMany()
                     .HasForeignKey(e => e.CreatedById)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<PivotReport>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(150);
+                entity.Property(e => e.Layout).IsRequired();
+                entity.Property(e => e.ReportType).IsRequired();
+                entity.Property(e => e.CreatedById).IsRequired();
+                entity.Property(e => e.CreatedAt).HasColumnType("datetime2");
+                entity.Property(e => e.UpdatedAt).HasColumnType("datetime2");
+
+                entity.HasOne(e => e.CreatedBy)
+                    .WithMany()
+                    .HasForeignKey(e => e.CreatedById)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // JournalEntry configuration
@@ -591,7 +608,9 @@ namespace AccountingSystem.Data
                 new Permission { Id = 50, Name = "assets.edit", DisplayName = "تعديل الأصول", Category = "الأصول", CreatedAt = createdAt },
                 new Permission { Id = 51, Name = "assets.delete", DisplayName = "حذف الأصول", Category = "الأصول", CreatedAt = createdAt },
                 new Permission { Id = 52, Name = "assetexpenses.view", DisplayName = "عرض مصاريف الأصول", Category = "الأصول", CreatedAt = createdAt },
-                new Permission { Id = 53, Name = "assetexpenses.create", DisplayName = "إنشاء مصروف أصل", Category = "الأصول", CreatedAt = createdAt }
+                new Permission { Id = 53, Name = "assetexpenses.create", DisplayName = "إنشاء مصروف أصل", Category = "الأصول", CreatedAt = createdAt },
+                new Permission { Id = 54, Name = "reports.pending", DisplayName = "عرض الحركات غير المرحلة", Category = "التقارير", CreatedAt = createdAt },
+                new Permission { Id = 55, Name = "reports.dynamic", DisplayName = "التقارير التفاعلية", Category = "التقارير", CreatedAt = createdAt }
             );
         }
     }

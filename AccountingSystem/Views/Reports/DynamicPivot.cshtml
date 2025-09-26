@@ -1,0 +1,406 @@
+@model AccountingSystem.ViewModels.DynamicPivotReportViewModel
+@{
+    ViewData["Title"] = "التقارير التفاعلية";
+    Layout = "~/Views/Shared/_AccountingLayout.cshtml";
+    var today = DateTime.Today;
+    var defaultFrom = today.AddMonths(-1);
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-3">
+                <div class="card-header d-flex flex-wrap align-items-center justify-content-between">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-table me-2"></i>
+                        التقارير التفاعلية
+                    </h3>
+                    <div class="text-muted small">
+                        قم باختيار نوع التقرير والفترة الزمنية ثم صمّم تقريرك باستخدام Pivot Table واحفظه للاستخدام لاحقاً.
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="pivotMessages"></div>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label for="reportType" class="form-label">نوع التقرير</label>
+                            <select id="reportType" class="form-select">
+                                @foreach (var type in Model.ReportTypes)
+                                {
+                                    <option value="@type.Value">@type.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="fromDate" class="form-label">من تاريخ</label>
+                            <input type="date" id="fromDate" class="form-control" value="@defaultFrom.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-md-3">
+                            <label for="toDate" class="form-label">إلى تاريخ</label>
+                            <input type="date" id="toDate" class="form-control" value="@today.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-md-3">
+                            <button id="loadDataBtn" class="btn btn-primary w-100">
+                                <i class="fas fa-sync-alt me-1"></i>
+                                تحميل البيانات
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row g-3 align-items-end mt-3">
+                        <div class="col-md-6">
+                            <label for="savedReports" class="form-label">التقارير المحفوظة</label>
+                            <select id="savedReports" class="form-select">
+                                <option value="">-- اختر تقريراً محفوظاً --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <button id="saveReportBtn" class="btn btn-success me-2">
+                                <i class="fas fa-save me-1"></i>
+                                حفظ التقرير
+                            </button>
+                            <button id="saveAsReportBtn" class="btn btn-outline-primary me-2">
+                                <i class="fas fa-copy me-1"></i>
+                                حفظ كـ...
+                            </button>
+                            <button id="deleteReportBtn" class="btn btn-outline-danger">
+                                <i class="fas fa-trash me-1"></i>
+                                حذف التقرير
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    @Html.AntiForgeryToken()
+                    <div id="dynamicPivot"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const reportTypeSelect = document.getElementById('reportType');
+            const savedReportsSelect = document.getElementById('savedReports');
+            const fromDateInput = document.getElementById('fromDate');
+            const toDateInput = document.getElementById('toDate');
+            const loadDataBtn = document.getElementById('loadDataBtn');
+            const saveReportBtn = document.getElementById('saveReportBtn');
+            const saveAsReportBtn = document.getElementById('saveAsReportBtn');
+            const deleteReportBtn = document.getElementById('deleteReportBtn');
+            const messagesContainer = document.getElementById('pivotMessages');
+            const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            let pivotObj = null;
+            let currentData = [];
+            let currentReportId = null;
+            let currentLayout = null;
+            let isLoadingSavedLayout = false;
+
+            function showMessage(type, text) {
+                messagesContainer.innerHTML = '';
+                if (!text) {
+                    return;
+                }
+                const alert = document.createElement('div');
+                alert.className = `alert alert-${type} alert-dismissible fade show`;
+                alert.setAttribute('role', 'alert');
+                alert.textContent = text;
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'btn-close';
+                button.setAttribute('data-bs-dismiss', 'alert');
+                button.setAttribute('aria-label', 'Close');
+                alert.appendChild(button);
+                messagesContainer.appendChild(alert);
+            }
+
+            function getDefaultDataSourceSettings(data) {
+                return {
+                    dataSource: data,
+                    expandAll: false,
+                    enableSorting: true,
+                    rows: [],
+                    columns: [],
+                    values: [],
+                    filters: [],
+                    formatSettings: [
+                        { name: 'Debit', format: 'N2' },
+                        { name: 'Credit', format: 'N2' },
+                        { name: 'Amount', format: 'N2' },
+                        { name: 'AmountBase', format: 'N2' },
+                        { name: 'ExchangeRate', format: 'N4' }
+                    ]
+                };
+            }
+
+            function initializePivot() {
+                pivotObj = new ej.pivotview.PivotView({
+                    height: 600,
+                    locale: 'ar',
+                    enableRtl: true,
+                    showFieldList: true,
+                    showToolbar: true,
+                    toolbar: ['Grid', 'Chart', 'Export', 'SubTotal', 'GrandTotal', 'FieldList'],
+                    dataSourceSettings: getDefaultDataSourceSettings([]),
+                    gridSettings: {
+                        columnWidth: 140
+                    }
+                });
+                pivotObj.appendTo('#dynamicPivot');
+            }
+
+            async function loadSavedReports(reportType, preserveState = false) {
+                savedReportsSelect.innerHTML = '<option value="">-- اختر تقريراً محفوظاً --</option>';
+                if (!preserveState) {
+                    currentReportId = null;
+                    currentLayout = null;
+                }
+
+                try {
+                    const response = await fetch(`@Url.Action("GetPivotReports")?reportType=${reportType}`);
+                    if (!response.ok) {
+                        throw new Error('تعذر تحميل التقارير المحفوظة');
+                    }
+                    const reports = await response.json();
+                    reports.forEach(report => {
+                        const option = document.createElement('option');
+                        option.value = report.Id;
+                        option.textContent = `${report.Name}`;
+                        savedReportsSelect.appendChild(option);
+                    });
+                } catch (error) {
+                    showMessage('danger', error.message);
+                }
+            }
+
+            function applyLayout(layout) {
+                if (!pivotObj) {
+                    return;
+                }
+
+                if (!layout) {
+                    pivotObj.setProperties({ dataSourceSettings: getDefaultDataSourceSettings(currentData) });
+                    pivotObj.refreshData();
+                    return;
+                }
+
+                try {
+                    const parsed = JSON.parse(layout);
+                    pivotObj.setProperties(parsed);
+                } catch (error) {
+                    console.error('Failed to parse layout', error);
+                }
+
+                if (pivotObj.dataSourceSettings) {
+                    pivotObj.dataSourceSettings.dataSource = currentData;
+                } else {
+                    pivotObj.setProperties({ dataSourceSettings: getDefaultDataSourceSettings(currentData) });
+                }
+
+                pivotObj.refreshData();
+            }
+
+            async function loadReportLayout(reportId) {
+                if (!reportId) {
+                    currentLayout = null;
+                    return;
+                }
+                try {
+                    const response = await fetch(`@Url.Action("GetPivotReport")?id=${reportId}`);
+                    if (!response.ok) {
+                        throw new Error('تعذر تحميل إعدادات التقرير');
+                    }
+                    const report = await response.json();
+                    currentLayout = report.Layout;
+                    currentReportId = report.Id;
+                    const reportTypeValue = report.ReportType;
+                    isLoadingSavedLayout = true;
+                    if (reportTypeSelect.value !== reportTypeValue) {
+                        reportTypeSelect.value = reportTypeValue;
+                        await loadSavedReports(reportTypeValue, true);
+                        savedReportsSelect.value = report.Id.toString();
+                    }
+                    if (currentData.length > 0) {
+                        applyLayout(currentLayout);
+                    }
+                } catch (error) {
+                    showMessage('danger', error.message);
+                }
+            }
+
+            async function loadReportData() {
+                const reportType = reportTypeSelect.value;
+                const fromDate = fromDateInput.value;
+                const toDate = toDateInput.value;
+
+                const params = new URLSearchParams({
+                    reportType,
+                    fromDate,
+                    toDate
+                });
+
+                try {
+                    showMessage(null, null);
+                    if (!isLoadingSavedLayout && pivotObj) {
+                        currentLayout = pivotObj.getPersistData();
+                    }
+                    const response = await fetch(`@Url.Action("GetDynamicPivotData")?${params.toString()}`);
+                    if (!response.ok) {
+                        throw new Error('تعذر تحميل البيانات');
+                    }
+                    currentData = await response.json();
+                    if (!currentLayout) {
+                        pivotObj.setProperties({ dataSourceSettings: getDefaultDataSourceSettings(currentData) });
+                        pivotObj.refreshData();
+                    } else {
+                        applyLayout(currentLayout);
+                    }
+                    if (!currentReportId) {
+                        savedReportsSelect.value = '';
+                    }
+                    isLoadingSavedLayout = false;
+                    showMessage('success', 'تم تحديث البيانات بنجاح');
+                } catch (error) {
+                    showMessage('danger', error.message);
+                    isLoadingSavedLayout = false;
+                }
+            }
+
+            async function saveReport(isSaveAs) {
+                if (!pivotObj) {
+                    return;
+                }
+
+                const currentNameOption = savedReportsSelect.selectedOptions.length > 0 ? savedReportsSelect.selectedOptions[0].textContent : '';
+                const defaultName = isSaveAs ? '' : currentNameOption;
+                const name = prompt('أدخل اسم التقرير', defaultName || '');
+                if (!name) {
+                    return;
+                }
+
+                const payload = {
+                    id: !isSaveAs ? currentReportId : null,
+                    reportType: reportTypeSelect.value,
+                    name: name.trim(),
+                    layout: pivotObj.getPersistData()
+                };
+
+                try {
+                    const response = await fetch('@Url.Action("SavePivotReport")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': antiForgeryToken
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json().catch(() => ({ message: 'تعذر حفظ التقرير' }));
+                        throw new Error(error.message || 'تعذر حفظ التقرير');
+                    }
+
+                    const result = await response.json();
+                    currentReportId = result.Id;
+                    currentLayout = payload.layout;
+                    await loadSavedReports(reportTypeSelect.value, true);
+                    savedReportsSelect.value = currentReportId ? currentReportId.toString() : '';
+                    showMessage('success', 'تم حفظ التقرير بنجاح');
+                } catch (error) {
+                    showMessage('danger', error.message);
+                }
+            }
+
+            async function deleteReport() {
+                if (!currentReportId) {
+                    showMessage('warning', 'الرجاء اختيار تقرير محفوظ لحذفه');
+                    return;
+                }
+
+                if (!confirm('هل أنت متأكد من حذف التقرير المحدد؟')) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch('@Url.Action("DeletePivotReport")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': antiForgeryToken
+                        },
+                        body: JSON.stringify({ id: currentReportId })
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json().catch(() => ({ message: 'تعذر حذف التقرير' }));
+                        throw new Error(error.message || 'تعذر حذف التقرير');
+                    }
+
+                    currentReportId = null;
+                    currentLayout = null;
+                    savedReportsSelect.value = '';
+                    await loadSavedReports(reportTypeSelect.value);
+                    showMessage('success', 'تم حذف التقرير بنجاح');
+                } catch (error) {
+                    showMessage('danger', error.message);
+                }
+            }
+
+            reportTypeSelect.addEventListener('change', async () => {
+                await loadSavedReports(reportTypeSelect.value);
+                currentData = [];
+                pivotObj.setProperties({ dataSourceSettings: getDefaultDataSourceSettings([]) });
+                pivotObj.refreshData();
+                isLoadingSavedLayout = false;
+            });
+
+            savedReportsSelect.addEventListener('change', async () => {
+                const selectedId = parseInt(savedReportsSelect.value, 10);
+                if (!selectedId) {
+                    currentReportId = null;
+                    currentLayout = null;
+                    return;
+                }
+                await loadReportLayout(selectedId);
+                await loadReportData();
+            });
+
+            loadDataBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await loadReportData();
+            });
+
+            saveReportBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await saveReport(false);
+            });
+
+            saveAsReportBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await saveReport(true);
+            });
+
+            deleteReportBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await deleteReport();
+            });
+
+            async function init() {
+                initializePivot();
+                await loadSavedReports(reportTypeSelect.value);
+                await loadReportData();
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
+    </script>
+}
