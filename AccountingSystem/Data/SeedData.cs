@@ -311,6 +311,11 @@ namespace AccountingSystem.Data
                 context.SystemSettings.Add(new SystemSetting { Key = "CashBoxDifferenceAccountId", Value = null });
             }
 
+            if (!context.SystemSettings.Any(s => s.Key == "AssetsParentAccountCode"))
+            {
+                context.SystemSettings.Add(new SystemSetting { Key = "AssetsParentAccountCode", Value = null });
+            }
+
             await context.SaveChangesAsync();
         }
 

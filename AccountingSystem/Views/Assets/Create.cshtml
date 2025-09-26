@@ -28,6 +28,18 @@
                     <span asp-validation-for="BranchId" class="text-danger"></span>
                 </div>
                 <div class="col-md-6">
+                    <label asp-for="OpeningBalance" class="form-label"></label>
+                    <input asp-for="OpeningBalance" class="form-control" />
+                    <span asp-validation-for="OpeningBalance" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="CapitalAccountId" class="form-label"></label>
+                    <select asp-for="CapitalAccountId" asp-items="Model.CapitalAccounts" class="form-select">
+                        <option value="">اختر حساب رأس المال</option>
+                    </select>
+                    <span asp-validation-for="CapitalAccountId" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
                     <label asp-for="AssetNumber" class="form-label"></label>
                     <input asp-for="AssetNumber" class="form-control" />
                     <span asp-validation-for="AssetNumber" class="text-danger"></span>
