@@ -1259,7 +1259,7 @@ namespace Roadfn.Controllers
                     lines.Add(PayCashAccountsDriverAttxn);
                     #endregion
 
-                    await _journalEntryService.CreateJournalEntryAsync(DateTime.Now, "PayToDriver " + sh.ShipmentTrackingNo, Accbrn.Id, user.Id, lines, JournalEntryStatus.Posted);
+                    await _journalEntryService.CreateJournalEntryAsync(DateTime.Now, "DriverInvoice_" + driverPaymentHeader.Id, Accbrn.Id, user.Id, lines, JournalEntryStatus.Posted);
 
                 }
 
