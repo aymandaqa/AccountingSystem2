@@ -1060,36 +1060,6 @@ namespace Roadfn.Controllers
 
             if (rptDriverPay.Count > 0)
             {
-                var driverPaymentHeader = new DriverPaymentHeader();
-                var driverPayments = new List<DriverPaymentDetail>();
-                await _context.DriverPaymentHeader.AddAsync(driverPaymentHeader);
-                await _context.SaveChangesAsync();
-                var listpay = new List<RptDriverPay>();
-                foreach (var item in rptDriverPay)
-                {
-                    var shipmentsPay = await _context.RptDriverPay.Where(t => t.Id == Convert.ToInt64(item.Id)).FirstOrDefaultAsync();
-                    if (shipmentsPay != null)
-                        driverPayments.Add(new DriverPaymentDetail
-                        {
-                            HeaderId = driverPaymentHeader.Id,
-                            ComisionValue = shipmentsPay.CommissionPerItem,
-                            ShipmentId = shipmentsPay.ShipmentId,
-                            ShipmentTrackingNo = shipmentsPay.ShipmentTrackingNo,
-                            DriverExtraComisionValue = shipmentsPay.DriverExtraComisionValue,
-                            CompanyRevenueValue = shipmentsPay.ShipmentCod - shipmentsPay.ShipmentPrice,
-                        });
-                    listpay.Add(shipmentsPay);
-                }
-                await _context.DriverPaymentDetails.AddRangeAsync(driverPayments);
-                await _context.SaveChangesAsync();
-                driverPaymentHeader.PaymentValue = listpay.Sum(t => t.CommissionPerItem) + listpay.Sum(t => t.DriverExtraComisionValue);
-                driverPaymentHeader.SumOfComison = listpay.Sum(t => t.CommissionPerItem) + listpay.Sum(t => t.DriverExtraComisionValue);
-                driverPaymentHeader.TotalCod = listpay.Sum(t => t.ShipmentTotal) - (listpay.Sum(t => t.CommissionPerItem) + listpay.Sum(t => t.DriverExtraComisionValue));
-                driverPaymentHeader.DriverId = listpay.DistinctBy(t => t.DriverId).FirstOrDefault().DriverId;
-                driverPaymentHeader.PaymentDate = DateTime.Now;
-                driverPaymentHeader.EntryUserId = 0;// Convert.ToInt32(user.Id);
-                _context.DriverPaymentHeader.Update(driverPaymentHeader);
-                await _context.SaveChangesAsync();
 
 
                 var cashAccount = await _accontext.UserPaymentAccounts
@@ -1141,6 +1111,39 @@ namespace Roadfn.Controllers
                 {
                     return BadRequest("الحساب الرئيسي للعميل غير موجود");
                 }
+
+
+                var driverPaymentHeader = new DriverPaymentHeader();
+                var driverPayments = new List<DriverPaymentDetail>();
+                await _context.DriverPaymentHeader.AddAsync(driverPaymentHeader);
+                await _context.SaveChangesAsync();
+                var listpay = new List<RptDriverPay>();
+                foreach (var item in rptDriverPay)
+                {
+                    var shipmentsPay = await _context.RptDriverPay.Where(t => t.Id == Convert.ToInt64(item.Id)).FirstOrDefaultAsync();
+                    if (shipmentsPay != null)
+                        driverPayments.Add(new DriverPaymentDetail
+                        {
+                            HeaderId = driverPaymentHeader.Id,
+                            ComisionValue = shipmentsPay.CommissionPerItem,
+                            ShipmentId = shipmentsPay.ShipmentId,
+                            ShipmentTrackingNo = shipmentsPay.ShipmentTrackingNo,
+                            DriverExtraComisionValue = shipmentsPay.DriverExtraComisionValue,
+                            CompanyRevenueValue = shipmentsPay.ShipmentCod - shipmentsPay.ShipmentPrice,
+                        });
+                    listpay.Add(shipmentsPay);
+                }
+                await _context.DriverPaymentDetails.AddRangeAsync(driverPayments);
+                await _context.SaveChangesAsync();
+                driverPaymentHeader.PaymentValue = listpay.Sum(t => t.CommissionPerItem) + listpay.Sum(t => t.DriverExtraComisionValue);
+                driverPaymentHeader.SumOfComison = listpay.Sum(t => t.CommissionPerItem) + listpay.Sum(t => t.DriverExtraComisionValue);
+                driverPaymentHeader.TotalCod = listpay.Sum(t => t.ShipmentTotal) - (listpay.Sum(t => t.CommissionPerItem) + listpay.Sum(t => t.DriverExtraComisionValue));
+                driverPaymentHeader.DriverId = listpay.DistinctBy(t => t.DriverId).FirstOrDefault().DriverId;
+                driverPaymentHeader.PaymentDate = DateTime.Now;
+                driverPaymentHeader.EntryUserId = 0;// Convert.ToInt32(user.Id);
+                _context.DriverPaymentHeader.Update(driverPaymentHeader);
+                await _context.SaveChangesAsync();
+
 
                 var customerAccountsCache = new Dictionary<int, Account>();
 
