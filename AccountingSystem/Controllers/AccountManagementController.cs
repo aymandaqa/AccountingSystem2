@@ -1148,6 +1148,9 @@ namespace Roadfn.Controllers
                 {
                     var id1 = item.ShipmentId;
 
+                    var sh = await _context.Shipments.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(id1));
+                    var customer = await _context.Users.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(sh.BusinessUserId));
+
                     var CustomerAccount = await _accountService.CreateAccountAsync(customer.Id + "_" + customer.FirstName + " " + customer.LastName + " " + customer.MobileNo1, Cacc.Id);
 
                     var customerUser = await _context.Users.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(sh.BusinessUserId));
@@ -1255,7 +1258,6 @@ namespace Roadfn.Controllers
 
                     await _journalEntryService.CreateJournalEntryAsync(DateTime.Now, "PayToDriver " + sh.ShipmentTrackingNo, Accbrn.Id, user.Id, lines, JournalEntryStatus.Posted);
 
-                    #endregion
                 }
 
 
