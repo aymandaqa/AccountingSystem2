@@ -9,9 +9,11 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Roadfn.Models;
 using Roadfn.ViewModel;
 using Syncfusion.EJ2.Base;
+using System.Collections.Generic;
 using System.Data;
 using System.Security.Claims;
 using System.Text;
+using System.Linq;
 using User = AccountingSystem.Models.User;
 
 namespace Roadfn.Controllers
@@ -1090,68 +1092,92 @@ namespace Roadfn.Controllers
                 await _context.SaveChangesAsync();
 
 
+                var cashAccount = await _accontext.UserPaymentAccounts
+                    .Where(u => u.UserId == user.Id && u.CurrencyId == 1)
+                    .FirstOrDefaultAsync();
+                if (cashAccount == null)
+                {
+                    return BadRequest("لا يوجد حساب صندوق مرتبط بالمستخدم الحالي");
+                }
+
+                var driverParentSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "DriverParentAccountId");
+                if (driverParentSetting == null)
+                {
+                    return BadRequest("إعدادات حساب السائق غير متوفرة");
+                }
+
+                var driverParentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == driverParentSetting.Value);
+                if (driverParentAccount == null)
+                {
+                    return BadRequest("الحساب الرئيسي للسائق غير موجود");
+                }
+
+                var revenueAccountSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "RevenueAccountCode");
+                if (revenueAccountSetting == null)
+                {
+                    return BadRequest("إعدادات حساب الإيرادات غير متوفرة");
+                }
+
+                var revenueAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == revenueAccountSetting.Value);
+                if (revenueAccount == null)
+                {
+                    return BadRequest("حساب الإيرادات غير موجود");
+                }
+
+                var driverAccount = await EnsureDriverAccountAsync(listpay, driverParentAccount);
+                if (driverAccount == null)
+                {
+                    return BadRequest("تعذر تحديد حساب السائق");
+                }
+
+                var customerParentSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "CustomerParentAccountId");
+                if (customerParentSetting == null)
+                {
+                    return BadRequest("إعدادات حساب العميل غير متوفرة");
+                }
+
+                var customerParentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == customerParentSetting.Value);
+                if (customerParentAccount == null)
+                {
+                    return BadRequest("الحساب الرئيسي للعميل غير موجود");
+                }
+
+                var customerAccountsCache = new Dictionary<int, Account>();
+
                 foreach (var item in listpay)
                 {
-
-                    var id = item.Id;
                     var id1 = item.ShipmentId;
 
-                    var CashAccounts = await _accontext.UserPaymentAccounts.Where(u => u.UserId == user.Id && u.CurrencyId == 1).FirstOrDefaultAsync();
                     var sh = await _context.Shipments.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(id1));
-                    var bus = await _context.Users.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(sh.BusinessUserId));
-                    var brn = await _context.CompanyBranches.FirstOrDefaultAsync(t => t.Id == bus.CompanyBranchId);
-                    var Accbrn = await _accontext.Branches.FirstOrDefaultAsync(t => t.Code == bus.CompanyBranchId.ToString());
-
-                    #region driver account
-                    var setting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "DriverParentAccountId");
-                    var acc = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == setting.Value);
-                    var driver = await _context.Drives.FirstOrDefaultAsync(t => t.Id == driverPaymentHeader.DriverId);
-
-
-                    var DriverAccount = await _accountService.CreateAccountAsync(driver.Id + "_" + driver.FirstName + " " + driver.FamilyName + " " + driver.Phone1, acc.Id);
-                    var dfacc = await _accontext.DriverMappingAccounts.FirstOrDefaultAsync(t => t.DriverId == driver.Id.ToString());
-                    if (dfacc == null)
+                    if (sh == null)
                     {
-                        await _accontext.DriverMappingAccounts.AddAsync(new DriverMappingAccount
-                        {
-                            DriverId = driver.Id.ToString(),
-                            AccountId = DriverAccount.Id.ToString(),
-                            AccountCode = DriverAccount.Code,
-                        });
-                    }
-                    #endregion
-
-
-                    #region customer account
-                    #region def account
-                    var Csetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "CustomerParentAccountId");
-                    var Cacc = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == Csetting.Value);
-                    var customer = await _context.Users.FirstOrDefaultAsync(t => t.Id == sh.BusinessUserId);
-
-
-                    var CustomerAccount = await _accountService.CreateAccountAsync(customer.Id + "_" + customer.FirstName + " " + customer.LastName + " " + customer.MobileNo1, Cacc.Id);
-
-                    var Cdfacc = await _accontext.CusomerMappingAccounts.FirstOrDefaultAsync(t => t.CustomerId == customer.Id.ToString());
-                    if (Cdfacc == null)
-                    {
-                        await _accontext.CusomerMappingAccounts.AddAsync(new CusomerMappingAccount
-                        {
-                            CustomerId = customer.Id.ToString(),
-                            AccountId = CustomerAccount.Id.ToString(),
-                            AccountCode = CustomerAccount.Code,
-                        });
+                        continue;
                     }
 
-                    var RevenueAccountCode = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "RevenueAccountCode");
-                    var RevenueAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == RevenueAccountCode.Value);
-                    #endregion  
+                    var customerUser = await _context.Users.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(sh.BusinessUserId));
+                    if (customerUser == null)
+                    {
+                        continue;
+                    }
+
+                    var Accbrn = await _accontext.Branches.FirstOrDefaultAsync(t => t.Code == customerUser.CompanyBranchId.ToString());
+                    if (Accbrn == null)
+                    {
+                        continue;
+                    }
+
+                    var customerAccount = await EnsureCustomerAccountAsync(customerUser, customerAccountsCache, customerParentAccount);
+                    if (customerAccount == null)
+                    {
+                        return BadRequest("تعذر تحديد حساب العميل");
+                    }
 
                     var Paytxn = item;
                     var lines = new List<JournalEntryLine>();
 
                     #region CashAccounts txn
                     var tottxn = new JournalEntryLine();
-                    tottxn.AccountId = CashAccounts.AccountId;
+                    tottxn.AccountId = cashAccount.AccountId;
                     tottxn.DebitAmount = 0;
                     tottxn.CreditAmount = 0;
                     if (Convert.ToDecimal(Paytxn.ShipmentTotal) <= 0)
@@ -1170,7 +1196,7 @@ namespace Roadfn.Controllers
 
                     #region DriverAttxn txn
                     var DriverAttxn = new JournalEntryLine();
-                    DriverAttxn.AccountId = DriverAccount.Id;
+                    DriverAttxn.AccountId = driverAccount.Id;
                     DriverAttxn.CreditAmount = Convert.ToDecimal(Paytxn.CommissionPerItem);
                     DriverAttxn.Reference = driverPaymentHeader.Id.ToString();
                     DriverAttxn.Description = sh.ShipmentTrackingNo;
@@ -1179,7 +1205,7 @@ namespace Roadfn.Controllers
 
                     #region CustomerAccounttxn txn
                     var CustomerAccounttxn = new JournalEntryLine();
-                    CustomerAccounttxn.AccountId = CustomerAccount.Id;
+                    CustomerAccounttxn.AccountId = customerAccount.Id;
                     CustomerAccounttxn.DebitAmount = 0;
                     CustomerAccounttxn.CreditAmount = 0;
                     if (Convert.ToDecimal(Paytxn.ShipmentPrice) <= 0)
@@ -1197,7 +1223,7 @@ namespace Roadfn.Controllers
 
                     #region RevenueAccounttxn txn
                     var RevenueAccounttxn = new JournalEntryLine();
-                    RevenueAccounttxn.AccountId = RevenueAccount.Id;
+                    RevenueAccounttxn.AccountId = revenueAccount.Id;
                     RevenueAccounttxn.DebitAmount = 0;
                     RevenueAccounttxn.CreditAmount = 0;
                     if (Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice) <= 0)
@@ -1211,11 +1237,11 @@ namespace Roadfn.Controllers
                     RevenueAccounttxn.Reference = driverPaymentHeader.Id.ToString();
                     RevenueAccounttxn.Description = sh.ShipmentTrackingNo;
                     lines.Add(RevenueAccounttxn);
-                    #endregion 
+                    #endregion
 
                     #region pay DriverAttxn txn
                     var PayDriverAttxn = new JournalEntryLine();
-                    PayDriverAttxn.AccountId = DriverAccount.Id;
+                    PayDriverAttxn.AccountId = driverAccount.Id;
                     PayDriverAttxn.DebitAmount = Convert.ToDecimal(Paytxn.CommissionPerItem);
                     PayDriverAttxn.Reference = driverPaymentHeader.Id.ToString();
                     PayDriverAttxn.Description = sh.ShipmentTrackingNo;
@@ -1224,12 +1250,12 @@ namespace Roadfn.Controllers
 
                     #region pay DriverAttxn CashAccounts txn
                     var PayCashAccountsDriverAttxn = new JournalEntryLine();
-                    PayCashAccountsDriverAttxn.AccountId = CashAccounts.AccountId; ;
+                    PayCashAccountsDriverAttxn.AccountId = cashAccount.AccountId;
                     PayCashAccountsDriverAttxn.CreditAmount = Convert.ToDecimal(Paytxn.CommissionPerItem);
                     PayCashAccountsDriverAttxn.Reference = driverPaymentHeader.Id.ToString();
                     PayCashAccountsDriverAttxn.Description = sh.ShipmentTrackingNo;
                     lines.Add(PayCashAccountsDriverAttxn);
-                    #endregion 
+                    #endregion
 
                     await _journalEntryService.CreateJournalEntryAsync(DateTime.Now, "PayToDriver " + sh.ShipmentTrackingNo, Accbrn.Id, user.Id, lines, JournalEntryStatus.Posted);
 
@@ -1402,6 +1428,97 @@ namespace Roadfn.Controllers
                 return Ok(bisnessUserPaymentHeader);
             }
             return Ok();
+        }
+
+        private async Task<Account?> EnsureDriverAccountAsync(IEnumerable<RptDriverPay> driverPayments, Account driverParentAccount)
+        {
+            var driverId = driverPayments.FirstOrDefault(p => p.DriverId.HasValue)?.DriverId;
+            if (!driverId.HasValue)
+            {
+                return null;
+            }
+
+            var driver = await _context.Drives.FirstOrDefaultAsync(t => t.Id == driverId.Value);
+            if (driver == null)
+            {
+                return null;
+            }
+
+            var mapping = await _accontext.DriverMappingAccounts.FirstOrDefaultAsync(t => t.DriverId == driver.Id.ToString());
+            if (mapping != null)
+            {
+                var mappedAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == mapping.AccountCode);
+                if (mappedAccount != null)
+                {
+                    return mappedAccount;
+                }
+            }
+
+            var accountName = $"{driver.Id}_{(driver.FirstName ?? string.Empty)} {(driver.FamilyName ?? string.Empty)} {(driver.Phone1 ?? string.Empty)}".Trim();
+            var newAccount = await _accountService.CreateAccountAsync(accountName, driverParentAccount.Id);
+
+            if (mapping == null)
+            {
+                mapping = new DriverMappingAccount
+                {
+                    DriverId = driver.Id.ToString(),
+                    AccountId = newAccount.Id.ToString(),
+                    AccountCode = newAccount.Code,
+                };
+                await _accontext.DriverMappingAccounts.AddAsync(mapping);
+            }
+            else
+            {
+                mapping.AccountId = newAccount.Id.ToString();
+                mapping.AccountCode = newAccount.Code;
+                _accontext.DriverMappingAccounts.Update(mapping);
+            }
+
+            await _accontext.SaveChangesAsync();
+            return newAccount;
+        }
+
+        private async Task<Account?> EnsureCustomerAccountAsync(User customer, Dictionary<int, Account> cache, Account customerParentAccount)
+        {
+            if (cache.TryGetValue(customer.Id, out var cachedAccount))
+            {
+                return cachedAccount;
+            }
+
+            var mapping = await _accontext.CusomerMappingAccounts.FirstOrDefaultAsync(t => t.CustomerId == customer.Id.ToString());
+            if (mapping != null)
+            {
+                var mappedAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == mapping.AccountCode);
+                if (mappedAccount != null)
+                {
+                    cache[customer.Id] = mappedAccount;
+                    return mappedAccount;
+                }
+            }
+
+            var accountName = $"{customer.Id}_{(customer.FirstName ?? string.Empty)} {(customer.LastName ?? string.Empty)} {(customer.MobileNo1 ?? string.Empty)}".Trim();
+            var newAccount = await _accountService.CreateAccountAsync(accountName, customerParentAccount.Id);
+
+            if (mapping == null)
+            {
+                mapping = new CusomerMappingAccount
+                {
+                    CustomerId = customer.Id.ToString(),
+                    AccountId = newAccount.Id.ToString(),
+                    AccountCode = newAccount.Code,
+                };
+                await _accontext.CusomerMappingAccounts.AddAsync(mapping);
+            }
+            else
+            {
+                mapping.AccountId = newAccount.Id.ToString();
+                mapping.AccountCode = newAccount.Code;
+                _accontext.CusomerMappingAccounts.Update(mapping);
+            }
+
+            await _accontext.SaveChangesAsync();
+            cache[customer.Id] = newAccount;
+            return newAccount;
         }
 
 

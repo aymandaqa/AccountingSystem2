@@ -1,9 +1,40 @@
 ﻿@using Newtonsoft.Json
 
-@{
+@{ 
     var rtl = true;
     ViewData["Title"] = "حساب سائق";
 }
+
+
+<style>
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+    }
+
+    .loading-overlay.d-none {
+        display: none !important;
+    }
+
+    #actionsToolbar .btn {
+        min-width: 120px;
+    }
+</style>
+
+<div id="loadingOverlay" class="loading-overlay d-none" aria-live="polite" aria-busy="true">
+    <div class="text-center">
+        <div class="spinner-border text-primary" role="status"></div>
+        <div class="mt-3 text-primary font-weight-bold">جاري معالجة طلبك...</div>
+    </div>
+</div>
 
 
 
@@ -20,21 +51,13 @@
                             <div class="box-body">
                                 <div class="row">
                                     <div class="col-12">
-                                        <div class="table-responsive col-12" id="bodytarg2">
-                                            <table class="table" style="font-size:15px; color:#1dbfc1">
-                                                <tbody>
-                                                    <tr>
-                                                        <th style="width:100%">
-                                                            <button class="btn btn-primary btn-sm" id="Excel" onclick="ExportExcel()">  <i class="ti-layout"></i> اكسل</button>
-                                                            <button class="btn btn-primary btn-sm" onclick="print()" id="Print">  <i class="ti-printer"></i> طباعة</button>
-
-                                                            <button class="btn btn-primary btn-sm" id="pay" onclick="pay()">  <i class="ti-money"></i> قبض تحصيل</button>
-
-                                                            <button class="btn btn-primary btn-sm" id="reload" onclick="Refresh()">  <i class="ti-reload"></i> تحديث</button>
-                                                        </th>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
+                                        <div class="col-12" id="bodytarg2">
+                                            <div id="actionsToolbar" class="d-flex flex-wrap gap-2 align-items-center mb-3">
+                                                <button class="btn btn-primary btn-sm m-1" id="Excel" onclick="ExportExcel()"><i class="ti-layout"></i> اكسل</button>
+                                                <button class="btn btn-primary btn-sm m-1" onclick="print()" id="Print"><i class="ti-printer"></i> طباعة</button>
+                                                <button class="btn btn-success btn-sm m-1" id="pay" onclick="pay()"><i class="ti-money"></i> قبض تحصيل</button>
+                                                <button class="btn btn-secondary btn-sm m-1" id="reload" onclick="Refresh()"><i class="ti-reload"></i> تحديث</button>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -253,9 +276,24 @@
         var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
         grid1.print();
     }
+    function toggleLoading(isVisible) {
+        var overlay = document.getElementById('loadingOverlay');
+        if (!overlay) return;
+        if (isVisible) {
+            overlay.classList.remove('d-none');
+        } else {
+            overlay.classList.add('d-none');
+        }
+    }
+
     function pay() {
         var grid = document.getElementById('Grid').ej2_instances[0]; // Grid instance
         var selectedRecords = grid.getSelectedRecords();
+        if (!selectedRecords || selectedRecords.length === 0) {
+            swal("الرجاء اختيار شحنات للتحصيل.");
+            return;
+        }
+
         swal({
             title: "هل انت متأكد ؟",
             icon: "warning",
@@ -265,26 +303,37 @@
             .then((willDelete) => {
                 if (willDelete) {
                     document.getElementById("pay").disabled = true;
-                     //alert(myJSON);
+                    toggleLoading(true);
                     var ajax1 = new ej.base.Ajax({ url: '/AccountManagement/PayToDriver', data: JSON.stringify(selectedRecords), type: 'POST', contentType: 'application/json' });
                     ajax1.send(JSON.stringify(selectedRecords));
                     ajax1.onSuccess = function (data) {
-                        swal(data, {
+                        toggleLoading(false);
+                        document.getElementById("pay").disabled = false;
+                        swal("تمت العملية بنجاح", {
                             icon: "success",
                         });
-                        document.getElementById("pay").disabled = false;
-                         var grid = document.getElementById("Grid").ej2_instances[0];
-                        grid.refresh(); //tabObj.select(0);
-
-                        window.open('/AccountManagement/PrintDriverSlip?id=' + JSON.parse(data).Id, '_blank');
+                        var grid = document.getElementById("Grid").ej2_instances[0];
+                        grid.refresh();
+                        try {
+                            var parsed = typeof data === 'string' ? JSON.parse(data) : data;
+                            if (parsed && parsed.Id) {
+                                window.open('/AccountManagement/PrintDriverSlip?id=' + parsed.Id, '_blank');
+                            }
+                        } catch (e) {
+                            console.error(e);
+                        }
                     };
 
                     ajax1.onFailure = function (data) {
-                        swal(data);
+                        toggleLoading(false);
+                        document.getElementById("pay").disabled = false;
+                        var message = data;
+                        if (data && data.responseText) {
+                            message = data.responseText;
+                        }
+                        swal(message);
                     };
 
-                } else {
-                    //swal("Your imaginary file is safe!");
                 }
             });
     }
