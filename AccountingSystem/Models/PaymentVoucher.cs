@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace AccountingSystem.Models
 {
@@ -31,9 +32,16 @@ namespace AccountingSystem.Models
 
         public bool IsCash { get; set; }
 
+        [ValidateNever]
         public virtual Supplier Supplier { get; set; } = null!;
+
+        [ValidateNever]
         public virtual Account? Account { get; set; }
+
+        [ValidateNever]
         public virtual Currency Currency { get; set; } = null!;
+
+        [ValidateNever]
         public virtual User CreatedBy { get; set; } = null!;
     }
 }
