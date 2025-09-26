@@ -9,6 +9,7 @@ using System;
 using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
+using Syncfusion.EJ2.Base;
 
 namespace AccountingSystem.Controllers
 {
@@ -215,6 +216,107 @@ namespace AccountingSystem.Controllers
                 recordsFiltered,
                 data
             });
+        }
+
+        [HttpPost]
+        [Authorize(Policy = "journal.view")]
+        public IActionResult UrlDatasourceJournalEntries([FromBody] DataManagerRequest dm, DateTime? fromDate, DateTime? toDate, int? branchId, string? status)
+        {
+            var query = _context.JournalEntries
+                .AsNoTracking()
+                .Include(j => j.Branch)
+                .Include(j => j.Lines)
+                .AsQueryable();
+
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                query = query.Where(j => j.BranchId == branchId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<JournalEntryStatus>(status, out var statusValue))
+            {
+                query = query.Where(j => j.Status == statusValue);
+            }
+
+            if (fromDate.HasValue)
+            {
+                var from = fromDate.Value.Date;
+                query = query.Where(j => j.Date >= from);
+            }
+
+            if (toDate.HasValue)
+            {
+                var to = toDate.Value.Date.AddDays(1);
+                query = query.Where(j => j.Date < to);
+            }
+
+            var dataSource = query
+                .Select(entry => new
+                {
+                    entry.Id,
+                    entry.Number,
+                    entry.Date,
+                    entry.Description,
+                    entry.Reference,
+                    entry.Status,
+                    BranchName = entry.Branch.NameAr,
+                    TotalAmount = entry.Lines.Sum(l => l.DebitAmount),
+                    LinesCount = entry.Lines.Count
+                })
+                .AsEnumerable()
+                .Select(entry =>
+                {
+                    var info = GetStatusInfo(entry.Status);
+                    return new JournalEntryViewModel
+                    {
+                        Id = entry.Id,
+                        Number = entry.Number,
+                        Date = entry.Date,
+                        Description = entry.Description ?? string.Empty,
+                        Reference = entry.Reference ?? string.Empty,
+                        Status = entry.Status.ToString(),
+                        BranchName = entry.BranchName,
+                        TotalAmount = entry.TotalAmount,
+                        LinesCount = entry.LinesCount,
+                        StatusDisplay = info.Text,
+                        StatusClass = info.CssClass,
+                        DateFormatted = entry.Date.ToString("yyyy-MM-dd"),
+                        DateGroup = entry.Date.ToString("yyyy-MM"),
+                        TotalAmountFormatted = entry.TotalAmount.ToString("N2"),
+                        IsDraft = entry.Status == JournalEntryStatus.Draft
+                    };
+                });
+
+            var operation = new DataOperations();
+
+            if (dm.Search != null && dm.Search.Count > 0)
+            {
+                dataSource = operation.PerformSearching(dataSource, dm.Search);
+            }
+
+            if (dm.Where != null && dm.Where.Count > 0)
+            {
+                dataSource = operation.PerformFiltering(dataSource, dm.Where, dm.Where[0].Operator);
+            }
+
+            var count = dataSource.Count();
+
+            if (dm.Sorted != null && dm.Sorted.Count > 0)
+            {
+                dataSource = operation.PerformSorting(dataSource, dm.Sorted);
+            }
+
+            if (dm.Skip != 0)
+            {
+                dataSource = operation.PerformSkip(dataSource, dm.Skip);
+            }
+
+            if (dm.Take != 0)
+            {
+                dataSource = operation.PerformTake(dataSource, dm.Take);
+            }
+
+            return dm.RequiresCounts ? Json(new { result = dataSource, count }) : Json(dataSource);
         }
 
         // GET: JournalEntries/Create

@@ -1,45 +1,24 @@
-@using System.Linq
+@using System.Collections.Generic
 @model AccountingSystem.ViewModels.JournalEntriesIndexViewModel
 
 @{
     ViewData["Title"] = "القيود المالية";
     Layout = "~/Views/Shared/_AccountingLayout.cshtml";
+    var toolbarItems = new List<string> { "Search", "ExcelExport", "Print" };
 }
 
 @section Styles {
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css" />
-    <link rel="stylesheet" href="https://cdn.datatables.net/rowgroup/1.3.1/css/rowGroup.bootstrap5.min.css" />
     <style>
-        .dt-buttons .btn {
-            margin-left: .5rem;
-            margin-right: .5rem;
-        }
-
-        table.dataTable tbody tr.group-header td {
-            background-color: #f1f3f5;
-            font-weight: 700;
-            color: #0d6efd;
-        }
-
-        #journalEntriesTable thead tr.filters-row th {
-            background-color: #f8f9fa;
-            font-weight: 400;
-        }
-
-        #journalEntriesTable thead input,
-        #journalEntriesTable thead select {
-            max-width: 100%;
-        }
-
-        .dataTables_wrapper .dataTables_processing {
-            top: 50%;
-            z-index: 1000;
-        }
-
         .table-actions .btn {
-            margin-inline-start: .25rem;
-            margin-inline-end: .25rem;
+            min-width: 2.25rem;
+        }
+
+        .table-actions .btn i {
+            pointer-events: none;
+        }
+
+        .filters-card .form-label {
+            font-weight: 600;
         }
     </style>
 }
@@ -60,7 +39,7 @@
                         </a>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body filters-card">
                     <form id="filtersForm" class="row g-3 align-items-end mb-3">
                         <div class="col-sm-6 col-lg-3">
                             <label for="fromDate" class="form-label">من تاريخ</label>
@@ -92,9 +71,9 @@
                             <label for="groupBy" class="form-label">تجميع النتائج</label>
                             <select id="groupBy" class="form-select">
                                 <option value="">بدون تجميع</option>
-                                <option value="branchName">حسب الفرع</option>
-                                <option value="statusDisplay">حسب الحالة</option>
-                                <option value="dateGroup">حسب الشهر</option>
+                                <option value="BranchName">حسب الفرع</option>
+                                <option value="StatusDisplay">حسب الحالة</option>
+                                <option value="DateGroup">حسب الشهر</option>
                             </select>
                         </div>
                         <div class="col-sm-6 col-lg-3 d-flex">
@@ -104,43 +83,33 @@
                         </div>
                     </form>
 
-                    <div class="table-responsive">
-                        <table id="journalEntriesTable" class="table table-striped table-hover align-middle w-100">
-                            <thead>
-                                <tr>
-                                    <th>رقم القيد</th>
-                                    <th>التاريخ</th>
-                                    <th>الوصف</th>
-                                    <th>المرجع</th>
-                                    <th>الفرع</th>
-                                    <th>المبلغ الإجمالي</th>
-                                    <th>عدد البنود</th>
-                                    <th>الحالة</th>
-                                    <th>الإجراءات</th>
-                                </tr>
-                                <tr class="filters-row">
-                                    <th><input type="text" class="form-control form-control-sm column-search" data-column="0" placeholder="بحث..." /></th>
-                                    <th><input type="date" class="form-control form-control-sm column-search" data-column="1" /></th>
-                                    <th><input type="text" class="form-control form-control-sm column-search" data-column="2" placeholder="بحث..." /></th>
-                                    <th><input type="text" class="form-control form-control-sm column-search" data-column="3" placeholder="بحث..." /></th>
-                                    <th><input type="text" class="form-control form-control-sm column-search" data-column="4" placeholder="بحث..." /></th>
-                                    <th><input type="number" step="0.01" class="form-control form-control-sm column-search" data-column="5" placeholder="=" /></th>
-                                    <th><input type="number" class="form-control form-control-sm column-search" data-column="6" placeholder="=" /></th>
-                                    <th>
-                                        <select class="form-select form-select-sm column-search" data-column="7">
-                                            <option value="">الكل</option>
-                                            @foreach (var status in Model.Statuses.Where(s => !string.IsNullOrEmpty(s.Value)))
-                                            {
-                                                <option value="@status.Value">@status.Text</option>
-                                            }
-                                        </select>
-                                    </th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
+                    <ejs-grid id="journalEntriesGrid"
+                              allowPaging="true"
+                              allowSorting="true"
+                              allowFiltering="true"
+                              allowGrouping="true"
+                              allowExcelExport="true"
+                              enableStickyHeader="true"
+                              enableRtl="true"
+                              allowSelection="false"
+                              height="500"
+                              gridLines="Both"
+                              toolbar="@toolbarItems">
+                        <e-data-manager url="@Url.Action("UrlDatasourceJournalEntries", "JournalEntries")" adaptor="UrlAdaptor"></e-data-manager>
+                        <e-grid-filterSettings type="Excel"></e-grid-filterSettings>
+                        <e-grid-columns>
+                            <e-grid-column field="Number" headerText="رقم القيد" width="140"></e-grid-column>
+                            <e-grid-column field="Date" headerText="التاريخ" format="yyyy-MM-dd" type="date" textAlign="Center" width="140"></e-grid-column>
+                            <e-grid-column field="Description" headerText="الوصف" width="220"></e-grid-column>
+                            <e-grid-column field="Reference" headerText="المرجع" width="180"></e-grid-column>
+                            <e-grid-column field="BranchName" headerText="الفرع" width="180"></e-grid-column>
+                            <e-grid-column field="TotalAmount" headerText="المبلغ الإجمالي" format="N2" type="number" textAlign="Right" width="170"></e-grid-column>
+                            <e-grid-column field="LinesCount" headerText="عدد البنود" textAlign="Center" width="130"></e-grid-column>
+                            <e-grid-column field="StatusDisplay" headerText="الحالة" template="#statusTemplate" textAlign="Center" width="140"></e-grid-column>
+                            <e-grid-column field="DateGroup" headerText="الشهر" visible="false"></e-grid-column>
+                            <e-grid-column field="Id" headerText="الإجراءات" template="#actionsTemplate" textAlign="Center" width="210" allowSorting="false" allowFiltering="false"></e-grid-column>
+                        </e-grid-columns>
+                    </ejs-grid>
 
                     <form id="antiForgeryForm" asp-action="Post" method="post" class="d-none">
                         @Html.AntiForgeryToken()
@@ -152,198 +121,155 @@
 </div>
 
 @section Scripts {
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
-    <script src="https://cdn.datatables.net/rowgroup/1.3.1/js/dataTables.rowGroup.min.js"></script>
+    <script id="statusTemplate" type="text/x-template">
+        <span class="badge ${StatusClass}">${StatusDisplay}</span>
+    </script>
+
+    <script id="actionsTemplate" type="text/x-template">
+        <div class="d-flex justify-content-center flex-wrap gap-2 table-actions" role="group">
+            <a href="@Url.Action("Details", "JournalEntries")/${Id}" class="btn btn-sm btn-outline-info" title="عرض">
+                <i class="fas fa-eye"></i>
+            </a>
+            ${if(IsDraft)}
+            <a href="@Url.Action("Edit", "JournalEntries")/${Id}" class="btn btn-sm btn-outline-warning" title="تعديل">
+                <i class="fas fa-edit"></i>
+            </a>
+            <button type="button" class="btn btn-sm btn-outline-success btn-post-entry" data-id="${Id}" data-number="${Number}" title="ترحيل">
+                <i class="fas fa-share"></i>
+            </button>
+            ${/if}
+            <a href="@Url.Action("Print", "JournalEntries")/${Id}" target="_blank" class="btn btn-sm btn-outline-secondary" title="طباعة">
+                <i class="fas fa-print"></i>
+            </a>
+        </div>
+    </script>
+
     <script>
-        (function () {
-            const formatCurrency = value => new Intl.NumberFormat('ar-EG', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }).format(value ?? 0);
+        document.addEventListener('DOMContentLoaded', function () {
+            var dataUrl = '@Url.Action("UrlDatasourceJournalEntries", "JournalEntries")';
+            var postUrlBase = '@Url.Action("Post", "JournalEntries")';
+            var gridElement = document.getElementById('journalEntriesGrid');
+            if (!gridElement || !gridElement.ej2_instances || !gridElement.ej2_instances.length) {
+                return;
+            }
 
-            const detailsUrlBase = '@Url.Action("Details", "JournalEntries")';
-            const editUrlBase = '@Url.Action("Edit", "JournalEntries")';
-            const postUrlBase = '@Url.Action("Post", "JournalEntries")';
-            const printUrlBase = '@Url.Action("Print", "JournalEntries")';
+            var grid = gridElement.ej2_instances[0];
+            var trackedRequestTypes = ['paging', 'sorting', 'filtering', 'searching', 'grouping', 'ungrouping', 'refresh'];
 
-            const table = $('#journalEntriesTable').DataTable({
-                processing: true,
-                serverSide: true,
-                deferRender: true,
-                ajax: {
-                    url: '@Url.Action("GetEntries", "JournalEntries")',
-                    data: function (d) {
-                        d.fromDate = $('#fromDate').val();
-                        d.toDate = $('#toDate').val();
-                        d.branchId = $('#branchFilter').val();
-                        d.status = $('#statusFilter').val();
-                    }
-                },
-                columns: [
-                    { data: 'number' },
-                    { data: 'dateFormatted' },
-                    { data: 'description' },
-                    { data: 'reference' },
-                    { data: 'branchName' },
-                    {
-                        data: 'totalAmount',
-                        render: function (data, type) {
-                            if (type === 'display' || type === 'filter') {
-                                return `<span class="text-nowrap">${formatCurrency(data)}</span>`;
-                            }
-                            return data;
-                        },
-                        className: 'text-end'
-                    },
-                    { data: 'linesCount', className: 'text-center' },
-                    {
-                        data: 'statusDisplay',
-                        render: function (data, type, row) {
-                            if (type === 'display') {
-                                return `<span class="badge ${row.statusClass}">${data}</span>`;
-                            }
-                            return data;
-                        },
-                        className: 'text-center'
-                    },
-                    {
-                        data: null,
-                        orderable: false,
-                        searchable: false,
-                        className: 'text-center text-nowrap table-actions',
-                        render: function (data, type, row) {
-                            const detailsUrl = `${detailsUrlBase}/${row.id}`;
-                            const editUrl = `${editUrlBase}/${row.id}`;
-                            const printUrl = `${printUrlBase}/${row.id}`;
+            grid.pageSettings = { pageSize: 10, pageSizes: [10, 25, 50, 100, 'All'] };
+            grid.groupSettings = { showDropArea: false };
 
-                            let buttons = `
-                                <a href="${detailsUrl}" class="btn btn-sm btn-outline-info" title="عرض">
-                                    <i class="fas fa-eye"></i>
-                                </a>`;
-
-                            if (row.isDraft) {
-                                buttons += `
-                                    <a href="${editUrl}" class="btn btn-sm btn-outline-warning" title="تعديل">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <button type="button" class="btn btn-sm btn-outline-success btn-post-entry" data-id="${row.id}" data-number="${row.number}" title="ترحيل">
-                                        <i class="fas fa-share"></i>
-                                    </button>`;
-                            }
-
-                            buttons += `
-                                <a href="${printUrl}" target="_blank" class="btn btn-sm btn-outline-secondary" title="طباعة">
-                                    <i class="fas fa-print"></i>
-                                </a>`;
-
-                            return `<div class="btn-group" role="group">${buttons}</div>`;
-                        }
-                    }
-                ],
-                order: [[1, 'desc']],
-                pageLength: 10,
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'الكل']],
-                dom: "<'row mb-2'<'col-sm-12 col-md-4'l><'col-sm-12 col-md-4 text-center'B><'col-sm-12 col-md-4'f>>" +
-                    "<'row'<'col-sm-12'tr>>" +
-                    "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
-                buttons: [
-                    {
-                        extend: 'excelHtml5',
-                        text: '<i class="fas fa-file-excel me-2"></i>تصدير Excel',
-                        exportOptions: { columns: ':not(:last-child)' }
-                    },
-                    {
-                        extend: 'print',
-                        text: '<i class="fas fa-print me-2"></i>طباعة جميع القيود',
-                        title: 'القيود المالية',
-                        exportOptions: { columns: ':not(:last-child)' },
-                        customize: function (win) {
-                            $(win.document.body)
-                                .css('direction', 'rtl')
-                                .css('font-family', '\"Tajawal\", Arial, sans-serif');
-                            $(win.document.body).find('table')
-                                .addClass('table table-bordered')
-                                .css('direction', 'rtl');
-                        }
-                    }
-                ],
-                language: {
-                    url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
-                },
-                rowGroup: {
-                    dataSrc: 'branchName',
-                    startRender: function (rows, group) {
-                        const total = rows
-                            .data()
-                            .pluck('totalAmount')
-                            .reduce((a, b) => a + parseFloat(b || 0), 0);
-                        return $('<tr/>')
-                            .addClass('group-header')
-                            .append(`<td colspan="9">${group} - إجمالي: ${formatCurrency(total)}</td>`);
-                    }
+            grid.actionBegin = function (args) {
+                if (trackedRequestTypes.indexOf(args.requestType) > -1) {
+                    showLoading();
                 }
-            });
+            };
 
-            table.rowGroup().disable();
+            grid.actionComplete = function (args) {
+                if (trackedRequestTypes.indexOf(args.requestType) > -1) {
+                    hideLoading();
+                }
+            };
 
-            table.on('preXhr.dt', function () { showLoading(); });
-            table.on('xhr.dt', function () { hideLoading(); });
-            table.on('error.dt', function () { hideLoading(); });
+            grid.dataBound = function () {
+                hideLoading();
+            };
 
-            $('.column-search').on('change keyup', function () {
-                const columnIndex = $(this).data('column');
-                const value = $(this).val();
-                table.column(columnIndex).search(value || '').draw();
-            });
+            grid.actionFailure = function () {
+                hideLoading();
+            };
 
-            $('#fromDate, #toDate, #branchFilter, #statusFilter').on('change', function () {
-                table.ajax.reload();
-            });
+            function buildDataUrl() {
+                var params = new URLSearchParams();
+                var fromDate = document.getElementById('fromDate').value;
+                var toDate = document.getElementById('toDate').value;
+                var branchId = document.getElementById('branchFilter').value;
+                var status = document.getElementById('statusFilter').value;
 
-            $('#resetFilters').on('click', function () {
-                $('#fromDate, #toDate').val('');
-                $('#branchFilter option:first').prop('selected', true);
-                $('#statusFilter option:first').prop('selected', true);
-                $('#groupBy').val('');
-                $('.column-search').each(function () {
-                    $(this).val('');
-                    const columnIndex = $(this).data('column');
-                    table.column(columnIndex).search('');
+                if (fromDate) params.append('fromDate', fromDate);
+                if (toDate) params.append('toDate', toDate);
+                if (branchId) params.append('branchId', branchId);
+                if (status) params.append('status', status);
+
+                var query = params.toString();
+                return query ? dataUrl + '?' + query : dataUrl;
+            }
+
+            function reloadGrid() {
+                showLoading();
+                grid.dataSource = new ej.data.DataManager({
+                    url: buildDataUrl(),
+                    adaptor: new ej.data.UrlAdaptor()
                 });
-                table.rowGroup().disable();
-                table.ajax.reload();
+                grid.refresh();
+            }
+
+            grid.dataSource = new ej.data.DataManager({
+                url: buildDataUrl(),
+                adaptor: new ej.data.UrlAdaptor()
             });
 
-            $('#groupBy').on('change', function () {
-                const value = $(this).val();
-                if (value) {
-                    table.rowGroup().dataSrc(value).enable();
-                } else {
-                    table.rowGroup().disable();
+            ['fromDate', 'toDate', 'branchFilter', 'statusFilter'].forEach(function (id) {
+                var element = document.getElementById(id);
+                if (!element) return;
+                element.addEventListener('change', function () {
+                    grid.pageSettings.currentPage = 1;
+                    reloadGrid();
+                });
+            });
+
+            var resetButton = document.getElementById('resetFilters');
+            if (resetButton) {
+                resetButton.addEventListener('click', function () {
+                    document.getElementById('fromDate').value = '';
+                    document.getElementById('toDate').value = '';
+                    document.getElementById('branchFilter').selectedIndex = 0;
+                    document.getElementById('statusFilter').selectedIndex = 0;
+                    document.getElementById('groupBy').value = '';
+
+                    grid.clearFiltering();
+                    grid.clearSorting();
+                    grid.searchSettings.key = '';
+                    grid.clearGrouping();
+                    grid.pageSettings.currentPage = 1;
+                    reloadGrid();
+                });
+            }
+
+            var groupSelect = document.getElementById('groupBy');
+            if (groupSelect) {
+                groupSelect.addEventListener('change', function (event) {
+                    grid.clearGrouping();
+                    var value = event.target.value;
+                    if (value) {
+                        grid.groupColumn(value);
+                    }
+                });
+            }
+
+            document.getElementById('journalEntriesGrid').addEventListener('click', function (event) {
+                var button = event.target.closest('.btn-post-entry');
+                if (!button) {
+                    return;
                 }
-                table.draw();
-            });
 
-            $('#journalEntriesTable').on('click', '.btn-post-entry', function () {
-                const id = $(this).data('id');
-                const number = $(this).data('number');
-                if (!confirm(`هل تريد ترحيل القيد رقم ${number}?`)) {
+                var id = button.getAttribute('data-id');
+                var number = button.getAttribute('data-number');
+                if (!id) {
+                    return;
+                }
+
+                if (!confirm('هل تريد ترحيل القيد رقم ' + number + '?')) {
                     return;
                 }
 
                 showLoading();
                 $.ajax({
-                    url: `${postUrlBase}/${id}`,
+                    url: postUrlBase + '/' + id,
                     type: 'POST',
                     success: function () {
                         hideLoading();
-                        table.ajax.reload(null, false);
+                        grid.refresh();
                         if (window.swal) {
                             swal({ title: 'تم الترحيل بنجاح', icon: 'success', button: 'حسناً' });
                         } else {
@@ -352,7 +278,7 @@
                     },
                     error: function (xhr) {
                         hideLoading();
-                        const message = xhr.responseText || 'تعذر ترحيل القيد.';
+                        var message = xhr.responseText || 'تعذر ترحيل القيد.';
                         if (window.swal) {
                             swal({ title: 'خطأ', text: message, icon: 'error', button: 'إغلاق' });
                         } else {
@@ -361,6 +287,6 @@
                     }
                 });
             });
-        })();
+        });
     </script>
 }
