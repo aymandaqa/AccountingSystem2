@@ -1094,6 +1094,30 @@ namespace Roadfn.Controllers
                     return BadRequest("حساب الإيرادات غير موجود");
                 }
 
+                var driverPaymentHeader = new DriverPaymentHeader();
+                var driverPayments = new List<DriverPaymentDetail>();
+                await _context.DriverPaymentHeader.AddAsync(driverPaymentHeader);
+                await _context.SaveChangesAsync();
+
+                var listpay = new List<RptDriverPay>();
+                foreach (var item in rptDriverPay)
+                {
+                    var shipmentsPay = await _context.RptDriverPay.Where(t => t.Id == Convert.ToInt64(item.Id)).FirstOrDefaultAsync();
+                    if (shipmentsPay != null)
+                    {
+                        driverPayments.Add(new DriverPaymentDetail
+                        {
+                            HeaderId = driverPaymentHeader.Id,
+                            ComisionValue = shipmentsPay.CommissionPerItem,
+                            ShipmentId = shipmentsPay.ShipmentId,
+                            ShipmentTrackingNo = shipmentsPay.ShipmentTrackingNo,
+                            DriverExtraComisionValue = shipmentsPay.DriverExtraComisionValue,
+                            CompanyRevenueValue = shipmentsPay.ShipmentCod - shipmentsPay.ShipmentPrice,
+                        });
+                        listpay.Add(shipmentsPay);
+                    }
+                }
+
                 var driverAccount = await EnsureDriverAccountAsync(listpay, driverParentAccount);
                 if (driverAccount == null)
                 {
@@ -1113,26 +1137,6 @@ namespace Roadfn.Controllers
                 }
 
 
-                var driverPaymentHeader = new DriverPaymentHeader();
-                var driverPayments = new List<DriverPaymentDetail>();
-                await _context.DriverPaymentHeader.AddAsync(driverPaymentHeader);
-                await _context.SaveChangesAsync();
-                var listpay = new List<RptDriverPay>();
-                foreach (var item in rptDriverPay)
-                {
-                    var shipmentsPay = await _context.RptDriverPay.Where(t => t.Id == Convert.ToInt64(item.Id)).FirstOrDefaultAsync();
-                    if (shipmentsPay != null)
-                        driverPayments.Add(new DriverPaymentDetail
-                        {
-                            HeaderId = driverPaymentHeader.Id,
-                            ComisionValue = shipmentsPay.CommissionPerItem,
-                            ShipmentId = shipmentsPay.ShipmentId,
-                            ShipmentTrackingNo = shipmentsPay.ShipmentTrackingNo,
-                            DriverExtraComisionValue = shipmentsPay.DriverExtraComisionValue,
-                            CompanyRevenueValue = shipmentsPay.ShipmentCod - shipmentsPay.ShipmentPrice,
-                        });
-                    listpay.Add(shipmentsPay);
-                }
                 await _context.DriverPaymentDetails.AddRangeAsync(driverPayments);
                 await _context.SaveChangesAsync();
                 driverPaymentHeader.PaymentValue = listpay.Sum(t => t.CommissionPerItem) + listpay.Sum(t => t.DriverExtraComisionValue);
@@ -1152,10 +1156,6 @@ namespace Roadfn.Controllers
                     var id1 = item.ShipmentId;
 
                     var sh = await _context.Shipments.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(id1));
-                    var customer = await _context.Users.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(sh.BusinessUserId));
-
-                    var CustomerAccount = await _accountService.CreateAccountAsync(customer.Id + "_" + customer.FirstName + " " + customer.LastName + " " + customer.MobileNo1, Cacc.Id);
-
                     var customerUser = await _context.Users.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(sh.BusinessUserId));
                     if (customerUser == null)
                     {
@@ -1456,7 +1456,12 @@ namespace Roadfn.Controllers
             }
 
             var accountName = $"{driver.Id}_{(driver.FirstName ?? string.Empty)} {(driver.FamilyName ?? string.Empty)} {(driver.Phone1 ?? string.Empty)}".Trim();
-            var newAccount = await _accountService.CreateAccountAsync(accountName, driverParentAccount.Id);
+            var (accountId, _) = await _accountService.CreateAccountAsync(accountName, driverParentAccount.Id);
+            var newAccount = await _accontext.Accounts.FirstOrDefaultAsync(a => a.Id == accountId);
+            if (newAccount == null)
+            {
+                return null;
+            }
 
             if (mapping == null)
             {
@@ -1479,7 +1484,7 @@ namespace Roadfn.Controllers
             return newAccount;
         }
 
-        private async Task<Account?> EnsureCustomerAccountAsync(User customer, Dictionary<int, Account> cache, Account customerParentAccount)
+        private async Task<Account?> EnsureCustomerAccountAsync(Roadfn.Models.User customer, Dictionary<int, Account> cache, Account customerParentAccount)
         {
             if (cache.TryGetValue(customer.Id, out var cachedAccount))
             {
@@ -1498,7 +1503,12 @@ namespace Roadfn.Controllers
             }
 
             var accountName = $"{customer.Id}_{(customer.FirstName ?? string.Empty)} {(customer.LastName ?? string.Empty)} {(customer.MobileNo1 ?? string.Empty)}".Trim();
-            var newAccount = await _accountService.CreateAccountAsync(accountName, customerParentAccount.Id);
+            var (accountId, _) = await _accountService.CreateAccountAsync(accountName, customerParentAccount.Id);
+            var newAccount = await _accontext.Accounts.FirstOrDefaultAsync(a => a.Id == accountId);
+            if (newAccount == null)
+            {
+                return null;
+            }
 
             if (mapping == null)
             {
