@@ -5,6 +5,9 @@ using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using System;
+using System.Globalization;
+using System.Linq;
 using System.Security.Claims;
 
 namespace AccountingSystem.Controllers
@@ -21,53 +24,197 @@ namespace AccountingSystem.Controllers
 
         // GET: JournalEntries
         [Authorize(Policy = "journal.view")]
-        public async Task<IActionResult> Index(string? searchTerm, int page = 1, int pageSize = 10)
+        public async Task<IActionResult> Index()
         {
+            var branches = await _context.Branches
+                .OrderBy(b => b.NameAr)
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = b.NameAr
+                })
+                .ToListAsync();
+
+            branches.Insert(0, new SelectListItem { Value = string.Empty, Text = "كل الفروع" });
+
+            var statuses = Enum.GetValues<JournalEntryStatus>()
+                .Select(status =>
+                {
+                    var info = GetStatusInfo(status);
+                    return new SelectListItem
+                    {
+                        Value = status.ToString(),
+                        Text = info.Text
+                    };
+                })
+                .ToList();
+
+            statuses.Insert(0, new SelectListItem { Value = string.Empty, Text = "كل الحالات" });
+
+            var viewModel = new JournalEntriesIndexViewModel
+            {
+                Branches = branches,
+                Statuses = statuses
+            };
+
+            return View(viewModel);
+        }
+
+        [HttpGet]
+        [Authorize(Policy = "journal.view")]
+        public async Task<IActionResult> GetEntries()
+        {
+            int.TryParse(Request.Query["draw"], out var draw);
+            int.TryParse(Request.Query["start"], out var start);
+            int.TryParse(Request.Query["length"], out var length);
+
+            var totalRecords = await _context.JournalEntries.CountAsync();
+
             var query = _context.JournalEntries
+                .AsNoTracking()
                 .Include(j => j.Branch)
                 .Include(j => j.Lines)
                 .AsQueryable();
 
-            if (!string.IsNullOrWhiteSpace(searchTerm))
+            var searchValue = Request.Query["search[value]"].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(searchValue))
             {
                 query = query.Where(j =>
-                    j.Number.Contains(searchTerm) ||
-                    j.Description.Contains(searchTerm) ||
-                    (j.Reference != null && j.Reference.Contains(searchTerm)) ||
-                    j.Branch.NameAr.Contains(searchTerm));
+                    j.Number.Contains(searchValue) ||
+                    j.Description.Contains(searchValue) ||
+                    (j.Reference != null && j.Reference.Contains(searchValue)) ||
+                    j.Branch.NameAr.Contains(searchValue));
             }
 
-            var totalItems = await query.CountAsync();
+            if (int.TryParse(Request.Query["branchId"], out var branchId))
+            {
+                query = query.Where(j => j.BranchId == branchId);
+            }
+
+            var statusFilter = Request.Query["status"].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(statusFilter) && Enum.TryParse<JournalEntryStatus>(statusFilter, out var statusValue))
+            {
+                query = query.Where(j => j.Status == statusValue);
+            }
+
+            if (DateTime.TryParse(Request.Query["fromDate"], CultureInfo.InvariantCulture, DateTimeStyles.None, out var fromDate))
+            {
+                var from = fromDate.Date;
+                query = query.Where(j => j.Date >= from);
+            }
+
+            if (DateTime.TryParse(Request.Query["toDate"], CultureInfo.InvariantCulture, DateTimeStyles.None, out var toDate))
+            {
+                var to = toDate.Date.AddDays(1);
+                query = query.Where(j => j.Date < to);
+            }
+
+            var numberFilter = GetColumnSearchValue(0);
+            if (!string.IsNullOrWhiteSpace(numberFilter))
+            {
+                query = query.Where(j => j.Number.Contains(numberFilter));
+            }
+
+            var descriptionFilter = GetColumnSearchValue(2);
+            if (!string.IsNullOrWhiteSpace(descriptionFilter))
+            {
+                query = query.Where(j => j.Description.Contains(descriptionFilter));
+            }
+
+            var referenceFilter = GetColumnSearchValue(3);
+            if (!string.IsNullOrWhiteSpace(referenceFilter))
+            {
+                query = query.Where(j => j.Reference != null && j.Reference.Contains(referenceFilter));
+            }
+
+            var branchFilterValue = GetColumnSearchValue(4);
+            if (!string.IsNullOrWhiteSpace(branchFilterValue))
+            {
+                query = query.Where(j => j.Branch.NameAr.Contains(branchFilterValue));
+            }
+
+            var dateColumnValue = Request.Query[$"columns[1][search][value]"].ToString();
+            if (!string.IsNullOrWhiteSpace(dateColumnValue) && DateTime.TryParse(dateColumnValue, out var columnDate))
+            {
+                var dateOnly = columnDate.Date;
+                query = query.Where(j => j.Date.Date == dateOnly);
+            }
+
+            var amountColumnValue = Request.Query[$"columns[5][search][value]"].ToString();
+            if (!string.IsNullOrWhiteSpace(amountColumnValue) && decimal.TryParse(amountColumnValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var amountFilter))
+            {
+                query = query.Where(j => j.Lines.Sum(l => l.DebitAmount) == amountFilter);
+            }
+
+            var linesCountValue = Request.Query[$"columns[6][search][value]"].ToString();
+            if (!string.IsNullOrWhiteSpace(linesCountValue) && int.TryParse(linesCountValue, out var linesFilter))
+            {
+                query = query.Where(j => j.Lines.Count == linesFilter);
+            }
+
+            var statusColumnValue = Request.Query[$"columns[7][search][value]"].ToString();
+            if (!string.IsNullOrWhiteSpace(statusColumnValue) && Enum.TryParse<JournalEntryStatus>(statusColumnValue, out var statusColumn))
+            {
+                query = query.Where(j => j.Status == statusColumn);
+            }
+
+            var recordsFiltered = await query.CountAsync();
+
+            if (length == -1)
+            {
+                length = recordsFiltered;
+            }
+
+            if (start > recordsFiltered)
+            {
+                start = 0;
+            }
+
+            var orderColumnIndexValue = Request.Query["order[0][column]"].FirstOrDefault();
+            var orderDirection = Request.Query["order[0][dir]"].FirstOrDefault();
+            if (!int.TryParse(orderColumnIndexValue, out var orderColumnIndex))
+            {
+                orderColumnIndex = 1;
+            }
+
+            query = ApplyOrdering(query, orderColumnIndex, orderDirection);
 
             var entries = await query
-                .OrderByDescending(j => j.Date)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
+                .Skip(start)
+                .Take(length)
                 .ToListAsync();
 
-            var items = entries.Select(j => new JournalEntryViewModel
+            var data = entries.Select(entry =>
             {
-                Id = j.Id,
-                Number = j.Number,
-                Date = j.Date,
-                Description = j.Description,
-                Reference = j.Reference,
-                Status = j.Status.ToString(),
-                BranchName = j.Branch.NameAr,
-                TotalAmount = j.Lines.Sum(l => l.DebitAmount),
-                LinesCount = j.Lines.Count
+                var totalAmount = entry.Lines.Sum(l => l.DebitAmount);
+                var info = GetStatusInfo(entry.Status);
+                return new JournalEntryViewModel
+                {
+                    Id = entry.Id,
+                    Number = entry.Number,
+                    Date = entry.Date,
+                    DateFormatted = entry.Date.ToString("yyyy-MM-dd"),
+                    DateGroup = entry.Date.ToString("yyyy-MM"),
+                    Description = entry.Description,
+                    Reference = entry.Reference ?? string.Empty,
+                    Status = entry.Status.ToString(),
+                    StatusDisplay = info.Text,
+                    StatusClass = info.CssClass,
+                    BranchName = entry.Branch.NameAr,
+                    TotalAmount = totalAmount,
+                    TotalAmountFormatted = totalAmount.ToString("N2"),
+                    LinesCount = entry.Lines.Count,
+                    IsDraft = entry.Status == JournalEntryStatus.Draft
+                };
             }).ToList();
 
-            var result = new PagedResult<JournalEntryViewModel>
+            return Json(new
             {
-                Items = items,
-                Page = page,
-                PageSize = pageSize,
-                TotalItems = totalItems,
-                SearchTerm = searchTerm
-            };
-
-            return View(result);
+                draw,
+                recordsTotal = totalRecords,
+                recordsFiltered,
+                data
+            });
         }
 
         // GET: JournalEntries/Create
@@ -201,27 +348,25 @@ namespace AccountingSystem.Controllers
             if (entry == null)
                 return NotFound();
 
-            var model = new JournalEntryDetailsViewModel
-            {
-                Id = entry.Id,
-                Number = entry.Number,
-                Date = entry.Date,
-                Description = entry.Description,
-                Reference = entry.Reference,
-                Status = entry.Status.ToString(),
-                BranchName = entry.Branch.NameAr,
-                Lines = entry.Lines.Select(l => new JournalEntryLineViewModel
-                {
-                    AccountId = l.AccountId,
-                    AccountCode = l.Account.Code,
-                    AccountName = $"{l.Account.NameAr} ({l.Account?.Currency?.Code})",
-                    Description = l.Description ?? string.Empty,
-                    DebitAmount = l.DebitAmount,
-                    CreditAmount = l.CreditAmount
-                }).ToList(),
-                TotalDebit = entry.Lines.Sum(l => l.DebitAmount),
-                TotalCredit = entry.Lines.Sum(l => l.CreditAmount)
-            };
+            var model = MapToDetailsViewModel(entry);
+
+            return View(model);
+        }
+
+        [Authorize(Policy = "journal.view")]
+        public async Task<IActionResult> Print(int id)
+        {
+            var entry = await _context.JournalEntries
+                .Include(j => j.Branch)
+                .Include(j => j.Lines)
+                    .ThenInclude(l => l.Account)
+                        .ThenInclude(a => a.Currency)
+                .FirstOrDefaultAsync(j => j.Id == id);
+
+            if (entry == null)
+                return NotFound();
+
+            var model = MapToDetailsViewModel(entry);
 
             return View(model);
         }
@@ -352,6 +497,11 @@ namespace AccountingSystem.Controllers
 
             await _context.SaveChangesAsync();
 
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return Ok(new { success = true });
+            }
+
             return RedirectToAction(nameof(Index));
         }
 
@@ -365,6 +515,67 @@ namespace AccountingSystem.Controllers
         public async Task<IActionResult> Posted(string? searchTerm, int page = 1, int pageSize = 10)
         {
             return await GetEntriesByStatus(JournalEntryStatus.Posted, "Posted", searchTerm, page, pageSize);
+        }
+
+        private string? GetColumnSearchValue(int index)
+        {
+            var value = Request.Query[$"columns[{index}][search][value]"].FirstOrDefault();
+            return string.IsNullOrWhiteSpace(value) ? null : value;
+        }
+
+        private static IQueryable<JournalEntry> ApplyOrdering(IQueryable<JournalEntry> query, int columnIndex, string? direction)
+        {
+            var ascending = string.Equals(direction, "asc", StringComparison.OrdinalIgnoreCase);
+
+            return columnIndex switch
+            {
+                0 => ascending ? query.OrderBy(j => j.Number) : query.OrderByDescending(j => j.Number),
+                1 => ascending ? query.OrderBy(j => j.Date) : query.OrderByDescending(j => j.Date),
+                2 => ascending ? query.OrderBy(j => j.Description) : query.OrderByDescending(j => j.Description),
+                3 => ascending ? query.OrderBy(j => j.Reference) : query.OrderByDescending(j => j.Reference),
+                4 => ascending ? query.OrderBy(j => j.Branch.NameAr) : query.OrderByDescending(j => j.Branch.NameAr),
+                5 => ascending ? query.OrderBy(j => j.Lines.Sum(l => l.DebitAmount)) : query.OrderByDescending(j => j.Lines.Sum(l => l.DebitAmount)),
+                6 => ascending ? query.OrderBy(j => j.Lines.Count) : query.OrderByDescending(j => j.Lines.Count),
+                7 => ascending ? query.OrderBy(j => j.Status) : query.OrderByDescending(j => j.Status),
+                _ => ascending ? query.OrderBy(j => j.Date) : query.OrderByDescending(j => j.Date)
+            };
+        }
+
+        private static (string Text, string CssClass) GetStatusInfo(JournalEntryStatus status)
+        {
+            return status switch
+            {
+                JournalEntryStatus.Draft => ("مسودة", "bg-secondary"),
+                JournalEntryStatus.Posted => ("مرحل", "bg-success"),
+                JournalEntryStatus.Approved => ("معتمد", "bg-primary"),
+                JournalEntryStatus.Cancelled => ("ملغي", "bg-danger"),
+                _ => (status.ToString(), "bg-secondary")
+            };
+        }
+
+        private static JournalEntryDetailsViewModel MapToDetailsViewModel(JournalEntry entry)
+        {
+            return new JournalEntryDetailsViewModel
+            {
+                Id = entry.Id,
+                Number = entry.Number,
+                Date = entry.Date,
+                Description = entry.Description,
+                Reference = entry.Reference,
+                Status = entry.Status.ToString(),
+                BranchName = entry.Branch.NameAr,
+                Lines = entry.Lines.Select(l => new JournalEntryLineViewModel
+                {
+                    AccountId = l.AccountId,
+                    AccountCode = l.Account.Code,
+                    AccountName = $"{l.Account.NameAr} ({l.Account?.Currency?.Code})",
+                    Description = l.Description ?? string.Empty,
+                    DebitAmount = l.DebitAmount,
+                    CreditAmount = l.CreditAmount
+                }).ToList(),
+                TotalDebit = entry.Lines.Sum(l => l.DebitAmount),
+                TotalCredit = entry.Lines.Sum(l => l.CreditAmount)
+            };
         }
 
         private async Task<IActionResult> GetEntriesByStatus(JournalEntryStatus status, string viewName, string? searchTerm, int page, int pageSize)
