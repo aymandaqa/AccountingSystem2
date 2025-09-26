@@ -36,10 +36,7 @@
             <input type="text" class="form-control" id="currencyDisplay" readonly />
             <input type="hidden" asp-for="CurrencyId" id="currencyId" />
         </div>
-        <div class="col-md-6">
-            <label class="form-label">سعر الصرف</label>
-            <input asp-for="ExchangeRate" class="form-control" />
-        </div>
+        <input asp-for="ExchangeRate" type="hidden" value="1" />
         <div class="col-md-6">
             <label class="form-label">المبلغ</label>
             <input asp-for="Amount" class="form-control" />
