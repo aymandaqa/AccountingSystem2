@@ -15,8 +15,8 @@
         public string? ArabicCityName { get; set; }
         public string? LoginUserFirstName { get; set; }
         public string? LoginUserLastName { get; set; }
-        public decimal ReturnFees { get; set; }
-        public decimal ShipmentTotal { get; set; }
+        public decimal? ReturnFees { get; set; }
+        public decimal? ShipmentTotal { get; set; }
         public string? AreaName { get; set; }
         public string? ShipmentContains { get; set; }
     }

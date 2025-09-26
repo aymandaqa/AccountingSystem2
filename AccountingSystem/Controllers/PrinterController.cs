@@ -133,9 +133,9 @@ namespace Roadfn.Controllers
 
         public async Task<WTable> CreateTable(WordDocument document, string BisnessUserPaymentHeaders)
         {
-            var header = await _context.BisnessUserPaymentHeaders.FindAsync(Convert.ToInt64(BisnessUserPaymentHeaders));
+            var header = await _context.BisnessUserPaymentHeader.FindAsync(Convert.ToInt64(BisnessUserPaymentHeaders));
 
-            var details = await _context.PayBusinessSlipViews.Where(t => t.Id == header.Id).ToListAsync();
+            var details = await _context.PayBusinessSlipView.Where(t => t.Id == header.Id).ToListAsync();
 
             DataTable table = new DataTable();
             //DataColumn dataColumn1 = new DataColumn("ID");

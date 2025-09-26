@@ -12,7 +12,7 @@ namespace Roadfn.Models
         public int? LoginUserId { get; set; }
         public int? StatusId { get; set; }
         public int? DriverId { get; set; }
-        public bool? IsSendToInOutTransaction { get; set; }
+        public bool? IsSendTo_IN_OUT_TRANSACTION { get; set; }
     }
 
     public partial class BisnessUserReturnHeader

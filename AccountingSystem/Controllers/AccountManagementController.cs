@@ -211,11 +211,11 @@ namespace Roadfn.Controllers
             var msg = "";
             foreach (var item1 in invoiceBusinessUserShipments)
             {
-                var inv = await _context.BisnessUserPaymentHeaders.Where(t => t.Id == item1.ID).FirstOrDefaultAsync();
+                var inv = await _context.BisnessUserPaymentHeader.Where(t => t.Id == item1.ID).FirstOrDefaultAsync();
                 if (inv != null)
                 {
                     inv.StatusId = 2;
-                    _context.BisnessUserPaymentHeaders.Update(inv);
+                    _context.BisnessUserPaymentHeader.Update(inv);
                     await _context.SaveChangesAsync();
                     msg += Environment.NewLine + $"تم تسليم الفاتورة {inv.Id} ";
 
@@ -397,11 +397,11 @@ namespace Roadfn.Controllers
             var msg = "";
             foreach (var item1 in invoiceBusinessUserShipments)
             {
-                var inv = await _context.BisnessUserPaymentHeaders.Where(t => t.Id == item1.ID).FirstOrDefaultAsync();
+                var inv = await _context.BisnessUserPaymentHeader.Where(t => t.Id == item1.ID).FirstOrDefaultAsync();
                 if (inv != null)
                 {
                     inv.DriverId = DriverId;
-                    _context.BisnessUserPaymentHeaders.Update(inv);
+                    _context.BisnessUserPaymentHeader.Update(inv);
                     await _context.SaveChangesAsync();
                     msg += Environment.NewLine + $"تم تغيير السائق للفاتورة {inv.Id} ";
 
@@ -1330,7 +1330,7 @@ namespace Roadfn.Controllers
                 var bisnessUserPaymentHeader = new BisnessUserPaymentHeader();
                 bisnessUserPaymentHeader.StatusId = statusinv.Id;
                 var bisnessUserPaymentDetail = new List<BisnessUserPaymentDetail>();
-                await _context.BisnessUserPaymentHeaders.AddAsync(bisnessUserPaymentHeader);
+                await _context.BisnessUserPaymentHeader.AddAsync(bisnessUserPaymentHeader);
                 await _context.SaveChangesAsync();
                 var listpay = new List<Shipment>();
                 foreach (var item in PayToBus)
@@ -1350,7 +1350,7 @@ namespace Roadfn.Controllers
                 }
                 if (listpay.Sum(t => t.ShipmentTotal) - listpay.Sum(t => t.ShipmentFees) < 0)
                 {
-                    _context.BisnessUserPaymentHeaders.Remove(bisnessUserPaymentHeader);
+                    _context.BisnessUserPaymentHeader.Remove(bisnessUserPaymentHeader);
                     await _context.SaveChangesAsync();
                     return Ok($"لايمكن دفع الفاتورة المجموع {listpay.Sum(t => t.ShipmentTotal) - listpay.Sum(t => t.ShipmentFees)}");
                 }
@@ -1362,7 +1362,7 @@ namespace Roadfn.Controllers
                 bisnessUserPaymentHeader.UserId = listpay.DistinctBy(t => t.BusinessUserId).FirstOrDefault().BusinessUserId;
                 bisnessUserPaymentHeader.PaymentDate = DateTime.Now;
                 bisnessUserPaymentHeader.DriverId = dariverID;
-                _context.BisnessUserPaymentHeaders.Update(bisnessUserPaymentHeader);
+                _context.BisnessUserPaymentHeader.Update(bisnessUserPaymentHeader);
                 await _context.SaveChangesAsync();
 
                 BussPaymentsHist bussPaymentsHist = new BussPaymentsHist();
@@ -1768,7 +1768,7 @@ namespace Roadfn.Controllers
                     var bisnessUserPaymentHeader = new BisnessUserPaymentHeader();
                     bisnessUserPaymentHeader.StatusId = statusinv.Id;
                     var bisnessUserPaymentDetail = new List<BisnessUserPaymentDetail>();
-                    await _context.BisnessUserPaymentHeaders.AddAsync(bisnessUserPaymentHeader);
+                    await _context.BisnessUserPaymentHeader.AddAsync(bisnessUserPaymentHeader);
                     await _context.SaveChangesAsync();
                     var listpay = new List<Shipment>();
                     foreach (var item in PayToBus)
@@ -1785,7 +1785,7 @@ namespace Roadfn.Controllers
                     }
                     if (listpay.Sum(t => t.ShipmentTotal) - listpay.Sum(t => t.ShipmentFees) < 0)
                     {
-                        _context.BisnessUserPaymentHeaders.Remove(bisnessUserPaymentHeader);
+                        _context.BisnessUserPaymentHeader.Remove(bisnessUserPaymentHeader);
                         await _context.SaveChangesAsync();
                         //return BadRequest();
                     }
@@ -1798,7 +1798,7 @@ namespace Roadfn.Controllers
                         bisnessUserPaymentHeader.UserId = listpay.DistinctBy(t => t.BusinessUserId).FirstOrDefault().BusinessUserId;
                         bisnessUserPaymentHeader.PaymentDate = DateTime.Now;
                         bisnessUserPaymentHeader.DriverId = dariverID;
-                        _context.BisnessUserPaymentHeaders.Update(bisnessUserPaymentHeader);
+                        _context.BisnessUserPaymentHeader.Update(bisnessUserPaymentHeader);
                         await _context.SaveChangesAsync();
                         BussPaymentsHist bussPaymentsHist = new BussPaymentsHist();
                         bussPaymentsHist.StatusId = 1;
@@ -2191,10 +2191,10 @@ namespace Roadfn.Controllers
                 if (!string.IsNullOrWhiteSpace(item1))
                 {
                     var filepath = Path.Combine(_env.WebRootPath, "ReportTemplates", "CashDeliveryInvoice", "CashDeliveryInvoice.html");
-                    var header = await _context.BisnessUserPaymentHeaders.FindAsync(Convert.ToInt64(item1));
+                    var header = await _context.BisnessUserPaymentHeader.FindAsync(Convert.ToInt64(item1));
                     if (header == null)
                         return NotFound();
-                    var details = await _context.PayBusinessSlipViews.Where(t => t.Id == header.Id).ToListAsync();
+                    var details = await _context.PayBusinessSlipView.Where(t => t.Id == header.Id).ToListAsync();
 
                     DataTable table = new DataTable();
                     //DataColumn dataColumn1 = new DataColumn("ID");

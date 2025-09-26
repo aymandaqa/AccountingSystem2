@@ -114,7 +114,7 @@ namespace AccountingSystem.Data
             Console.WriteLine($"Save Chagnes Failed at {DateTime.Now}");
 
         }
-        public virtual DbSet<PayBusinessSlipView> PayBusinessSlipViews { get; set; }
+        public virtual DbSet<PayBusinessSlipView> PayBusinessSlipView { get; set; }
 
         public virtual DbSet<ShipmentLogGrid2> ShipmentLogGrid2s { get; set; }
 
@@ -150,7 +150,7 @@ namespace AccountingSystem.Data
         public virtual DbSet<InvoiceStatus> InvoiceStatus { get; set; }
         public virtual DbSet<RptDriverPaySlip> RptDriverPaySlip { get; set; }
         public virtual DbSet<BisnessUserPaymentDetail> BisnessUserPaymentDetails { get; set; }
-        public virtual DbSet<BisnessUserPaymentHeader> BisnessUserPaymentHeaders { get; set; }
+        public virtual DbSet<BisnessUserPaymentHeader> BisnessUserPaymentHeader { get; set; }
         public virtual DbSet<Roadfn.Models.City> Cities { get; set; }
         public virtual DbSet<CompanyBranch> CompanyBranches { get; set; }
         public virtual DbSet<DriverPaymentDetail> DriverPaymentDetails { get; set; }
