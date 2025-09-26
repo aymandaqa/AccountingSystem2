@@ -35,6 +35,7 @@ namespace AccountingSystem.Controllers
             var expenses = await _context.AssetExpenses
                 .Include(e => e.Asset).ThenInclude(a => a.Branch)
                 .Include(e => e.ExpenseAccount)
+                .Include(e => e.Supplier)
                 .OrderByDescending(e => e.Date)
                 .ToListAsync();
 
@@ -44,6 +45,7 @@ namespace AccountingSystem.Controllers
                 AssetName = e.Asset.Name,
                 BranchName = e.Asset.Branch.NameAr,
                 ExpenseAccountName = e.ExpenseAccount.NameAr,
+                SupplierName = e.Supplier.NameAr,
                 Amount = e.Amount,
                 IsCash = e.IsCash,
                 Date = e.Date,
@@ -61,7 +63,8 @@ namespace AccountingSystem.Controllers
                 Date = DateTime.Now,
                 Assets = await GetAssetsAsync(),
                 ExpenseAccounts = await GetExpenseAccountsAsync(),
-                Accounts = await GetSettlementAccountsAsync()
+                Accounts = await GetSettlementAccountsAsync(),
+                Suppliers = await GetSuppliersAsync()
             };
 
             return View(model);
@@ -97,20 +100,31 @@ namespace AccountingSystem.Controllers
                 ModelState.AddModelError(string.Empty, "لم يتم ضبط حسابات مصاريف الأصول في الإعدادات");
             }
 
-            Account? settlementAccount = null;
-            if (!model.IsCash)
+            Supplier? supplier = null;
+            if (!model.SupplierId.HasValue)
             {
-                if (model.AccountId == null)
+                ModelState.AddModelError(nameof(model.SupplierId), "الرجاء اختيار المورد");
+            }
+            else
+            {
+                supplier = await _context.Suppliers
+                    .Include(s => s.Account)
+                        .ThenInclude(a => a.Currency)
+                    .FirstOrDefaultAsync(s => s.Id == model.SupplierId.Value);
+
+                if (supplier?.Account == null)
                 {
-                    ModelState.AddModelError(nameof(model.AccountId), "الرجاء اختيار حساب التسوية");
+                    ModelState.AddModelError(nameof(model.SupplierId), "المورد غير موجود أو لا يملك حساباً");
                 }
-                else
+            }
+
+            Account? settlementAccount = null;
+            if (!model.IsCash && model.AccountId.HasValue)
+            {
+                settlementAccount = await _context.Accounts.FindAsync(model.AccountId.Value);
+                if (settlementAccount == null)
                 {
-                    settlementAccount = await _context.Accounts.FindAsync(model.AccountId.Value);
-                    if (settlementAccount == null)
-                    {
-                        ModelState.AddModelError(nameof(model.AccountId), "حساب التسوية غير صالح");
-                    }
+                    ModelState.AddModelError(nameof(model.AccountId), "حساب التسوية غير صالح");
                 }
             }
 
@@ -120,6 +134,10 @@ namespace AccountingSystem.Controllers
                 if (settlementAccount != null && settlementAccount.CurrencyId != expenseAccount.CurrencyId)
                 {
                     ModelState.AddModelError(nameof(model.AccountId), "يجب أن تكون الحسابات بنفس العملة");
+                }
+                if (supplier?.Account != null && supplier.Account.CurrencyId != expenseAccount.CurrencyId)
+                {
+                    ModelState.AddModelError(nameof(model.SupplierId), "يجب أن تكون الحسابات بنفس العملة");
                 }
                 if (model.IsCash && user.PaymentAccountId.HasValue)
                 {
@@ -141,6 +159,7 @@ namespace AccountingSystem.Controllers
                 model.Assets = await GetAssetsAsync();
                 model.ExpenseAccounts = await GetExpenseAccountsAsync();
                 model.Accounts = await GetSettlementAccountsAsync();
+                model.Suppliers = await GetSuppliersAsync();
                 return View(model);
             }
 
@@ -155,6 +174,7 @@ namespace AccountingSystem.Controllers
                 AssetId = model.AssetId,
                 ExpenseAccountId = model.ExpenseAccountId,
                 AccountId = model.IsCash ? null : model.AccountId,
+                SupplierId = model.SupplierId!.Value,
                 CurrencyId = model.CurrencyId,
                 Amount = model.Amount,
                 ExchangeRate = model.ExchangeRate,
@@ -171,13 +191,20 @@ namespace AccountingSystem.Controllers
                 new JournalEntryLine { AccountId = assetExpense.ExpenseAccountId, DebitAmount = assetExpense.Amount }
             };
 
-            if (assetExpense.IsCash)
+            if (supplier?.AccountId != null)
             {
-                lines.Add(new JournalEntryLine { AccountId = user.PaymentAccountId!.Value, CreditAmount = assetExpense.Amount });
-            }
-            else if (settlementAccount != null)
-            {
-                lines.Add(new JournalEntryLine { AccountId = settlementAccount.Id, CreditAmount = assetExpense.Amount });
+                lines.Add(new JournalEntryLine { AccountId = supplier.AccountId.Value, CreditAmount = assetExpense.Amount });
+
+                if (assetExpense.IsCash)
+                {
+                    lines.Add(new JournalEntryLine { AccountId = supplier.AccountId.Value, DebitAmount = assetExpense.Amount });
+                    lines.Add(new JournalEntryLine { AccountId = user.PaymentAccountId!.Value, CreditAmount = assetExpense.Amount });
+                }
+                else if (settlementAccount != null)
+                {
+                    lines.Add(new JournalEntryLine { AccountId = supplier.AccountId.Value, DebitAmount = assetExpense.Amount });
+                    lines.Add(new JournalEntryLine { AccountId = settlementAccount.Id, CreditAmount = assetExpense.Amount });
+                }
             }
 
             await _journalEntryService.CreateJournalEntryAsync(
@@ -191,6 +218,24 @@ namespace AccountingSystem.Controllers
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Index));
+        }
+
+        private async Task<IEnumerable<AssetExpenseSupplierOption>> GetSuppliersAsync()
+        {
+            return await _context.Suppliers
+                .Include(s => s.Account)
+                    .ThenInclude(a => a.Currency)
+                .Where(s => s.AccountId != null && s.Account != null)
+                .OrderBy(s => s.NameAr)
+                .Select(s => new AssetExpenseSupplierOption
+                {
+                    Id = s.Id,
+                    DisplayName = s.NameAr,
+                    AccountId = s.AccountId!.Value,
+                    CurrencyId = s.Account!.CurrencyId,
+                    CurrencyCode = s.Account.Currency.Code
+                })
+                .ToListAsync();
         }
 
         private async Task<IEnumerable<SelectListItem>> GetAssetsAsync()
