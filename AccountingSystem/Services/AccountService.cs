@@ -1,3 +1,4 @@
+using System;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using Microsoft.EntityFrameworkCore;
@@ -56,19 +57,26 @@ namespace AccountingSystem.Services
         {
             var lastChildCode = await _context.Accounts
                 .Where(a => a.ParentId == parent.Id)
-                .OrderByDescending(a => a.Code)
+                .OrderByDescending(a => a.Code.Length)
+                .ThenByDescending(a => a.Code)
                 .Select(a => a.Code)
                 .FirstOrDefaultAsync();
 
             int next = 1;
+            int suffixLength = 2;
+
             if (!string.IsNullOrEmpty(lastChildCode) && lastChildCode.Length > parent.Code.Length)
             {
+                suffixLength = Math.Max(2, lastChildCode.Length - parent.Code.Length);
+
                 var suffix = lastChildCode.Substring(parent.Code.Length);
                 if (int.TryParse(suffix, out var num))
+                {
                     next = num + 1;
+                }
             }
 
-            return parent.Code + next.ToString("D2");
+            return parent.Code + next.ToString($"D{suffixLength}");
         }
     }
 }
