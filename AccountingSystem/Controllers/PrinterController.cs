@@ -1,4 +1,7 @@
 ﻿using AccountingSystem.Data;
+using AccountingSystem.Models;
+using AccountingSystem.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting.Internal;
@@ -28,11 +31,15 @@ namespace Roadfn.Controllers
     {
         private readonly IWebHostEnvironment _env;
         private RoadFnDbContext _context;
+        private readonly UserManager<AccountingSystem.Models.User> _userManager;
+        private readonly ApplicationDbContext _accDB;
 
-        public PrinterController(IWebHostEnvironment env, RoadFnDbContext context)
+        public PrinterController(IWebHostEnvironment env, RoadFnDbContext context, UserManager<AccountingSystem.Models.User> userManager, ApplicationDbContext accDB)
         {
             _context = context;
             _env = env;
+            _userManager = userManager;
+            _accDB = accDB;
         }
 
         public IActionResult Index()
@@ -208,8 +215,9 @@ namespace Roadfn.Controllers
                 buss.Address = "";
             }
 
-            var user = await _context.Users.FindAsync(header?.LoginUserId);
-            var t = await _context.CompanyBranches.FindAsync(user?.CompanyBranchId);
+            var usera = await _userManager.GetUserAsync(User);
+            var company = await _accDB.Branches.FirstOrDefaultAsync(t => t.Id == usera.PaymentBranchId);
+            var t = await _context.CompanyBranches.FirstOrDefaultAsync(t => t.Id.ToString() == company.Code);
 
             document.Replace("{Date}", Convert.ToDateTime(header?.PaymentDate).ToString("yyyy-MM-dd"), true, true);
             document.Replace("{Total delivery shipments}", details.Count().ToString(), true, true);
@@ -220,7 +228,7 @@ namespace Roadfn.Controllers
             document.Replace("{Extra charge}", details?.Sum(t => t?.ShipmentExtraFees).ToString(), true, true);
             document.Replace("{Customer dues}", header?.PaymentValue.ToString(), true, true);
             document.Replace("{AgentName}", buss?.FirstName + " " + buss?.LastName, true, true);
-            document.Replace("{Act User Name}", user?.FirstName + " " + user?.LastName, true, true);
+            document.Replace("{Act User Name}", usera?.FirstName + " " + usera?.LastName, true, true);
             document.Replace("{address}", buss?.Address, true, true);
             document.Replace("{mobile}", buss?.MobileNo1, true, true);
             document.Replace("{area}", t.BranchName.ToString(), true, true);

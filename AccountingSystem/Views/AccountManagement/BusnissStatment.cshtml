@@ -15,11 +15,11 @@
         padding: 0.5rem 0;
     }
 
-    .action-toolbar .btn {
-        min-width: 110px;
-        box-shadow: 0 4px 10px rgba(29, 191, 193, 0.2);
-        border-radius: 6px;
-    }
+        .action-toolbar .btn {
+            min-width: 110px;
+            box-shadow: 0 4px 10px rgba(29, 191, 193, 0.2);
+            border-radius: 6px;
+        }
 
     .summary-card {
         display: flex;
@@ -35,23 +35,23 @@
         box-shadow: 0 6px 16px rgba(15, 76, 92, 0.08);
     }
 
-    .summary-card .summary-item {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 15px;
-    }
+        .summary-card .summary-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 15px;
+        }
 
-    .summary-card .summary-label {
-        font-weight: 600;
-    }
+        .summary-card .summary-label {
+            font-weight: 600;
+        }
 
-    .summary-card .summary-value {
-        font-weight: 700;
-        color: #0d1b2a;
-        min-width: 60px;
-        text-align: start;
-    }
+        .summary-card .summary-value {
+            font-weight: 700;
+            color: #0d1b2a;
+            min-width: 60px;
+            text-align: start;
+        }
 
     .loading-overlay {
         position: fixed;
@@ -68,32 +68,32 @@
         backdrop-filter: blur(3px);
     }
 
-    .loading-overlay.hidden {
-        display: none;
-    }
+        .loading-overlay.hidden {
+            display: none;
+        }
 
-    .loading-overlay .spinner {
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
-        border: 5px solid rgba(255, 255, 255, 0.35);
-        border-top-color: #1dbfc1;
-        animation: spin 1s linear infinite;
-    }
+        .loading-overlay .spinner {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 5px solid rgba(255, 255, 255, 0.35);
+            border-top-color: #1dbfc1;
+            animation: spin 1s linear infinite;
+        }
 
-    .loading-overlay .loading-text {
-        margin-top: 1rem;
-        font-size: 1.2rem;
-        color: #fff;
-        font-weight: 600;
-        letter-spacing: 0.5px;
-    }
+        .loading-overlay .loading-text {
+            margin-top: 1rem;
+            font-size: 1.2rem;
+            color: #fff;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
 
     .no-scroll {
         overflow: hidden !important;
     }
 
-    @keyframes spin {
+    @@keyframes spin {
         to {
             transform: rotate(360deg);
         }
