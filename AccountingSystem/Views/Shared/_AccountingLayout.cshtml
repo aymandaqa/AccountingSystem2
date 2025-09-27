@@ -72,6 +72,11 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link @(currentController == "Dashboard" && currentAction == "Index" ? "active" : "")" href="@Url.Action("Index", "home")">
+                        <i class="fas fa-tachometer-alt"></i> عرض اداء الشركة
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link" data-bs-toggle="collapse" href="#accountsMenu" role="button" aria-expanded="@(accountsActive ? "true" : "false")">
                         <i class="fas fa-list-alt"></i> الحسابات
                     </a>
