@@ -160,6 +160,15 @@ public class HomeController : Controller
             })
             .ToList();
 
+        var branchFinancials = branchGroups
+            .Select(g => new BranchFinancialComparison
+            {
+                Branch = g.Branch,
+                Revenue = Math.Round(g.Revenue, 2, MidpointRounding.AwayFromZero),
+                Expenses = Math.Round(g.Expenses, 2, MidpointRounding.AwayFromZero)
+            })
+            .ToList();
+
         var totalJournalEntries = await _context.JournalEntries
             .Where(e => e.Date >= startDate && e.Date <= endDate)
             .CountAsync();
@@ -205,7 +214,8 @@ public class HomeController : Controller
             IncomeSources = incomeSources,
             SalesScatter = receiptVouchers,
             RiskReturn = riskReturn,
-            BalancedScorecard = balancedScorecard
+            BalancedScorecard = balancedScorecard,
+            BranchFinancials = branchFinancials
         };
 
         return View(viewModel);
