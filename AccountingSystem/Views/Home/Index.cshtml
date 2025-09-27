@@ -214,23 +214,157 @@
                 });
             });
 
-            const monthlyFinancials = @Html.Raw(JsonSerializer.Serialize(Model.MonthlyFinancials, jsonOptions));
+            if (ej?.base) {
+                ej.base.enableRtl(true);
+                try {
+                    ej.base.setCulture('ar');
+                } catch (error) {
+                    console.warn('تعذر ضبط اللغة على العربية للتشارت', error);
+                }
+
+                ej.base.L10n.load({
+                    ar: {
+                        chart: {
+                            ZoomIn: 'تكبير',
+                            ZoomOut: 'تصغير',
+                            Zoom: 'تكبير',
+                            Pan: 'تحريك',
+                            Reset: 'إعادة تعيين',
+                            ResetZoom: 'إعادة ضبط التكبير'
+                        },
+                        accumulationchart: {
+                            Series: 'سلسلة'
+                        }
+                    }
+                });
+            }
+
+            const monthlyFinancialsRaw = @Html.Raw(JsonSerializer.Serialize(Model.MonthlyFinancials, jsonOptions));
             const departmentPerformance = @Html.Raw(JsonSerializer.Serialize(Model.DepartmentPerformance, jsonOptions));
             const marketShare = @Html.Raw(JsonSerializer.Serialize(Model.MarketShare, jsonOptions));
             const incomeSources = @Html.Raw(JsonSerializer.Serialize(Model.IncomeSources, jsonOptions));
-            const salesScatter = @Html.Raw(JsonSerializer.Serialize(Model.SalesScatter, jsonOptions));
+            const salesScatterRaw = @Html.Raw(JsonSerializer.Serialize(Model.SalesScatter, jsonOptions));
             const riskReturn = @Html.Raw(JsonSerializer.Serialize(Model.RiskReturn, jsonOptions));
             const balancedScorecard = @Html.Raw(JsonSerializer.Serialize(Model.BalancedScorecard, jsonOptions));
+
+            const numberFormatter = new Intl.NumberFormat('ar-EG', { maximumFractionDigits: 2 });
+            const axisDateFormatter = new Intl.DateTimeFormat('ar-EG', { year: 'numeric', month: 'short' });
+            const tooltipDateFormatter = new Intl.DateTimeFormat('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            const monthlyFinancials = monthlyFinancialsRaw.map(function (item) {
+                return Object.assign({}, item, {
+                    monthDate: item.monthDate ? new Date(item.monthDate) : null,
+                    monthLabel: item.month
+                });
+            });
 
             const cashflowSeries = monthlyFinancials.map(function (item, index) {
                 const cumulative = monthlyFinancials
                     .slice(0, index + 1)
-                    .reduce(function (sum, current) { return sum + (current.profit || 0); }, 0);
+                    .reduce(function (sum, current) { return sum + (Number(current.profit) || 0); }, 0);
                 return {
-                    month: item.month,
+                    monthDate: item.monthDate,
+                    monthLabel: item.monthLabel,
                     cumulative: cumulative
                 };
             });
+
+            const salesScatter = salesScatterRaw.map(function (item) {
+                return Object.assign({}, item, {
+                    date: item.date ? new Date(item.date) : null
+                });
+            });
+
+            function axisLabelRender(args) {
+                if (args.axis.valueType === 'DateTime' && args.value) {
+                    args.text = axisDateFormatter.format(new Date(args.value));
+                } else if (args.axis.valueType === 'Double' && typeof args.value === 'number') {
+                    args.text = numberFormatter.format(args.value);
+                }
+            }
+
+            function dataLabelRender(args) {
+                if (typeof args.value === 'number') {
+                    args.text = numberFormatter.format(args.value);
+                }
+            }
+
+            function tooltipRender(args) {
+                const seriesName = args.series && args.series.name ? args.series.name + ' - ' : '';
+                const yValue = typeof args.point.y === 'number'
+                    ? numberFormatter.format(args.point.y)
+                    : args.point.y;
+
+                if (args.point.x instanceof Date) {
+                    const label = args.point.pointData && args.point.pointData.monthLabel
+                        ? args.point.pointData.monthLabel
+                        : tooltipDateFormatter.format(args.point.x);
+                    args.text = seriesName + label + ' : ' + yValue;
+                    return;
+                }
+
+                if (args.series && args.series.type === 'Scatter') {
+                    const xValue = typeof args.point.x === 'number' ? numberFormatter.format(args.point.x) : args.point.x;
+                    const scatterDate = args.point.pointData && args.point.pointData.date
+                        ? tooltipDateFormatter.format(args.point.pointData.date)
+                        : '';
+                    let tooltip = 'المبلغ: ' + xValue + '<br/>معامل التحويل: ' + yValue;
+                    if (scatterDate) {
+                        tooltip += '<br/>التاريخ: ' + scatterDate;
+                    }
+                    args.text = tooltip;
+                    return;
+                }
+
+                if (args.series && args.series.type === 'Bubble') {
+                    const riskValue = typeof args.point.x === 'number' ? numberFormatter.format(args.point.x) : args.point.x;
+                    const returnValue = typeof args.point.y === 'number' ? numberFormatter.format(args.point.y) : args.point.y;
+                    const sizeValue = typeof args.point.size === 'number' ? numberFormatter.format(args.point.size) : args.point.size;
+                    const sector = args.point.pointData && args.point.pointData.sector ? args.point.pointData.sector + '<br/>' : '';
+                    args.text = sector + 'المخاطر: ' + riskValue + '<br/>العائد: ' + returnValue + '<br/>حجم النشاط: ' + sizeValue;
+                    return;
+                }
+
+                if (typeof args.point.x === 'string') {
+                    args.text = seriesName + args.point.x + ' : ' + yValue;
+                    return;
+                }
+
+                if (typeof args.point.x === 'number') {
+                    const xValue = numberFormatter.format(args.point.x);
+                    args.text = seriesName + xValue + ' : ' + yValue;
+                    return;
+                }
+
+                args.text = seriesName + yValue;
+            }
+
+            function createChart(selector, config) {
+                const chartConfig = Object.assign({
+                    enableRtl: true,
+                    locale: 'ar',
+                    axisLabelRender: axisLabelRender,
+                    tooltipRender: tooltipRender,
+                    dataLabelRender: dataLabelRender
+                }, config);
+
+                chartConfig.tooltip = Object.assign({ enable: true }, config.tooltip || {});
+
+                return new ej.charts.Chart(chartConfig, selector);
+            }
+
+            function createAccumulationChart(selector, config) {
+                const chartConfig = Object.assign({
+                    enableRtl: true,
+                    locale: 'ar',
+                    tooltipRender: tooltipRender,
+                    dataLabelRender: dataLabelRender
+                }, config);
+
+                chartConfig.tooltip = Object.assign({ enable: true }, config.tooltip || {});
+
+                return new ej.charts.AccumulationChart(chartConfig, selector);
+            }
 
             ej.charts.Chart.Inject(
                 ej.charts.LineSeries,
@@ -239,6 +373,7 @@
                 ej.charts.SplineSeries,
                 ej.charts.BarSeries,
                 ej.charts.Category,
+                ej.charts.DateTime,
                 ej.charts.Legend,
                 ej.charts.DataLabel,
                 ej.charts.Tooltip,
@@ -256,119 +391,133 @@
                 ej.charts.AccumulationDataLabel
             );
 
-            new ej.charts.Chart({
-                primaryXAxis: { valueType: 'Category' },
-                primaryYAxis: { labelFormat: '{value:N0}' },
+            createChart('#lineChart', {
+                primaryXAxis: {
+                    valueType: 'DateTime',
+                    intervalType: 'Months',
+                    edgeLabelPlacement: 'Shift',
+                    labelFormat: 'y MMM'
+                },
+                primaryYAxis: { },
                 title: 'نمو الإيرادات الشهرية',
-                tooltip: { enable: true },
                 series: [{
                     type: 'Line',
                     dataSource: monthlyFinancials,
-                    xName: 'month',
+                    xName: 'monthDate',
                     yName: 'revenue',
+                    name: 'الإيرادات',
                     width: 2,
                     marker: { visible: true }
                 }]
-            }, '#lineChart');
+            });
 
-            new ej.charts.Chart({
-                primaryXAxis: { valueType: 'Category' },
-                primaryYAxis: { labelFormat: '{value:N0}' },
+            createChart('#columnChart', {
+                primaryXAxis: {
+                    valueType: 'DateTime',
+                    intervalType: 'Months',
+                    edgeLabelPlacement: 'Shift',
+                    labelFormat: 'y MMM'
+                },
+                primaryYAxis: { },
                 title: 'الأرباح مقابل الإيرادات',
-                tooltip: { enable: true },
                 legendSettings: { visible: true },
                 series: [
                     {
                         type: 'Column',
                         dataSource: monthlyFinancials,
-                        xName: 'month',
+                        xName: 'monthDate',
                         yName: 'revenue',
                         name: 'الإيرادات'
                     },
                     {
                         type: 'Column',
                         dataSource: monthlyFinancials,
-                        xName: 'month',
+                        xName: 'monthDate',
                         yName: 'profit',
                         name: 'الأرباح'
                     }
                 ]
-            }, '#columnChart');
+            });
 
-            new ej.charts.Chart({
-                primaryXAxis: { valueType: 'Category' },
-                primaryYAxis: { labelFormat: '{value:N0}' },
+            createChart('#splineChart', {
+                primaryXAxis: {
+                    valueType: 'DateTime',
+                    intervalType: 'Months',
+                    edgeLabelPlacement: 'Shift',
+                    labelFormat: 'y MMM'
+                },
+                primaryYAxis: { },
                 title: 'النفقات المتراكمة',
-                tooltip: { enable: true },
                 series: [{
                     type: 'Spline',
                     dataSource: monthlyFinancials,
-                    xName: 'month',
+                    xName: 'monthDate',
                     yName: 'expenses',
                     marker: { visible: true }
                 }]
-            }, '#splineChart');
+            });
 
-            new ej.charts.Chart({
-                primaryXAxis: { valueType: 'Category' },
-                primaryYAxis: { labelFormat: '{value:N0}' },
+            createChart('#areaChart', {
+                primaryXAxis: {
+                    valueType: 'DateTime',
+                    intervalType: 'Months',
+                    edgeLabelPlacement: 'Shift',
+                    labelFormat: 'y MMM'
+                },
+                primaryYAxis: { },
                 title: 'صافي التدفق النقدي',
-                tooltip: { enable: true },
                 series: [
                     {
                         type: 'Area',
                         dataSource: monthlyFinancials,
-                        xName: 'month',
+                        xName: 'monthDate',
                         yName: 'revenue',
-                        name: 'إيرادات'
+                        name: 'الإيرادات'
                     },
                     {
                         type: 'Area',
                         dataSource: monthlyFinancials,
-                        xName: 'month',
+                        xName: 'monthDate',
                         yName: 'expenses',
-                        name: 'نفقات'
+                        name: 'النفقات'
                     },
                     {
                         type: 'SplineArea',
                         dataSource: cashflowSeries,
-                        xName: 'month',
+                        xName: 'monthDate',
                         yName: 'cumulative',
                         name: 'التدفق التراكمي'
                     }
                 ]
-            }, '#areaChart');
+            });
 
-            new ej.charts.Chart({
+            createChart('#barChart', {
                 primaryXAxis: { valueType: 'Category' },
-                primaryYAxis: { labelFormat: '{value:N0}' },
+                primaryYAxis: { },
                 title: 'مستوى الأداء حسب القسم',
-                tooltip: { enable: true },
                 series: [{
                     type: 'Bar',
                     dataSource: departmentPerformance,
                     xName: 'department',
                     yName: 'score',
-                    dataLabel: { visible: true }
+                    dataLabel: { visible: true, position: 'Top' }
                 }]
-            }, '#barChart');
+            });
 
-            new ej.charts.AccumulationChart({
+            createAccumulationChart('#pieChart', {
                 title: 'الحصة السوقية حسب الفروع',
                 legendSettings: { visible: true },
-                tooltip: { enable: true },
                 series: [{
                     dataSource: marketShare,
                     xName: 'company',
                     yName: 'share',
                     dataLabel: { visible: true, position: 'Outside', name: 'company' }
                 }]
-            }, '#pieChart');
+            });
 
-            new ej.charts.AccumulationChart({
+            createAccumulationChart('#doughnutChart', {
                 title: 'مصادر الدخل الرئيسية',
                 legendSettings: { visible: true },
-                tooltip: { enable: true },
                 series: [{
                     type: 'Doughnut',
                     innerRadius: '45%',
@@ -377,13 +526,12 @@
                     yName: 'value',
                     dataLabel: { visible: true, position: 'Inside', name: 'source' }
                 }]
-            }, '#doughnutChart');
+            });
 
-            new ej.charts.Chart({
-                primaryXAxis: { title: 'المبلغ' },
-                primaryYAxis: { title: 'معامل التحويل' },
+            createChart('#scatterChart', {
+                primaryXAxis: { title: 'المبلغ', valueType: 'Double' },
+                primaryYAxis: { title: 'معامل التحويل', valueType: 'Double' },
                 title: 'العلاقة بين قيمة سندات القبض ومعامل التحويل',
-                tooltip: { enable: true },
                 series: [{
                     type: 'Scatter',
                     dataSource: salesScatter,
@@ -391,13 +539,12 @@
                     yName: 'units',
                     marker: { width: 12, height: 12 }
                 }]
-            }, '#scatterChart');
+            });
 
-            new ej.charts.Chart({
-                primaryXAxis: { title: 'إجمالي النفقات' },
-                primaryYAxis: { title: 'إجمالي الإيرادات' },
+            createChart('#bubbleChart', {
+                primaryXAxis: { title: 'إجمالي النفقات', valueType: 'Double' },
+                primaryYAxis: { title: 'إجمالي الإيرادات', valueType: 'Double' },
                 title: 'المخاطر مقابل العائد حسب الفروع',
-                tooltip: { enable: true },
                 series: [{
                     type: 'Bubble',
                     dataSource: riskReturn,
@@ -406,13 +553,12 @@
                     size: 'size',
                     name: 'الفروع'
                 }]
-            }, '#bubbleChart');
+            });
 
-            new ej.charts.Chart({
+            createChart('#radarChart', {
                 primaryXAxis: { valueType: 'Category' },
                 primaryYAxis: { minimum: 0, maximum: 5, interval: 1 },
                 title: 'تقييم بطاقة الأداء المتوازن',
-                tooltip: { enable: true },
                 series: [{
                     type: 'Radar',
                     drawType: 'Area',
@@ -421,7 +567,7 @@
                     yName: 'score',
                     name: 'الدرجات'
                 }]
-            }, '#radarChart');
+            });
         });
     </script>
 }

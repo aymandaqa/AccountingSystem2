@@ -6,6 +6,7 @@ namespace AccountingSystem.ViewModels
     public class MonthlyFinancialData
     {
         public string Month { get; set; } = string.Empty;
+        public DateTime MonthDate { get; set; }
         public decimal Revenue { get; set; }
         public decimal Expenses { get; set; }
         public decimal Profit { get; set; }
@@ -31,6 +32,7 @@ namespace AccountingSystem.ViewModels
 
     public class SalesScatterPoint
     {
+        public DateTime Date { get; set; }
         public decimal Price { get; set; }
         public decimal Units { get; set; }
     }
