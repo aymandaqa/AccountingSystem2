@@ -352,11 +352,16 @@
                     locale: 'ar',
                     allowPaging: true,
                     allowSorting: true,
-                    pageSettings: { pageSize: 20, pageSizes: true },
+                    pageSettings: { pageSize: 20, pageSizes: true, currentPage: 1 },
                     allowFiltering: true,
                     filterSettings: { type: 'Menu' },
                     toolbar: ['Search'],
-                    columns: getGridColumns(data.columns)
+                    columns: getGridColumns(data.columns),
+                    dataBound: function () {
+                        if (this.pageSettings.currentPage <= 0) {
+                            this.goToPage(1);
+                        }
+                    }
                 });
 
                 resultsGrid.appendTo('#resultsGrid');
