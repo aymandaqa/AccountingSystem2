@@ -6,6 +6,100 @@
 }
 
 
+<style>
+    .action-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem 0;
+    }
+
+    .action-toolbar .btn {
+        min-width: 110px;
+        box-shadow: 0 4px 10px rgba(29, 191, 193, 0.2);
+        border-radius: 6px;
+    }
+
+    .summary-card {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        align-items: center;
+        background: #f6fbfb;
+        border: 1px solid rgba(29, 191, 193, 0.15);
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 1rem;
+        color: #0b5d60;
+        box-shadow: 0 6px 16px rgba(15, 76, 92, 0.08);
+    }
+
+    .summary-card .summary-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 15px;
+    }
+
+    .summary-card .summary-label {
+        font-weight: 600;
+    }
+
+    .summary-card .summary-value {
+        font-weight: 700;
+        color: #0d1b2a;
+        min-width: 60px;
+        text-align: start;
+    }
+
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.55);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+        backdrop-filter: blur(3px);
+    }
+
+    .loading-overlay.hidden {
+        display: none;
+    }
+
+    .loading-overlay .spinner {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        border: 5px solid rgba(255, 255, 255, 0.35);
+        border-top-color: #1dbfc1;
+        animation: spin 1s linear infinite;
+    }
+
+    .loading-overlay .loading-text {
+        margin-top: 1rem;
+        font-size: 1.2rem;
+        color: #fff;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+    .no-scroll {
+        overflow: hidden !important;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
 <div class="container-full">
 
 
@@ -15,38 +109,39 @@
             <div class="col-12">
                 <div class="box">
                     <div class="box-body">
-                        <div class="table-responsive col-12" id="bodytarg2">
-                            <table class="table" style="font-size:15px; color:#1dbfc1">
-                                <tbody>
-                                    <tr>
-                                        <th style="width:100%">
-                                            <button class="btn btn-primary btn-sm" id="Excel" onclick="ExportExcel()">  <i class="ti-layout"></i> اكسل</button>
-                                            <button class="btn btn-primary btn-sm" onclick="print()" id="Print">  <i class="ti-printer"></i> طباعة</button>
+                        <div class="col-12" id="bodytarg2">
+                            <div class="action-toolbar">
+                                <button class="btn btn-primary btn-sm" id="Excel" onclick="ExportExcel()">  <i class="ti-layout"></i> اكسل</button>
+                                <button class="btn btn-primary btn-sm" onclick="print()" id="Print">  <i class="ti-printer"></i> طباعة</button>
 
-                                            <button class="btn btn-primary btn-sm" id="pay" onclick="pay()">  <i class="ti-money"></i> دفع</button>
+                                <button class="btn btn-primary btn-sm" id="pay" onclick="pay()">  <i class="ti-money"></i> دفع</button>
 
-                                            <button class="btn btn-primary btn-sm" id="reload" onclick="Refresh()">  <i class="ti-reload"></i> تحديث</button>
-                                        </th>
-                                    </tr>
-                                </tbody>
-                            </table>
+                                <button class="btn btn-primary btn-sm" id="reload" onclick="Refresh()">  <i class="ti-reload"></i> تحديث</button>
+                            </div>
                         </div>
-                        <div class="table-responsive col-12" id="bodytarg2">
-                            <table class="table" style="font-size:15px; color:#1dbfc1">
-                                <tbody>
-                                    <tr>
-
-                                        <th style="width:100%">
-                                            عدد الطرود  : <label id="shipRetCount"></label> &nbsp;&nbsp;
-                                            مجموع العمولة : <label id="commSum"></label> &nbsp;&nbsp;
-                                            مجموع العمولات الاضافية : <label id="ExtraFees"></label> &nbsp;&nbsp;
-                                            مجموع مبالغ الطرود : <label id="shipTotSum"></label> &nbsp;&nbsp;
-                                            الصافي : <label id="total"></label> &nbsp;&nbsp;
-
-                                        </th>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div class="col-12" id="bodytarg2">
+                            <div class="summary-card">
+                                <div class="summary-item">
+                                    <span class="summary-label">عدد الطرود:</span>
+                                    <span class="summary-value" id="shipRetCount"></span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-label">مجموع العمولة:</span>
+                                    <span class="summary-value" id="commSum"></span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-label">مجموع العمولات الاضافية:</span>
+                                    <span class="summary-value" id="ExtraFees"></span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-label">مجموع مبالغ الطرود:</span>
+                                    <span class="summary-value" id="shipTotSum"></span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-label">الصافي:</span>
+                                    <span class="summary-value" id="total"></span>
+                                </div>
+                            </div>
                         </div>
                         <div class="col=md-12">
                             <div class="row">
@@ -132,11 +227,30 @@
 
 </div>
 
+<div id="pageOverlay" class="loading-overlay hidden">
+    <div class="spinner"></div>
+    <div class="loading-text">جاري معالجة الدفع...</div>
+</div>
+
 <script>
     function onfiltering(e) {
         var query = new ej.data.Query();
         query = (e.text !== '') ? query.where('Name', 'contains', e.text, true) : query;
         e.updateData(@Html.Raw(JsonConvert.SerializeObject(ViewBag.data)), query);
+    }
+    function showLoadingOverlay() {
+        var overlay = document.getElementById('pageOverlay');
+        if (overlay) {
+            overlay.classList.remove('hidden');
+            document.body.classList.add('no-scroll');
+        }
+    }
+    function hideLoadingOverlay() {
+        var overlay = document.getElementById('pageOverlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+            document.body.classList.remove('no-scroll');
+        }
     }
     function GetuserStmt() {
         var User = document.getElementById('User').ej2_instances[0];
@@ -228,8 +342,12 @@
         var grid = document.getElementById('Grid').ej2_instances[0]; // Grid instance
         var InvoiceStatus = document.getElementById('InvoiceStatus').ej2_instances[0]; // Grid instance
         var selectedRecords = grid.getSelectedRecords();
+        if (!selectedRecords || selectedRecords.length === 0) {
+            swal("الرجاء اختيار الشحنات المراد دفعها");
+            return;
+        }
         if (InvoiceStatus.value == null) {
-            swal("الرجاء السائق");
+            swal("الرجاء اختيار السائق");
             return;
         }
         swal({
@@ -240,21 +358,30 @@
         })
             .then((willDelete) => {
                 if (willDelete) {
+                    showLoadingOverlay();
                     document.getElementById("pay").disabled = true;
                      //alert(myJSON);
                     var ajax1 = new ej.base.Ajax({ url: '/AccountManagement/PayToBusniss?dariverID=' + InvoiceStatus.value, data: JSON.stringify(selectedRecords), type: 'POST', contentType: 'application/json' });
                     ajax1.send(JSON.stringify(selectedRecords));
                     ajax1.onSuccess = function (data) {
+                        document.getElementById("pay").disabled = false;
+                        hideLoadingOverlay();
                         swal(data, {
                             icon: "success",
                         });
-                        document.getElementById("pay").disabled = false;
                          var grid = document.getElementById("Grid").ej2_instances[0];
                         grid.refresh(); //tabObj.select(0);
                         window.open('/AccountManagement/PrintUserSlip?id=' + JSON.parse(data).Id, '_blank');
                     };
                     ajax1.onFailure = function (data) {
+                        hideLoadingOverlay();
+                        document.getElementById("pay").disabled = false;
                         swal(data);
+                    };
+                    ajax1.onError = function (error) {
+                        hideLoadingOverlay();
+                        document.getElementById("pay").disabled = false;
+                        swal(error);
                     };
                 } else {
                     //swal("Your imaginary file is safe!");
