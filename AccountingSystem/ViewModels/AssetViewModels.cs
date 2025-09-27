@@ -85,9 +85,6 @@ namespace AccountingSystem.ViewModels
         [Display(Name = "الحساب")]
         public int ExpenseAccountId { get; set; }
 
-        [Display(Name = "حساب التسوية")]
-        public int? AccountId { get; set; }
-
         [Required]
         [Display(Name = "المورد")]
         public int? SupplierId { get; set; }
@@ -114,7 +111,6 @@ namespace AccountingSystem.ViewModels
 
         public IEnumerable<SelectListItem> Assets { get; set; } = Enumerable.Empty<SelectListItem>();
         public IEnumerable<AssetExpenseAccountOption> ExpenseAccounts { get; set; } = Enumerable.Empty<AssetExpenseAccountOption>();
-        public IEnumerable<AssetExpenseAccountOption> Accounts { get; set; } = Enumerable.Empty<AssetExpenseAccountOption>();
         public IEnumerable<AssetExpenseSupplierOption> Suppliers { get; set; } = Enumerable.Empty<AssetExpenseSupplierOption>();
     }
 
