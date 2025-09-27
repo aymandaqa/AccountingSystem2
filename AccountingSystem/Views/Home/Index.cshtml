@@ -2,7 +2,438 @@
     ViewData["Title"] = "Home Page";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container py-4">
+    <h1 class="mb-4 text-center">لوحة مؤشرات النظام</h1>
+    <p class="text-muted text-center mb-5">استعرض أداء النظام من خلال مجموعة متنوعة من الرسوم البيانية التفاعلية من Syncfusion، مع إمكانية إخفاء أي منها مع تذكر حالتها تلقائياً.</p>
+
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="card chart-card" data-collapse-id="line-chart">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">اتجاه الإيرادات - مخطط خطي</h5>
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-line-chart" aria-expanded="true" aria-controls="collapse-line-chart">إظهار / إخفاء</button>
+                </div>
+                <div id="collapse-line-chart" class="collapse show">
+                    <div id="lineChart" class="chart-host"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card chart-card" data-collapse-id="column-chart">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">مقارنة الأرباح السنوية - مخطط أعمدة</h5>
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-column-chart" aria-expanded="true" aria-controls="collapse-column-chart">إظهار / إخفاء</button>
+                </div>
+                <div id="collapse-column-chart" class="collapse show">
+                    <div id="columnChart" class="chart-host"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card chart-card" data-collapse-id="spline-chart">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">الاتجاه التراكمي للنفقات - مخطط سبلاين</h5>
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-spline-chart" aria-expanded="true" aria-controls="collapse-spline-chart">إظهار / إخفاء</button>
+                </div>
+                <div id="collapse-spline-chart" class="collapse show">
+                    <div id="splineChart" class="chart-host"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card chart-card" data-collapse-id="area-chart">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">توزيع التدفقات النقدية - مخطط مساحي</h5>
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-area-chart" aria-expanded="true" aria-controls="collapse-area-chart">إظهار / إخفاء</button>
+                </div>
+                <div id="collapse-area-chart" class="collapse show">
+                    <div id="areaChart" class="chart-host"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card chart-card" data-collapse-id="bar-chart">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">أداء الأقسام - مخطط شريطي</h5>
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-bar-chart" aria-expanded="true" aria-controls="collapse-bar-chart">إظهار / إخفاء</button>
+                </div>
+                <div id="collapse-bar-chart" class="collapse show">
+                    <div id="barChart" class="chart-host"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card chart-card" data-collapse-id="pie-chart">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">الحصة السوقية - مخطط دائري</h5>
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-pie-chart" aria-expanded="true" aria-controls="collapse-pie-chart">إظهار / إخفاء</button>
+                </div>
+                <div id="collapse-pie-chart" class="collapse show">
+                    <div id="pieChart" class="chart-host"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card chart-card" data-collapse-id="doughnut-chart">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">مصادر الدخل - مخطط دونات</h5>
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-doughnut-chart" aria-expanded="true" aria-controls="collapse-doughnut-chart">إظهار / إخفاء</button>
+                </div>
+                <div id="collapse-doughnut-chart" class="collapse show">
+                    <div id="doughnutChart" class="chart-host"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card chart-card" data-collapse-id="scatter-chart">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">تحليل المبيعات حسب السعر - مخطط مبعثر</h5>
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-scatter-chart" aria-expanded="true" aria-controls="collapse-scatter-chart">إظهار / إخفاء</button>
+                </div>
+                <div id="collapse-scatter-chart" class="collapse show">
+                    <div id="scatterChart" class="chart-host"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card chart-card" data-collapse-id="bubble-chart">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">تحليل المخاطر مقابل العائد - مخطط فقاعي</h5>
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-bubble-chart" aria-expanded="true" aria-controls="collapse-bubble-chart">إظهار / إخفاء</button>
+                </div>
+                <div id="collapse-bubble-chart" class="collapse show">
+                    <div id="bubbleChart" class="chart-host"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card chart-card" data-collapse-id="radar-chart">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">تقييم الأداء الشامل - مخطط رادار</h5>
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-radar-chart" aria-expanded="true" aria-controls="collapse-radar-chart">إظهار / إخفاء</button>
+                </div>
+                <div id="collapse-radar-chart" class="collapse show">
+                    <div id="radarChart" class="chart-host"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+@section Styles {
+    <style>
+        .chart-host {
+            height: 360px;
+        }
+
+        .chart-card {
+            border: 1px solid #dee2e6;
+            box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.05);
+        }
+
+        .chart-card .card-header {
+            background-color: #0d6efd;
+            color: #fff;
+        }
+
+        .chart-card .btn {
+            color: #0d6efd;
+            background-color: #fff;
+            border-color: #fff;
+        }
+
+        .chart-card .btn:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var collapsePrefix = 'chart-collapse-state:';
+
+            document.querySelectorAll('.chart-card').forEach(function (card) {
+                var collapseId = card.getAttribute('data-collapse-id');
+                var collapseElement = card.querySelector('.collapse');
+                var storageKey = collapsePrefix + collapseId;
+                var storedState = localStorage.getItem(storageKey);
+                var collapseInstance = bootstrap.Collapse.getOrCreateInstance(collapseElement, { toggle: false });
+
+                if (storedState === 'hidden') {
+                    collapseInstance.hide();
+                } else {
+                    collapseInstance.show();
+                }
+
+                collapseElement.addEventListener('shown.bs.collapse', function () {
+                    localStorage.setItem(storageKey, 'shown');
+                });
+
+                collapseElement.addEventListener('hidden.bs.collapse', function () {
+                    localStorage.setItem(storageKey, 'hidden');
+                });
+            });
+
+            // إعداد البيانات المشتركة للرسوم البيانية
+            var monthlyFinancials = [
+                { month: 'Jan', revenue: 35, profit: 20, expenses: 15 },
+                { month: 'Feb', revenue: 42, profit: 25, expenses: 18 },
+                { month: 'Mar', revenue: 51, profit: 28, expenses: 23 },
+                { month: 'Apr', revenue: 58, profit: 32, expenses: 26 },
+                { month: 'May', revenue: 64, profit: 36, expenses: 28 },
+                { month: 'Jun', revenue: 72, profit: 40, expenses: 32 },
+                { month: 'Jul', revenue: 78, profit: 44, expenses: 34 },
+                { month: 'Aug', revenue: 85, profit: 47, expenses: 38 },
+                { month: 'Sep', revenue: 90, profit: 50, expenses: 40 },
+                { month: 'Oct', revenue: 96, profit: 54, expenses: 42 },
+                { month: 'Nov', revenue: 102, profit: 57, expenses: 45 },
+                { month: 'Dec', revenue: 108, profit: 61, expenses: 47 }
+            ];
+
+            var departmentPerformance = [
+                { department: 'المبيعات', score: 92 },
+                { department: 'التسويق', score: 78 },
+                { department: 'العمليات', score: 88 },
+                { department: 'المالية', score: 96 },
+                { department: 'الموارد البشرية', score: 82 }
+            ];
+
+            var marketShare = [
+                { company: 'الشركة A', share: 37 },
+                { company: 'الشركة B', share: 21 },
+                { company: 'الشركة C', share: 18 },
+                { company: 'الشركة D', share: 14 },
+                { company: 'أخرى', share: 10 }
+            ];
+
+            var incomeSources = [
+                { source: 'المنتجات', value: 52 },
+                { source: 'الخدمات', value: 26 },
+                { source: 'الاشتراكات', value: 14 },
+                { source: 'استثمارات', value: 8 }
+            ];
+
+            var salesScatter = [
+                { price: 15, units: 35 },
+                { price: 22, units: 28 },
+                { price: 28, units: 34 },
+                { price: 35, units: 26 },
+                { price: 42, units: 30 },
+                { price: 48, units: 22 },
+                { price: 54, units: 18 },
+                { price: 60, units: 16 }
+            ];
+
+            var riskReturn = [
+                { sector: 'تقنية', risk: 12, return: 22, size: 1.1 },
+                { sector: 'صناعة', risk: 18, return: 15, size: 0.9 },
+                { sector: 'مالية', risk: 10, return: 18, size: 1.3 },
+                { sector: 'صحة', risk: 8, return: 14, size: 0.7 },
+                { sector: 'طاقة', risk: 22, return: 20, size: 1.5 }
+            ];
+
+            var balancedScorecard = [
+                { dimension: 'المالية', score: 4.4 },
+                { dimension: 'العملاء', score: 3.8 },
+                { dimension: 'العمليات الداخلية', score: 4.1 },
+                { dimension: 'التعلم والنمو', score: 3.5 }
+            ];
+
+            ej.charts.Chart.Inject(
+                ej.charts.LineSeries,
+                ej.charts.ColumnSeries,
+                ej.charts.AreaSeries,
+                ej.charts.SplineSeries,
+                ej.charts.BarSeries,
+                ej.charts.Category,
+                ej.charts.Legend,
+                ej.charts.DataLabel,
+                ej.charts.Tooltip,
+                ej.charts.ScatterSeries,
+                ej.charts.BubbleSeries,
+                ej.charts.PolarSeries,
+                ej.charts.RadarSeries
+            );
+
+            ej.charts.AccumulationChart.Inject(
+                ej.charts.AccumulationLegend,
+                ej.charts.PieSeries,
+                ej.charts.DoughnutSeries,
+                ej.charts.AccumulationTooltip,
+                ej.charts.AccumulationDataLabel
+            );
+
+            new ej.charts.Chart({
+                primaryXAxis: { valueType: 'Category' },
+                primaryYAxis: { labelFormat: '{value}K' },
+                title: 'نمو الإيرادات الشهرية',
+                tooltip: { enable: true },
+                series: [{
+                    type: 'Line',
+                    dataSource: monthlyFinancials,
+                    xName: 'month',
+                    yName: 'revenue',
+                    width: 2,
+                    marker: { visible: true }
+                }]
+            }, '#lineChart');
+
+            new ej.charts.Chart({
+                primaryXAxis: { valueType: 'Category' },
+                primaryYAxis: { labelFormat: '{value}K' },
+                title: 'الأرباح مقابل الإيرادات',
+                tooltip: { enable: true },
+                legendSettings: { visible: true },
+                series: [
+                    {
+                        type: 'Column',
+                        dataSource: monthlyFinancials,
+                        xName: 'month',
+                        yName: 'revenue',
+                        name: 'الإيرادات'
+                    },
+                    {
+                        type: 'Column',
+                        dataSource: monthlyFinancials,
+                        xName: 'month',
+                        yName: 'profit',
+                        name: 'الأرباح'
+                    }
+                ]
+            }, '#columnChart');
+
+            new ej.charts.Chart({
+                primaryXAxis: { valueType: 'Category' },
+                primaryYAxis: { labelFormat: '{value}K' },
+                title: 'النفقات المتراكمة',
+                tooltip: { enable: true },
+                series: [{
+                    type: 'Spline',
+                    dataSource: monthlyFinancials,
+                    xName: 'month',
+                    yName: 'expenses',
+                    marker: { visible: true }
+                }]
+            }, '#splineChart');
+
+            new ej.charts.Chart({
+                primaryXAxis: { valueType: 'Category' },
+                primaryYAxis: { labelFormat: '{value}K' },
+                title: 'صافي التدفق النقدي',
+                tooltip: { enable: true },
+                series: [
+                    {
+                        type: 'Area',
+                        dataSource: monthlyFinancials,
+                        xName: 'month',
+                        yName: 'revenue',
+                        name: 'إيرادات'
+                    },
+                    {
+                        type: 'Area',
+                        dataSource: monthlyFinancials,
+                        xName: 'month',
+                        yName: 'expenses',
+                        name: 'نفقات'
+                    }
+                ]
+            }, '#areaChart');
+
+            new ej.charts.Chart({
+                primaryXAxis: { valueType: 'Category' },
+                primaryYAxis: { interval: 10, labelFormat: '{value}%' },
+                title: 'مستوى الأداء حسب القسم',
+                tooltip: { enable: true },
+                series: [{
+                    type: 'Bar',
+                    dataSource: departmentPerformance,
+                    xName: 'department',
+                    yName: 'score',
+                    dataLabel: { visible: true }
+                }]
+            }, '#barChart');
+
+            new ej.charts.AccumulationChart({
+                title: 'الحصة السوقية للشركات',
+                legendSettings: { visible: true },
+                tooltip: { enable: true },
+                series: [{
+                    dataSource: marketShare,
+                    xName: 'company',
+                    yName: 'share',
+                    dataLabel: { visible: true, position: 'Outside', name: 'company' }
+                }]
+            }, '#pieChart');
+
+            new ej.charts.AccumulationChart({
+                title: 'مصادر الدخل الرئيسية',
+                legendSettings: { visible: true },
+                tooltip: { enable: true },
+                series: [{
+                    type: 'Doughnut',
+                    innerRadius: '45%',
+                    dataSource: incomeSources,
+                    xName: 'source',
+                    yName: 'value',
+                    dataLabel: { visible: true, position: 'Inside', name: 'source' }
+                }]
+            }, '#doughnutChart');
+
+            new ej.charts.Chart({
+                primaryXAxis: { title: 'السعر (بالدولار)' },
+                primaryYAxis: { title: 'الوحدات المباعة (بالألف)' },
+                title: 'العلاقة بين السعر وحجم المبيعات',
+                tooltip: { enable: true },
+                series: [{
+                    type: 'Scatter',
+                    dataSource: salesScatter,
+                    xName: 'price',
+                    yName: 'units',
+                    marker: { width: 12, height: 12 }
+                }]
+            }, '#scatterChart');
+
+            new ej.charts.Chart({
+                primaryXAxis: { title: 'المخاطر (%)' },
+                primaryYAxis: { title: 'العائد المتوقع (%)' },
+                title: 'المخاطر مقابل العائد حسب القطاع',
+                tooltip: { enable: true },
+                series: [{
+                    type: 'Bubble',
+                    dataSource: riskReturn,
+                    xName: 'risk',
+                    yName: 'return',
+                    size: 'size',
+                    name: 'القطاعات'
+                }]
+            }, '#bubbleChart');
+
+            new ej.charts.Chart({
+                primaryXAxis: { valueType: 'Category' },
+                primaryYAxis: { minimum: 0, maximum: 5, interval: 1 },
+                title: 'تقييم بطاقة الأداء المتوازن',
+                tooltip: { enable: true },
+                series: [{
+                    type: 'Radar',
+                    drawType: 'Area',
+                    dataSource: balancedScorecard,
+                    xName: 'dimension',
+                    yName: 'score',
+                    name: 'الدرجات'
+                }]
+            }, '#radarChart');
+        });
+    </script>
+}
