@@ -5,8 +5,24 @@
 
 body {
     font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f8f9fa;
+    background: linear-gradient(135deg, #355C93 0%, #5E88CA 100%);
+    min-height: 100vh;
     line-height: 1.6;
+    color: #1f2d5c;
+    background-attachment: fixed;
+}
+
+.page-content {
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 20px 45px rgba(17, 38, 79, 0.25);
+    backdrop-filter: blur(6px);
+    min-height: calc(100vh - 160px);
+}
+
+.page-content .breadcrumb {
+    background: rgba(255, 255, 255, 0.8);
 }
 
 /* تحسين الشكل العام */
@@ -419,7 +435,13 @@ body {
     .container-fluid {
         padding: 0 1rem;
     }
-    
+
+    .page-content {
+        padding: 1.25rem;
+        border-radius: 16px;
+        min-height: calc(100vh - 140px);
+    }
+
     .card-header {
         padding: 1rem;
     }

@@ -12,6 +12,16 @@
   background: linear-gradient(180deg, #355C93 0%, #2B4A7C 100%);
 }
 
+#sidebar .sidebar-header {
+  background: rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+#sidebar .navbar-brand {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
 #sidebar .nav-link {
   color: #e9ecef;
   border-radius: 0 20px 20px 0;
@@ -36,4 +46,56 @@
   #wrapper.toggled #sidebar {
     margin-right: 0;
   }
+}
+
+.top-navbar {
+  background: linear-gradient(135deg, #355C93 0%, #5E88CA 100%);
+  box-shadow: 0 10px 25px rgba(17, 38, 79, 0.25);
+  border: none !important;
+}
+
+.top-navbar .navbar-nav .nav-link,
+.top-navbar .navbar-brand,
+.top-navbar .dropdown-toggle,
+.top-navbar .btn {
+  color: #fff !important;
+}
+
+.top-navbar .navbar-nav .nav-link:hover,
+.top-navbar .dropdown-menu a:hover {
+  color: #eef3ff !important;
+}
+
+.top-navbar .btn-outline-light {
+  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.12);
+  transition: all 0.2s ease;
+}
+
+.top-navbar .btn-outline-light:hover {
+  background: #fff;
+  color: #355C93 !important;
+}
+
+.top-navbar .dropdown-menu {
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 15px 35px rgba(17, 38, 79, 0.25);
+  padding: 0.5rem 0;
+}
+
+.top-navbar .dropdown-item {
+  padding: 0.75rem 1.25rem;
+  color: #1f2d5c;
+}
+
+.top-navbar .dropdown-item:hover {
+  background: rgba(53, 92, 147, 0.1);
+}
+
+.app-footer {
+  background: rgba(255, 255, 255, 0.82);
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  color: #1f2d5c;
+  box-shadow: 0 -10px 25px rgba(17, 38, 79, 0.15);
 }
