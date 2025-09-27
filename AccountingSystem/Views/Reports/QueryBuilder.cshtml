@@ -234,10 +234,10 @@
                     const dataset = await response.json();
                     currentDatasetKey = dataset.Key;
                     currentDatasetFields = dataset.Fields.map(f => ({
-                        field: f.field,
-                        label: f.label,
-                        type: f.type,
-                        category: f.category
+                        field: f.Field,
+                        label: f.Label,
+                        type: f.Type,
+                        category: f.Category
                     }));
 
                     datasetDescription.textContent = dataset.Description || 'لا يوجد وصف متاح لهذه المجموعة.';
