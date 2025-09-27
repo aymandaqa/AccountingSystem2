@@ -119,16 +119,16 @@
                 {
                     <li class="nav-item">
                         <a class="nav-link" data-bs-toggle="collapse" href="#assetsMenu" role="button" aria-expanded="@(assetsActive ? "true" : "false")">
-                            <i class="fas fa-boxes"></i> الأصول
+                            <i class="fas fa-boxes"></i> الاصول الثابته
                         </a>
                         <ul class="collapse nav flex-column ms-3 @(assetsActive ? "show" : "")" id="assetsMenu">
                             @if (canAssets)
                             {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Assets")"><i class="fas fa-list"></i> قائمة الأصول</a></li>
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Assets")"><i class="fas fa-list"></i> قائمة الأصول الثابته</a></li>
                             }
                             @if (canAssetExpenses)
                             {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "AssetExpenses")"><i class="fas fa-money-bill"></i> مصاريف الأصول</a></li>
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "AssetExpenses")"><i class="fas fa-money-bill"></i> مصاريف الأصول الثابته</a></li>
                             }
                         </ul>
                     </li>
