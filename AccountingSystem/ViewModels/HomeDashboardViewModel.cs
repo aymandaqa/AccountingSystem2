@@ -51,6 +51,13 @@ namespace AccountingSystem.ViewModels
         public decimal Score { get; set; }
     }
 
+    public class BranchFinancialComparison
+    {
+        public string Branch { get; set; } = string.Empty;
+        public decimal Revenue { get; set; }
+        public decimal Expenses { get; set; }
+    }
+
     public class HomeDashboardViewModel
     {
         public DateTime FromDate { get; set; }
@@ -62,5 +69,6 @@ namespace AccountingSystem.ViewModels
         public List<SalesScatterPoint> SalesScatter { get; set; } = new();
         public List<RiskReturnPoint> RiskReturn { get; set; } = new();
         public List<BalancedScorecardMetric> BalancedScorecard { get; set; } = new();
+        public List<BranchFinancialComparison> BranchFinancials { get; set; } = new();
     }
 }
