@@ -63,7 +63,6 @@ namespace AccountingSystem.Controllers
                 Date = DateTime.Now,
                 Assets = await GetAssetsAsync(),
                 ExpenseAccounts = await GetExpenseAccountsAsync(),
-                Accounts = await GetSettlementAccountsAsync(),
                 Suppliers = await GetSuppliersAsync()
             };
 
@@ -118,23 +117,9 @@ namespace AccountingSystem.Controllers
                 }
             }
 
-            Account? settlementAccount = null;
-            if (!model.IsCash && model.AccountId.HasValue)
-            {
-                settlementAccount = await _context.Accounts.FindAsync(model.AccountId.Value);
-                if (settlementAccount == null)
-                {
-                    ModelState.AddModelError(nameof(model.AccountId), "حساب التسوية غير صالح");
-                }
-            }
-
             if (expenseAccount != null)
             {
                 model.CurrencyId = expenseAccount.CurrencyId;
-                if (settlementAccount != null && settlementAccount.CurrencyId != expenseAccount.CurrencyId)
-                {
-                    ModelState.AddModelError(nameof(model.AccountId), "يجب أن تكون الحسابات بنفس العملة");
-                }
                 if (supplier?.Account != null && supplier.Account.CurrencyId != expenseAccount.CurrencyId)
                 {
                     ModelState.AddModelError(nameof(model.SupplierId), "يجب أن تكون الحسابات بنفس العملة");
@@ -158,7 +143,6 @@ namespace AccountingSystem.Controllers
             {
                 model.Assets = await GetAssetsAsync();
                 model.ExpenseAccounts = await GetExpenseAccountsAsync();
-                model.Accounts = await GetSettlementAccountsAsync();
                 model.Suppliers = await GetSuppliersAsync();
                 return View(model);
             }
@@ -173,7 +157,7 @@ namespace AccountingSystem.Controllers
             {
                 AssetId = model.AssetId,
                 ExpenseAccountId = model.ExpenseAccountId,
-                AccountId = model.IsCash ? null : model.AccountId,
+                AccountId = null,
                 SupplierId = model.SupplierId!.Value,
                 CurrencyId = model.CurrencyId,
                 Amount = model.Amount,
@@ -199,11 +183,6 @@ namespace AccountingSystem.Controllers
                 {
                     lines.Add(new JournalEntryLine { AccountId = supplier.AccountId.Value, DebitAmount = assetExpense.Amount });
                     lines.Add(new JournalEntryLine { AccountId = user.PaymentAccountId!.Value, CreditAmount = assetExpense.Amount });
-                }
-                else if (settlementAccount != null)
-                {
-                    lines.Add(new JournalEntryLine { AccountId = supplier.AccountId.Value, DebitAmount = assetExpense.Amount });
-                    lines.Add(new JournalEntryLine { AccountId = settlementAccount.Id, CreditAmount = assetExpense.Amount });
                 }
             }
 
@@ -273,18 +252,5 @@ namespace AccountingSystem.Controllers
             return Enumerable.Empty<AssetExpenseAccountOption>();
         }
 
-        private async Task<IEnumerable<AssetExpenseAccountOption>> GetSettlementAccountsAsync()
-        {
-            return await _context.Accounts
-                .Include(a => a.Currency)
-                .OrderBy(a => a.Code)
-                .Select(a => new AssetExpenseAccountOption
-                {
-                    Id = a.Id,
-                    DisplayName = $"{a.Code} - {a.NameAr} ({a.Currency.Code})",
-                    CurrencyId = a.CurrencyId,
-                    CurrencyCode = a.Currency.Code
-                }).ToListAsync();
-        }
     }
 }

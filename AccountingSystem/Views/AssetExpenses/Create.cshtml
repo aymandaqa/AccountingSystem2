@@ -55,20 +55,6 @@
                         <option value="false" selected="@(!Model.IsCash ? "selected" : null)">غير نقدي</option>
                     </select>
                 </div>
-                <div class="col-md-6" id="settlementContainer">
-                    <label asp-for="AccountId" class="form-label"></label>
-                    <select asp-for="AccountId" class="form-select" id="settlementAccountSelect">
-                        <option value="">-- اختر الحساب --</option>
-                        @foreach (var account in Model.Accounts)
-                        {
-                            <option value="@account.Id"
-                                    data-currency-id="@account.CurrencyId"
-                                    data-currency-code="@account.CurrencyCode"
-                                    selected="@(account.Id == Model.AccountId ? "selected" : null)">@account.DisplayName</option>
-                        }
-                    </select>
-                    <span asp-validation-for="AccountId" class="text-danger"></span>
-                </div>
                 <div class="col-md-6">
                     <label class="form-label">العملة</label>
                     <input type="text" class="form-control" id="currencyDisplay" readonly />
@@ -108,9 +94,6 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const expenseSelect = document.getElementById('expenseAccountSelect');
-            const settlementContainer = document.getElementById('settlementContainer');
-            const settlementSelect = document.getElementById('settlementAccountSelect');
-            const paymentType = document.getElementById('paymentType');
             const currencyDisplay = document.getElementById('currencyDisplay');
             const currencyId = document.getElementById('currencyId');
             const supplierSelect = document.getElementById('supplierSelect');
@@ -122,27 +105,7 @@
                 const currencyValue = option ? option.getAttribute('data-currency-id') : '';
                 currencyDisplay.value = currencyCode || '';
                 currencyId.value = currencyValue || '';
-                filterSettlementAccounts(currencyValue);
                 filterSuppliers(currencyValue);
-            }
-
-            function filterSettlementAccounts(currencyValue) {
-                if (!settlementSelect) return;
-                let firstVisible = null;
-                Array.from(settlementSelect.options).forEach(opt => {
-                    if (!opt.value) {
-                        opt.hidden = false;
-                        return;
-                    }
-                    const matches = !currencyValue || opt.getAttribute('data-currency-id') === currencyValue;
-                    opt.hidden = !matches;
-                    if (matches && !firstVisible) {
-                        firstVisible = opt;
-                    }
-                });
-                if (firstVisible && settlementSelect.value && settlementSelect.options[settlementSelect.selectedIndex].hidden) {
-                    settlementSelect.value = firstVisible.value;
-                }
             }
 
             function filterSuppliers(currencyValue) {
@@ -164,25 +127,11 @@
                 }
             }
 
-            function toggleSettlement() {
-                if (!settlementContainer) return;
-                if (paymentType.value === 'true') {
-                    settlementContainer.classList.add('d-none');
-                } else {
-                    settlementContainer.classList.remove('d-none');
-                    filterSettlementAccounts(currencyId.value);
-                }
-            }
-
             if (expenseSelect) {
                 expenseSelect.addEventListener('change', updateCurrency);
             }
-            if (paymentType) {
-                paymentType.addEventListener('change', toggleSettlement);
-            }
 
             updateCurrency();
-            toggleSettlement();
             filterSuppliers(currencyId.value);
         });
     </script>
