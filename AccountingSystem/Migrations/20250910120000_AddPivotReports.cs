@@ -45,8 +45,7 @@ namespace AccountingSystem.Migrations
                 columns: new[] { "Id", "Category", "CreatedAt", "Description", "DisplayName", "IsActive", "Name" },
                 values: new object[,]
                 {
-                    { 54, "التقارير", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض الحركات غير المرحلة", true, "reports.pending" },
-                    { 55, "التقارير", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "التقارير التفاعلية", true, "reports.dynamic" }
+                     { 407, "التقارير", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "التقارير التفاعلية", true, "reports.dynamic" }
                 });
         }
 

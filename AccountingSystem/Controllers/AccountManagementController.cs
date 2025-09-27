@@ -1318,12 +1318,20 @@ namespace Roadfn.Controllers
         [HttpPost]
         public async Task<IActionResult> PayToBusniss([FromBody] List<PayToBus> PayToBus, int dariverID)
         {
-            string userId = User.Claims.SingleOrDefault(x => x.Type.Equals(ClaimTypes.NameIdentifier)).Value;
-            var user = await _context.Users.FindAsync(Convert.ToInt32(userId));
+            var user = await _userManager.GetUserAsync(User);
+
             var statusinv = await _context.InvoiceStatus.FindAsync(1);
             if (statusinv == null)
                 return Ok();
 
+
+            var cashAccount = await _accontext.UserPaymentAccounts
+                             .Where(u => u.UserId == user.Id && u.CurrencyId == 1)
+                             .FirstOrDefaultAsync();
+            if (cashAccount == null)
+            {
+                return BadRequest("لا يوجد حساب صندوق مرتبط بالمستخدم الحالي");
+            }
 
             if (PayToBus.Count > 0)
             {
@@ -1358,7 +1366,7 @@ namespace Roadfn.Controllers
                 await _context.SaveChangesAsync();
 
                 bisnessUserPaymentHeader.PaymentValue = listpay.Sum(t => t.ShipmentTotal) - listpay.Sum(t => t.ShipmentFees) - listpay.Sum(t => t.ShipmentExtraFees);
-                bisnessUserPaymentHeader.LoginUserId = Convert.ToInt32(userId);
+                bisnessUserPaymentHeader.LoginUserId = 0;
                 bisnessUserPaymentHeader.UserId = listpay.DistinctBy(t => t.BusinessUserId).FirstOrDefault().BusinessUserId;
                 bisnessUserPaymentHeader.PaymentDate = DateTime.Now;
                 bisnessUserPaymentHeader.DriverId = dariverID;
@@ -1369,11 +1377,83 @@ namespace Roadfn.Controllers
                 bussPaymentsHist.StatusId = 1;
                 bussPaymentsHist.DriverId = dariverID;
                 bussPaymentsHist.BisnessUserPaymentHeader = bisnessUserPaymentHeader.Id;
-                bussPaymentsHist.Iuser = Convert.ToInt32(userId);
+                bussPaymentsHist.Iuser = 0;
                 await _context.BussPaymentsHist.AddAsync(bussPaymentsHist);
                 await _context.SaveChangesAsync();
 
+                var customerParentSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "CustomerParentAccountId");
+                if (customerParentSetting == null)
+                {
+                    return BadRequest("إعدادات حساب العميل غير متوفرة");
+                }
 
+                var customerParentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == customerParentSetting.Value);
+                if (customerParentAccount == null)
+                {
+                    return BadRequest("الحساب الرئيسي للعميل غير موجود");
+                }
+                var customerAccountsCache = new Dictionary<int, Account>();
+
+
+                foreach (var sh in listpay)
+                {
+                    var customerUser = await _context.Users.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(sh.BusinessUserId));
+                    if (customerUser == null)
+                    {
+                        continue;
+                    }
+                    var Accbrn = await _accontext.Branches.FirstOrDefaultAsync(t => t.Code == customerUser.CompanyBranchId.ToString());
+                    if (Accbrn == null)
+                    {
+                        continue;
+                    }
+
+                    var customerAccount = await EnsureCustomerAccountAsync(customerUser, customerAccountsCache, customerParentAccount);
+                    if (customerAccount == null)
+                    {
+                        return BadRequest("تعذر تحديد حساب العميل");
+                    }
+                    var lines = new List<JournalEntryLine>();
+
+                    #region CashAccounts txn
+                    var tottxn = new JournalEntryLine();
+                    tottxn.AccountId = cashAccount.AccountId;
+                    tottxn.DebitAmount = 0;
+                    tottxn.CreditAmount = 0;
+                    if (Convert.ToDecimal(sh.ShipmentPrice) <= 0)
+                    {
+                        tottxn.DebitAmount = Convert.ToDecimal(sh.ShipmentPrice) * -1;
+                    }
+                    else
+                    {
+                        tottxn.CreditAmount = Convert.ToDecimal(sh.ShipmentPrice);
+                    }
+                    tottxn.Reference = bisnessUserPaymentHeader.Id.ToString();
+                    tottxn.Description = sh.ShipmentTrackingNo;
+                    lines.Add(tottxn);
+                    #endregion
+
+
+                    #region CustomerAccounttxn txn
+                    var CustomerAccounttxn = new JournalEntryLine();
+                    CustomerAccounttxn.AccountId = customerAccount.Id;
+                    CustomerAccounttxn.DebitAmount = 0;
+                    CustomerAccounttxn.CreditAmount = 0;
+                    if (Convert.ToDecimal(sh.ShipmentPrice) <= 0)
+                    {
+                        CustomerAccounttxn.CreditAmount = Convert.ToDecimal(sh.ShipmentPrice) * -1;
+                    }
+                    else
+                    {
+                        CustomerAccounttxn.DebitAmount = Convert.ToDecimal(sh.ShipmentPrice);
+                    }
+                    CustomerAccounttxn.Reference = bisnessUserPaymentHeader.Id.ToString();
+                    CustomerAccounttxn.Description = sh.ShipmentTrackingNo;
+                    lines.Add(CustomerAccounttxn);
+                    #endregion
+                    await _journalEntryService.CreateJournalEntryAsync(DateTime.Now, "Business_" + bisnessUserPaymentHeader.Id, Accbrn.Id, user.Id, lines, JournalEntryStatus.Posted);
+
+                }
 
 
                 foreach (var item in listpay)
@@ -1387,7 +1467,7 @@ namespace Roadfn.Controllers
                         shipmentLog.ShipmentId = ship.Id;
                         shipmentLog.EntryDate = DateTime.Now;
                         shipmentLog.EntryDateTine = DateTime.Now;
-                        shipmentLog.UserId = Convert.ToInt32(userId);
+                        shipmentLog.UserId = 0;
 
                         shipmentLog.Status = statusinv.TransferShipmentStatusTo;
 
@@ -1407,7 +1487,7 @@ namespace Roadfn.Controllers
 
                         SessionAddRemark sessionAddRemark = new SessionAddRemark();
                         sessionAddRemark.ShipmentId = ship.Id;
-                        sessionAddRemark.UserId = Convert.ToInt32(userId);
+                        sessionAddRemark.UserId = 0;
                         sessionAddRemark.EntryDateTime = DateTime.Now;
                         sessionAddRemark.OldStatus = ship.Status;
 
