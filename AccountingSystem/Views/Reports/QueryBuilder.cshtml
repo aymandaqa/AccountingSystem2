@@ -1,0 +1,581 @@
+@model AccountingSystem.ViewModels.QueryBuilderReportViewModel
+@{
+    ViewData["Title"] = "مصمم التقارير";
+    Layout = "~/Views/Shared/_AccountingLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-3">
+                <div class="card-header d-flex flex-wrap align-items-center justify-content-between">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-filter me-2"></i>
+                        مصمم التقارير التفاعلي
+                    </h3>
+                    <div class="text-muted small">
+                        اختر مجموعة البيانات، أنشئ شروط التقرير باستخدام Query Builder، ثم احفظ الاستعلام لتنفيذه مرة أخرى.
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="reportMessages"></div>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-lg-4 col-md-6">
+                            <label for="datasetSelect" class="form-label">مجموعة البيانات</label>
+                            <select id="datasetSelect" class="form-select">
+                                <option value="">-- اختر مجموعة بيانات --</option>
+                                @foreach (var dataset in Model.Datasets)
+                                {
+                                    <option value="@dataset.Value">@dataset.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <label for="savedQueries" class="form-label">الاستعلامات المحفوظة</label>
+                            <select id="savedQueries" class="form-select">
+                                <option value="">-- اختر استعلاماً محفوظاً --</option>
+                            </select>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <label for="queryName" class="form-label">اسم الاستعلام</label>
+                            <input id="queryName" type="text" class="form-control" placeholder="أدخل اسم الاستعلام" />
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <label class="form-label">الأعمدة المعروضة</label>
+                            <input type="text" id="columnsSelect" />
+                        </div>
+                        <div class="col-lg-8 col-md-12">
+                            <label class="form-label">وصف مجموعة البيانات</label>
+                            <div id="datasetDescription" class="alert alert-light border mb-0">اختر مجموعة البيانات لعرض التفاصيل.</div>
+                        </div>
+                    </div>
+                    <div class="mt-3 d-flex flex-wrap gap-2">
+                        <button id="runQueryBtn" class="btn btn-primary">
+                            <i class="fas fa-play me-1"></i>
+                            تنفيذ الاستعلام
+                        </button>
+                        <button id="saveQueryBtn" class="btn btn-success">
+                            <i class="fas fa-save me-1"></i>
+                            حفظ الاستعلام
+                        </button>
+                        <button id="saveAsQueryBtn" class="btn btn-outline-primary">
+                            <i class="fas fa-copy me-1"></i>
+                            حفظ كاستعلام جديد
+                        </button>
+                        <button id="deleteQueryBtn" class="btn btn-outline-danger">
+                            <i class="fas fa-trash me-1"></i>
+                            حذف الاستعلام
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-sitemap me-2"></i>
+                        شروط التقرير
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div id="queryBuilder"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-table me-2"></i>
+                        النتائج
+                    </h4>
+                    <span class="text-muted small">سيتم عرض أول 5000 سجل فقط لاعتبارات الأداء.</span>
+                </div>
+                <div class="card-body">
+                    @Html.AntiForgeryToken()
+                    <div id="resultsGrid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const datasetSelect = document.getElementById('datasetSelect');
+            const savedQueriesSelect = document.getElementById('savedQueries');
+            const queryNameInput = document.getElementById('queryName');
+            const datasetDescription = document.getElementById('datasetDescription');
+            const runQueryBtn = document.getElementById('runQueryBtn');
+            const saveQueryBtn = document.getElementById('saveQueryBtn');
+            const saveAsQueryBtn = document.getElementById('saveAsQueryBtn');
+            const deleteQueryBtn = document.getElementById('deleteQueryBtn');
+            const messagesContainer = document.getElementById('reportMessages');
+            const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            let queryBuilderInstance = null;
+            let columnsSelectInstance = null;
+            let resultsGrid = null;
+            let currentDatasetKey = null;
+            let currentDatasetFields = [];
+            let currentQueryId = null;
+
+            function showMessage(type, text) {
+                messagesContainer.innerHTML = '';
+                if (!text) {
+                    return;
+                }
+                const alert = document.createElement('div');
+                alert.className = `alert alert-${type} alert-dismissible fade show`;
+                alert.setAttribute('role', 'alert');
+                alert.textContent = text;
+
+                const closeButton = document.createElement('button');
+                closeButton.type = 'button';
+                closeButton.className = 'btn-close';
+                closeButton.setAttribute('data-bs-dismiss', 'alert');
+                closeButton.setAttribute('aria-label', 'Close');
+                alert.appendChild(closeButton);
+
+                messagesContainer.appendChild(alert);
+            }
+
+            function clearMessage() {
+                messagesContainer.innerHTML = '';
+            }
+
+            function destroyQueryBuilder() {
+                if (queryBuilderInstance) {
+                    queryBuilderInstance.destroy();
+                    queryBuilderInstance = null;
+                }
+                document.getElementById('queryBuilder').innerHTML = '';
+            }
+
+            function destroyColumnsSelect() {
+                if (columnsSelectInstance) {
+                    columnsSelectInstance.destroy();
+                    columnsSelectInstance = null;
+                }
+                document.getElementById('columnsSelect').value = '';
+            }
+
+            function resetResultsGrid() {
+                if (resultsGrid) {
+                    resultsGrid.destroy();
+                    resultsGrid = null;
+                }
+                document.getElementById('resultsGrid').innerHTML = '';
+            }
+
+            function buildColumnsForQueryBuilder(fields) {
+                return fields.map(field => ({
+                    field: field.field,
+                    label: field.label,
+                    type: field.type,
+                    category: field.category
+                }));
+            }
+
+            function initializeQueryBuilder(fields) {
+                destroyQueryBuilder();
+
+                queryBuilderInstance = new ej.querybuilder.QueryBuilder({
+                    locale: 'ar',
+                    enableRtl: true,
+                    showButtons: true,
+                    columns: buildColumnsForQueryBuilder(fields)
+                });
+
+                queryBuilderInstance.appendTo('#queryBuilder');
+            }
+
+            function initializeColumnsSelect(fields) {
+                destroyColumnsSelect();
+
+                columnsSelectInstance = new ej.dropdowns.MultiSelect({
+                    dataSource: fields,
+                    fields: { text: 'label', value: 'field' },
+                    mode: 'CheckBox',
+                    showDropDownIcon: true,
+                    enableRtl: true,
+                    locale: 'ar',
+                    allowFiltering: true,
+                    selectAllText: 'تحديد الكل',
+                    unSelectAllText: 'إلغاء التحديد',
+                    placeholder: 'اختر الأعمدة المراد عرضها',
+                    value: fields.map(f => f.field)
+                });
+
+                columnsSelectInstance.appendTo('#columnsSelect');
+                columnsSelectInstance.dataBind();
+            }
+
+            async function loadDataset(datasetKey, preserveSelection = false) {
+                if (!datasetKey) {
+                    currentDatasetKey = null;
+                    currentDatasetFields = [];
+                    datasetDescription.textContent = 'اختر مجموعة البيانات لعرض التفاصيل.';
+                    destroyQueryBuilder();
+                    destroyColumnsSelect();
+                    resetResultsGrid();
+                    savedQueriesSelect.innerHTML = '<option value="">-- اختر استعلاماً محفوظاً --</option>';
+                    currentQueryId = null;
+                    queryNameInput.value = '';
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`@Url.Action("GetQueryDataset")?key=${datasetKey}`);
+                    if (!response.ok) {
+                        throw new Error('تعذر تحميل تفاصيل مجموعة البيانات.');
+                    }
+
+                    const dataset = await response.json();
+                    currentDatasetKey = dataset.Key;
+                    currentDatasetFields = dataset.Fields.map(f => ({
+                        field: f.field,
+                        label: f.label,
+                        type: f.type,
+                        category: f.category
+                    }));
+
+                    datasetDescription.textContent = dataset.Description || 'لا يوجد وصف متاح لهذه المجموعة.';
+
+                    initializeQueryBuilder(currentDatasetFields);
+                    initializeColumnsSelect(currentDatasetFields);
+                    if (!preserveSelection) {
+                        currentQueryId = null;
+                        queryNameInput.value = '';
+                        savedQueriesSelect.value = '';
+                    }
+
+                    await loadSavedQueries(datasetKey, preserveSelection);
+                } catch (error) {
+                    showMessage('danger', error.message);
+                }
+            }
+
+            async function loadSavedQueries(datasetKey, preserveSelection = false) {
+                savedQueriesSelect.innerHTML = '<option value="">-- اختر استعلاماً محفوظاً --</option>';
+
+                try {
+                    const response = await fetch(`@Url.Action("GetReportQueries")?datasetKey=${datasetKey}`);
+                    if (!response.ok) {
+                        throw new Error('تعذر تحميل الاستعلامات المحفوظة.');
+                    }
+
+                    const items = await response.json();
+                    items.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.Id;
+                        option.textContent = `${item.Name}`;
+                        savedQueriesSelect.appendChild(option);
+                    });
+
+                    if (preserveSelection && currentQueryId) {
+                        savedQueriesSelect.value = currentQueryId;
+                    }
+                } catch (error) {
+                    showMessage('danger', error.message);
+                }
+            }
+
+            function getSelectedColumns() {
+                if (!columnsSelectInstance) {
+                    return [];
+                }
+                const values = columnsSelectInstance.value || [];
+                return Array.isArray(values) ? values : [];
+            }
+
+            function setColumnsSelection(values) {
+                if (!columnsSelectInstance) {
+                    return;
+                }
+                columnsSelectInstance.value = values;
+                columnsSelectInstance.dataBind();
+            }
+
+            function getRulesJson() {
+                if (!queryBuilderInstance) {
+                    return null;
+                }
+
+                const rules = queryBuilderInstance.getRules();
+                if (!rules || !rules.rules || !rules.rules.length) {
+                    return JSON.stringify({ condition: 'and', rules: [] });
+                }
+
+                return JSON.stringify(rules);
+            }
+
+            function getFieldType(fieldName) {
+                const field = currentDatasetFields.find(f => f.field === fieldName);
+                return field ? field.type : 'string';
+            }
+
+            function getGridColumns(columns) {
+                return columns.map(column => {
+                    const type = getFieldType(column.field);
+                    const config = {
+                        field: column.field,
+                        headerText: column.label,
+                        textAlign: 'Left',
+                        width: 160
+                    };
+
+                    if (type === 'number') {
+                        config.format = 'N2';
+                        config.textAlign = 'Right';
+                    } else if (type === 'date') {
+                        config.format = { type: 'date', format: 'yyyy-MM-dd' };
+                    } else if (type === 'boolean') {
+                        config.textAlign = 'Center';
+                    }
+
+                    return config;
+                });
+            }
+
+            function renderResultsGrid(data) {
+                resetResultsGrid();
+
+                if (!data || !data.rows || !data.rows.length) {
+                    document.getElementById('resultsGrid').innerHTML = '<div class="alert alert-info mb-0">لا توجد بيانات مطابقة للشروط المحددة.</div>';
+                    return;
+                }
+
+                resultsGrid = new ej.grids.Grid({
+                    dataSource: data.rows,
+                    enableRtl: true,
+                    locale: 'ar',
+                    allowPaging: true,
+                    allowSorting: true,
+                    pageSettings: { pageSize: 20, pageSizes: true },
+                    allowFiltering: true,
+                    filterSettings: { type: 'Menu' },
+                    toolbar: ['Search'],
+                    columns: getGridColumns(data.columns)
+                });
+
+                resultsGrid.appendTo('#resultsGrid');
+            }
+
+            async function executeQuery() {
+                clearMessage();
+
+                if (!currentDatasetKey) {
+                    showMessage('warning', 'يرجى اختيار مجموعة البيانات أولاً.');
+                    return;
+                }
+
+                const payload = {
+                    datasetKey: currentDatasetKey,
+                    rulesJson: getRulesJson(),
+                    columns: getSelectedColumns()
+                };
+
+                try {
+                    showLoading();
+                    const response = await fetch('@Url.Action("ExecuteReportQuery")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': antiForgeryToken
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json().catch(() => null);
+                        throw new Error(error?.message || 'تعذر تنفيذ الاستعلام.');
+                    }
+
+                    const data = await response.json();
+                    renderResultsGrid(data);
+                } catch (error) {
+                    showMessage('danger', error.message);
+                    resetResultsGrid();
+                } finally {
+                    hideLoading();
+                }
+            }
+
+            async function loadReportQuery(queryId) {
+                if (!queryId) {
+                    currentQueryId = null;
+                    queryNameInput.value = '';
+                    setColumnsSelection(currentDatasetFields.map(f => f.field));
+                    if (queryBuilderInstance) {
+                        queryBuilderInstance.setRules({ condition: 'and', rules: [] });
+                    }
+                    return;
+                }
+
+                try {
+                    showLoading();
+                    const response = await fetch(`@Url.Action("GetReportQuery")?id=${queryId}`);
+                    if (!response.ok) {
+                        throw new Error('تعذر تحميل الاستعلام المحدد.');
+                    }
+
+                    const data = await response.json();
+                    await ensureDataset(data.DatasetKey, true);
+
+                    currentQueryId = data.Id;
+                    queryNameInput.value = data.Name;
+
+                    if (data.SelectedColumnsJson) {
+                        try {
+                            const columns = JSON.parse(data.SelectedColumnsJson);
+                            setColumnsSelection(columns);
+                        } catch {
+                            setColumnsSelection(currentDatasetFields.map(f => f.field));
+                        }
+                    } else {
+                        setColumnsSelection(currentDatasetFields.map(f => f.field));
+                    }
+
+                    if (queryBuilderInstance && data.RulesJson) {
+                        try {
+                            const rules = JSON.parse(data.RulesJson);
+                            queryBuilderInstance.setRules(rules);
+                        } catch {
+                            queryBuilderInstance.setRules({ condition: 'and', rules: [] });
+                        }
+                    }
+
+                    savedQueriesSelect.value = data.Id;
+                    showMessage('success', 'تم تحميل الاستعلام بنجاح.');
+                } catch (error) {
+                    showMessage('danger', error.message);
+                } finally {
+                    hideLoading();
+                }
+            }
+
+            async function ensureDataset(datasetKey, preserveSelection = false) {
+                if (datasetSelect.value !== datasetKey) {
+                    datasetSelect.value = datasetKey;
+                    await loadDataset(datasetKey, preserveSelection);
+                }
+            }
+
+            async function saveReportQuery(asNew = false) {
+                clearMessage();
+
+                if (!currentDatasetKey) {
+                    showMessage('warning', 'يرجى اختيار مجموعة البيانات قبل الحفظ.');
+                    return;
+                }
+
+                const name = queryNameInput.value.trim();
+                if (!name) {
+                    showMessage('warning', 'يرجى إدخال اسم للاستعلام.');
+                    return;
+                }
+
+                const payload = {
+                    id: asNew ? null : currentQueryId,
+                    name: name,
+                    datasetKey: currentDatasetKey,
+                    rulesJson: getRulesJson(),
+                    selectedColumnsJson: JSON.stringify(getSelectedColumns())
+                };
+
+                try {
+                    showLoading();
+                    const response = await fetch('@Url.Action("SaveReportQuery")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': antiForgeryToken
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json().catch(() => null);
+                        throw new Error(error?.message || 'تعذر حفظ الاستعلام.');
+                    }
+
+                    const result = await response.json();
+                    currentQueryId = result.id || result.Id;
+                    showMessage('success', 'تم حفظ الاستعلام بنجاح.');
+                    await loadSavedQueries(currentDatasetKey, true);
+                } catch (error) {
+                    showMessage('danger', error.message);
+                } finally {
+                    hideLoading();
+                }
+            }
+
+            async function deleteReportQuery() {
+                clearMessage();
+
+                if (!currentQueryId) {
+                    showMessage('warning', 'لا يوجد استعلام محدد للحذف.');
+                    return;
+                }
+
+                if (!confirm('هل أنت متأكد من رغبتك في حذف هذا الاستعلام؟')) {
+                    return;
+                }
+
+                try {
+                    showLoading();
+                    const response = await fetch('@Url.Action("DeleteReportQuery")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': antiForgeryToken
+                        },
+                        body: JSON.stringify({ id: currentQueryId })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('تعذر حذف الاستعلام.');
+                    }
+
+                    showMessage('success', 'تم حذف الاستعلام بنجاح.');
+                    currentQueryId = null;
+                    queryNameInput.value = '';
+                    savedQueriesSelect.value = '';
+                    setColumnsSelection(currentDatasetFields.map(f => f.field));
+                    if (queryBuilderInstance) {
+                        queryBuilderInstance.setRules({ condition: 'and', rules: [] });
+                    }
+                    await loadSavedQueries(currentDatasetKey);
+                } catch (error) {
+                    showMessage('danger', error.message);
+                } finally {
+                    hideLoading();
+                }
+            }
+
+            datasetSelect.addEventListener('change', async function () {
+                await loadDataset(this.value);
+            });
+
+            savedQueriesSelect.addEventListener('change', function () {
+                const queryId = this.value;
+                if (queryId) {
+                    loadReportQuery(queryId);
+                } else {
+                    currentQueryId = null;
+                    queryNameInput.value = '';
+                    setColumnsSelection(currentDatasetFields.map(f => f.field));
+                    if (queryBuilderInstance) {
+                        queryBuilderInstance.setRules({ condition: 'and', rules: [] });
+                    }
+                }
+            });
+
+            runQueryBtn.addEventListener('click', executeQuery);
+            saveQueryBtn.addEventListener('click', () => saveReportQuery(false));
+            saveAsQueryBtn.addEventListener('click', () => saveReportQuery(true));
+            deleteQueryBtn.addEventListener('click', deleteReportQuery);
+        })();
+    </script>
+}

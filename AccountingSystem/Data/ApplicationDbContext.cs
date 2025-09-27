@@ -45,6 +45,7 @@ namespace AccountingSystem.Data
         public DbSet<Asset> Assets { get; set; }
         public DbSet<AssetExpense> AssetExpenses { get; set; }
         public DbSet<PivotReport> PivotReports { get; set; }
+        public DbSet<ReportQuery> ReportQueries { get; set; }
 
         public override int SaveChanges()
         {
@@ -258,6 +259,23 @@ namespace AccountingSystem.Data
                     .WithMany()
                     .HasForeignKey(e => e.CreatedById)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<ReportQuery>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(150);
+                entity.Property(e => e.Description).HasMaxLength(250);
+                entity.Property(e => e.DatasetKey).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.RulesJson).IsRequired();
+                entity.Property(e => e.SelectedColumnsJson);
+                entity.Property(e => e.CreatedAt).HasColumnType("datetime2");
+                entity.Property(e => e.UpdatedAt).HasColumnType("datetime2");
+
+                entity.HasOne(e => e.CreatedBy)
+                    .WithMany()
+                    .HasForeignKey(e => e.CreatedById)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             // JournalEntry configuration
