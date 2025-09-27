@@ -69,6 +69,7 @@ public class HomeController : Controller
             return new MonthlyFinancialData
             {
                 Month = month.ToString("yyyy MMM", CultureInfo.GetCultureInfo("ar-SA")),
+                MonthDate = month,
                 Revenue = Math.Round(revenue, 2, MidpointRounding.AwayFromZero),
                 Expenses = Math.Round(expenses, 2, MidpointRounding.AwayFromZero),
                 Profit = Math.Round(profit, 2, MidpointRounding.AwayFromZero)
@@ -142,6 +143,7 @@ public class HomeController : Controller
             .Where(v => v.Date >= startDate && v.Date <= endDate)
             .Select(v => new SalesScatterPoint
             {
+                Date = v.Date,
                 Price = Math.Round(v.Amount, 2, MidpointRounding.AwayFromZero),
                 Units = Math.Round(v.ExchangeRate, 4, MidpointRounding.AwayFromZero)
             })
