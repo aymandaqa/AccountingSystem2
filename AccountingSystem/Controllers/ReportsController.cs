@@ -12,6 +12,12 @@ using QuestPDF.Helpers;
 using AccountingSystem.Services;
 using System;
 using System.Security.Claims;
+using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Linq.Dynamic.Core;
+using System.Reflection;
+using System.Linq;
 
 namespace AccountingSystem.Controllers
 {
@@ -43,6 +49,23 @@ namespace AccountingSystem.Controllers
                     {
                         Value = t.ToString(),
                         Text = GetReportTypeDisplayName(t)
+                    })
+                    .ToList()
+            };
+
+            return View(viewModel);
+        }
+
+        [Authorize(Policy = "reports.dynamic")]
+        public IActionResult QueryBuilder()
+        {
+            var viewModel = new QueryBuilderReportViewModel
+            {
+                Datasets = QueryBuilderDatasets.All
+                    .Select(d => new SelectListItem
+                    {
+                        Value = d.Key,
+                        Text = d.Name
                     })
                     .ToList()
             };
@@ -102,6 +125,246 @@ namespace AccountingSystem.Controllers
                 ReportType = report.ReportType.ToString(),
                 report.Layout
             });
+        }
+
+        [Authorize(Policy = "reports.dynamic")]
+        [HttpGet]
+        public IActionResult GetQueryDatasets()
+        {
+            var datasets = QueryBuilderDatasets.All
+                .Select(dataset => new QueryDatasetInfoViewModel
+                {
+                    Key = dataset.Key,
+                    Name = dataset.Name,
+                    Description = dataset.Description,
+                    Fields = dataset.Fields
+                        .Select(f => new QueryDatasetFieldViewModel
+                        {
+                            Field = f.Field,
+                            Label = f.Label,
+                            Type = GetFieldTypeString(f.FieldType),
+                            Category = f.Category
+                        })
+                        .ToList()
+                })
+                .ToList();
+
+            return Json(datasets);
+        }
+
+        [Authorize(Policy = "reports.dynamic")]
+        [HttpGet]
+        public IActionResult GetQueryDataset(string key)
+        {
+            var dataset = QueryBuilderDatasets.GetByKey(key);
+            if (dataset == null)
+            {
+                return NotFound();
+            }
+
+            var response = new QueryDatasetInfoViewModel
+            {
+                Key = dataset.Key,
+                Name = dataset.Name,
+                Description = dataset.Description,
+                Fields = dataset.Fields
+                    .Select(f => new QueryDatasetFieldViewModel
+                    {
+                        Field = f.Field,
+                        Label = f.Label,
+                        Type = GetFieldTypeString(f.FieldType),
+                        Category = f.Category
+                    })
+                    .ToList()
+            };
+
+            return Json(response);
+        }
+
+        [Authorize(Policy = "reports.dynamic")]
+        [HttpGet]
+        public async Task<IActionResult> GetReportQueries(string? datasetKey = null)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var query = _context.ReportQueries
+                .AsNoTracking()
+                .Where(r => r.CreatedById == userId);
+
+            if (!string.IsNullOrEmpty(datasetKey))
+            {
+                query = query.Where(r => r.DatasetKey == datasetKey);
+            }
+
+            var items = await query
+                .OrderByDescending(r => r.UpdatedAt ?? r.CreatedAt)
+                .Select(r => new ReportQueryListItemViewModel
+                {
+                    Id = r.Id,
+                    Name = r.Name,
+                    DatasetKey = r.DatasetKey,
+                    UpdatedAt = r.UpdatedAt ?? r.CreatedAt
+                })
+                .ToListAsync();
+
+            return Json(items);
+        }
+
+        [Authorize(Policy = "reports.dynamic")]
+        [HttpGet]
+        public async Task<IActionResult> GetReportQuery(int id)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var query = await _context.ReportQueries
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Id == id && r.CreatedById == userId);
+
+            if (query == null)
+            {
+                return NotFound();
+            }
+
+            return Json(new
+            {
+                query.Id,
+                query.Name,
+                query.DatasetKey,
+                query.RulesJson,
+                query.SelectedColumnsJson
+            });
+        }
+
+        [Authorize(Policy = "reports.dynamic")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveReportQuery([FromBody] SaveReportQueryRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var dataset = QueryBuilderDatasets.GetByKey(request.DatasetKey);
+            if (dataset == null)
+            {
+                return BadRequest(new { message = "مجموعة البيانات المحددة غير موجودة." });
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            ReportQuery entity;
+            if (request.Id.HasValue && request.Id.Value > 0)
+            {
+                entity = await _context.ReportQueries
+                    .FirstOrDefaultAsync(r => r.Id == request.Id.Value && r.CreatedById == userId);
+
+                if (entity == null)
+                {
+                    return NotFound(new { message = "لم يتم العثور على التقرير المطلوب تحديثه." });
+                }
+            }
+            else
+            {
+                entity = new ReportQuery
+                {
+                    CreatedById = userId,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.ReportQueries.Add(entity);
+            }
+
+            entity.Name = request.Name.Trim();
+            entity.DatasetKey = dataset.Key;
+            entity.RulesJson = request.RulesJson;
+            entity.SelectedColumnsJson = string.IsNullOrWhiteSpace(request.SelectedColumnsJson)
+                ? null
+                : request.SelectedColumnsJson;
+            entity.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Json(new { entity.Id });
+        }
+
+        [Authorize(Policy = "reports.dynamic")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteReportQuery([FromBody] DeleteReportQueryRequest request)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var entity = await _context.ReportQueries
+                .FirstOrDefaultAsync(r => r.Id == request.Id && r.CreatedById == userId);
+
+            if (entity == null)
+            {
+                return NotFound();
+            }
+
+            _context.ReportQueries.Remove(entity);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true });
+        }
+
+        [Authorize(Policy = "reports.dynamic")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ExecuteReportQuery([FromBody] ExecuteReportQueryRequest request)
+        {
+            var dataset = QueryBuilderDatasets.GetByKey(request.DatasetKey);
+            if (dataset == null)
+            {
+                return BadRequest(new { message = "مجموعة البيانات غير معروفة." });
+            }
+
+            var queryable = dataset.QueryFactory(_context);
+
+            if (!string.IsNullOrWhiteSpace(request.RulesJson))
+            {
+                if (!TryBuildPredicate(dataset, request.RulesJson, out var predicate, out var parameters, out var errorMessage))
+                {
+                    return BadRequest(new { message = errorMessage ?? "تعذر تحويل شروط التقرير." });
+                }
+
+                if (!string.IsNullOrEmpty(predicate))
+                {
+                    queryable = queryable.Where(predicate, parameters.ToArray());
+                }
+            }
+
+            var selectedFields = GetSelectedFields(dataset, request.Columns);
+
+            var limitedQuery = ApplyTake(queryable, 5000);
+            var projected = Queryable.Cast<object>(limitedQuery);
+            var rows = await EntityFrameworkQueryableExtensions.ToListAsync(projected);
+
+            var shapedRows = rows.Select(row => ShapeRow(row, selectedFields)).ToList();
+
+            var response = new
+            {
+                columns = selectedFields.Select(f => new { field = f.Field, label = f.Label }),
+                rows = shapedRows
+            };
+
+            return Json(response);
         }
 
         [Authorize(Policy = "reports.dynamic")]
@@ -322,6 +585,449 @@ namespace AccountingSystem.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "تم حذف التقرير" });
+        }
+
+        private static string GetFieldTypeString(QueryFieldType type)
+        {
+            return type switch
+            {
+                QueryFieldType.Number => "number",
+                QueryFieldType.Decimal => "number",
+                QueryFieldType.Date => "date",
+                QueryFieldType.Boolean => "boolean",
+                _ => "string"
+            };
+        }
+
+        private static IReadOnlyList<QueryDatasetField> GetSelectedFields(QueryDatasetDefinition dataset, List<string>? requestedColumns)
+        {
+            if (requestedColumns == null || requestedColumns.Count == 0)
+            {
+                return dataset.Fields;
+            }
+
+            var selected = new List<QueryDatasetField>();
+            foreach (var column in requestedColumns)
+            {
+                var field = dataset.Fields.FirstOrDefault(f => string.Equals(f.Field, column, StringComparison.OrdinalIgnoreCase));
+                if (field != null)
+                {
+                    selected.Add(field);
+                }
+            }
+
+            return selected.Count > 0 ? selected : dataset.Fields;
+        }
+
+        private static IQueryable ApplyTake(IQueryable source, int take)
+        {
+            var method = typeof(Queryable).GetMethods()
+                .First(m => m.Name == nameof(Queryable.Take) && m.GetParameters().Length == 2);
+            var generic = method.MakeGenericMethod(source.ElementType);
+            return (IQueryable)generic.Invoke(null, new object[] { source, take })!;
+        }
+
+        private static IDictionary<string, object?> ShapeRow(object row, IReadOnlyList<QueryDatasetField> fields)
+        {
+            var result = new Dictionary<string, object?>();
+            var type = row.GetType();
+
+            foreach (var field in fields)
+            {
+                var property = type.GetProperty(field.Field, BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase);
+                var value = property?.GetValue(row);
+                result[field.Field] = value;
+            }
+
+            return result;
+        }
+
+        private bool TryBuildPredicate(QueryDatasetDefinition dataset, string rulesJson, out string predicate, out List<object?> parameters, out string? errorMessage)
+        {
+            predicate = string.Empty;
+            parameters = new List<object?>();
+            errorMessage = null;
+
+            QueryBuilderGroup? root;
+            try
+            {
+                root = JsonSerializer.Deserialize<QueryBuilderGroup>(rulesJson, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                    NumberHandling = JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString
+                });
+            }
+            catch
+            {
+                errorMessage = "تعذر قراءة شروط التقرير.";
+                return false;
+            }
+
+            if (root == null || root.Rules == null || root.Rules.Count == 0)
+            {
+                predicate = string.Empty;
+                return true;
+            }
+
+            var parameterIndex = 0;
+            var expression = BuildGroupExpression(root, dataset, parameters, ref parameterIndex, out errorMessage);
+
+            if (errorMessage != null)
+            {
+                return false;
+            }
+
+            predicate = expression ?? string.Empty;
+            return true;
+        }
+
+        private string? BuildGroupExpression(QueryBuilderGroup group, QueryDatasetDefinition dataset, List<object?> parameters, ref int parameterIndex, out string? errorMessage)
+        {
+            errorMessage = null;
+            if (group.Rules == null || group.Rules.Count == 0)
+            {
+                return null;
+            }
+
+            var expressions = new List<string>();
+
+            foreach (var rule in group.Rules)
+            {
+                string? expression = null;
+
+                if (rule.Rules != null && rule.Rules.Count > 0)
+                {
+                    expression = BuildGroupExpression(rule.ToGroup(), dataset, parameters, ref parameterIndex, out errorMessage);
+                }
+                else if (!string.IsNullOrEmpty(rule.Field))
+                {
+                    var field = dataset.Fields.FirstOrDefault(f => string.Equals(f.Field, rule.Field, StringComparison.OrdinalIgnoreCase));
+                    if (field == null)
+                    {
+                        errorMessage = $"الحقل {rule.Field} غير معروف.";
+                        return null;
+                    }
+
+                    expression = BuildRuleExpression(field, rule, parameters, ref parameterIndex, out errorMessage);
+                }
+
+                if (errorMessage != null)
+                {
+                    return null;
+                }
+
+                if (!string.IsNullOrEmpty(expression))
+                {
+                    if (rule.Not)
+                    {
+                        expression = $"!({expression})";
+                    }
+
+                    expressions.Add(expression);
+                }
+            }
+
+            if (expressions.Count == 0)
+            {
+                return null;
+            }
+
+            var separator = string.Equals(group.Condition, "or", StringComparison.OrdinalIgnoreCase) ? " or " : " and ";
+            var combined = string.Join(separator, expressions.Select(e => $"({e})"));
+
+            if (group.Not)
+            {
+                combined = $"!({combined})";
+            }
+
+            return combined;
+        }
+
+        private string? BuildRuleExpression(QueryDatasetField field, QueryBuilderRule rule, List<object?> parameters, ref int parameterIndex, out string? errorMessage)
+        {
+            errorMessage = null;
+            var op = rule.Operator?.ToLowerInvariant();
+            if (string.IsNullOrEmpty(op))
+            {
+                errorMessage = "نوع المعامل غير معروف.";
+                return null;
+            }
+
+            switch (op)
+            {
+                case "equal":
+                case "notequal":
+                case "greaterthan":
+                case "greaterthanorequal":
+                case "lessthan":
+                case "lessthanorequal":
+                    {
+                        var value = ConvertSingleValue(field, rule.Value, out errorMessage);
+                        if (errorMessage != null)
+                        {
+                            return null;
+                        }
+
+                        parameters.Add(value);
+                        var token = $"@{parameterIndex++}";
+
+                        return op switch
+                        {
+                            "equal" => $"{field.Field} == {token}",
+                            "notequal" => $"{field.Field} != {token}",
+                            "greaterthan" => $"{field.Field} > {token}",
+                            "greaterthanorequal" => $"{field.Field} >= {token}",
+                            "lessthan" => $"{field.Field} < {token}",
+                            "lessthanorequal" => $"{field.Field} <= {token}",
+                            _ => null
+                        };
+                    }
+                case "between":
+                case "notbetween":
+                    {
+                        if (!TryConvertBetween(field, rule.Value, out var start, out var end, out errorMessage))
+                        {
+                            return null;
+                        }
+
+                        parameters.Add(start);
+                        var startToken = $"@{parameterIndex++}";
+                        parameters.Add(end);
+                        var endToken = $"@{parameterIndex++}";
+
+                        if (op == "between")
+                        {
+                            return $"({field.Field} >= {startToken} and {field.Field} <= {endToken})";
+                        }
+
+                        return $"({field.Field} < {startToken} or {field.Field} > {endToken})";
+                    }
+                case "contains":
+                    {
+                        var value = ConvertSingleValue(field, rule.Value, out errorMessage);
+                        if (errorMessage != null)
+                        {
+                            return null;
+                        }
+
+                        parameters.Add(value);
+                        var token = $"@{parameterIndex++}";
+                        return $"{field.Field} != null && {field.Field}.Contains({token})";
+                    }
+                case "startswith":
+                    {
+                        var value = ConvertSingleValue(field, rule.Value, out errorMessage);
+                        if (errorMessage != null)
+                        {
+                            return null;
+                        }
+
+                        parameters.Add(value);
+                        var token = $"@{parameterIndex++}";
+                        return $"{field.Field} != null && {field.Field}.StartsWith({token})";
+                    }
+                case "endswith":
+                    {
+                        var value = ConvertSingleValue(field, rule.Value, out errorMessage);
+                        if (errorMessage != null)
+                        {
+                            return null;
+                        }
+
+                        parameters.Add(value);
+                        var token = $"@{parameterIndex++}";
+                        return $"{field.Field} != null && {field.Field}.EndsWith({token})";
+                    }
+                case "in":
+                case "notin":
+                    {
+                        var values = ConvertMultipleValues(field, rule.Value, out errorMessage);
+                        if (errorMessage != null)
+                        {
+                            return null;
+                        }
+
+                        parameters.Add(values);
+                        var token = $"@{parameterIndex++}";
+                        var clause = $"{token}.Contains({field.Field})";
+                        return op == "notin" ? $"!({clause})" : clause;
+                    }
+                case "isnull":
+                    return $"{field.Field} == null";
+                case "isnotnull":
+                    return $"{field.Field} != null";
+                case "isempty":
+                    return $"string.IsNullOrEmpty({field.Field})";
+                case "isnotempty":
+                    return $"!string.IsNullOrEmpty({field.Field})";
+                default:
+                    errorMessage = "نوع المعامل غير مدعوم.";
+                    return null;
+            }
+        }
+
+        private object? ConvertSingleValue(QueryDatasetField field, JsonElement valueElement, out string? errorMessage)
+        {
+            errorMessage = null;
+            try
+            {
+                if (valueElement.ValueKind == JsonValueKind.Null || valueElement.ValueKind == JsonValueKind.Undefined)
+                {
+                    return null;
+                }
+
+                return field.FieldType switch
+                {
+                    QueryFieldType.Number => ConvertToInt(valueElement),
+                    QueryFieldType.Decimal => ConvertToDecimal(valueElement),
+                    QueryFieldType.Date => ConvertToDateTime(valueElement),
+                    QueryFieldType.Boolean => ConvertToBoolean(valueElement),
+                    _ => valueElement.GetString()
+                };
+            }
+            catch
+            {
+                errorMessage = $"قيمة غير صالحة للحقل {field.Label}.";
+                return null;
+            }
+        }
+
+        private bool TryConvertBetween(QueryDatasetField field, JsonElement valueElement, out object? start, out object? end, out string? errorMessage)
+        {
+            errorMessage = null;
+            start = null;
+            end = null;
+
+            if (valueElement.ValueKind != JsonValueKind.Array)
+            {
+                errorMessage = $"قيمة غير صالحة للحقل {field.Label}.";
+                return false;
+            }
+
+            var array = valueElement.EnumerateArray().ToList();
+            if (array.Count != 2)
+            {
+                errorMessage = $"قيمة غير صالحة للحقل {field.Label}.";
+                return false;
+            }
+
+            start = ConvertSingleValue(field, array[0], out errorMessage);
+            if (errorMessage != null)
+            {
+                return false;
+            }
+
+            end = ConvertSingleValue(field, array[1], out errorMessage);
+            if (errorMessage != null)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private object ConvertMultipleValues(QueryDatasetField field, JsonElement valueElement, out string? errorMessage)
+        {
+            errorMessage = null;
+            if (valueElement.ValueKind != JsonValueKind.Array)
+            {
+                errorMessage = $"قيمة غير صالحة للحقل {field.Label}.";
+                return Array.Empty<object>();
+            }
+
+            try
+            {
+                return field.FieldType switch
+                {
+                    QueryFieldType.Number => valueElement.EnumerateArray().Select(ConvertToInt).ToList(),
+                    QueryFieldType.Decimal => valueElement.EnumerateArray().Select(ConvertToDecimal).ToList(),
+                    QueryFieldType.Date => valueElement.EnumerateArray().Select(ConvertToDateTime).ToList(),
+                    QueryFieldType.Boolean => valueElement.EnumerateArray().Select(ConvertToBoolean).ToList(),
+                    _ => valueElement.EnumerateArray().Select(e => e.GetString() ?? string.Empty).ToList()
+                };
+            }
+            catch
+            {
+                errorMessage = $"قيمة غير صالحة للحقل {field.Label}.";
+                return Array.Empty<object>();
+            }
+        }
+
+        private static int ConvertToInt(JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.Number => element.TryGetInt32(out var intValue) ? intValue : (int)element.GetInt64(),
+                JsonValueKind.String when int.TryParse(element.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var value) => value,
+                _ => throw new FormatException()
+            };
+        }
+
+        private static decimal ConvertToDecimal(JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.Number => element.GetDecimal(),
+                JsonValueKind.String when decimal.TryParse(element.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var value) => value,
+                _ => throw new FormatException()
+            };
+        }
+
+        private static DateTime ConvertToDateTime(JsonElement element)
+        {
+            if (element.ValueKind == JsonValueKind.String)
+            {
+                var stringValue = element.GetString();
+                if (DateTime.TryParse(stringValue, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed))
+                {
+                    return parsed;
+                }
+            }
+            else if (element.ValueKind == JsonValueKind.Number && element.TryGetInt64(out var unix))
+            {
+                return DateTimeOffset.FromUnixTimeMilliseconds(unix).DateTime;
+            }
+
+            throw new FormatException();
+        }
+
+        private static bool ConvertToBoolean(JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                JsonValueKind.String when bool.TryParse(element.GetString(), out var value) => value,
+                _ => throw new FormatException()
+            };
+        }
+
+        private class QueryBuilderGroup
+        {
+            public string? Condition { get; set; }
+            public bool Not { get; set; }
+            public List<QueryBuilderRule> Rules { get; set; } = new();
+        }
+
+        private class QueryBuilderRule
+        {
+            public string? Field { get; set; }
+            public string? Operator { get; set; }
+            public string? Type { get; set; }
+            public JsonElement Value { get; set; }
+            public bool Not { get; set; }
+            public string? Condition { get; set; }
+            public List<QueryBuilderRule>? Rules { get; set; }
+
+            public QueryBuilderGroup ToGroup()
+            {
+                return new QueryBuilderGroup
+                {
+                    Condition = Condition,
+                    Not = false,
+                    Rules = Rules ?? new List<QueryBuilderRule>()
+                };
+            }
         }
 
         private static string GetReportTypeDisplayName(DynamicReportType type)
