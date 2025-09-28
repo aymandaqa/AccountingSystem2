@@ -46,41 +46,7 @@ namespace AccountingSystem.Migrations
                 table: "AssetTypes",
                 column: "AccountId");
 
-            migrationBuilder.Sql(@"
-IF EXISTS (SELECT 1 FROM Assets)
-BEGIN
-    INSERT INTO AssetTypes (Name, AccountId)
-    SELECT DISTINCT
-        CONCAT('Auto Asset Type - ', acc.Name),
-        acc.Id
-    FROM Assets a
-    INNER JOIN Accounts acc ON acc.Id = a.AccountId
-    LEFT JOIN AssetTypes at ON at.AccountId = a.AccountId
-    WHERE a.AccountId IS NOT NULL AND at.Id IS NULL;
 
-    UPDATE a
-    SET AssetTypeId = at.Id
-    FROM Assets a
-    INNER JOIN AssetTypes at ON at.AccountId = a.AccountId
-    WHERE a.AccountId IS NOT NULL;
-
-    IF EXISTS (SELECT 1 FROM Assets WHERE AssetTypeId IS NULL)
-    BEGIN
-        DECLARE @fallbackAccountId INT = (SELECT TOP (1) Id FROM Accounts ORDER BY Id);
-        IF @fallbackAccountId IS NOT NULL
-        BEGIN
-            DECLARE @fallbackAssetTypeId INT;
-            INSERT INTO AssetTypes (Name, AccountId)
-            VALUES (N'Auto Asset Type - Default', @fallbackAccountId);
-            SET @fallbackAssetTypeId = SCOPE_IDENTITY();
-
-            UPDATE Assets
-            SET AssetTypeId = @fallbackAssetTypeId
-            WHERE AssetTypeId IS NULL;
-        END
-    END
-END
-");
 
             migrationBuilder.AlterColumn<int>(
                 name: "AssetTypeId",
