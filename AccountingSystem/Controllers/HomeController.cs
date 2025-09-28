@@ -1,7 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AccountingSystem.Data;
@@ -14,11 +17,13 @@ public class HomeController : Controller
 {
     private readonly ILogger<HomeController> _logger;
     private readonly ApplicationDbContext _context;
+    private readonly UserManager<User> _userManager;
 
-    public HomeController(ILogger<HomeController> logger, ApplicationDbContext context)
+    public HomeController(ILogger<HomeController> logger, ApplicationDbContext context, UserManager<User> userManager)
     {
         _logger = logger;
         _context = context;
+        _userManager = userManager;
     }
 
     public async Task<IActionResult> Index(DateTime? fromDate = null, DateTime? toDate = null)
@@ -226,9 +231,213 @@ public class HomeController : Controller
         return View();
     }
 
+    [Authorize]
+    public async Task<IActionResult> Applications()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        var grantedPermissions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (user != null)
+        {
+            var userPermissions = await _context.UserPermissions
+                .Where(up => up.UserId == user.Id && up.IsGranted && up.Permission != null)
+                .Select(up => up.Permission!.Name)
+                .ToListAsync();
+
+            grantedPermissions = userPermissions
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
+        var appTiles = _systemAppDefinitions
+            .Select(definition => new SystemAppTileViewModel
+            {
+                Name = definition.Name,
+                Description = definition.Description,
+                Category = definition.Category,
+                Icon = definition.Icon,
+                AccentColor = definition.AccentColor,
+                Permission = definition.Permission,
+                Url = definition.Url,
+                HasAccess = string.IsNullOrWhiteSpace(definition.Permission) || grantedPermissions.Contains(definition.Permission)
+            })
+            .OrderBy(tile => tile.Category)
+            .ThenBy(tile => tile.Name)
+            .ToList();
+
+        var viewModel = new SystemAppOverviewViewModel
+        {
+            Apps = appTiles
+        };
+
+        return View(viewModel);
+    }
+
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {
         return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+    }
+
+    private static IReadOnlyList<SystemAppDefinition> _systemAppDefinitions { get; } = new List<SystemAppDefinition>
+    {
+        new SystemAppDefinition(
+            name: "لوحة التحكم",
+            description: "نظرة شاملة على مؤشرات الأداء الرئيسية وموازين الحسابات",
+            category: "الرئيسية",
+            icon: "📊",
+            accentColor: "#4e73df",
+            permission: "dashboard.view",
+            url: "/Dashboard/Index"),
+        new SystemAppDefinition(
+            name: "إدارة الحسابات",
+            description: "استعرض شجرة الحسابات وتابع أرصدة الحسابات",
+            category: "المحاسبة",
+            icon: "📚",
+            accentColor: "#20c997",
+            permission: "accounts.view",
+            url: "/Accounts/Index"),
+        new SystemAppDefinition(
+            name: "قيود اليومية",
+            description: "إنشاء وتدقيق القيود اليومية للحركات المحاسبية",
+            category: "المحاسبة",
+            icon: "🧾",
+            accentColor: "#f6c23e",
+            permission: "journal.view",
+            url: "/JournalEntries/Index"),
+        new SystemAppDefinition(
+            name: "السندات المقبوضة",
+            description: "إدارة سندات القبض وتتبع التحصيلات",
+            category: "الخزينة",
+            icon: "🧾",
+            accentColor: "#1cc88a",
+            permission: "receiptvouchers.view",
+            url: "/ReceiptVouchers/Index"),
+        new SystemAppDefinition(
+            name: "سندات الصرف",
+            description: "إنشاء ومراجعة سندات الصرف النقدي",
+            category: "الخزينة",
+            icon: "💸",
+            accentColor: "#36b9cc",
+            permission: "paymentvouchers.view",
+            url: "/PaymentVouchers/Index"),
+        new SystemAppDefinition(
+            name: "الحوالات",
+            description: "متابعة الحوالات الداخلية والخارجية",
+            category: "الخزينة",
+            icon: "🔄",
+            accentColor: "#858796",
+            permission: "transfers.view",
+            url: "/Transfers/Index"),
+        new SystemAppDefinition(
+            name: "المصاريف",
+            description: "تسجيل المصاريف واعتمادها ومتابعة حدود الصرف",
+            category: "المالية",
+            icon: "🧮",
+            accentColor: "#e74a3b",
+            permission: "expenses.view",
+            url: "/Expenses/Index"),
+        new SystemAppDefinition(
+            name: "التقارير",
+            description: "عرض تقارير النظام التفصيلية والتحليلية",
+            category: "التقارير",
+            icon: "📈",
+            accentColor: "#fd7e14",
+            permission: "reports.view",
+            url: "/Reports/Index"),
+        new SystemAppDefinition(
+            name: "الأصول",
+            description: "إدارة الأصول الثابتة وتتبع حالة كل أصل",
+            category: "الأصول",
+            icon: "🏢",
+            accentColor: "#6f42c1",
+            permission: "assets.view",
+            url: "/Assets/Index"),
+        new SystemAppDefinition(
+            name: "أنواع الأصول",
+            description: "تصنيف الأصول وتحديد سياسات الإهلاك",
+            category: "الأصول",
+            icon: "🗂️",
+            accentColor: "#6610f2",
+            permission: "assettypes.view",
+            url: "/AssetTypes/Index"),
+        new SystemAppDefinition(
+            name: "مصروفات الأصول",
+            description: "تسجيل ومراجعة المصروفات المرتبطة بالأصول",
+            category: "الأصول",
+            icon: "🛠️",
+            accentColor: "#d63384",
+            permission: "assetexpenses.view",
+            url: "/AssetExpenses/Index"),
+        new SystemAppDefinition(
+            name: "الموردون",
+            description: "إدارة بيانات الموردين وسجلاتهم",
+            category: "المشتريات",
+            icon: "🚚",
+            accentColor: "#198754",
+            permission: "suppliers.view",
+            url: "/Suppliers/Index"),
+        new SystemAppDefinition(
+            name: "المستخدمون",
+            description: "إدارة مستخدمي النظام وتعيين الصلاحيات",
+            category: "الإعدادات",
+            icon: "👥",
+            accentColor: "#0dcaf0",
+            permission: "users.view",
+            url: "/Users/Index"),
+        new SystemAppDefinition(
+            name: "الفروع",
+            description: "تعريف الفروع وضبط صلاحيات الوصول إليها",
+            category: "الإعدادات",
+            icon: "🏢",
+            accentColor: "#9c27b0",
+            permission: "branches.view",
+            url: "/Branches/Index"),
+        new SystemAppDefinition(
+            name: "مراكز التكلفة",
+            description: "تعريف مراكز التكلفة وربطها بالحسابات",
+            category: "الإعدادات",
+            icon: "🎯",
+            accentColor: "#ff6f61",
+            permission: "costcenters.view",
+            url: "/CostCenters/Index"),
+        new SystemAppDefinition(
+            name: "العملات",
+            description: "إدارة العملات وأسعار الصرف",
+            category: "الإعدادات",
+            icon: "💱",
+            accentColor: "#00bcd4",
+            permission: "currencies.view",
+            url: "/Currencies/Index"),
+        new SystemAppDefinition(
+            name: "إعدادات النظام",
+            description: "تهيئة الإعدادات العامة للنظام",
+            category: "الإعدادات",
+            icon: "⚙️",
+            accentColor: "#17a2b8",
+            permission: "systemsettings.view",
+            url: "/SystemSettings/Index"),
+    };
+
+    private sealed class SystemAppDefinition
+    {
+        public SystemAppDefinition(string name, string description, string category, string icon, string accentColor, string permission, string url)
+        {
+            Name = name;
+            Description = description;
+            Category = category;
+            Icon = icon;
+            AccentColor = accentColor;
+            Permission = permission;
+            Url = url;
+        }
+
+        public string Name { get; }
+        public string Description { get; }
+        public string Category { get; }
+        public string Icon { get; }
+        public string AccentColor { get; }
+        public string Permission { get; }
+        public string Url { get; }
     }
 }
