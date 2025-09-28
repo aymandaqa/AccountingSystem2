@@ -1,4 +1,6 @@
 @model AccountingSystem.ViewModels.BranchExpensesReportViewModel
+@using AccountingSystem.ViewModels
+@using System.Linq
 @{
     ViewData["Title"] = "تقرير مصروفات الفروع";
     Layout = "~/Views/Shared/_AccountingLayout.cshtml";
@@ -10,7 +12,7 @@
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h4 class="mb-0"><i class="fas fa-code-branch me-2"></i>تقرير مصروفات الفروع</h4>
-                    <span class="small">يعرض إجمالي المصاريف لكل فرع موزعة حسب الأشهر المختارة</span>
+                    <span class="small">يعرض إجمالي المصاريف لكل فرع موزعة حسب الفترة المختارة</span>
                 </div>
                 <div class="card-body">
                     <form method="get" class="row g-3 mb-4">
@@ -33,6 +35,24 @@
                             <label class="form-label">إلى تاريخ</label>
                             <input type="date" name="toDate" class="form-control" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
                         </div>
+                        <div class="col-lg-2 col-md-3">
+                            <label class="form-label">فترة التجميع</label>
+                            <select name="periodGrouping" class="form-select">
+                                <option value="Monthly" selected="@(Model.PeriodGrouping == BranchExpensesPeriodGrouping.Monthly ? "selected" : null)">شهري</option>
+                                <option value="Quarterly" selected="@(Model.PeriodGrouping == BranchExpensesPeriodGrouping.Quarterly ? "selected" : null)">ربع سنوي</option>
+                                <option value="Yearly" selected="@(Model.PeriodGrouping == BranchExpensesPeriodGrouping.Yearly ? "selected" : null)">سنوي</option>
+                            </select>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <label class="form-label d-block">طريقة العرض</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="viewMode" id="viewModeBranch" value="ByBranch" @(Model.ViewMode == BranchExpensesViewMode.ByBranch ? "checked" : null) />
+                                <label class="btn btn-outline-primary" for="viewModeBranch"><i class="fas fa-network-wired me-1"></i>حسب كل فرع</label>
+                                <input type="radio" class="btn-check" name="viewMode" id="viewModeCombined" value="Combined" @(Model.ViewMode == BranchExpensesViewMode.Combined ? "checked" : null) />
+                                <label class="btn btn-outline-primary" for="viewModeCombined"><i class="fas fa-layer-group me-1"></i>إجمالي الفروع</label>
+                            </div>
+                            <small class="text-muted d-block mt-1">حدد ما إذا كنت ترغب في عرض كل فرع على حدة أو دمج الفروع المختارة في صف واحد</small>
+                        </div>
                         <div class="col-lg-4 col-md-6 align-self-end">
                             <div class="d-flex gap-2">
                                 <button type="submit" class="btn btn-primary flex-grow-1">
@@ -47,14 +67,45 @@
 
                     @if (Model.HasResults)
                     {
+                        var periodDescription = Model.PeriodGrouping switch
+                        {
+                            BranchExpensesPeriodGrouping.Monthly => "شهري",
+                            BranchExpensesPeriodGrouping.Quarterly => "ربع سنوي",
+                            BranchExpensesPeriodGrouping.Yearly => "سنوي",
+                            _ => "شهري"
+                        };
+                        var branchSummary = Model.ViewMode == BranchExpensesViewMode.Combined
+                            ? (Model.SelectedBranchIds.Any()
+                                ? $"إجمالي {Model.SelectedBranchIds.Count} فرع/فروع"
+                                : "إجمالي جميع الفروع")
+                            : (Model.SelectedBranchIds.Any()
+                                ? $"عدد الفروع المختارة: {Model.SelectedBranchIds.Count}"
+                                : "جميع الفروع");
+                        var selectedBranchNames = Model.SelectedBranchIds.Any()
+                            ? string.Join("، ", Model.Branches
+                                .Where(b => int.TryParse(b.Value, out var id) && Model.SelectedBranchIds.Contains(id))
+                                .Select(b => b.Text))
+                            : string.Empty;
+                        <div class="alert alert-info d-flex align-items-center gap-3">
+                            <i class="fas fa-info-circle fa-lg"></i>
+                            <div>
+                                <div>من <strong>@Model.FromDate:yyyy-MM-dd</strong> إلى <strong>@Model.ToDate:yyyy-MM-dd</strong> - تجميع <strong>@periodDescription</strong></div>
+                                <div>@branchSummary</div>
+                                @if (!string.IsNullOrWhiteSpace(selectedBranchNames))
+                                {
+                                    <div>الفروع: @selectedBranchNames</div>
+                                }
+                            </div>
+                        </div>
                         <div class="table-responsive">
                             <table class="table table-bordered table-hover align-middle">
                                 <thead class="table-light">
                                     <tr>
-                                        <th style="min-width: 200px;">الفرع</th>
+                                        <th style="min-width: 200px;">@((Model.ViewMode == BranchExpensesViewMode.Combined) ? "إجمالي" : "الفرع")</th>
                                         @foreach (var column in Model.Columns)
                                         {
-                                            <th class="text-end">@column.Label</th>
+                                            var periodRange = $"{column.PeriodStart:yyyy-MM-dd} - {column.PeriodEnd:yyyy-MM-dd}";
+                                            <th class="text-end" title="@periodRange">@column.Label</th>
                                         }
                                         <th class="text-end">الإجمالي</th>
                                     </tr>
@@ -66,7 +117,8 @@
                                             <td>@row.BranchName</td>
                                             @foreach (var column in Model.Columns)
                                             {
-                                                <td class="text-end">@row.Amounts[column.PeriodStart].ToString("N2")</td>
+                                                var amount = row.Amounts.TryGetValue(column.PeriodStart, out var value) ? value : 0m;
+                                                <td class="text-end">@amount.ToString("N2")</td>
                                             }
                                             <td class="text-end fw-bold">@row.Total.ToString("N2")</td>
                                         </tr>
