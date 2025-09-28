@@ -17,7 +17,10 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Linq.Dynamic.Core;
 using System.Reflection;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace AccountingSystem.Controllers
 {
@@ -353,10 +356,9 @@ namespace AccountingSystem.Controllers
             var selectedFields = GetSelectedFields(dataset, request.Columns);
 
             var limitedQuery = ApplyTake(queryable, 5000);
-            var projected = Queryable.Cast<object>(limitedQuery);
-            var rows = await EntityFrameworkQueryableExtensions.ToListAsync(projected);
+            var rows = await ToListAsyncDynamic(limitedQuery);
 
-            var shapedRows = rows.Select(row => ShapeRow(row, selectedFields)).ToList();
+            var shapedRows = rows.Cast<object>().Select(row => ShapeRow(row, selectedFields)).ToList();
 
             var response = new
             {
@@ -640,6 +642,26 @@ namespace AccountingSystem.Controllers
             }
 
             return result;
+        }
+
+        private static async Task<IList> ToListAsyncDynamic(IQueryable source)
+        {
+            var toListAsyncMethod = typeof(EntityFrameworkQueryableExtensions)
+                .GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .First(m => m.Name == nameof(EntityFrameworkQueryableExtensions.ToListAsync) && m.GetParameters().Length == 2);
+
+            var genericMethod = toListAsyncMethod.MakeGenericMethod(source.ElementType);
+            var task = (Task)genericMethod.Invoke(null, new object[] { source, CancellationToken.None })!;
+
+            await task.ConfigureAwait(false);
+
+            var resultProperty = task.GetType().GetProperty("Result");
+            if (resultProperty?.GetValue(task) is IList list)
+            {
+                return list;
+            }
+
+            return new List<object>();
         }
 
         private bool TryBuildPredicate(QueryDatasetDefinition dataset, string rulesJson, out string predicate, out List<object?> parameters, out string? errorMessage)
