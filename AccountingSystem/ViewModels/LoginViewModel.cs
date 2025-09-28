@@ -14,8 +14,6 @@ namespace AccountingSystem.ViewModels
         [Display(Name = "كلمة المرور")]
         public string Password { get; set; } = string.Empty;
 
-        [Display(Name = "تذكرني")]
-        public bool RememberMe { get; set; }
     }
 }
 

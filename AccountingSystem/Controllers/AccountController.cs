@@ -45,7 +45,7 @@ namespace AccountingSystem.Controllers
                 var user = await _userManager.FindByEmailAsync(model.Email);
                 if (user != null && user.IsActive)
                 {
-                    var result = await _signInManager.PasswordSignInAsync(user, model.Password, model.RememberMe, lockoutOnFailure: false);
+                    var result = await _signInManager.PasswordSignInAsync(user, model.Password, isPersistent: false, lockoutOnFailure: false);
 
                     if (result.Succeeded)
                     {
