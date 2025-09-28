@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AccountingSystem.Models
 {
@@ -38,6 +39,7 @@ namespace AccountingSystem.Models
         public int CurrencyId { get; set; }
 
         // Calculated property for current balance
+        [Column(TypeName = "decimal(18,2)")]
         public decimal CurrentBalance { get; set; } = 0;
 
         public bool IsActive { get; set; } = true;

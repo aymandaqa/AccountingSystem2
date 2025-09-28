@@ -170,6 +170,7 @@ namespace AccountingSystem.Data
                 entity.Property(e => e.NameAr).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.NameEn).HasMaxLength(200);
                 entity.Property(e => e.OpeningBalance).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.CurrentBalance).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.CurrencyId);
 
                 entity.HasOne(e => e.Parent)
@@ -498,6 +499,8 @@ namespace AccountingSystem.Data
 
             builder.Entity<User>(entity =>
             {
+                entity.Property(u => u.ExpenseLimit).HasColumnType("decimal(18,2)");
+
                 entity.HasOne(u => u.PaymentAccount)
                     .WithMany()
                     .HasForeignKey(u => u.PaymentAccountId)
