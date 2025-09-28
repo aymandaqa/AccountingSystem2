@@ -14,6 +14,7 @@ html {
   --odoo-muted: #f4f5f7;
   --odoo-text: #2e2e2e;
   --odoo-border: #e4e6eb;
+  --odoo-text-muted: #6c6f7a;
 }
 
 .btn:focus,
@@ -184,6 +185,130 @@ html {
   min-width: 220px;
   max-width: 240px;
   height: fit-content;
+}
+
+.odoo-sidebar__header p {
+  color: var(--odoo-text-muted);
+}
+
+.odoo-sidebar__search .form-control {
+  border-radius: 999px;
+  border-color: transparent;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.odoo-sidebar__search .form-control:focus {
+  box-shadow: 0 0 0 0.25rem rgba(135, 90, 123, 0.25);
+  border-color: var(--odoo-purple);
+}
+
+.odoo-tree {
+  gap: 0.25rem;
+}
+
+.odoo-menu-toggle {
+  width: 100%;
+  background: var(--odoo-muted);
+  border: none;
+  color: var(--odoo-text);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.odoo-menu-toggle:hover,
+.odoo-menu-toggle:focus {
+  background: rgba(135, 90, 123, 0.12);
+  color: var(--odoo-purple);
+}
+
+.odoo-menu-toggle .bi-chevron-down {
+  transition: transform 0.3s ease;
+}
+
+.odoo-menu-group.is-open > .odoo-menu-toggle .bi-chevron-down {
+  transform: rotate(180deg);
+}
+
+.odoo-submenu {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0 0.5rem;
+  margin-top: 0.25rem;
+  margin-right: 0.5rem;
+  border-right: 2px dashed rgba(135, 90, 123, 0.25);
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+
+.odoo-menu-group.is-open > .odoo-submenu {
+  max-height: 500px;
+  opacity: 1;
+}
+
+.odoo-submenu__item {
+  position: relative;
+  margin-top: 0.35rem;
+  padding-right: 1rem;
+}
+
+.odoo-submenu__item::before {
+  content: "";
+  position: absolute;
+  right: -0.5rem;
+  top: 0.9rem;
+  width: 10px;
+  height: 2px;
+  background: rgba(135, 90, 123, 0.35);
+  border-radius: 999px;
+}
+
+.odoo-submenu__item .nav-link {
+  font-size: 0.95rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.65rem;
+  background-color: transparent;
+}
+
+.odoo-submenu__item .nav-link.active {
+  background: var(--odoo-purple);
+  color: #fff;
+  box-shadow: 0 6px 12px rgba(135, 90, 123, 0.25);
+}
+
+.odoo-submenu__item .nav-link:hover,
+.odoo-submenu__item .nav-link:focus {
+  background: rgba(135, 90, 123, 0.08);
+  color: var(--odoo-purple);
+}
+
+.odoo-menu-leaf > .nav-link {
+  background: rgba(135, 90, 123, 0.08);
+  border-radius: 0.75rem;
+  font-weight: 600;
+}
+
+.odoo-menu-leaf > .nav-link.active,
+.odoo-menu-leaf > .nav-link:hover,
+.odoo-menu-leaf > .nav-link:focus {
+  background: rgba(135, 90, 123, 0.16);
+  color: var(--odoo-purple);
+}
+
+.odoo-menu-leaf > .nav-link.active {
+  background: var(--odoo-purple);
+  color: #fff;
+  box-shadow: 0 6px 12px rgba(135, 90, 123, 0.25);
+}
+
+.odoo-menu-item--hidden {
+  display: none !important;
 }
 
 .odoo-sidebar__header button {
