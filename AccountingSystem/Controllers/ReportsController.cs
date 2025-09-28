@@ -1173,7 +1173,12 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/BranchExpenses
-        public async Task<IActionResult> BranchExpenses(int[]? branchIds, DateTime? fromDate, DateTime? toDate)
+        public async Task<IActionResult> BranchExpenses(
+            int[]? branchIds,
+            DateTime? fromDate,
+            DateTime? toDate,
+            BranchExpensesViewMode viewMode = BranchExpensesViewMode.ByBranch,
+            BranchExpensesPeriodGrouping periodGrouping = BranchExpensesPeriodGrouping.Monthly)
         {
             var defaultFrom = new DateTime(DateTime.Today.Year, 1, 1);
             var defaultTo = DateTime.Today;
@@ -1184,7 +1189,9 @@ namespace AccountingSystem.Controllers
                 ToDate = toDate?.Date ?? defaultTo,
                 Branches = await GetBranchesSelectList(),
                 SelectedBranchIds = branchIds?.Where(id => id > 0).Distinct().ToList() ?? new List<int>(),
-                FiltersApplied = true
+                FiltersApplied = true,
+                ViewMode = viewMode,
+                PeriodGrouping = periodGrouping
             };
 
             if (model.FromDate > model.ToDate)
@@ -1192,22 +1199,9 @@ namespace AccountingSystem.Controllers
                 (model.FromDate, model.ToDate) = (model.ToDate, model.FromDate);
             }
 
-            var periodStart = new DateTime(model.FromDate.Year, model.FromDate.Month, 1);
-            var periodEnd = new DateTime(model.ToDate.Year, model.ToDate.Month, 1);
             var culture = new CultureInfo("ar-SA");
 
-            var columns = new List<BranchExpensesReportColumn>();
-            var cursor = periodStart;
-            while (cursor <= periodEnd)
-            {
-                columns.Add(new BranchExpensesReportColumn
-                {
-                    PeriodStart = cursor,
-                    Label = $"{culture.DateTimeFormat.GetMonthName(cursor.Month)} {cursor.Year}"
-                });
-                cursor = cursor.AddMonths(1);
-            }
-
+            var columns = BuildBranchExpensesColumns(model.FromDate, model.ToDate, model.PeriodGrouping, culture);
             model.Columns = columns;
 
             if (!columns.Any())
@@ -1227,67 +1221,105 @@ namespace AccountingSystem.Controllers
                 expensesQuery = expensesQuery.Where(e => model.SelectedBranchIds.Contains(e.BranchId));
             }
 
-            var data = await expensesQuery
-                .GroupBy(e => new
+            var rawData = await expensesQuery
+                .Select(e => new
                 {
                     e.BranchId,
                     BranchName = e.Branch.NameAr,
-                    Year = e.CreatedAt.Year,
-                    Month = e.CreatedAt.Month
+                    e.CreatedAt,
+                    e.Amount
                 })
+                .ToListAsync();
+
+            var groupedData = rawData
+                .Select(item => new
+                {
+                    item.BranchId,
+                    item.BranchName,
+                    PeriodStart = GetBranchExpensesPeriodStart(item.CreatedAt, model.PeriodGrouping),
+                    item.Amount
+                })
+                .Where(x => x.PeriodStart >= columns.First().PeriodStart && x.PeriodStart <= columns.Last().PeriodStart)
+                .GroupBy(x => new { x.BranchId, x.BranchName, x.PeriodStart })
                 .Select(g => new
                 {
                     g.Key.BranchId,
                     g.Key.BranchName,
-                    g.Key.Year,
-                    g.Key.Month,
+                    g.Key.PeriodStart,
                     Total = g.Sum(x => x.Amount)
                 })
-                .ToListAsync();
+                .ToList();
 
             var branchLookup = model.Branches
                 .Where(b => int.TryParse(b.Value, out _))
                 .ToDictionary(b => int.Parse(b.Value), b => b.Text);
 
-            var branchIdsToDisplay = model.SelectedBranchIds.Any()
-                ? model.SelectedBranchIds
-                : data.Select(d => d.BranchId).Distinct().ToList();
-
             var columnTotals = columns.ToDictionary(c => c.PeriodStart, _ => 0m);
             var rows = new List<BranchExpensesReportRow>();
             decimal grandTotal = 0m;
 
-            foreach (var branchId in branchIdsToDisplay)
+            if (model.ViewMode == BranchExpensesViewMode.Combined)
             {
                 var row = new BranchExpensesReportRow
                 {
-                    BranchId = branchId,
-                    BranchName = branchLookup.TryGetValue(branchId, out var name) ? name : $"فرع #{branchId}",
+                    BranchId = 0,
+                    BranchName = model.SelectedBranchIds.Any() ? "إجمالي الفروع المحددة" : "إجمالي جميع الفروع",
                     Amounts = columns.ToDictionary(c => c.PeriodStart, _ => 0m)
                 };
 
-                foreach (var item in data.Where(d => d.BranchId == branchId))
-                {
-                    var key = new DateTime(item.Year, item.Month, 1);
-                    if (row.Amounts.ContainsKey(key))
-                    {
-                        row.Amounts[key] = item.Total;
-                    }
-                }
-
-                if (!model.SelectedBranchIds.Any() && row.Total == 0)
-                {
-                    continue;
-                }
-
-                rows.Add(row);
-
                 foreach (var column in columns)
                 {
-                    columnTotals[column.PeriodStart] += row.Amounts[column.PeriodStart];
+                    var periodTotal = groupedData
+                        .Where(d => d.PeriodStart == column.PeriodStart)
+                        .Sum(d => d.Total);
+
+                    row.Amounts[column.PeriodStart] = periodTotal;
+                    columnTotals[column.PeriodStart] += periodTotal;
+                    grandTotal += periodTotal;
                 }
 
-                grandTotal += row.Total;
+                if (row.Total > 0 || groupedData.Any())
+                {
+                    rows.Add(row);
+                }
+            }
+            else
+            {
+                var branchIdsToDisplay = model.SelectedBranchIds.Any()
+                    ? model.SelectedBranchIds
+                    : groupedData.Select(d => d.BranchId).Distinct().ToList();
+
+                foreach (var branchId in branchIdsToDisplay)
+                {
+                    var row = new BranchExpensesReportRow
+                    {
+                        BranchId = branchId,
+                        BranchName = branchLookup.TryGetValue(branchId, out var name) ? name : $"فرع #{branchId}",
+                        Amounts = columns.ToDictionary(c => c.PeriodStart, _ => 0m)
+                    };
+
+                    foreach (var item in groupedData.Where(d => d.BranchId == branchId))
+                    {
+                        if (row.Amounts.ContainsKey(item.PeriodStart))
+                        {
+                            row.Amounts[item.PeriodStart] = item.Total;
+                        }
+                    }
+
+                    if (!model.SelectedBranchIds.Any() && row.Total == 0)
+                    {
+                        continue;
+                    }
+
+                    rows.Add(row);
+
+                    foreach (var column in columns)
+                    {
+                        columnTotals[column.PeriodStart] += row.Amounts[column.PeriodStart];
+                    }
+
+                    grandTotal += row.Total;
+                }
             }
 
             model.Rows = rows.OrderBy(r => r.BranchName).ToList();
@@ -1295,6 +1327,74 @@ namespace AccountingSystem.Controllers
             model.GrandTotal = grandTotal;
 
             return View(model);
+        }
+
+        private static List<BranchExpensesReportColumn> BuildBranchExpensesColumns(DateTime fromDate, DateTime toDate, BranchExpensesPeriodGrouping grouping, CultureInfo culture)
+        {
+            var columns = new List<BranchExpensesReportColumn>();
+
+            if (fromDate > toDate)
+            {
+                (fromDate, toDate) = (toDate, fromDate);
+            }
+
+            var start = GetBranchExpensesPeriodStart(fromDate, grouping);
+            var end = GetBranchExpensesPeriodStart(toDate, grouping);
+
+            var cursor = start;
+            while (cursor <= end)
+            {
+                var column = new BranchExpensesReportColumn
+                {
+                    PeriodStart = cursor,
+                    PeriodEnd = GetBranchExpensesNextPeriodStart(cursor, grouping).AddDays(-1),
+                    Label = GetBranchExpensesPeriodLabel(cursor, grouping, culture)
+                };
+
+                columns.Add(column);
+                cursor = GetBranchExpensesNextPeriodStart(cursor, grouping);
+            }
+
+            return columns;
+        }
+
+        private static DateTime GetBranchExpensesPeriodStart(DateTime date, BranchExpensesPeriodGrouping grouping)
+        {
+            return grouping switch
+            {
+                BranchExpensesPeriodGrouping.Monthly => new DateTime(date.Year, date.Month, 1),
+                BranchExpensesPeriodGrouping.Quarterly =>
+                    new DateTime(date.Year, ((date.Month - 1) / 3) * 3 + 1, 1),
+                BranchExpensesPeriodGrouping.Yearly => new DateTime(date.Year, 1, 1),
+                _ => new DateTime(date.Year, date.Month, 1)
+            };
+        }
+
+        private static DateTime GetBranchExpensesNextPeriodStart(DateTime periodStart, BranchExpensesPeriodGrouping grouping)
+        {
+            return grouping switch
+            {
+                BranchExpensesPeriodGrouping.Monthly => periodStart.AddMonths(1),
+                BranchExpensesPeriodGrouping.Quarterly => periodStart.AddMonths(3),
+                BranchExpensesPeriodGrouping.Yearly => periodStart.AddYears(1),
+                _ => periodStart.AddMonths(1)
+            };
+        }
+
+        private static string GetBranchExpensesPeriodLabel(DateTime periodStart, BranchExpensesPeriodGrouping grouping, CultureInfo culture)
+        {
+            return grouping switch
+            {
+                BranchExpensesPeriodGrouping.Monthly => $"{culture.DateTimeFormat.GetMonthName(periodStart.Month)} {periodStart.Year}",
+                BranchExpensesPeriodGrouping.Quarterly => $"الربع {GetQuarterNumber(periodStart)} {periodStart.Year}",
+                BranchExpensesPeriodGrouping.Yearly => periodStart.Year.ToString(),
+                _ => periodStart.ToString("yyyy-MM")
+            };
+        }
+
+        private static int GetQuarterNumber(DateTime periodStart)
+        {
+            return ((periodStart.Month - 1) / 3) + 1;
         }
 
         // GET: Reports/BalanceSheet

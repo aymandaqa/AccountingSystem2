@@ -251,6 +251,8 @@ namespace AccountingSystem.ViewModels
         public DateTime ToDate { get; set; } = DateTime.Today;
         public List<int> SelectedBranchIds { get; set; } = new List<int>();
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
+        public BranchExpensesViewMode ViewMode { get; set; } = BranchExpensesViewMode.ByBranch;
+        public BranchExpensesPeriodGrouping PeriodGrouping { get; set; } = BranchExpensesPeriodGrouping.Monthly;
         public List<BranchExpensesReportColumn> Columns { get; set; } = new List<BranchExpensesReportColumn>();
         public List<BranchExpensesReportRow> Rows { get; set; } = new List<BranchExpensesReportRow>();
         public Dictionary<DateTime, decimal> ColumnTotals { get; set; } = new Dictionary<DateTime, decimal>();
@@ -263,6 +265,7 @@ namespace AccountingSystem.ViewModels
     {
         public DateTime PeriodStart { get; set; }
         public string Label { get; set; } = string.Empty;
+        public DateTime PeriodEnd { get; set; }
     }
 
     public class BranchExpensesReportRow
@@ -271,6 +274,19 @@ namespace AccountingSystem.ViewModels
         public string BranchName { get; set; } = string.Empty;
         public Dictionary<DateTime, decimal> Amounts { get; set; } = new Dictionary<DateTime, decimal>();
         public decimal Total => Amounts.Values.Sum();
+    }
+
+    public enum BranchExpensesViewMode
+    {
+        ByBranch = 0,
+        Combined = 1
+    }
+
+    public enum BranchExpensesPeriodGrouping
+    {
+        Monthly = 0,
+        Quarterly = 1,
+        Yearly = 2
     }
 
     public class AccountStatementViewModel
