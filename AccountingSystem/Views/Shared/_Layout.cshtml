@@ -86,17 +86,69 @@
         <div class="row flex-nowrap">
             <aside class="col-auto odoo-sidebar" id="mainSidebar" aria-labelledby="mainSidebarLabel">
                 <div class="odoo-sidebar__header d-flex align-items-center justify-content-between mb-3">
-                    <h5 class="mb-0" id="mainSidebarLabel">التطبيقات</h5>
+                    <div>
+                        <h5 class="mb-1" id="mainSidebarLabel">التطبيقات</h5>
+                        <p class="text-muted mb-0 small">تنقل بين الوحدات بسهولة</p>
+                    </div>
                     <button type="button" class="btn btn-sm btn-outline-secondary d-lg-none" id="sidebarClose" aria-label="إغلاق القائمة">
                         <i class="bi bi-x-lg"></i>
                     </button>
                 </div>
-                <ul class="nav flex-column">
-                    <li class="nav-item"><a class="nav-link" asp-area="" asp-controller="Home" asp-action="Applications"><i class="bi bi-app"></i><span> التطبيقات</span></a></li>
-                    <li class="nav-item"><a class="nav-link" asp-area="" asp-controller="Transfers" asp-action="Index"><i class="bi bi-arrow-left-right"></i><span> الحوالات</span></a></li>
-                    <li class="nav-item"><a class="nav-link" asp-area="" asp-controller="Invoices" asp-action="Index"><i class="bi bi-receipt"></i><span> الفواتير</span></a></li>
-                    <li class="nav-item"><a class="nav-link" asp-area="" asp-controller="Reports" asp-action="Index"><i class="bi bi-graph-up"></i><span> التقارير</span></a></li>
-                    <li class="nav-item"><a class="nav-link" asp-area="" asp-controller="Settings" asp-action="Index"><i class="bi bi-sliders"></i><span> الإعدادات</span></a></li>
+                <div class="odoo-sidebar__search mb-3">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text" id="sidebarSearchLabel"><i class="bi bi-search"></i></span>
+                        <input type="search" class="form-control" id="sidebarMenuSearch" aria-describedby="sidebarSearchLabel" placeholder="ابحث في القائمة" autocomplete="off">
+                    </div>
+                </div>
+                <ul class="nav flex-column odoo-tree" id="sidebarTree" aria-labelledby="mainSidebarLabel">
+                    <li class="odoo-menu-group" data-menu-group>
+                        <button class="odoo-menu-toggle" type="button" data-menu-toggle data-menu-label="اللوحة الرئيسية" aria-expanded="false">
+                            <i class="bi bi-speedometer2"></i>
+                            <span>اللوحة الرئيسية</span>
+                            <i class="bi bi-chevron-down ms-auto"></i>
+                        </button>
+                        <ul class="odoo-submenu" data-submenu>
+                            <li class="odoo-submenu__item" data-menu-item>
+                                <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Applications" data-menu-link>
+                                    <i class="bi bi-app"></i>
+                                    <span>التطبيقات</span>
+                                </a>
+                            </li>
+                            <li class="odoo-submenu__item" data-menu-item>
+                                <a class="nav-link" asp-area="" asp-controller="Reports" asp-action="Index" data-menu-link>
+                                    <i class="bi bi-graph-up"></i>
+                                    <span>التقارير</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="odoo-menu-group" data-menu-group>
+                        <button class="odoo-menu-toggle" type="button" data-menu-toggle data-menu-label="المعاملات" aria-expanded="false">
+                            <i class="bi bi-cash-coin"></i>
+                            <span>المعاملات</span>
+                            <i class="bi bi-chevron-down ms-auto"></i>
+                        </button>
+                        <ul class="odoo-submenu" data-submenu>
+                            <li class="odoo-submenu__item" data-menu-item>
+                                <a class="nav-link" asp-area="" asp-controller="Transfers" asp-action="Index" data-menu-link>
+                                    <i class="bi bi-arrow-left-right"></i>
+                                    <span>الحوالات</span>
+                                </a>
+                            </li>
+                            <li class="odoo-submenu__item" data-menu-item>
+                                <a class="nav-link" asp-area="" asp-controller="Invoices" asp-action="Index" data-menu-link>
+                                    <i class="bi bi-receipt"></i>
+                                    <span>الفواتير</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="odoo-menu-leaf" data-menu-leaf>
+                        <a class="nav-link" asp-area="" asp-controller="Settings" asp-action="Index" data-menu-link>
+                            <i class="bi bi-sliders"></i>
+                            <span>الإعدادات</span>
+                        </a>
+                    </li>
                 </ul>
             </aside>
             <div class="col odoo-content-wrapper">
