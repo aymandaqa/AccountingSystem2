@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AccountingSystem.Models
 {
@@ -26,6 +27,7 @@ namespace AccountingSystem.Models
         public int? PaymentBranchId { get; set; }
         public string? DriverAccountBranchIds { get; set; }
         public string? BusinessAccountBranchIds { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
         public decimal ExpenseLimit { get; set; } = 0;
 
         // Navigation properties
