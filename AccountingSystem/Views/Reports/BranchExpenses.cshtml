@@ -1,0 +1,100 @@
+@model AccountingSystem.ViewModels.BranchExpensesReportViewModel
+@{
+    ViewData["Title"] = "تقرير مصروفات الفروع";
+    Layout = "~/Views/Shared/_AccountingLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="fas fa-code-branch me-2"></i>تقرير مصروفات الفروع</h4>
+                    <span class="small">يعرض إجمالي المصاريف لكل فرع موزعة حسب الأشهر المختارة</span>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3 mb-4">
+                        <div class="col-lg-4 col-md-6">
+                            <label class="form-label">الفروع</label>
+                            <select name="branchIds" class="form-select" multiple size="6">
+                                @foreach (var branch in Model.Branches)
+                                {
+                                    var isSelected = int.TryParse(branch.Value, out var branchId) && Model.SelectedBranchIds.Contains(branchId);
+                                    <option value="@branch.Value" selected="@(isSelected ? "selected" : null)">@branch.Text</option>
+                                }
+                            </select>
+                            <small class="text-muted">استخدم Ctrl أو Shift للاختيار المتعدد</small>
+                        </div>
+                        <div class="col-lg-2 col-md-3">
+                            <label class="form-label">من تاريخ</label>
+                            <input type="date" name="fromDate" class="form-control" value="@Model.FromDate.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-lg-2 col-md-3">
+                            <label class="form-label">إلى تاريخ</label>
+                            <input type="date" name="toDate" class="form-control" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-lg-4 col-md-6 align-self-end">
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary flex-grow-1">
+                                    <i class="fas fa-search me-1"></i>عرض التقرير
+                                </button>
+                                <a asp-action="BranchExpenses" class="btn btn-outline-secondary">
+                                    <i class="fas fa-undo me-1"></i>إعادة تعيين
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+
+                    @if (Model.HasResults)
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="min-width: 200px;">الفرع</th>
+                                        @foreach (var column in Model.Columns)
+                                        {
+                                            <th class="text-end">@column.Label</th>
+                                        }
+                                        <th class="text-end">الإجمالي</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var row in Model.Rows)
+                                    {
+                                        <tr>
+                                            <td>@row.BranchName</td>
+                                            @foreach (var column in Model.Columns)
+                                            {
+                                                <td class="text-end">@row.Amounts[column.PeriodStart].ToString("N2")</td>
+                                            }
+                                            <td class="text-end fw-bold">@row.Total.ToString("N2")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot class="table-secondary">
+                                    <tr class="fw-bold">
+                                        <td>الإجمالي الكلي</td>
+                                        @foreach (var column in Model.Columns)
+                                        {
+                                            var total = Model.ColumnTotals.TryGetValue(column.PeriodStart, out var value) ? value : 0m;
+                                            <td class="text-end">@total.ToString("N2")</td>
+                                        }
+                                        <td class="text-end">@Model.GrandTotal.ToString("N2")</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    }
+                    else if (Model.FiltersApplied)
+                    {
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-inbox fa-2x mb-3"></i>
+                            <p class="mb-0">لا توجد بيانات ضمن الفترة المحددة.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

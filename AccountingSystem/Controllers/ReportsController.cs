@@ -1172,6 +1172,131 @@ namespace AccountingSystem.Controllers
             return View(viewModel);
         }
 
+        // GET: Reports/BranchExpenses
+        public async Task<IActionResult> BranchExpenses(int[]? branchIds, DateTime? fromDate, DateTime? toDate)
+        {
+            var defaultFrom = new DateTime(DateTime.Today.Year, 1, 1);
+            var defaultTo = DateTime.Today;
+
+            var model = new BranchExpensesReportViewModel
+            {
+                FromDate = fromDate?.Date ?? defaultFrom,
+                ToDate = toDate?.Date ?? defaultTo,
+                Branches = await GetBranchesSelectList(),
+                SelectedBranchIds = branchIds?.Where(id => id > 0).Distinct().ToList() ?? new List<int>(),
+                FiltersApplied = true
+            };
+
+            if (model.FromDate > model.ToDate)
+            {
+                (model.FromDate, model.ToDate) = (model.ToDate, model.FromDate);
+            }
+
+            var periodStart = new DateTime(model.FromDate.Year, model.FromDate.Month, 1);
+            var periodEnd = new DateTime(model.ToDate.Year, model.ToDate.Month, 1);
+            var culture = new CultureInfo("ar-SA");
+
+            var columns = new List<BranchExpensesReportColumn>();
+            var cursor = periodStart;
+            while (cursor <= periodEnd)
+            {
+                columns.Add(new BranchExpensesReportColumn
+                {
+                    PeriodStart = cursor,
+                    Label = $"{culture.DateTimeFormat.GetMonthName(cursor.Month)} {cursor.Year}"
+                });
+                cursor = cursor.AddMonths(1);
+            }
+
+            model.Columns = columns;
+
+            if (!columns.Any())
+            {
+                return View(model);
+            }
+
+            var toExclusive = model.ToDate.AddDays(1);
+
+            var expensesQuery = _context.Expenses
+                .AsNoTracking()
+                .Where(e => e.IsApproved)
+                .Where(e => e.CreatedAt >= model.FromDate && e.CreatedAt < toExclusive);
+
+            if (model.SelectedBranchIds.Any())
+            {
+                expensesQuery = expensesQuery.Where(e => model.SelectedBranchIds.Contains(e.BranchId));
+            }
+
+            var data = await expensesQuery
+                .GroupBy(e => new
+                {
+                    e.BranchId,
+                    BranchName = e.Branch.NameAr,
+                    Year = e.CreatedAt.Year,
+                    Month = e.CreatedAt.Month
+                })
+                .Select(g => new
+                {
+                    g.Key.BranchId,
+                    g.Key.BranchName,
+                    g.Key.Year,
+                    g.Key.Month,
+                    Total = g.Sum(x => x.Amount)
+                })
+                .ToListAsync();
+
+            var branchLookup = model.Branches
+                .Where(b => int.TryParse(b.Value, out _))
+                .ToDictionary(b => int.Parse(b.Value), b => b.Text);
+
+            var branchIdsToDisplay = model.SelectedBranchIds.Any()
+                ? model.SelectedBranchIds
+                : data.Select(d => d.BranchId).Distinct().ToList();
+
+            var columnTotals = columns.ToDictionary(c => c.PeriodStart, _ => 0m);
+            var rows = new List<BranchExpensesReportRow>();
+            decimal grandTotal = 0m;
+
+            foreach (var branchId in branchIdsToDisplay)
+            {
+                var row = new BranchExpensesReportRow
+                {
+                    BranchId = branchId,
+                    BranchName = branchLookup.TryGetValue(branchId, out var name) ? name : $"فرع #{branchId}",
+                    Amounts = columns.ToDictionary(c => c.PeriodStart, _ => 0m)
+                };
+
+                foreach (var item in data.Where(d => d.BranchId == branchId))
+                {
+                    var key = new DateTime(item.Year, item.Month, 1);
+                    if (row.Amounts.ContainsKey(key))
+                    {
+                        row.Amounts[key] = item.Total;
+                    }
+                }
+
+                if (!model.SelectedBranchIds.Any() && row.Total == 0)
+                {
+                    continue;
+                }
+
+                rows.Add(row);
+
+                foreach (var column in columns)
+                {
+                    columnTotals[column.PeriodStart] += row.Amounts[column.PeriodStart];
+                }
+
+                grandTotal += row.Total;
+            }
+
+            model.Rows = rows.OrderBy(r => r.BranchName).ToList();
+            model.ColumnTotals = columnTotals;
+            model.GrandTotal = grandTotal;
+
+            return View(model);
+        }
+
         // GET: Reports/BalanceSheet
         public async Task<IActionResult> BalanceSheet(int? branchId, DateTime? asOfDate, bool includePending = false, int? currencyId = null)
         {
