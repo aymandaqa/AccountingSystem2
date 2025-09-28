@@ -10,7 +10,7 @@ namespace AccountingSystem.ViewModels
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
-        public string Type { get; set; } = string.Empty;
+        public string AssetTypeName { get; set; } = string.Empty;
         public string BranchName { get; set; } = string.Empty;
         public string? AssetNumber { get; set; }
         public string? Notes { get; set; }
@@ -29,9 +29,9 @@ namespace AccountingSystem.ViewModels
         public string Name { get; set; } = string.Empty;
 
         [Required]
-        [StringLength(100)]
         [Display(Name = "نوع الأصل")]
-        public string Type { get; set; } = string.Empty;
+        [Range(1, int.MaxValue, ErrorMessage = "اختر نوع الأصل")]
+        public int AssetTypeId { get; set; }
 
         [Required]
         [Display(Name = "الفرع")]
@@ -60,6 +60,7 @@ namespace AccountingSystem.ViewModels
 
         public IEnumerable<SelectListItem> Branches { get; set; } = Enumerable.Empty<SelectListItem>();
         public IEnumerable<SelectListItem> CapitalAccounts { get; set; } = Enumerable.Empty<SelectListItem>();
+        public IEnumerable<SelectListItem> AssetTypes { get; set; } = Enumerable.Empty<SelectListItem>();
     }
 
     public class AssetExpenseListViewModel
@@ -129,5 +130,25 @@ namespace AccountingSystem.ViewModels
         public int AccountId { get; set; }
         public int CurrencyId { get; set; }
         public string CurrencyCode { get; set; } = string.Empty;
+    }
+
+    public class AssetTypeListViewModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string AccountCode { get; set; } = string.Empty;
+        public string AccountName { get; set; } = string.Empty;
+    }
+
+    public class AssetTypeFormViewModel
+    {
+        public int? Id { get; set; }
+
+        [Required]
+        [StringLength(200)]
+        [Display(Name = "اسم نوع الأصل")]
+        public string Name { get; set; } = string.Empty;
+
+        public string? AccountCode { get; set; }
     }
 }

@@ -37,6 +37,7 @@ namespace AccountingSystem.Controllers
         {
             var assets = await _context.Assets
                 .Include(a => a.Branch)
+                .Include(a => a.AssetType)
                 .OrderBy(a => a.Name)
                 .ToListAsync();
 
@@ -44,7 +45,7 @@ namespace AccountingSystem.Controllers
             {
                 Id = a.Id,
                 Name = a.Name,
-                Type = a.Type,
+                AssetTypeName = a.AssetType.Name,
                 BranchName = a.Branch.NameAr,
                 AssetNumber = a.AssetNumber,
                 Notes = a.Notes,
@@ -62,7 +63,8 @@ namespace AccountingSystem.Controllers
             var model = new AssetFormViewModel
             {
                 Branches = await GetBranchesAsync(),
-                CapitalAccounts = await GetCapitalAccountsAsync()
+                CapitalAccounts = await GetCapitalAccountsAsync(),
+                AssetTypes = await GetAssetTypesAsync()
             };
             return View(model);
         }
@@ -80,25 +82,26 @@ namespace AccountingSystem.Controllers
 
             Account? parentAccount = null;
             Account? capitalAccount = null;
+            AssetType? assetType = null;
 
             if (ModelState.IsValid)
             {
-                var parentSetting = await _context.SystemSettings
-                    .FirstOrDefaultAsync(s => s.Key == "AssetsParentAccountCode");
+                assetType = await _context.AssetTypes
+                    .Include(t => t.Account)
+                    .ThenInclude(a => a.Currency)
+                    .FirstOrDefaultAsync(t => t.Id == model.AssetTypeId);
 
-                if (parentSetting == null || string.IsNullOrWhiteSpace(parentSetting.Value))
+                if (assetType == null)
                 {
-                    ModelState.AddModelError(string.Empty, "لم يتم ضبط حساب الأصول الرئيسي في الإعدادات");
+                    ModelState.AddModelError(nameof(model.AssetTypeId), "نوع الأصل غير صالح");
                 }
                 else
                 {
-                    parentAccount = await _context.Accounts
-                        .Include(a => a.Currency)
-                        .FirstOrDefaultAsync(a => a.Code == parentSetting.Value);
+                    parentAccount = assetType.Account;
 
                     if (parentAccount == null)
                     {
-                        ModelState.AddModelError(string.Empty, "حساب الأصول المحدد في الإعدادات غير موجود");
+                        ModelState.AddModelError(nameof(model.AssetTypeId), "نوع الأصل لا يحتوي على حساب مرتبط");
                     }
                 }
 
@@ -121,6 +124,7 @@ namespace AccountingSystem.Controllers
             {
                 model.Branches = await GetBranchesAsync();
                 model.CapitalAccounts = await GetCapitalAccountsAsync();
+                model.AssetTypes = await GetAssetTypesAsync();
                 return View(model);
             }
 
@@ -145,7 +149,7 @@ namespace AccountingSystem.Controllers
                 var asset = new Asset
                 {
                     Name = model.Name,
-                    Type = model.Type,
+                    AssetTypeId = model.AssetTypeId,
                     BranchId = model.BranchId,
                     AssetNumber = model.AssetNumber,
                     Notes = model.Notes,
@@ -190,6 +194,7 @@ namespace AccountingSystem.Controllers
 
             model.Branches = await GetBranchesAsync();
             model.CapitalAccounts = await GetCapitalAccountsAsync();
+            model.AssetTypes = await GetAssetTypesAsync();
             return View(model);
         }
 
@@ -198,6 +203,7 @@ namespace AccountingSystem.Controllers
         {
             var asset = await _context.Assets
                 .Include(a => a.Account)
+                .Include(a => a.AssetType)
                 .FirstOrDefaultAsync(a => a.Id == id);
             if (asset == null)
             {
@@ -208,14 +214,15 @@ namespace AccountingSystem.Controllers
             {
                 Id = asset.Id,
                 Name = asset.Name,
-                Type = asset.Type,
+                AssetTypeId = asset.AssetTypeId,
                 BranchId = asset.BranchId,
                 AssetNumber = asset.AssetNumber,
                 Notes = asset.Notes,
                 OpeningBalance = asset.OpeningBalance,
                 AccountId = asset.AccountId,
                 AccountCode = asset.Account?.Code,
-                Branches = await GetBranchesAsync()
+                Branches = await GetBranchesAsync(),
+                AssetTypes = await GetAssetTypesAsync()
             };
 
             return View(model);
@@ -231,16 +238,39 @@ namespace AccountingSystem.Controllers
                 return NotFound();
             }
 
+            Asset? asset = null;
+            AssetType? assetType = null;
+
             if (ModelState.IsValid)
             {
-                var asset = await _context.Assets.FindAsync(id);
+                asset = await _context.Assets
+                    .Include(a => a.Account)
+                    .FirstOrDefaultAsync(a => a.Id == id);
                 if (asset == null)
                 {
                     return NotFound();
                 }
 
+                assetType = await _context.AssetTypes
+                    .Include(t => t.Account)
+                    .FirstOrDefaultAsync(t => t.Id == model.AssetTypeId);
+
+                if (assetType == null)
+                {
+                    ModelState.AddModelError(nameof(model.AssetTypeId), "نوع الأصل غير صالح");
+                }
+                else if (assetType.Account == null)
+                {
+                    ModelState.AddModelError(nameof(model.AssetTypeId), "نوع الأصل لا يحتوي على حساب مرتبط");
+                }
+            }
+
+            if (ModelState.IsValid && asset != null && assetType?.Account != null)
+            {
+                var previousAssetTypeId = asset.AssetTypeId;
+
                 asset.Name = model.Name;
-                asset.Type = model.Type;
+                asset.AssetTypeId = model.AssetTypeId;
                 asset.BranchId = model.BranchId;
                 asset.AssetNumber = model.AssetNumber;
                 asset.Notes = model.Notes;
@@ -257,6 +287,17 @@ namespace AccountingSystem.Controllers
                         account.BranchId = model.BranchId;
                         account.Description = model.Notes;
                         account.UpdatedAt = DateTime.Now;
+
+                        if (previousAssetTypeId != model.AssetTypeId)
+                        {
+                            account.ParentId = assetType.AccountId;
+                            account.Level = assetType.Account.Level + 1;
+                            account.AccountType = assetType.Account.AccountType;
+                            account.Nature = assetType.Account.Nature;
+                            account.Classification = assetType.Account.Classification;
+                            account.SubClassification = assetType.Account.SubClassification;
+                            account.CurrencyId = assetType.Account.CurrencyId;
+                        }
                     }
                 }
 
@@ -265,6 +306,7 @@ namespace AccountingSystem.Controllers
             }
 
             model.Branches = await GetBranchesAsync();
+            model.AssetTypes = await GetAssetTypesAsync();
             if (model.AccountId.HasValue)
             {
                 var account = await _context.Accounts.FindAsync(model.AccountId.Value);
@@ -278,6 +320,7 @@ namespace AccountingSystem.Controllers
         {
             var asset = await _context.Assets
                 .Include(a => a.Branch)
+                .Include(a => a.AssetType)
                 .FirstOrDefaultAsync(a => a.Id == id);
             if (asset == null)
             {
@@ -288,7 +331,7 @@ namespace AccountingSystem.Controllers
             {
                 Id = asset.Id,
                 Name = asset.Name,
-                Type = asset.Type,
+                AssetTypeName = asset.AssetType.Name,
                 BranchName = asset.Branch.NameAr,
                 AssetNumber = asset.AssetNumber,
                 Notes = asset.Notes,
@@ -335,6 +378,19 @@ namespace AccountingSystem.Controllers
                 {
                     Value = b.Id.ToString(),
                     Text = b.NameAr
+                }).ToListAsync();
+        }
+
+        private async Task<IEnumerable<SelectListItem>> GetAssetTypesAsync()
+        {
+            return await _context.AssetTypes
+                .OrderBy(t => t.Name)
+                .Select(t => new SelectListItem
+                {
+                    Value = t.Id.ToString(),
+                    Text = t.Account == null || string.IsNullOrWhiteSpace(t.Account.Code)
+                        ? t.Name
+                        : $"{t.Name} ({t.Account.Code})"
                 }).ToListAsync();
         }
     }

@@ -1,0 +1,36 @@
+@model AccountingSystem.ViewModels.AssetTypeFormViewModel
+
+@{
+    ViewData["Title"] = "تعديل نوع أصل";
+    Layout = "~/Views/Shared/_AccountingLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">تعديل نوع الأصل</h3>
+        </div>
+        <div class="card-body">
+            <form asp-action="Edit" method="post" class="row g-3">
+                <input type="hidden" asp-for="Id" />
+                <div class="col-md-6">
+                    <label asp-for="Name" class="form-label"></label>
+                    <input asp-for="Name" class="form-control" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="AccountCode" class="form-label">كود الحساب</label>
+                    <input asp-for="AccountCode" class="form-control" readonly />
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">حفظ</button>
+                    <a asp-action="Index" class="btn btn-secondary">إلغاء</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

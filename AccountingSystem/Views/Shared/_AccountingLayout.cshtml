@@ -44,8 +44,9 @@
         var showVouchers = canReceiptVouchers || canDisbursementVouchers || canPaymentVouchers || canReceiptVouchersCreate || canDisbursementVouchersCreate || canPaymentVouchersCreate;
         var showAccountManagement = canBusinessStatementBulk || canBusinessRetStatementBulk || canBusnissShipmentsReturn || canBusnissStatment || canDriverPayment || canDriverStatment || canPrintSlip || canReceivePayments || canReceiveRetPayments || canUserPayment;
         var canAssets = (await AuthorizationService.AuthorizeAsync(User, "assets.view")).Succeeded;
+        var canAssetTypes = (await AuthorizationService.AuthorizeAsync(User, "assettypes.view")).Succeeded;
         var canAssetExpenses = (await AuthorizationService.AuthorizeAsync(User, "assetexpenses.view")).Succeeded;
-        var showAssets = canAssets || canAssetExpenses;
+        var showAssets = canAssets || canAssetExpenses || canAssetTypes;
 
         var currentController = ViewContext.RouteData.Values["controller"]?.ToString()?.ToLower();
         var currentAction = ViewContext.RouteData.Values["action"]?.ToString()?.ToLower();
@@ -56,7 +57,7 @@
         var journalActive = currentController == "journalentries";
         var reportsActive = currentController == "reports";
         var settingsActive = currentController == "branches" || currentController == "costcenters" || currentController == "currencies" || currentController == "users";
-        var assetsActive = currentController == "assets" || currentController == "assetexpenses";
+        var assetsActive = currentController == "assets" || currentController == "assetexpenses" || currentController == "assettypes";
     }
     <div id="wrapper" class="d-flex">
         <nav id="sidebar">
@@ -125,6 +126,10 @@
                             @if (canAssets)
                             {
                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Assets")"><i class="fas fa-list"></i> قائمة الأصول الثابته</a></li>
+                            }
+                            @if (canAssetTypes)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "AssetTypes")"><i class="fas fa-tags"></i> أنواع الأصول</a></li>
                             }
                             @if (canAssetExpenses)
                             {

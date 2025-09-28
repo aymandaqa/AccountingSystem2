@@ -13,8 +13,7 @@ namespace AccountingSystem.Models
         public string Name { get; set; } = string.Empty;
 
         [Required]
-        [StringLength(100)]
-        public string Type { get; set; } = string.Empty;
+        public int AssetTypeId { get; set; }
 
         [Required]
         public int BranchId { get; set; }
@@ -34,6 +33,8 @@ namespace AccountingSystem.Models
         public DateTime? UpdatedAt { get; set; }
 
         public virtual Branch Branch { get; set; } = null!;
+
+        public virtual AssetType AssetType { get; set; } = null!;
 
         public virtual Account? Account { get; set; }
 
