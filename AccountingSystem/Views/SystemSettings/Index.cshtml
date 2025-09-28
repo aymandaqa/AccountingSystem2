@@ -5,7 +5,7 @@
 <h1 class="mb-3">إعدادات النظام</h1>
 @Html.AntiForgeryToken()
 <p>
-    <a class="btn btn-primary" href="@Url.Action("Create")">إضافة إعداد</a>
+    <a class="btn btn-primary" href="@Url.Action("Create")" asp-require-permission="systemsettings.create">إضافة إعداد</a>
 </p>
 <table class="table table-bordered">
     <thead>
@@ -22,8 +22,8 @@
             <td>@item.Key</td>
             <td>@item.Value</td>
             <td>
-                <a class="btn btn-sm btn-warning" href="@Url.Action("Edit", new { id = item.Id })">تعديل</a>
-                <button class="btn btn-sm btn-danger" onclick="deleteSetting(@item.Id)">حذف</button>
+                <a class="btn btn-sm btn-warning" href="@Url.Action("Edit", new { id = item.Id })" asp-require-permission="systemsettings.edit">تعديل</a>
+                <button class="btn btn-sm btn-danger" onclick="deleteSetting(@item.Id)" asp-require-permission="systemsettings.delete">حذف</button>
             </td>
         </tr>
     }

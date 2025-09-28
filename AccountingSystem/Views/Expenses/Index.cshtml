@@ -6,7 +6,7 @@
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col">
-            <a href="@Url.Action("Create")" class="btn btn-primary">
+            <a href="@Url.Action("Create")" class="btn btn-primary" asp-require-permission="expenses.create">
                 <i class="fas fa-plus"></i> إضافة مصروف
             </a>
             <a href="@Url.Action("My")" class="btn btn-secondary ms-2">
@@ -52,11 +52,11 @@
                         <td>
                             @if (!item.IsApproved)
                             {
-                                <a class="btn btn-sm btn-primary" asp-action="Edit" asp-route-id="@item.Id">تعديل</a>
-                                <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline">
+                                <a class="btn btn-sm btn-primary" asp-action="Edit" asp-route-id="@item.Id" asp-require-permission="expenses.edit">تعديل</a>
+                                <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline" asp-require-permission="expenses.delete">
                                     <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('هل أنت متأكد من الحذف؟');">حذف</button>
                                 </form>
-                                <a class="btn btn-sm btn-success" asp-action="Approve" asp-route-id="@item.Id">اعتماد</a>
+                                <a class="btn btn-sm btn-success" asp-action="Approve" asp-route-id="@item.Id" asp-require-permission="expenses.approve">اعتماد</a>
                             }
                         </td>
                     </tr>

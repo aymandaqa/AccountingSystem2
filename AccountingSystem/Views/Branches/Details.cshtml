@@ -11,7 +11,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3 class="card-title">تفاصيل الفرع: @Model.NameAr</h3>
                     <div class="btn-group">
-                        <a href="@Url.Action("Edit", new { id = Model.Id })" class="btn btn-warning">
+                        <a href="@Url.Action("Edit", new { id = Model.Id })" class="btn btn-warning" asp-require-permission="branches.edit">
                             <i class="fas fa-edit"></i> تعديل
                         </a>
                         <a href="@Url.Action("Index")" class="btn btn-secondary">

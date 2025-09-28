@@ -36,18 +36,18 @@
                                 <td>@item.Account.CurrentBalance.ToString("N2")</td>
                                 <td class="@(diff == 0 ? "text-success" : "text-danger")">@diff.ToString("N2")</td>
                                 <td>
-                                    <form asp-action="Approve" method="post" class="d-inline">
+                                    <form asp-action="Approve" method="post" class="d-inline" asp-require-permission="cashclosures.approve">
                                         <input type="hidden" name="id" value="@item.Id" />
                                         <input type="hidden" name="matched" value="true" />
                                         <button type="submit" class="btn btn-success btn-sm">موافقة مطابقة</button>
                                     </form>
-                                    <form asp-action="Approve" method="post" class="d-inline mt-1">
+                                    <form asp-action="Approve" method="post" class="d-inline mt-1" asp-require-permission="cashclosures.approve">
                                         <input type="hidden" name="id" value="@item.Id" />
                                         <input type="hidden" name="matched" value="false" />
                                         <input type="text" required name="reason" class="form-control form-control-sm d-inline w-auto" placeholder="سبب" />
                                         <button type="submit" class="btn btn-warning btn-sm">موافقة مع فرق</button>
                                     </form>
-                                    <form asp-action="Reject" method="post" class="d-inline mt-1">
+                                    <form asp-action="Reject" method="post" class="d-inline mt-1" asp-require-permission="cashclosures.approve">
                                         <input type="hidden" name="id" value="@item.Id" />
                                         <input type="text" required name="reason" class="form-control form-control-sm d-inline w-auto" placeholder="سبب" />
                                         <button type="submit" class="btn btn-danger btn-sm">رفض</button>

@@ -5,7 +5,7 @@
 }
 
 <div class="container-fluid">
-    <a asp-action="Create" class="btn btn-primary mb-3">سند قبض جديد</a>
+    <a asp-action="Create" class="btn btn-primary mb-3" asp-require-permission="receiptvouchers.create">سند قبض جديد</a>
     <table class="table table-striped table-hover">
         <thead class="table-dark">
             <tr>
