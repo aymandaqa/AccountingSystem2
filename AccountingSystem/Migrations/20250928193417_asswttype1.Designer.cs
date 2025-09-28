@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AccountingSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250928190839_ApplyModelChanges")]
-    partial class ApplyModelChanges
+    [Migration("20250928193417_asswttype1")]
+    partial class asswttype1
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
