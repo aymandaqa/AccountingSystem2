@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc.Rendering;
 using AccountingSystem.Models;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 namespace AccountingSystem.ViewModels
 {
@@ -242,6 +243,34 @@ namespace AccountingSystem.ViewModels
         public string AccountCode { get; set; } = string.Empty;
         public string AccountName { get; set; } = string.Empty;
         public decimal Amount { get; set; }
+    }
+
+    public class BranchExpensesReportViewModel
+    {
+        public DateTime FromDate { get; set; } = new DateTime(DateTime.Now.Year, 1, 1);
+        public DateTime ToDate { get; set; } = DateTime.Today;
+        public List<int> SelectedBranchIds { get; set; } = new List<int>();
+        public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
+        public List<BranchExpensesReportColumn> Columns { get; set; } = new List<BranchExpensesReportColumn>();
+        public List<BranchExpensesReportRow> Rows { get; set; } = new List<BranchExpensesReportRow>();
+        public Dictionary<DateTime, decimal> ColumnTotals { get; set; } = new Dictionary<DateTime, decimal>();
+        public decimal GrandTotal { get; set; }
+        public bool FiltersApplied { get; set; }
+        public bool HasResults => Rows.Any();
+    }
+
+    public class BranchExpensesReportColumn
+    {
+        public DateTime PeriodStart { get; set; }
+        public string Label { get; set; } = string.Empty;
+    }
+
+    public class BranchExpensesReportRow
+    {
+        public int BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+        public Dictionary<DateTime, decimal> Amounts { get; set; } = new Dictionary<DateTime, decimal>();
+        public decimal Total => Amounts.Values.Sum();
     }
 
     public class AccountStatementViewModel
