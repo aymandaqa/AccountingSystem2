@@ -11,7 +11,7 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3 class="card-title">إدارة العملات</h3>
-                    <a href="@Url.Action("Create")" class="btn btn-primary">
+                    <a href="@Url.Action("Create")" class="btn btn-primary" asp-require-permission="currencies.create">
                         <i class="fas fa-plus"></i> إضافة عملة جديدة
                     </a>
                 </div>
@@ -48,10 +48,12 @@
                                             </td>
                                             <td>
                                                 <div class="btn-group" role="group">
-                                                    <a href="@Url.Action("Edit", new { id = currency.Id })" class="btn btn-warning btn-sm" title="تعديل">
+                                                    <a href="@Url.Action("Edit", new { id = currency.Id })" class="btn btn-warning btn-sm" title="تعديل"
+                                                       asp-require-permission="currencies.edit">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
-                                                    <button type="button" class="btn btn-danger btn-sm" onclick="deleteCurrency(@currency.Id)" title="حذف">
+                                                    <button type="button" class="btn btn-danger btn-sm" onclick="deleteCurrency(@currency.Id)" title="حذف"
+                                                            asp-require-permission="currencies.delete">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 </div>

@@ -11,7 +11,7 @@
 
 <h1 class="mb-4">المستخدمون</h1>
 <div class="mb-3">
-    <a class="btn btn-success" asp-action="Create"><i class="fas fa-plus"></i> مستخدم جديد</a>
+    <a class="btn btn-success" asp-action="Create" asp-require-permission="users.create"><i class="fas fa-plus"></i> مستخدم جديد</a>
 </div>
 
 <form id="usersAntiForgery" method="post" class="d-none">
@@ -98,10 +98,10 @@
                                 </td>
                                 <td class="text-center">
                                     <div class="btn-group btn-group-sm user-actions" role="group">
-                                        <a class="btn btn-warning" asp-action="Edit" asp-route-id="@user.Id" title="تعديل"><i class="fas fa-edit"></i></a>
-                                        <a class="btn btn-primary" asp-action="ManagePermissions" asp-route-id="@user.Id" title="الصلاحيات"><i class="fas fa-key"></i></a>
-                                        <a class="btn btn-secondary" asp-action="ResetPassword" asp-route-id="@user.Id" title="إعادة ضبط كلمة المرور"><i class="fas fa-lock"></i></a>
-                                        <button type="button" class="btn @(user.IsActive ? "btn-danger" : "btn-success") js-toggle-user" data-id="@user.Id">
+                                        <a class="btn btn-warning" asp-action="Edit" asp-route-id="@user.Id" title="تعديل" asp-require-permission="users.edit"><i class="fas fa-edit"></i></a>
+                                        <a class="btn btn-primary" asp-action="ManagePermissions" asp-route-id="@user.Id" title="الصلاحيات" asp-require-permission="users.edit"><i class="fas fa-key"></i></a>
+                                        <a class="btn btn-secondary" asp-action="ResetPassword" asp-route-id="@user.Id" title="إعادة ضبط كلمة المرور" asp-require-permission="users.edit"><i class="fas fa-lock"></i></a>
+                                        <button type="button" class="btn @(user.IsActive ? "btn-danger" : "btn-success") js-toggle-user" data-id="@user.Id" asp-require-permission="users.edit">
                                             <i class="fas @(user.IsActive ? "fa-user-slash" : "fa-user")"></i> @(user.IsActive ? "إيقاف" : "تفعيل")
                                         </button>
                                     </div>

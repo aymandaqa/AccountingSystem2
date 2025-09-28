@@ -33,7 +33,7 @@
                         القيود المالية
                     </h3>
                     <div class="d-flex flex-column flex-md-row align-items-md-center gap-2">
-                        <a asp-action="Create" class="btn btn-primary">
+                        <a asp-action="Create" class="btn btn-primary" asp-require-permission="journal.create">
                             <i class="fas fa-plus me-1"></i>
                             إضافة قيد جديد
                         </a>
@@ -127,14 +127,14 @@
 
     <script id="actionsTemplate" type="text/x-template">
         <div class="d-flex justify-content-center flex-wrap gap-2 table-actions" role="group">
-            <a href="@Url.Action("Details", "JournalEntries")/${Id}" class="btn btn-sm btn-outline-info" title="عرض">
+            <a href="@Url.Action("Details", "JournalEntries")/${Id}" class="btn btn-sm btn-outline-info" title="عرض" asp-require-permission="journal.view">
                 <i class="fas fa-eye"></i>
             </a>
             ${if(IsDraft)}
-            <a href="@Url.Action("Edit", "JournalEntries")/${Id}" class="btn btn-sm btn-outline-warning" title="تعديل">
+            <a href="@Url.Action("Edit", "JournalEntries")/${Id}" class="btn btn-sm btn-outline-warning" title="تعديل" asp-require-permission="journal.edit">
                 <i class="fas fa-edit"></i>
             </a>
-            <button type="button" class="btn btn-sm btn-outline-success btn-post-entry" data-id="${Id}" data-number="${Number}" title="ترحيل">
+            <button type="button" class="btn btn-sm btn-outline-success btn-post-entry" data-id="${Id}" data-number="${Number}" title="ترحيل" asp-require-permission="journal.approve">
                 <i class="fas fa-share"></i>
             </button>
             ${/if}

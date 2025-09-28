@@ -5,7 +5,7 @@
 <h1 class="mb-3">الموردين</h1>
 @Html.AntiForgeryToken()
 <p>
-    <a class="btn btn-primary" href="@Url.Action("Create")">إضافة مورد</a>
+    <a class="btn btn-primary" href="@Url.Action("Create")" asp-require-permission="suppliers.create">إضافة مورد</a>
 </p>
 <table class="table table-bordered">
     <thead>
@@ -24,8 +24,8 @@
             <td>@item.Phone</td>
             <td>@item.Email</td>
             <td>
-                <a class="btn btn-sm btn-warning" href="@Url.Action("Edit", new { id = item.Id })">تعديل</a>
-                <button class="btn btn-sm btn-danger" onclick="deleteSupplier(@item.Id)">حذف</button>
+                <a class="btn btn-sm btn-warning" href="@Url.Action("Edit", new { id = item.Id })" asp-require-permission="suppliers.edit">تعديل</a>
+                <button class="btn btn-sm btn-danger" onclick="deleteSupplier(@item.Id)" asp-require-permission="suppliers.delete">حذف</button>
             </td>
         </tr>
     }
