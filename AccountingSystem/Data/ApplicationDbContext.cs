@@ -43,6 +43,7 @@ namespace AccountingSystem.Data
         public DbSet<SystemSetting> SystemSettings { get; set; }
         public DbSet<UserPaymentAccount> UserPaymentAccounts { get; set; }
         public DbSet<Asset> Assets { get; set; }
+        public DbSet<AssetType> AssetTypes { get; set; }
         public DbSet<AssetExpense> AssetExpenses { get; set; }
         public DbSet<PivotReport> PivotReports { get; set; }
         public DbSet<ReportQuery> ReportQueries { get; set; }
@@ -187,11 +188,21 @@ namespace AccountingSystem.Data
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
+            builder.Entity<AssetType>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+
+                entity.HasOne(e => e.Account)
+                    .WithMany()
+                    .HasForeignKey(e => e.AccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
             builder.Entity<Asset>(entity =>
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
-                entity.Property(e => e.Type).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.AssetNumber).HasMaxLength(100);
                 entity.Property(e => e.Notes).HasMaxLength(500);
                 entity.Property(e => e.OpeningBalance).HasColumnType("decimal(18,2)");
@@ -204,6 +215,11 @@ namespace AccountingSystem.Data
                 entity.HasOne(e => e.Account)
                     .WithMany()
                     .HasForeignKey(e => e.AccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.AssetType)
+                    .WithMany(t => t.Assets)
+                    .HasForeignKey(e => e.AssetTypeId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 

@@ -1,0 +1,69 @@
+@model IEnumerable<AccountingSystem.ViewModels.AssetTypeListViewModel>
+
+@{
+    ViewData["Title"] = "أنواع الأصول";
+    Layout = "~/Views/Shared/_AccountingLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="card-title">إدارة أنواع الأصول</h3>
+            <a asp-action="Create" class="btn btn-primary" asp-require-permission="assettypes.create">
+                <i class="fas fa-plus"></i> إضافة نوع أصل
+            </a>
+        </div>
+        <div class="card-body">
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success">@TempData["Success"]</div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger">@TempData["Error"]</div>
+            }
+
+            @if (Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>اسم النوع</th>
+                                <th>كود الحساب</th>
+                                <th>اسم الحساب</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var type in Model)
+                            {
+                                <tr>
+                                    <td>@type.Name</td>
+                                    <td>@type.AccountCode</td>
+                                    <td>@type.AccountName</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a asp-action="Edit" asp-route-id="@type.Id" class="btn btn-warning" asp-require-permission="assettypes.edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a asp-action="Delete" asp-route-id="@type.Id" class="btn btn-danger" asp-require-permission="assettypes.delete">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info text-center">
+                    لا توجد أنواع أصول مسجلة حالياً.
+                </div>
+            }
+        </div>
+    </div>
+</div>

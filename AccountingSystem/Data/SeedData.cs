@@ -123,6 +123,10 @@ namespace AccountingSystem.Data
                 new Permission { Name = "assets.create", DisplayName = "إنشاء الأصول", Category = "الأصول" },
                 new Permission { Name = "assets.edit", DisplayName = "تعديل الأصول", Category = "الأصول" },
                 new Permission { Name = "assets.delete", DisplayName = "حذف الأصول", Category = "الأصول" },
+                new Permission { Name = "assettypes.view", DisplayName = "عرض أنواع الأصول", Category = "الأصول" },
+                new Permission { Name = "assettypes.create", DisplayName = "إنشاء نوع أصل", Category = "الأصول" },
+                new Permission { Name = "assettypes.edit", DisplayName = "تعديل نوع أصل", Category = "الأصول" },
+                new Permission { Name = "assettypes.delete", DisplayName = "حذف نوع أصل", Category = "الأصول" },
                 new Permission { Name = "assetexpenses.view", DisplayName = "عرض مصاريف الأصول", Category = "الأصول" },
                 new Permission { Name = "assetexpenses.create", DisplayName = "إنشاء مصروف أصل", Category = "الأصول" },
                 new Permission { Name = "systemsettings.view", DisplayName = "عرض إعدادات النظام", Category = "إعدادات النظام" },
@@ -315,6 +319,11 @@ namespace AccountingSystem.Data
             if (!context.SystemSettings.Any(s => s.Key == "AssetsParentAccountCode"))
             {
                 context.SystemSettings.Add(new SystemSetting { Key = "AssetsParentAccountCode", Value = null });
+            }
+
+            if (!context.SystemSettings.Any(s => s.Key == "AssetTypesParentAccountCode"))
+            {
+                context.SystemSettings.Add(new SystemSetting { Key = "AssetTypesParentAccountCode", Value = null });
             }
 
             await context.SaveChangesAsync();

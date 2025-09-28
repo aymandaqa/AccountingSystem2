@@ -20,9 +20,9 @@
                     <span asp-validation-for="Name" class="text-danger"></span>
                 </div>
                 <div class="col-md-6">
-                    <label asp-for="Type" class="form-label"></label>
-                    <input asp-for="Type" class="form-control" />
-                    <span asp-validation-for="Type" class="text-danger"></span>
+                    <label asp-for="AssetTypeId" class="form-label"></label>
+                    <select asp-for="AssetTypeId" asp-items="Model.AssetTypes" class="form-select"></select>
+                    <span asp-validation-for="AssetTypeId" class="text-danger"></span>
                 </div>
                 <div class="col-md-6">
                     <label asp-for="BranchId" class="form-label"></label>

@@ -125,6 +125,9 @@ namespace AccountingSystem.Migrations
                     b.Property<int?>("AccountId")
                         .HasColumnType("int");
 
+                    b.Property<int>("AssetTypeId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -140,11 +143,6 @@ namespace AccountingSystem.Migrations
                     b.Property<decimal>("OpeningBalance")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -152,9 +150,35 @@ namespace AccountingSystem.Migrations
 
                     b.HasIndex("AccountId");
 
+                    b.HasIndex("AssetTypeId");
+
                     b.HasIndex("BranchId");
 
                     b.ToTable("Assets");
+                });
+
+            modelBuilder.Entity("AccountingSystem.Models.AssetType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId")
+                        .IsUnique();
+
+                    b.ToTable("AssetTypes");
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.AssetExpense", b =>
@@ -1884,6 +1908,12 @@ namespace AccountingSystem.Migrations
                         .HasForeignKey("AccountId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("AccountingSystem.Models.AssetType", "AssetType")
+                        .WithMany("Assets")
+                        .HasForeignKey("AssetTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("AccountingSystem.Models.Branch", "Branch")
                         .WithMany("Assets")
                         .HasForeignKey("BranchId")
@@ -1892,7 +1922,22 @@ namespace AccountingSystem.Migrations
 
                     b.Navigation("Account");
 
+                    b.Navigation("AssetType");
+
                     b.Navigation("Branch");
+                });
+
+            modelBuilder.Entity("AccountingSystem.Models.AssetType", b =>
+                {
+                    b.HasOne("AccountingSystem.Models.Account", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+
+                    b.Navigation("Assets");
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.AssetExpense", b =>
@@ -2400,6 +2445,11 @@ namespace AccountingSystem.Migrations
             modelBuilder.Entity("AccountingSystem.Models.Asset", b =>
                 {
                     b.Navigation("Expenses");
+                });
+
+            modelBuilder.Entity("AccountingSystem.Models.AssetType", b =>
+                {
+                    b.Navigation("Assets");
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.Branch", b =>
