@@ -317,6 +317,7 @@ namespace AccountingSystem.ViewModels
     public class AccountTransactionViewModel
     {
         public DateTime Date { get; set; }
+        public int JournalEntryId { get; set; }
         public string JournalEntryNumber { get; set; } = string.Empty;
         public string Reference { get; set; } = string.Empty;
         public string MovementType { get; set; } = string.Empty;

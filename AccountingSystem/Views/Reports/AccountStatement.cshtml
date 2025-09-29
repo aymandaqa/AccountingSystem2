@@ -28,7 +28,7 @@
                                 {
                                     @foreach (var account in Model.Accounts)
                                     {
-                                        <option value="@account.Value">@account.Text</option>
+                                        <option value="@account.Value" @(account.Selected ? "selected" : string.Empty)>@account.Text</option>
                                     }
                                 }
                             </select>
@@ -41,18 +41,18 @@
                                 {
                                     @foreach (var branch in Model.Branches)
                                     {
-                                        <option value="@branch.Value">@branch.Text</option>
+                                        <option value="@branch.Value" @(branch.Selected ? "selected" : string.Empty)>@branch.Text</option>
                                     }
                                 }
                             </select>
                         </div>
                         <div class="col-md-2">
                             <label for="fromDate" class="form-label">من تاريخ:</label>
-                            <input type="date" name="fromDate" id="fromDate" class="form-control" value="@DateTime.Now.AddMonths(-1).ToString("yyyy-MM-dd")" />
+                            <input type="date" name="fromDate" id="fromDate" class="form-control" value="@(Model != null ? Model.FromDate.ToString("yyyy-MM-dd") : DateTime.Now.AddMonths(-1).ToString("yyyy-MM-dd"))" />
                         </div>
                         <div class="col-md-2">
                             <label for="toDate" class="form-label">إلى تاريخ:</label>
-                            <input type="date" name="toDate" id="toDate" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                            <input type="date" name="toDate" id="toDate" class="form-control" value="@(Model != null ? Model.ToDate.ToString("yyyy-MM-dd") : DateTime.Now.ToString("yyyy-MM-dd"))" />
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">&nbsp;</label>
@@ -83,6 +83,13 @@
                             </div>
                         </div>
 
+                        <div class="d-flex justify-content-end mb-3">
+                            <a class="btn btn-outline-primary" target="_blank" href="@Url.Action("PrintAccountStatement", "Reports", new { accountId = Model.AccountId, branchId = Model.BranchId, fromDate = Model.FromDate.ToString("yyyy-MM-dd"), toDate = Model.ToDate.ToString("yyyy-MM-dd") })">
+                                <i class="fas fa-print me-1"></i>
+                                طباعة A4
+                            </a>
+                        </div>
+
                         <!-- جدول الحركات -->
                         <div class="table-responsive">
                             <table class="table table-striped table-hover">
@@ -105,8 +112,17 @@
                                         {
                                             <tr>
                                                 <td>@transaction.Date.ToString("yyyy/MM/dd")</td>
-                                                <td>@transaction.JournalEntryNumber</td>
-                                                <td>@(string.IsNullOrWhiteSpace(transaction.Reference) ? "-" : transaction.Reference)</td>
+                                                <td>
+                                                    <a href="@Url.Action("Details", "JournalEntries", new { id = transaction.JournalEntryId })" class="text-decoration-none" target="_blank">
+                                                        @transaction.JournalEntryNumber
+                                                    </a>
+                                                </td>
+                                                <td>
+                                                    <a href="@Url.Action("Details", "JournalEntries", new { id = transaction.JournalEntryId })" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                                        <i class="fas fa-link me-1"></i>
+                                                        @(string.IsNullOrWhiteSpace(transaction.Reference) ? "عرض القيد" : transaction.Reference)
+                                                    </a>
+                                                </td>
                                                 <td>@transaction.MovementType</td>
                                                 <td>@transaction.Description</td>
                                                 <td class="text-end">
