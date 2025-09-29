@@ -28,7 +28,7 @@
                                 {
                                     @foreach (var account in Model.Accounts)
                                     {
-                                        <option value="@account.Value" @(account.Selected ? "selected" : string.Empty)>@account.Text</option>
+                                        <option value="@account.Value" selected="@(account.Selected ? "selected" : null)">@account.Text</option>
                                     }
                                 }
                             </select>
@@ -41,7 +41,7 @@
                                 {
                                     @foreach (var branch in Model.Branches)
                                     {
-                                        <option value="@branch.Value" @(branch.Selected ? "selected" : string.Empty)>@branch.Text</option>
+                                        <option value="@branch.Value" selected="@(branch.Selected ? "selected" : null)">@branch.Text</option>
                                     }
                                 }
                             </select>
