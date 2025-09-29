@@ -231,9 +231,9 @@
                                 @if (Model.CashBoxes.Any())
                                 {
                                     var groupedCashBoxes = Model.CashBoxes
-                                        .GroupBy(cb => string.IsNullOrWhiteSpace(cb.BranchName) ? "غير محدد" : cb.BranchName)
-                                        .OrderBy(g => g.Key)
-                                        .ToList();
+                                    .GroupBy(cb => string.IsNullOrWhiteSpace(cb.BranchName) ? "غير محدد" : cb.BranchName)
+                                    .OrderBy(g => g.Key)
+                                    .ToList();
                                     <div class="cashbox-tree">
                                         @foreach (var branchGroup in groupedCashBoxes)
                                         {
@@ -446,16 +446,16 @@
             gap: 0.35rem;
         }
 
-        .toolbar-chip .chip-label {
-            font-size: 0.75rem;
-            color: #6c757d;
-            text-transform: uppercase;
-        }
+            .toolbar-chip .chip-label {
+                font-size: 0.75rem;
+                color: #6c757d;
+                text-transform: uppercase;
+            }
 
-        .toolbar-chip .chip-value {
-            font-weight: 600;
-            color: #212529;
-        }
+            .toolbar-chip .chip-value {
+                font-weight: 600;
+                color: #212529;
+            }
 
         .dashboard-layout {
             display: grid;
@@ -491,20 +491,20 @@
             position: relative;
         }
 
-        .search-field > i {
-            position: absolute;
-            inset-inline-end: 1rem;
-            inset-block-start: 50%;
-            transform: translateY(-50%);
-            color: #6c757d;
-            pointer-events: none;
-        }
+            .search-field > i {
+                position: absolute;
+                inset-inline-end: 1rem;
+                inset-block-start: 50%;
+                transform: translateY(-50%);
+                color: #6c757d;
+                pointer-events: none;
+            }
 
-        .search-field .form-select,
-        .search-field .form-control {
-            padding-inline-end: 2.75rem;
-            border-radius: 12px;
-        }
+            .search-field .form-select,
+            .search-field .form-control {
+                padding-inline-end: 2.75rem;
+                border-radius: 12px;
+            }
 
         .dashboard-search-suggestions {
             display: grid;
@@ -534,15 +534,15 @@
             gap: 0.65rem;
         }
 
-        .suggestion-list a {
-            color: #0d6efd;
-            text-decoration: none;
-            font-weight: 500;
-        }
+            .suggestion-list a {
+                color: #0d6efd;
+                text-decoration: none;
+                font-weight: 500;
+            }
 
-        .suggestion-list a:hover {
-            text-decoration: underline;
-        }
+                .suggestion-list a:hover {
+                    text-decoration: underline;
+                }
 
         .dashboard-stats-grid {
             display: grid;
@@ -562,39 +562,56 @@
             align-items: center;
         }
 
-        .stat-card .stat-icon {
-            font-size: 2rem;
-            opacity: 0.85;
+            .stat-card .stat-icon {
+                font-size: 2rem;
+                opacity: 0.85;
+            }
+
+            .stat-card .stat-title {
+                font-size: 0.9rem;
+                letter-spacing: 0.5px;
+                text-transform: uppercase;
+                opacity: 0.85;
+            }
+
+            .stat-card .stat-value {
+                font-size: 1.5rem;
+                font-weight: 700;
+                display: block;
+            }
+
+            .stat-card .stat-sub {
+                font-size: 0.85rem;
+                opacity: 0.75;
+            }
+
+            .stat-card small {
+                font-weight: 500;
+            }
+
+        .gradient-primary {
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
         }
 
-        .stat-card .stat-title {
-            font-size: 0.9rem;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            opacity: 0.85;
+        .gradient-danger {
+            background: linear-gradient(135deg, #ef4444, #f97316);
         }
 
-        .stat-card .stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            display: block;
+        .gradient-secondary {
+            background: linear-gradient(135deg, #6b7280, #4b5563);
         }
 
-        .stat-card .stat-sub {
-            font-size: 0.85rem;
-            opacity: 0.75;
+        .gradient-success {
+            background: linear-gradient(135deg, #10b981, #22d3ee);
         }
 
-        .stat-card small {
-            font-weight: 500;
+        .gradient-warning {
+            background: linear-gradient(135deg, #f59e0b, #f97316);
         }
 
-        .gradient-primary { background: linear-gradient(135deg, #2563eb, #7c3aed); }
-        .gradient-danger { background: linear-gradient(135deg, #ef4444, #f97316); }
-        .gradient-secondary { background: linear-gradient(135deg, #6b7280, #4b5563); }
-        .gradient-success { background: linear-gradient(135deg, #10b981, #22d3ee); }
-        .gradient-warning { background: linear-gradient(135deg, #f59e0b, #f97316); }
-        .gradient-info { background: linear-gradient(135deg, #14b8a6, #06b6d4); }
+        .gradient-info {
+            background: linear-gradient(135deg, #14b8a6, #06b6d4);
+        }
 
         .cashbox-card .card-header,
         .account-tree-card .card-header,
@@ -604,11 +621,11 @@
             border-bottom: none;
         }
 
-        .cashbox-card .card-header h5,
-        .account-tree-card .card-header h5,
-        .quick-links-card .card-header h5 {
-            font-weight: 700;
-        }
+            .cashbox-card .card-header h5,
+            .account-tree-card .card-header h5,
+            .quick-links-card .card-header h5 {
+                font-weight: 700;
+            }
 
         .quick-links-grid {
             display: grid;
@@ -629,15 +646,15 @@
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
-        .quick-link-tile i {
-            font-size: 1.5rem;
-            color: #2563eb;
-        }
+            .quick-link-tile i {
+                font-size: 1.5rem;
+                color: #2563eb;
+            }
 
-        .quick-link-tile:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 14px 30px rgba(37, 99, 235, 0.2);
-        }
+            .quick-link-tile:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 14px 30px rgba(37, 99, 235, 0.2);
+            }
 
         .side-card .summary-item {
             display: flex;
@@ -648,9 +665,9 @@
             gap: 1rem;
         }
 
-        .side-card .summary-item:last-child {
-            border-bottom: none;
-        }
+            .side-card .summary-item:last-child {
+                border-bottom: none;
+            }
 
         .summary-label {
             font-weight: 600;
@@ -671,15 +688,15 @@
             gap: 0.75rem;
         }
 
-        .side-actions a {
-            color: #2563eb;
-            text-decoration: none;
-            font-weight: 500;
-        }
+            .side-actions a {
+                color: #2563eb;
+                text-decoration: none;
+                font-weight: 500;
+            }
 
-        .side-actions a:hover {
-            text-decoration: underline;
-        }
+                .side-actions a:hover {
+                    text-decoration: underline;
+                }
 
         .currency-badges {
             display: flex;
@@ -737,9 +754,9 @@
             text-align: center;
         }
 
-        .toggle-btn:hover {
-            color: #495057;
-        }
+            .toggle-btn:hover {
+                color: #495057;
+            }
 
         .cashbox-tree {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -776,10 +793,10 @@
             transition: all 0.2s ease;
         }
 
-        .cashbox-toggle:hover {
-            color: #0d6efd;
-            background-color: rgba(13, 110, 253, 0.1);
-        }
+            .cashbox-toggle:hover {
+                color: #0d6efd;
+                background-color: rgba(13, 110, 253, 0.1);
+            }
 
         .cashbox-card-toggle {
             min-width: 32px;
@@ -821,9 +838,9 @@
             gap: 0.75rem;
         }
 
-        .cashbox-leaf:last-child {
-            border-bottom: none;
-        }
+            .cashbox-leaf:last-child {
+                border-bottom: none;
+            }
 
         .cashbox-leaf-info {
             display: flex;
@@ -845,7 +862,7 @@
             font-size: 0.95rem;
         }
 
-        @media (max-width: 1200px) {
+        @@media (max-width: 1200px) {
             .dashboard-layout {
                 grid-template-columns: 1fr;
             }
@@ -855,7 +872,7 @@
             }
         }
 
-        @media (max-width: 768px) {
+        @@media (max-width: 768px) {
             .dashboard-toolbar .card-body {
                 flex-direction: column;
                 align-items: flex-start;
@@ -870,7 +887,7 @@
             }
         }
 
-        @media (max-width: 576px) {
+        @@media (max-width: 576px) {
             .cashbox-node-content {
                 flex-direction: column;
                 align-items: flex-start;
