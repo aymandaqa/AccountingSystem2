@@ -42,6 +42,170 @@ namespace AccountingSystem.Controllers
             return View();
         }
 
+        [Authorize(Policy = "reports.view")]
+        public async Task<IActionResult> UserCashTransactions(string? type, int? accountId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Challenge();
+            }
+
+            var normalizedType = string.IsNullOrWhiteSpace(type)
+                ? "all"
+                : type.Trim().ToLowerInvariant();
+
+            if (normalizedType != "payment" && normalizedType != "receipt")
+            {
+                normalizedType = "all";
+            }
+
+            var paymentVouchers = await _context.PaymentVouchers
+                .AsNoTracking()
+                .Where(v => v.CreatedById == userId)
+                .Include(v => v.Currency)
+                .Include(v => v.Account)
+                .Include(v => v.CreatedBy)
+                    .ThenInclude(u => u.PaymentAccount)
+                .ToListAsync();
+
+            var receiptVouchers = await _context.ReceiptVouchers
+                .AsNoTracking()
+                .Where(v => v.CreatedById == userId)
+                .Include(v => v.Currency)
+                .Include(v => v.Account)
+                .ToListAsync();
+
+            var references = new List<string>();
+            references.AddRange(paymentVouchers.Select(v => $"PAYV:{v.Id}"));
+            references.AddRange(receiptVouchers.Select(v => $"RCV:{v.Id}"));
+
+            var journalEntries = references.Count == 0
+                ? new Dictionary<string, JournalEntry>()
+                : await _context.JournalEntries
+                    .AsNoTracking()
+                    .Where(e => e.Reference != null && references.Contains(e.Reference))
+                    .ToDictionaryAsync(e => e.Reference!);
+
+            var accountIds = paymentVouchers
+                .Select(v => v.IsCash ? v.CreatedBy.PaymentAccountId : v.AccountId)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .Concat(receiptVouchers.Select(v => v.AccountId))
+                .Distinct()
+                .ToList();
+
+            var accounts = accountIds.Count == 0
+                ? new Dictionary<int, Account>()
+                : await _context.Accounts
+                    .AsNoTracking()
+                    .Where(a => accountIds.Contains(a.Id))
+                    .ToDictionaryAsync(a => a.Id);
+
+            var items = new List<UserCashTransactionReportItem>();
+
+            if (normalizedType != "payment")
+            {
+                foreach (var receipt in receiptVouchers)
+                {
+                    if (accountId.HasValue && receipt.AccountId != accountId.Value)
+                    {
+                        continue;
+                    }
+
+                    var reference = $"RCV:{receipt.Id}";
+                    journalEntries.TryGetValue(reference, out var entry);
+
+                    items.Add(new UserCashTransactionReportItem
+                    {
+                        Date = receipt.Date,
+                        Type = CashTransactionType.Receipt,
+                        AccountId = receipt.AccountId,
+                        AccountName = accounts.TryGetValue(receipt.AccountId, out var account)
+                            ? account.NameAr
+                            : receipt.Account?.NameAr ?? "-",
+                        Amount = receipt.Amount,
+                        Currency = receipt.Currency.Code,
+                        Reference = reference,
+                        Notes = receipt.Notes,
+                        JournalEntryId = entry?.Id,
+                        JournalEntryNumber = entry?.Number
+                    });
+                }
+            }
+
+            if (normalizedType != "receipt")
+            {
+                foreach (var payment in paymentVouchers)
+                {
+                    var paymentAccountId = payment.IsCash
+                        ? payment.CreatedBy.PaymentAccountId
+                        : payment.AccountId;
+
+                    if (accountId.HasValue && paymentAccountId != accountId.Value)
+                    {
+                        continue;
+                    }
+
+                    var reference = $"PAYV:{payment.Id}";
+                    journalEntries.TryGetValue(reference, out var entry);
+
+                    string accountName = "-";
+                    if (paymentAccountId.HasValue && accounts.TryGetValue(paymentAccountId.Value, out var account))
+                    {
+                        accountName = account.NameAr;
+                    }
+                    else if (payment.IsCash && payment.CreatedBy.PaymentAccount != null)
+                    {
+                        accountName = payment.CreatedBy.PaymentAccount.NameAr;
+                    }
+                    else if (payment.Account != null)
+                    {
+                        accountName = payment.Account.NameAr;
+                    }
+
+                    items.Add(new UserCashTransactionReportItem
+                    {
+                        Date = payment.Date,
+                        Type = CashTransactionType.Payment,
+                        AccountId = paymentAccountId,
+                        AccountName = accountName,
+                        Amount = payment.Amount,
+                        Currency = payment.Currency.Code,
+                        Reference = reference,
+                        Notes = payment.Notes,
+                        JournalEntryId = entry?.Id,
+                        JournalEntryNumber = entry?.Number
+                    });
+                }
+            }
+
+            var orderedItems = items
+                .OrderByDescending(i => i.Date)
+                .ThenBy(i => i.Reference)
+                .ToList();
+
+            var accountOptions = accounts.Values
+                .OrderBy(a => a.NameAr)
+                .Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = $"{a.Code} - {a.NameAr}",
+                    Selected = accountId.HasValue && a.Id == accountId.Value
+                })
+                .ToList();
+
+            var viewModel = new UserCashTransactionReportViewModel
+            {
+                SelectedType = normalizedType,
+                SelectedAccountId = accountId,
+                Accounts = accountOptions,
+                Items = orderedItems
+            };
+
+            return View(viewModel);
+        }
+
         [Authorize(Policy = "reports.dynamic")]
         public IActionResult DynamicPivot()
         {

@@ -1,0 +1,104 @@
+@model AccountingSystem.ViewModels.UserCashTransactionReportViewModel
+@{
+    ViewData["Title"] = "تقرير تحركات المستخدم النقدية";
+    Layout = "~/Views/Shared/_AccountingLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-wallet me-2"></i>
+                تقرير الحركات حسب نوع القيد وحساب المستخدم
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="type" class="form-label">نوع الحركة</label>
+                    <select id="type" name="type" class="form-select">
+                        <option value="all" @(Model.SelectedType == "all" ? "selected" : string.Empty)>جميع الأنواع</option>
+                        <option value="receipt" @(Model.SelectedType == "receipt" ? "selected" : string.Empty)>سندات القبض</option>
+                        <option value="payment" @(Model.SelectedType == "payment" ? "selected" : string.Empty)>سندات الدفع</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="accountId" class="form-label">الحساب</label>
+                    <select id="accountId" name="accountId" class="form-select">
+                        <option value="">جميع الحسابات</option>
+                        @foreach (var account in Model.Accounts)
+                        {
+                            <option value="@account.Value" @(account.Selected ? "selected" : string.Empty)>@account.Text</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search me-1"></i>
+                        عرض النتائج
+                    </button>
+                </div>
+            </form>
+
+            <div class="table-responsive mt-4">
+                <table class="table table-striped table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>نوع القيد</th>
+                            <th>الحساب</th>
+                            <th>المبلغ</th>
+                            <th>العملة</th>
+                            <th>المرجع</th>
+                            <th>القيد المحاسبي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Items.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    لا توجد حركات مطابقة لخيارات البحث الحالية.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            foreach (var item in Model.Items)
+                            {
+                                <tr>
+                                    <td>@item.Date.ToString("yyyy-MM-dd")</td>
+                                    <td>@item.TypeDisplay</td>
+                                    <td>@item.AccountName</td>
+                                    <td>@item.Amount.ToString("N2")</td>
+                                    <td>@item.Currency</td>
+                                    <td>@item.Reference</td>
+                                    <td>
+                                        @if (item.JournalEntryId.HasValue)
+                                        {
+                                            <div class="d-flex flex-column">
+                                                <span class="fw-semibold">@item.JournalEntryNumber</span>
+                                                <a asp-controller="JournalEntries"
+                                                   asp-action="Details"
+                                                   asp-route-id="@item.JournalEntryId.Value"
+                                                   asp-require-permission="journal.view"
+                                                   class="btn btn-sm btn-outline-primary mt-2">
+                                                    <i class="fas fa-book-open me-1"></i>
+                                                    عرض القيد
+                                                </a>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">لا يوجد قيد مرتبط</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
