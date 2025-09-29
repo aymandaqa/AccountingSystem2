@@ -83,6 +83,7 @@ namespace AccountingSystem.Controllers
 
             model.CreatedById = user.Id;
             _context.ReceiptVouchers.Add(model);
+            await _context.SaveChangesAsync();
 
             var lines = new List<JournalEntryLine>
             {
@@ -90,13 +91,16 @@ namespace AccountingSystem.Controllers
                 new JournalEntryLine { AccountId = model.AccountId, CreditAmount = model.Amount }
             };
 
+            var reference = $"RCV:{model.Id}";
+
             await _journalEntryService.CreateJournalEntryAsync(
                 model.Date,
                 model.Notes ?? "سند قبض",
                 user.PaymentBranchId.Value,
                 user.Id,
                 lines,
-                JournalEntryStatus.Posted);
+                JournalEntryStatus.Posted,
+                reference: reference);
 
             return RedirectToAction(nameof(Index));
         }

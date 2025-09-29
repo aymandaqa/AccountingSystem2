@@ -1876,6 +1876,8 @@ namespace AccountingSystem.Controllers
                         {
                             Date = line.JournalEntry.Date,
                             JournalEntryNumber = line.JournalEntry.Number,
+                            Reference = line.JournalEntry.Reference ?? string.Empty,
+                            MovementType = line.JournalEntry.Description,
                             Description = line.Description ?? string.Empty,
                             DebitAmount = line.DebitAmount,
                             CreditAmount = line.CreditAmount,

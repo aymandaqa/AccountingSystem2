@@ -85,6 +85,7 @@ namespace AccountingSystem.Controllers
 
             model.CreatedById = user.Id;
             _context.DisbursementVouchers.Add(model);
+            await _context.SaveChangesAsync();
 
             var lines = new List<JournalEntryLine>
             {
@@ -92,13 +93,16 @@ namespace AccountingSystem.Controllers
                 new JournalEntryLine { AccountId = user.PaymentAccountId.Value, CreditAmount = model.Amount }
             };
 
+            var reference = $"DSBV:{model.Id}";
+
             await _journalEntryService.CreateJournalEntryAsync(
                 model.Date,
                 model.Notes ?? "سند صرف",
                 user.PaymentBranchId.Value,
                 user.Id,
                 lines,
-                JournalEntryStatus.Posted);
+                JournalEntryStatus.Posted,
+                reference: reference);
 
             return RedirectToAction(nameof(Index));
         }

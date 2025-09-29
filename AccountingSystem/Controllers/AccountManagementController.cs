@@ -1259,7 +1259,14 @@ namespace Roadfn.Controllers
                     lines.Add(PayCashAccountsDriverAttxn);
                     #endregion
 
-                    await _journalEntryService.CreateJournalEntryAsync(DateTime.Now, "DriverInvoice_" + driverPaymentHeader.Id, Accbrn.Id, user.Id, lines, JournalEntryStatus.Posted);
+                    await _journalEntryService.CreateJournalEntryAsync(
+                        DateTime.Now,
+                        "DriverInvoice_" + driverPaymentHeader.Id,
+                        Accbrn.Id,
+                        user.Id,
+                        lines,
+                        JournalEntryStatus.Posted,
+                        reference: $"DriverInvoice:{driverPaymentHeader.Id}");
 
                 }
 
@@ -1451,7 +1458,14 @@ namespace Roadfn.Controllers
                     CustomerAccounttxn.Description = sh.ShipmentTrackingNo;
                     lines.Add(CustomerAccounttxn);
                     #endregion
-                    await _journalEntryService.CreateJournalEntryAsync(DateTime.Now, "Business_" + bisnessUserPaymentHeader.Id, Accbrn.Id, user.Id, lines, JournalEntryStatus.Posted);
+                    await _journalEntryService.CreateJournalEntryAsync(
+                        DateTime.Now,
+                        "Business_" + bisnessUserPaymentHeader.Id,
+                        Accbrn.Id,
+                        user.Id,
+                        lines,
+                        JournalEntryStatus.Posted,
+                        reference: $"BusinessInvoice:{bisnessUserPaymentHeader.Id}");
 
                 }
 

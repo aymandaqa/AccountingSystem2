@@ -56,6 +56,7 @@ namespace AccountingSystem.Services
                 {
                     AccountId = line.AccountId,
                     Description = string.IsNullOrWhiteSpace(line.Description) ? entry.Description : line.Description,
+                    Reference = line.Reference,
                     DebitAmount = line.DebitAmount,
                     CreditAmount = line.CreditAmount
                 });

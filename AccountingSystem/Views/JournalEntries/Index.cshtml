@@ -74,6 +74,7 @@
                                 <option value="BranchName">حسب الفرع</option>
                                 <option value="StatusDisplay">حسب الحالة</option>
                                 <option value="DateGroup">حسب الشهر</option>
+                                <option value="Reference" selected>حسب المرجع</option>
                             </select>
                         </div>
                         <div class="col-sm-6 col-lg-3 d-flex">
@@ -157,7 +158,7 @@
             var trackedRequestTypes = ['paging', 'sorting', 'filtering', 'searching', 'grouping', 'ungrouping', 'refresh'];
 
             grid.pageSettings = { pageSize: 10, pageSizes: [10, 25, 50, 100, 'All'] };
-            grid.groupSettings = { showDropArea: false };
+            grid.groupSettings = { showDropArea: false, columns: ['Reference'] };
 
             grid.actionBegin = function (args) {
                 if (trackedRequestTypes.indexOf(args.requestType) > -1) {
@@ -225,12 +226,13 @@
                     document.getElementById('toDate').value = '';
                     document.getElementById('branchFilter').selectedIndex = 0;
                     document.getElementById('statusFilter').selectedIndex = 0;
-                    document.getElementById('groupBy').value = '';
+                    document.getElementById('groupBy').value = 'Reference';
 
                     grid.clearFiltering();
                     grid.clearSorting();
                     grid.searchSettings.key = '';
                     grid.clearGrouping();
+                    grid.groupColumn('Reference');
                     grid.pageSettings.currentPage = 1;
                     reloadGrid();
                 });
@@ -238,6 +240,10 @@
 
             var groupSelect = document.getElementById('groupBy');
             if (groupSelect) {
+                if (groupSelect.value) {
+                    grid.clearGrouping();
+                    grid.groupColumn(groupSelect.value);
+                }
                 groupSelect.addEventListener('change', function (event) {
                     grid.clearGrouping();
                     var value = event.target.value;

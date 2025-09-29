@@ -169,6 +169,7 @@ namespace AccountingSystem.Controllers
             };
 
             _context.AssetExpenses.Add(assetExpense);
+            await _context.SaveChangesAsync();
 
             var lines = new List<JournalEntryLine>
             {
@@ -186,15 +187,16 @@ namespace AccountingSystem.Controllers
                 }
             }
 
+            var reference = $"ASSETEXP:{assetExpense.Id}";
+
             await _journalEntryService.CreateJournalEntryAsync(
                 assetExpense.Date,
                 assetExpense.Notes == null ? "مصروف أصل" : "مصروف أصل" + Environment.NewLine + assetExpense.Notes,
                 asset!.BranchId,
                 user.Id,
                 lines,
-                JournalEntryStatus.Posted);
-
-            await _context.SaveChangesAsync();
+                JournalEntryStatus.Posted,
+                reference: reference);
 
             return RedirectToAction(nameof(Index));
         }
