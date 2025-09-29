@@ -1821,82 +1821,17 @@ namespace AccountingSystem.Controllers
         // GET: Reports/AccountStatement
         public async Task<IActionResult> AccountStatement(int? accountId, int? branchId, DateTime? fromDate, DateTime? toDate)
         {
-            var baseCurrency = await _context.Currencies.FirstAsync(c => c.IsBase);
-            var viewModel = new AccountStatementViewModel
+            var viewModel = await BuildAccountStatementViewModel(accountId, branchId, fromDate, toDate);
+            return View(viewModel);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> PrintAccountStatement(int? accountId, int? branchId, DateTime? fromDate, DateTime? toDate)
+        {
+            var viewModel = await BuildAccountStatementViewModel(accountId, branchId, fromDate, toDate);
+            if (viewModel.AccountId == null)
             {
-                FromDate = fromDate ?? DateTime.Now.AddMonths(-1),
-                ToDate = toDate ?? DateTime.Now,
-                BranchId = branchId,
-                Accounts = await _context.Accounts
-                    .Where(a => a.CanPostTransactions)
-                    .Select(a => new SelectListItem
-                    {
-                        Value = a.Id.ToString(),
-                        Text = $"{a.Code} - {a.NameAr}"
-                    }).ToListAsync(),
-                Branches = await GetBranchesSelectList(),
-                BaseCurrencyCode = baseCurrency.Code
-            };
-
-            if (accountId.HasValue)
-            {
-                var account = await _context.Accounts
-                    .Include(a => a.Currency)
-                    .FirstOrDefaultAsync(a => a.Id == accountId.Value);
-                if (account != null)
-                {
-                    viewModel.AccountId = accountId;
-                    viewModel.AccountCode = account.Code;
-                    viewModel.AccountName = account.NameAr;
-                    viewModel.CurrencyCode = account.Currency.Code;
-
-                    var lines = await _context.JournalEntryLines
-                        .Include(l => l.JournalEntry)
-                        .Where(l => l.AccountId == accountId.Value)
-                        .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
-                        .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
-                        .Where(l => l.JournalEntry.Date >= viewModel.FromDate && l.JournalEntry.Date <= viewModel.ToDate)
-                        .OrderBy(l => l.JournalEntry.Date)
-                        .ThenBy(l => l.JournalEntry.Number)
-                        .ToListAsync();
-
-                    decimal running = account.OpeningBalance;
-                    decimal runningBase = _currencyService.Convert(running, account.Currency, baseCurrency);
-                    foreach (var line in lines)
-                    {
-                        var debitBase = _currencyService.Convert(line.DebitAmount, account.Currency, baseCurrency);
-                        var creditBase = _currencyService.Convert(line.CreditAmount, account.Currency, baseCurrency);
-                        running += account.Nature == AccountNature.Debit
-                            ? line.DebitAmount - line.CreditAmount
-                            : line.CreditAmount - line.DebitAmount;
-                        runningBase += account.Nature == AccountNature.Debit
-                            ? debitBase - creditBase
-                            : creditBase - debitBase;
-                        viewModel.Transactions.Add(new AccountTransactionViewModel
-                        {
-                            Date = line.JournalEntry.Date,
-                            JournalEntryNumber = line.JournalEntry.Number,
-                            Reference = line.JournalEntry.Reference ?? string.Empty,
-                            MovementType = line.JournalEntry.Description,
-                            Description = line.Description ?? string.Empty,
-                            DebitAmount = line.DebitAmount,
-                            CreditAmount = line.CreditAmount,
-                            RunningBalance = running,
-                            DebitAmountBase = debitBase,
-                            CreditAmountBase = creditBase,
-                            RunningBalanceBase = runningBase
-                        });
-                    }
-
-                    viewModel.OpeningBalance = account.OpeningBalance;
-                    viewModel.OpeningBalanceBase = _currencyService.Convert(account.OpeningBalance, account.Currency, baseCurrency);
-                    viewModel.ClosingBalance = running;
-                    viewModel.ClosingBalanceBase = runningBase;
-                    viewModel.TotalDebit = viewModel.Transactions.Sum(t => t.DebitAmount);
-                    viewModel.TotalCredit = viewModel.Transactions.Sum(t => t.CreditAmount);
-                    viewModel.TotalDebitBase = viewModel.Transactions.Sum(t => t.DebitAmountBase);
-                    viewModel.TotalCreditBase = viewModel.Transactions.Sum(t => t.CreditAmountBase);
-                }
+                return RedirectToAction(nameof(AccountStatement), new { accountId, branchId, fromDate, toDate });
             }
 
             return View(viewModel);
@@ -1964,6 +1899,102 @@ namespace AccountingSystem.Controllers
                     Value = b.Id.ToString(),
                     Text = b.NameAr
                 }).ToListAsync();
+        }
+
+        private async Task<AccountStatementViewModel> BuildAccountStatementViewModel(int? accountId, int? branchId, DateTime? fromDate, DateTime? toDate)
+        {
+            var baseCurrency = await _context.Currencies.FirstAsync(c => c.IsBase);
+            var accounts = await _context.Accounts
+                .Where(a => a.CanPostTransactions)
+                .Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = $"{a.Code} - {a.NameAr}",
+                    Selected = accountId.HasValue && a.Id == accountId.Value
+                }).ToListAsync();
+
+            var branches = await GetBranchesSelectList();
+            foreach (var branch in branches)
+            {
+                if (branchId.HasValue && int.TryParse(branch.Value, out var branchValue))
+                {
+                    branch.Selected = branchValue == branchId.Value;
+                }
+            }
+
+            var viewModel = new AccountStatementViewModel
+            {
+                FromDate = fromDate ?? DateTime.Now.AddMonths(-1),
+                ToDate = toDate ?? DateTime.Now,
+                BranchId = branchId,
+                Accounts = accounts,
+                Branches = branches,
+                BaseCurrencyCode = baseCurrency.Code
+            };
+
+            if (accountId.HasValue)
+            {
+                var account = await _context.Accounts
+                    .Include(a => a.Currency)
+                    .FirstOrDefaultAsync(a => a.Id == accountId.Value);
+                if (account != null)
+                {
+                    viewModel.AccountId = accountId;
+                    viewModel.AccountCode = account.Code;
+                    viewModel.AccountName = account.NameAr;
+                    viewModel.CurrencyCode = account.Currency.Code;
+
+                    var lines = await _context.JournalEntryLines
+                        .Include(l => l.JournalEntry)
+                        .Where(l => l.AccountId == accountId.Value)
+                        .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
+                        .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
+                        .Where(l => l.JournalEntry.Date >= viewModel.FromDate && l.JournalEntry.Date <= viewModel.ToDate)
+                        .OrderBy(l => l.JournalEntry.Date)
+                        .ThenBy(l => l.JournalEntry.Number)
+                        .ToListAsync();
+
+                    decimal running = account.OpeningBalance;
+                    decimal runningBase = _currencyService.Convert(running, account.Currency, baseCurrency);
+                    foreach (var line in lines)
+                    {
+                        var debitBase = _currencyService.Convert(line.DebitAmount, account.Currency, baseCurrency);
+                        var creditBase = _currencyService.Convert(line.CreditAmount, account.Currency, baseCurrency);
+                        running += account.Nature == AccountNature.Debit
+                            ? line.DebitAmount - line.CreditAmount
+                            : line.CreditAmount - line.DebitAmount;
+                        runningBase += account.Nature == AccountNature.Debit
+                            ? debitBase - creditBase
+                            : creditBase - debitBase;
+                        viewModel.Transactions.Add(new AccountTransactionViewModel
+                        {
+                            Date = line.JournalEntry.Date,
+                            JournalEntryId = line.JournalEntryId,
+                            JournalEntryNumber = line.JournalEntry.Number,
+                            Reference = line.JournalEntry.Reference ?? string.Empty,
+                            MovementType = line.JournalEntry.Description,
+                            Description = line.Description ?? string.Empty,
+                            DebitAmount = line.DebitAmount,
+                            CreditAmount = line.CreditAmount,
+                            RunningBalance = running,
+                            DebitAmountBase = debitBase,
+                            CreditAmountBase = creditBase,
+                            RunningBalanceBase = runningBase
+                        });
+                    }
+
+                    viewModel.OpeningBalance = account.OpeningBalance;
+                    viewModel.OpeningBalanceBase = _currencyService.Convert(account.OpeningBalance, account.Currency, baseCurrency);
+                    viewModel.ClosingBalance = running;
+                    viewModel.ClosingBalanceBase = runningBase;
+                    viewModel.TotalDebit = viewModel.Transactions.Sum(t => t.DebitAmount);
+                    viewModel.TotalCredit = viewModel.Transactions.Sum(t => t.CreditAmount);
+                    viewModel.TotalDebitBase = viewModel.Transactions.Sum(t => t.DebitAmountBase);
+                    viewModel.TotalCreditBase = viewModel.Transactions.Sum(t => t.CreditAmountBase);
+                }
+            }
+
+            return viewModel;
         }
     }
 }
