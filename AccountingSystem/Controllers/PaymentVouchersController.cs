@@ -132,6 +132,7 @@ namespace AccountingSystem.Controllers
 
             model.CreatedById = user.Id;
             _context.PaymentVouchers.Add(model);
+            await _context.SaveChangesAsync();
 
             var lines = new List<JournalEntryLine>
             {
@@ -145,13 +146,16 @@ namespace AccountingSystem.Controllers
                 lines.Add(new JournalEntryLine { AccountId = user.PaymentAccountId.Value, CreditAmount = model.Amount });
             }
 
+            var reference = $"PAYV:{model.Id}";
+
             await _journalEntryService.CreateJournalEntryAsync(
                 model.Date,
                 model.Notes == null ? "سند دفع" : "سند دفع" + Environment.NewLine + model.Notes,
                 user.PaymentBranchId.Value,
                 user.Id,
                 lines,
-                JournalEntryStatus.Posted);
+                JournalEntryStatus.Posted,
+                reference: reference);
 
             return RedirectToAction(nameof(Index));
         }

@@ -174,13 +174,18 @@ namespace AccountingSystem.Controllers
                         description += Environment.NewLine + asset.Notes;
                     }
 
+                    var reference = !string.IsNullOrWhiteSpace(asset.AssetNumber)
+                        ? $"ASSET:{asset.AssetNumber}"
+                        : $"ASSET:{asset.Id}";
+
                     await _journalEntryService.CreateJournalEntryAsync(
                         DateTime.Now,
                         description,
                         asset.BranchId,
                         user.Id,
                         lines,
-                        JournalEntryStatus.Posted);
+                        JournalEntryStatus.Posted,
+                        reference: reference);
                 }
 
                 await transaction.CommitAsync();

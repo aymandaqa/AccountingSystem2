@@ -90,6 +90,8 @@
                                     <tr>
                                         <th>التاريخ</th>
                                         <th>رقم القيد</th>
+                                        <th>المرجع</th>
+                                        <th>نوع الحركة</th>
                                         <th>البيان</th>
                                         <th>مدين (@Model.CurrencyCode)</th>
                                         <th>دائن (@Model.CurrencyCode)</th>
@@ -104,6 +106,8 @@
                                             <tr>
                                                 <td>@transaction.Date.ToString("yyyy/MM/dd")</td>
                                                 <td>@transaction.JournalEntryNumber</td>
+                                                <td>@(string.IsNullOrWhiteSpace(transaction.Reference) ? "-" : transaction.Reference)</td>
+                                                <td>@transaction.MovementType</td>
                                                 <td>@transaction.Description</td>
                                                 <td class="text-end">
                                                     @if (transaction.DebitAmount > 0)
@@ -137,7 +141,7 @@
                                     else
                                     {
                                         <tr>
-                                            <td colspan="6" class="text-center text-muted py-4">
+                                            <td colspan="8" class="text-center text-muted py-4">
                                                 <i class="fas fa-inbox fa-2x mb-2"></i>
                                                 <br>
                                                 لا توجد حركات في الفترة المحددة

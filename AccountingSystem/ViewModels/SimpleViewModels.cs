@@ -318,6 +318,8 @@ namespace AccountingSystem.ViewModels
     {
         public DateTime Date { get; set; }
         public string JournalEntryNumber { get; set; } = string.Empty;
+        public string Reference { get; set; } = string.Empty;
+        public string MovementType { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public decimal DebitAmount { get; set; }
         public decimal CreditAmount { get; set; }
