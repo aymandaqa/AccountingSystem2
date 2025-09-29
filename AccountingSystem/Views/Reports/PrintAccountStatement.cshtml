@@ -15,6 +15,7 @@
             background-color: #f8f9fa;
             color: #212529;
         }
+
         .print-container {
             width: 210mm;
             min-height: 297mm;
@@ -23,50 +24,61 @@
             background-color: #fff;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
         }
+
         .document-header {
             border-bottom: 3px solid #0d6efd;
             margin-bottom: 20px;
             padding-bottom: 10px;
         }
-        .document-header h1 {
-            font-size: 28px;
-            margin-bottom: 0;
-        }
+
+            .document-header h1 {
+                font-size: 28px;
+                margin-bottom: 0;
+            }
+
         .document-meta {
             font-size: 14px;
             color: #6c757d;
         }
+
         .summary-box {
             border: 1px solid #dee2e6;
             border-radius: 0.5rem;
             padding: 15px;
             margin-bottom: 20px;
         }
+
         .summary-title {
             font-weight: 600;
             color: #0d6efd;
         }
+
         table thead {
             background-color: #0d6efd;
             color: #fff;
         }
+
         table th, table td {
             vertical-align: middle;
             font-size: 13px;
         }
+
         .footer-signatures {
             margin-top: 40px;
         }
+
         .signature-box {
             border-top: 1px solid #adb5bd;
             padding-top: 10px;
             min-height: 60px;
             font-size: 14px;
         }
-        @media print {
+
+        @@media print {
             body {
                 background-color: #fff;
             }
+
             .print-container {
                 box-shadow: none;
                 margin: 0;
@@ -74,6 +86,7 @@
                 min-height: auto;
                 padding: 10mm 10mm 10mm 10mm;
             }
+
             .no-print {
                 display: none !important;
             }
