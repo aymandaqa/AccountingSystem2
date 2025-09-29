@@ -17,9 +17,32 @@
                 <div class="col-md-4">
                     <label for="type" class="form-label">نوع الحركة</label>
                     <select id="type" name="type" class="form-select">
-                        <option value="all" @(Model.SelectedType == "all" ? "selected" : string.Empty)>جميع الأنواع</option>
-                        <option value="receipt" @(Model.SelectedType == "receipt" ? "selected" : string.Empty)>سندات القبض</option>
-                        <option value="payment" @(Model.SelectedType == "payment" ? "selected" : string.Empty)>سندات الدفع</option>
+                        @if (Model.SelectedType == "all")
+                        {
+                            <option value="all" selected="selected">جميع الأنواع</option>
+                        }
+                        else
+                        {
+                            <option value="all">جميع الأنواع</option>
+                        }
+
+                        @if (Model.SelectedType == "receipt")
+                        {
+                            <option value="receipt" selected="selected">سندات القبض</option>
+                        }
+                        else
+                        {
+                            <option value="receipt">سندات القبض</option>
+                        }
+
+                        @if (Model.SelectedType == "payment")
+                        {
+                            <option value="payment" selected="selected">سندات الدفع</option>
+                        }
+                        else
+                        {
+                            <option value="payment">سندات الدفع</option>
+                        }
                     </select>
                 </div>
                 <div class="col-md-4">
@@ -28,7 +51,14 @@
                         <option value="">جميع الحسابات</option>
                         @foreach (var account in Model.Accounts)
                         {
-                            <option value="@account.Value" @(account.Selected ? "selected" : string.Empty)>@account.Text</option>
+                            if (account.Selected)
+                            {
+                                <option value="@account.Value" selected="selected">@account.Text</option>
+                            }
+                            else
+                            {
+                                <option value="@account.Value">@account.Text</option>
+                            }
                         }
                     </select>
                 </div>
