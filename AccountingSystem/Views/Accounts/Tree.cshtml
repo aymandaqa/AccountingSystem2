@@ -130,20 +130,66 @@
     </div>
     <script>
         $(document).ready(function () {
-            $('.toggle-btn').click(function () {
-                var $this = $(this);
-                var $children = $this.closest('.tree-node').find('> .tree-children');
+            var loadUrl = '@Url.Action("LoadTreeNodes")';
 
-                if ($children.is(':visible')) {
-                    $children.hide();
-                    $this.html('<i class="fas fa-plus"></i>');
-                } else {
-                    $children.show();
-                    $this.html('<i class="fas fa-minus"></i>');
+            $(document).on('click', '.toggle-btn', function () {
+                var $button = $(this);
+                var $node = $button.closest('.tree-node');
+                var hasChildren = $node.data('has-children');
+
+                if (!hasChildren) {
+                    return;
                 }
-            });
 
-            $('.tree-node[data-level="0"] .toggle-btn').click();
+                var $children = $node.find('> .tree-children');
+                var isVisible = $children.is(':visible');
+
+                if (isVisible) {
+                    $children.slideUp(200);
+                    $button.html('<i class="fas fa-plus"></i>');
+                    return;
+                }
+
+                if ($children.data('loaded')) {
+                    $children.slideDown(200);
+                    $button.html('<i class="fas fa-minus"></i>');
+                    return;
+                }
+
+                var nodeId = parseInt($node.data('node-id')) || 0;
+                var accountType = $node.data('account-type');
+                var requestData = {};
+
+                if (nodeId > 0) {
+                    requestData.parentId = nodeId;
+                } else if (accountType) {
+                    requestData.accountType = accountType;
+                }
+
+                $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+                $.get(loadUrl, requestData)
+                    .done(function (html) {
+                        var trimmed = $.trim(html);
+                        if (trimmed.length) {
+                            $children.html(trimmed);
+                            $children.data('loaded', true);
+                            $children.slideDown(200);
+                            $button.html('<i class="fas fa-minus"></i>');
+                        } else {
+                            $children.data('loaded', true);
+                            $node.data('has-children', false);
+                            $button.replaceWith('<span style="width: 20px; display: inline-block;"></span>');
+                        }
+                    })
+                    .fail(function () {
+                        alert('تعذر تحميل بيانات الحسابات، يرجى المحاولة مرة أخرى.');
+                        $button.html('<i class="fas fa-plus"></i>');
+                    })
+                    .always(function () {
+                        $button.prop('disabled', false);
+                    });
+            });
 
             $(document).on('click', '.ajax-modal', function (e) {
                 e.preventDefault();
