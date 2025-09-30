@@ -36,10 +36,509 @@ namespace AccountingSystem.Controllers
             _currencyService = currencyService;
         }
 
+        private static readonly string[] InventoryKeywordsAr = new[] { "مخزون", "بضاعة", "مواد", "سلع" };
+        private static readonly string[] InventoryKeywordsEn = new[] { "inventory", "stock", "goods", "materials" };
+        private static readonly string[] ReceivableKeywordsAr = new[] { "ذمم", "مدين", "عملاء" };
+        private static readonly string[] ReceivableKeywordsEn = new[] { "receivable", "customer", "clients" };
+        private static readonly string[] PayableKeywordsAr = new[] { "مورد", "دائن", "ذمم دائنة" };
+        private static readonly string[] PayableKeywordsEn = new[] { "payable", "supplier", "vendors" };
+        private static readonly string[] CostOfSalesKeywordsAr = new[] { "تكلفة", "مشتريات", "انتاج", "تصنيع" };
+        private static readonly string[] CostOfSalesKeywordsEn = new[] { "cost", "purchase", "production", "manufacturing" };
+
+        private sealed class ExecutiveLineData
+        {
+            public DateTime Date { get; set; }
+            public AccountType AccountType { get; set; }
+            public AccountSubClassification AccountSubClassification { get; set; }
+            public string AccountNameAr { get; set; } = string.Empty;
+            public string? AccountNameEn { get; set; }
+            public string AccountCode { get; set; } = string.Empty;
+            public decimal Debit { get; set; }
+            public decimal Credit { get; set; }
+        }
+
+        private static bool ContainsKeyword(string? value, string[] keywords)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            var normalized = value
+                .Replace("أ", "ا")
+                .Replace("إ", "ا")
+                .Replace("آ", "ا")
+                .ToLowerInvariant();
+
+            foreach (var keyword in keywords)
+            {
+                if (normalized.Contains(keyword))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsInventoryAccount(ExecutiveLineData line)
+        {
+            if (line.AccountType != AccountType.Assets)
+            {
+                return false;
+            }
+
+            return ContainsKeyword(line.AccountNameAr, InventoryKeywordsAr)
+                || ContainsKeyword(line.AccountNameEn, InventoryKeywordsEn)
+                || line.AccountCode.StartsWith("14", StringComparison.Ordinal)
+                || line.AccountCode.StartsWith("15", StringComparison.Ordinal);
+        }
+
+        private static bool IsReceivableAccount(ExecutiveLineData line)
+        {
+            if (line.AccountType != AccountType.Assets)
+            {
+                return false;
+            }
+
+            return ContainsKeyword(line.AccountNameAr, ReceivableKeywordsAr)
+                || ContainsKeyword(line.AccountNameEn, ReceivableKeywordsEn)
+                || line.AccountCode.StartsWith("12", StringComparison.Ordinal);
+        }
+
+        private static bool IsPayableAccount(ExecutiveLineData line)
+        {
+            if (line.AccountType != AccountType.Liabilities)
+            {
+                return false;
+            }
+
+            return ContainsKeyword(line.AccountNameAr, PayableKeywordsAr)
+                || ContainsKeyword(line.AccountNameEn, PayableKeywordsEn)
+                || line.AccountCode.StartsWith("21", StringComparison.Ordinal)
+                || line.AccountCode.StartsWith("22", StringComparison.Ordinal);
+        }
+
+        private static bool IsCostOfSalesAccount(ExecutiveLineData line)
+        {
+            if (line.AccountType != AccountType.Expenses)
+            {
+                return false;
+            }
+
+            return ContainsKeyword(line.AccountNameAr, CostOfSalesKeywordsAr)
+                || ContainsKeyword(line.AccountNameEn, CostOfSalesKeywordsEn)
+                || line.AccountCode.StartsWith("51", StringComparison.Ordinal)
+                || line.AccountCode.StartsWith("52", StringComparison.Ordinal);
+        }
+
         // GET: Reports
         public IActionResult Index()
         {
             return View();
+        }
+
+        [Authorize(Policy = "reports.view")]
+        public async Task<IActionResult> ExecutiveDashboard(int? year, int? month)
+        {
+            var baseCurrency = await _context.Currencies.AsNoTracking().FirstAsync(c => c.IsBase);
+            var today = DateTime.Today;
+
+            var availableYears = await _context.JournalEntries
+                .AsNoTracking()
+                .Select(e => e.Date.Year)
+                .Distinct()
+                .OrderByDescending(y => y)
+                .ToListAsync();
+
+            if (!availableYears.Any())
+            {
+                availableYears.Add(today.Year);
+            }
+
+            var selectedYear = year.HasValue && availableYears.Contains(year.Value)
+                ? year.Value
+                : availableYears.First();
+
+            var availableMonths = await _context.JournalEntries
+                .AsNoTracking()
+                .Where(e => e.Date.Year == selectedYear)
+                .Select(e => e.Date.Month)
+                .Distinct()
+                .OrderBy(m => m)
+                .ToListAsync();
+
+            if (!availableMonths.Any())
+            {
+                availableMonths = Enumerable.Range(1, 12).ToList();
+            }
+
+            var selectedMonth = month.HasValue && availableMonths.Contains(month.Value)
+                ? month.Value
+                : availableMonths.Max();
+
+            if (selectedYear == today.Year && selectedMonth > today.Month)
+            {
+                selectedMonth = today.Month;
+            }
+
+            if (selectedMonth < 1)
+            {
+                selectedMonth = 1;
+            }
+
+            var monthStart = new DateTime(selectedYear, selectedMonth, 1);
+            var monthEnd = monthStart.AddMonths(1);
+            var yearStart = new DateTime(selectedYear, 1, 1);
+            var yearEnd = monthEnd;
+
+            var previousMonthStart = monthStart.AddYears(-1);
+            var previousMonthEnd = previousMonthStart.AddMonths(1);
+            var previousYearStart = yearStart.AddYears(-1);
+            var previousYearEnd = yearEnd.AddYears(-1);
+
+            var linesRaw = await _context.JournalEntryLines
+                .AsNoTracking()
+                .Where(l => l.JournalEntry.Date >= previousYearStart && l.JournalEntry.Date < yearEnd)
+                .Select(l => new
+                {
+                    l.JournalEntry.Date,
+                    l.DebitAmount,
+                    l.CreditAmount,
+                    l.Account.AccountType,
+                    l.Account.SubClassification,
+                    l.Account.NameAr,
+                    l.Account.NameEn,
+                    l.Account.Code,
+                    CurrencyId = l.Account.CurrencyId
+                })
+                .ToListAsync();
+
+            var currencyIds = linesRaw.Select(l => l.CurrencyId).Distinct().ToList();
+            if (!currencyIds.Contains(baseCurrency.Id))
+            {
+                currencyIds.Add(baseCurrency.Id);
+            }
+
+            var currencies = await _context.Currencies
+                .AsNoTracking()
+                .Where(c => currencyIds.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id);
+
+            decimal Round(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);
+            decimal SafeDivide(decimal numerator, decimal denominator) => denominator == 0m ? 0m : numerator / denominator;
+
+            var lines = linesRaw.Select(l =>
+            {
+                var currency = currencies.TryGetValue(l.CurrencyId, out var c) ? c : baseCurrency;
+                return new ExecutiveLineData
+                {
+                    Date = l.Date,
+                    AccountType = l.AccountType,
+                    AccountSubClassification = l.SubClassification,
+                    AccountNameAr = l.NameAr ?? string.Empty,
+                    AccountNameEn = l.NameEn,
+                    AccountCode = l.Code ?? string.Empty,
+                    Debit = _currencyService.Convert(l.DebitAmount, currency, baseCurrency),
+                    Credit = _currencyService.Convert(l.CreditAmount, currency, baseCurrency)
+                };
+            }).ToList();
+
+            var monthLines = lines.Where(l => l.Date >= monthStart && l.Date < monthEnd).ToList();
+            var yearToDateLines = lines.Where(l => l.Date >= yearStart && l.Date < yearEnd).ToList();
+            var previousMonthLines = lines.Where(l => l.Date >= previousMonthStart && l.Date < previousMonthEnd).ToList();
+            var previousYearToDateLines = lines.Where(l => l.Date >= previousYearStart && l.Date < previousYearEnd).ToList();
+
+            decimal SumRevenue(IEnumerable<ExecutiveLineData> source) => source.Where(l => l.AccountType == AccountType.Revenue).Sum(l => l.Credit - l.Debit);
+            decimal SumCostOfSales(IEnumerable<ExecutiveLineData> source) => source.Where(IsCostOfSalesAccount).Sum(l => l.Debit - l.Credit);
+            decimal SumOperatingExpenses(IEnumerable<ExecutiveLineData> source) => source.Where(l => l.AccountType == AccountType.Expenses && !IsCostOfSalesAccount(l)).Sum(l => l.Debit - l.Credit);
+            decimal SumReceivables(IEnumerable<ExecutiveLineData> source) => source.Where(IsReceivableAccount).Sum(l => l.Debit - l.Credit);
+            decimal SumInventory(IEnumerable<ExecutiveLineData> source) => source.Where(IsInventoryAccount).Sum(l => l.Debit - l.Credit);
+            decimal SumPayables(IEnumerable<ExecutiveLineData> source) => source.Where(IsPayableAccount).Sum(l => l.Credit - l.Debit);
+
+            var revenueMonth = SumRevenue(monthLines);
+            var revenueMonthTarget = SumRevenue(previousMonthLines);
+            var revenueYearToDate = SumRevenue(yearToDateLines);
+            var revenueYearToDateTarget = SumRevenue(previousYearToDateLines);
+
+            var costOfSalesMonth = SumCostOfSales(monthLines);
+            var costOfSalesMonthTarget = SumCostOfSales(previousMonthLines);
+            var costOfSalesYearToDate = SumCostOfSales(yearToDateLines);
+            var costOfSalesYearToDateTarget = SumCostOfSales(previousYearToDateLines);
+
+            var operatingExpensesMonth = SumOperatingExpenses(monthLines);
+            var operatingExpensesMonthTarget = SumOperatingExpenses(previousMonthLines);
+            var operatingExpensesYearToDate = SumOperatingExpenses(yearToDateLines);
+            var operatingExpensesYearToDateTarget = SumOperatingExpenses(previousYearToDateLines);
+
+            var grossProfitMonth = revenueMonth - costOfSalesMonth;
+            var grossProfitMonthTarget = revenueMonthTarget - costOfSalesMonthTarget;
+            var grossProfitYearToDate = revenueYearToDate - costOfSalesYearToDate;
+            var grossProfitYearToDateTarget = revenueYearToDateTarget - costOfSalesYearToDateTarget;
+
+            var operatingProfitMonth = grossProfitMonth - operatingExpensesMonth;
+            var operatingProfitMonthTarget = grossProfitMonthTarget - operatingExpensesMonthTarget;
+            var operatingProfitYearToDate = grossProfitYearToDate - operatingExpensesYearToDate;
+            var operatingProfitYearToDateTarget = grossProfitYearToDateTarget - operatingExpensesYearToDateTarget;
+
+            var netProfitBeforeTaxMonth = operatingProfitMonth;
+            var netProfitBeforeTaxMonthTarget = operatingProfitMonthTarget;
+            var netProfitBeforeTaxYearToDate = operatingProfitYearToDate;
+            var netProfitBeforeTaxYearToDateTarget = operatingProfitYearToDateTarget;
+
+            var receivablesMonth = SumReceivables(monthLines);
+            var receivablesMonthTarget = SumReceivables(previousMonthLines);
+            var receivablesYearToDate = SumReceivables(yearToDateLines);
+            var receivablesYearToDateTarget = SumReceivables(previousYearToDateLines);
+
+            var inventoryMonth = SumInventory(monthLines);
+            var inventoryMonthTarget = SumInventory(previousMonthLines);
+            var inventoryYearToDate = SumInventory(yearToDateLines);
+            var inventoryYearToDateTarget = SumInventory(previousYearToDateLines);
+
+            var payablesMonth = SumPayables(monthLines);
+            var payablesYearToDate = SumPayables(yearToDateLines);
+
+            decimal Margin(decimal profit, decimal revenue) => revenue == 0m ? 0m : (profit / revenue) * 100m;
+
+            var netProfitMarginMonth = Margin(netProfitBeforeTaxMonth, revenueMonth);
+            var netProfitMarginMonthTarget = Margin(netProfitBeforeTaxMonthTarget, revenueMonthTarget);
+            var netProfitMarginYearToDate = Margin(netProfitBeforeTaxYearToDate, revenueYearToDate);
+            var netProfitMarginYearToDateTarget = Margin(netProfitBeforeTaxYearToDateTarget, revenueYearToDateTarget);
+
+            var operatingProfitMarginMonth = Margin(operatingProfitMonth, revenueMonth);
+            var operatingProfitMarginMonthTarget = Margin(operatingProfitMonthTarget, revenueMonthTarget);
+            var operatingProfitMarginYearToDate = Margin(operatingProfitYearToDate, revenueYearToDate);
+            var operatingProfitMarginYearToDateTarget = Margin(operatingProfitYearToDateTarget, revenueYearToDateTarget);
+
+            var daysInMonth = (decimal)(monthEnd - monthStart).TotalDays;
+            var daysInYear = (decimal)(yearEnd - yearStart).TotalDays;
+
+            var baseForInventoryMonth = Math.Abs(costOfSalesMonth) > 0m ? Math.Abs(costOfSalesMonth) : Math.Abs(revenueMonth);
+            var baseForInventoryYear = Math.Abs(costOfSalesYearToDate) > 0m ? Math.Abs(costOfSalesYearToDate) : Math.Abs(revenueYearToDate);
+
+            var dsoMonth = SafeDivide(Math.Abs(receivablesMonth), Math.Abs(revenueMonth)) * daysInMonth;
+            var dsoYear = SafeDivide(Math.Abs(receivablesYearToDate), Math.Abs(revenueYearToDate)) * daysInYear;
+
+            var dioMonth = baseForInventoryMonth == 0m ? 0m : SafeDivide(Math.Abs(inventoryMonth), baseForInventoryMonth) * daysInMonth;
+            var dioYear = baseForInventoryYear == 0m ? 0m : SafeDivide(Math.Abs(inventoryYearToDate), baseForInventoryYear) * daysInYear;
+
+            var dpoMonth = baseForInventoryMonth == 0m ? 0m : SafeDivide(Math.Abs(payablesMonth), baseForInventoryMonth) * daysInMonth;
+            var dpoYear = baseForInventoryYear == 0m ? 0m : SafeDivide(Math.Abs(payablesYearToDate), baseForInventoryYear) * daysInYear;
+
+            var cashConversionCycleMonth = Round(dioMonth + dsoMonth - dpoMonth);
+            var cashConversionCycleYear = Round(dioYear + dsoYear - dpoYear);
+
+            ExecutiveDashboardMetric CreateMetric(string title, decimal actual, decimal target, bool isPercentage = false, string? tooltip = null)
+            {
+                return new ExecutiveDashboardMetric
+                {
+                    Title = title,
+                    Actual = Round(actual),
+                    Target = Round(target),
+                    Unit = isPercentage ? "%" : baseCurrency.Code,
+                    IsPercentage = isPercentage,
+                    Tooltip = tooltip
+                };
+            }
+
+            var monthlyMetrics = new List<ExecutiveDashboardMetric>
+            {
+                CreateMetric("الإيرادات", revenueMonth, revenueMonthTarget),
+                CreateMetric("مجمل الربح", grossProfitMonth, grossProfitMonthTarget),
+                CreateMetric("الربح التشغيلي (EBIT)", operatingProfitMonth, operatingProfitMonthTarget),
+                CreateMetric("صافي الربح قبل الضريبة", netProfitBeforeTaxMonth, netProfitBeforeTaxMonthTarget),
+                CreateMetric("المخزون", inventoryMonth, inventoryMonthTarget),
+                CreateMetric("الذمم المدينة", receivablesMonth, receivablesMonthTarget),
+                CreateMetric("هامش صافي الربح", netProfitMarginMonth, netProfitMarginMonthTarget, true),
+                CreateMetric("هامش الربح التشغيلي", operatingProfitMarginMonth, operatingProfitMarginMonthTarget, true)
+            };
+
+            var yearToDateMetrics = new List<ExecutiveDashboardMetric>
+            {
+                CreateMetric("الإيرادات التراكمية", revenueYearToDate, revenueYearToDateTarget),
+                CreateMetric("مجمل الربح التراكمي", grossProfitYearToDate, grossProfitYearToDateTarget),
+                CreateMetric("الربح التشغيلي التراكمي", operatingProfitYearToDate, operatingProfitYearToDateTarget),
+                CreateMetric("صافي الربح قبل الضريبة (تراكمي)", netProfitBeforeTaxYearToDate, netProfitBeforeTaxYearToDateTarget),
+                CreateMetric("متوسط المخزون", inventoryYearToDate, inventoryYearToDateTarget),
+                CreateMetric("متوسط الذمم المدينة", receivablesYearToDate, receivablesYearToDateTarget),
+                CreateMetric("هامش صافي الربح التراكمي", netProfitMarginYearToDate, netProfitMarginYearToDateTarget, true),
+                CreateMetric("هامش الربح التشغيلي التراكمي", operatingProfitMarginYearToDate, operatingProfitMarginYearToDateTarget, true)
+            };
+
+            var culture = CultureInfo.CreateSpecificCulture("ar-SA");
+            var monthlyTrend = Enumerable.Range(1, selectedMonth)
+                .Select(m =>
+                {
+                    var rangeStart = new DateTime(selectedYear, m, 1);
+                    var rangeEnd = rangeStart.AddMonths(1);
+                    var data = lines.Where(l => l.Date >= rangeStart && l.Date < rangeEnd).ToList();
+                    var revenue = Round(SumRevenue(data));
+                    var cost = Round(SumCostOfSales(data));
+                    var operating = Round(SumOperatingExpenses(data));
+                    var profit = Round(revenue - cost - operating);
+                    return new ExecutiveDashboardTrendPoint
+                    {
+                        MonthNumber = m,
+                        Label = rangeStart.ToString("MM", culture),
+                        Revenue = revenue,
+                        CostOfSales = cost,
+                        OperatingExpenses = operating,
+                        Profit = profit,
+                        IsSelected = m == selectedMonth
+                    };
+                })
+                .ToList();
+
+            var expenseGroupsMonth = monthLines
+                .Where(l => l.AccountType == AccountType.Expenses)
+                .GroupBy(l => string.IsNullOrWhiteSpace(l.AccountNameAr) ? (l.AccountNameEn ?? l.AccountCode) : l.AccountNameAr)
+                .Select(g => new { Name = g.Key, Amount = Round(Math.Abs(g.Sum(x => x.Debit - x.Credit))) })
+                .Where(x => x.Amount > 0m)
+                .ToList();
+
+            var expenseGroupsYear = yearToDateLines
+                .Where(l => l.AccountType == AccountType.Expenses)
+                .GroupBy(l => string.IsNullOrWhiteSpace(l.AccountNameAr) ? (l.AccountNameEn ?? l.AccountCode) : l.AccountNameAr)
+                .Select(g => new { Name = g.Key, Amount = Round(Math.Abs(g.Sum(x => x.Debit - x.Credit))) })
+                .Where(x => x.Amount > 0m)
+                .ToList();
+
+            var topExpenseNames = expenseGroupsYear
+                .OrderByDescending(x => x.Amount)
+                .Take(6)
+                .Select(x => x.Name)
+                .ToList();
+
+            foreach (var item in expenseGroupsMonth.OrderByDescending(x => x.Amount))
+            {
+                if (topExpenseNames.Count >= 6)
+                {
+                    break;
+                }
+
+                if (!topExpenseNames.Contains(item.Name))
+                {
+                    topExpenseNames.Add(item.Name);
+                }
+            }
+
+            var operatingExpenseBreakdown = topExpenseNames
+                .Select(name => new OperatingExpenseBreakdownItem
+                {
+                    Name = name,
+                    MonthlyAmount = Round(expenseGroupsMonth.FirstOrDefault(x => x.Name == name)?.Amount ?? 0m),
+                    YearToDateAmount = Round(expenseGroupsYear.FirstOrDefault(x => x.Name == name)?.Amount ?? 0m)
+                })
+                .ToList();
+
+            var monthOther = expenseGroupsMonth.Where(x => !topExpenseNames.Contains(x.Name)).Sum(x => x.Amount);
+            var yearOther = expenseGroupsYear.Where(x => !topExpenseNames.Contains(x.Name)).Sum(x => x.Amount);
+
+            if (monthOther > 0m || yearOther > 0m)
+            {
+                operatingExpenseBreakdown.Add(new OperatingExpenseBreakdownItem
+                {
+                    Name = "أخرى",
+                    MonthlyAmount = Round(monthOther),
+                    YearToDateAmount = Round(yearOther)
+                });
+            }
+
+            var incomeStatement = new List<ExecutiveIncomeStatementRow>
+            {
+                new ExecutiveIncomeStatementRow
+                {
+                    Name = "الإيرادات",
+                    MonthlyActual = Round(revenueMonth),
+                    MonthlyTarget = Round(revenueMonthTarget),
+                    YearToDateActual = Round(revenueYearToDate),
+                    YearToDateTarget = Round(revenueYearToDateTarget)
+                },
+                new ExecutiveIncomeStatementRow
+                {
+                    Name = "تكلفة المبيعات",
+                    MonthlyActual = Round(costOfSalesMonth),
+                    MonthlyTarget = Round(costOfSalesMonthTarget),
+                    YearToDateActual = Round(costOfSalesYearToDate),
+                    YearToDateTarget = Round(costOfSalesYearToDateTarget)
+                },
+                new ExecutiveIncomeStatementRow
+                {
+                    Name = "مجمل الربح",
+                    MonthlyActual = Round(grossProfitMonth),
+                    MonthlyTarget = Round(grossProfitMonthTarget),
+                    YearToDateActual = Round(grossProfitYearToDate),
+                    YearToDateTarget = Round(grossProfitYearToDateTarget)
+                },
+                new ExecutiveIncomeStatementRow
+                {
+                    Name = "المصروفات التشغيلية",
+                    MonthlyActual = Round(operatingExpensesMonth),
+                    MonthlyTarget = Round(operatingExpensesMonthTarget),
+                    YearToDateActual = Round(operatingExpensesYearToDate),
+                    YearToDateTarget = Round(operatingExpensesYearToDateTarget)
+                },
+                new ExecutiveIncomeStatementRow
+                {
+                    Name = "الربح التشغيلي (EBIT)",
+                    MonthlyActual = Round(operatingProfitMonth),
+                    MonthlyTarget = Round(operatingProfitMonthTarget),
+                    YearToDateActual = Round(operatingProfitYearToDate),
+                    YearToDateTarget = Round(operatingProfitYearToDateTarget)
+                },
+                new ExecutiveIncomeStatementRow
+                {
+                    Name = "صافي الربح قبل الضريبة",
+                    MonthlyActual = Round(netProfitBeforeTaxMonth),
+                    MonthlyTarget = Round(netProfitBeforeTaxMonthTarget),
+                    YearToDateActual = Round(netProfitBeforeTaxYearToDate),
+                    YearToDateTarget = Round(netProfitBeforeTaxYearToDateTarget)
+                }
+            };
+
+            var cashConversionMetrics = new List<CashConversionMetric>
+            {
+                new CashConversionMetric
+                {
+                    Name = "مدة دوران المخزون (DIO)",
+                    MonthlyValue = Round(dioMonth),
+                    YearToDateValue = Round(dioYear)
+                },
+                new CashConversionMetric
+                {
+                    Name = "مدة تحصيل الذمم (DSO)",
+                    MonthlyValue = Round(dsoMonth),
+                    YearToDateValue = Round(dsoYear)
+                },
+                new CashConversionMetric
+                {
+                    Name = "مدة سداد الذمم (DPO)",
+                    MonthlyValue = Round(dpoMonth),
+                    YearToDateValue = Round(dpoYear)
+                }
+            };
+
+            var viewModel = new ExecutiveDashboardViewModel
+            {
+                Year = selectedYear,
+                Month = selectedMonth,
+                YearDisplay = selectedYear.ToString("0000", culture),
+                MonthDisplay = monthStart.ToString("MM", culture),
+                CurrencyCode = baseCurrency.Code,
+                AvailableYears = availableYears,
+                AvailableMonths = availableMonths,
+                MonthlyMetrics = monthlyMetrics,
+                YearToDateMetrics = yearToDateMetrics,
+                MonthlyTrend = monthlyTrend,
+                CashConversionMetrics = cashConversionMetrics,
+                CashConversionCycleMonthly = cashConversionCycleMonth,
+                CashConversionCycleYearToDate = cashConversionCycleYear,
+                OperatingExpenseBreakdown = operatingExpenseBreakdown,
+                IncomeStatement = incomeStatement
+            };
+
+            return View(viewModel);
         }
 
         [Authorize(Policy = "reports.view")]
