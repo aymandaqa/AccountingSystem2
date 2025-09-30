@@ -1192,7 +1192,7 @@ namespace Roadfn.Controllers
                         tottxn.DebitAmount = Convert.ToDecimal(Paytxn.ShipmentTotal);
                     }
                     tottxn.Reference = driverPaymentHeader.Id.ToString();
-                    tottxn.Description = sh.ShipmentTrackingNo;
+                    tottxn.Description = $"قبض من سائق مبلغ تحصيل {sh.ShipmentTrackingNo}";
                     lines.Add(tottxn);
                     #endregion
 
@@ -1201,7 +1201,8 @@ namespace Roadfn.Controllers
                     DriverAttxn.AccountId = driverAccount.Id;
                     DriverAttxn.CreditAmount = Convert.ToDecimal(Paytxn.CommissionPerItem);
                     DriverAttxn.Reference = driverPaymentHeader.Id.ToString();
-                    DriverAttxn.Description = sh.ShipmentTrackingNo;
+                    DriverAttxn.Description = $"ذمة سائق عمولة {sh.ShipmentTrackingNo}";
+
                     lines.Add(DriverAttxn);
                     #endregion
 
@@ -1219,7 +1220,7 @@ namespace Roadfn.Controllers
                         CustomerAccounttxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentPrice);
                     }
                     CustomerAccounttxn.Reference = driverPaymentHeader.Id.ToString();
-                    CustomerAccounttxn.Description = sh.ShipmentTrackingNo;
+                    CustomerAccounttxn.Description = $"ذمة مورد مبلغ تحصيل {sh.ShipmentTrackingNo}";
                     lines.Add(CustomerAccounttxn);
                     #endregion
 
@@ -1237,7 +1238,7 @@ namespace Roadfn.Controllers
                         RevenueAccounttxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice);
                     }
                     RevenueAccounttxn.Reference = driverPaymentHeader.Id.ToString();
-                    RevenueAccounttxn.Description = sh.ShipmentTrackingNo;
+                    RevenueAccounttxn.Description = $"ايراد خدمة  {sh.ShipmentTrackingNo}";
                     lines.Add(RevenueAccounttxn);
                     #endregion
 
@@ -1246,7 +1247,7 @@ namespace Roadfn.Controllers
                     PayDriverAttxn.AccountId = driverAccount.Id;
                     PayDriverAttxn.DebitAmount = Convert.ToDecimal(Paytxn.CommissionPerItem);
                     PayDriverAttxn.Reference = driverPaymentHeader.Id.ToString();
-                    PayDriverAttxn.Description = sh.ShipmentTrackingNo;
+                    PayDriverAttxn.Description = $"دفع عمولة سائق  {sh.ShipmentTrackingNo}";
                     lines.Add(PayDriverAttxn);
                     #endregion
 
@@ -1255,7 +1256,7 @@ namespace Roadfn.Controllers
                     PayCashAccountsDriverAttxn.AccountId = cashAccount.AccountId;
                     PayCashAccountsDriverAttxn.CreditAmount = Convert.ToDecimal(Paytxn.CommissionPerItem);
                     PayCashAccountsDriverAttxn.Reference = driverPaymentHeader.Id.ToString();
-                    PayCashAccountsDriverAttxn.Description = sh.ShipmentTrackingNo;
+                    PayCashAccountsDriverAttxn.Description = $"دفع عمولة سائق  {sh.ShipmentTrackingNo}";
                     lines.Add(PayCashAccountsDriverAttxn);
                     #endregion
 
