@@ -43,7 +43,7 @@ namespace AccountingSystem.Migrations
                     b.Property<bool>("CanPostTransactions")
                         .HasColumnType("bit");
 
-                    b.Property<int>("Classification")
+                    b.Property<AccountClassification>("Classification")
                         .HasColumnType("int");
 
                     b.Property<string>("Code")
@@ -88,7 +88,7 @@ namespace AccountingSystem.Migrations
                     b.Property<int?>("ParentId")
                         .HasColumnType("int");
 
-                    b.Property<int>("SubClassification")
+                    b.Property<AccountSubClassification>("SubClassification")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
