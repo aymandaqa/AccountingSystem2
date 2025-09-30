@@ -23,7 +23,7 @@ namespace AccountingSystem.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("AccountingSystem.Models.Account", b =>
+            modelBuilder.Entity<Account>(b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -2021,7 +2021,7 @@ namespace AccountingSystem.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("AccountingSystem.Models.Account", b =>
+            modelBuilder.Entity<Account>(b =>
                 {
                     b.HasOne("AccountingSystem.Models.Branch", "Branch")
                         .WithMany("Accounts")
@@ -2599,7 +2599,7 @@ namespace AccountingSystem.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("AccountingSystem.Models.Account", b =>
+            modelBuilder.Entity<Account>(b =>
                 {
                     b.Navigation("Children");
 
