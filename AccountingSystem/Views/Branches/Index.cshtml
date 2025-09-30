@@ -27,6 +27,7 @@
                                         <th>الاسم الإنجليزي</th>
                                         <th>الهاتف</th>
                                         <th>البريد الإلكتروني</th>
+                                        <th>حساب الموظفين</th>
                                         <th>عدد المستخدمين</th>
                                         <th>الحالة</th>
                                         <th>تاريخ الإنشاء</th>
@@ -42,6 +43,16 @@
                                             <td>@branch.NameEn</td>
                                             <td>@branch.Phone</td>
                                             <td>@branch.Email</td>
+                                            <td>
+                                                @if (!string.IsNullOrWhiteSpace(branch.EmployeeParentAccountName))
+                                                {
+                                                    @branch.EmployeeParentAccountName
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">غير محدد</span>
+                                                }
+                                            </td>
                                             <td>
                                                 <span class="badge bg-info">@branch.UserCount</span>
                                             </td>

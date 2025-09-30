@@ -44,6 +44,19 @@
                                     <td>@Model.Email</td>
                                 </tr>
                                 <tr>
+                                    <th>حساب الموظفين:</th>
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(Model.EmployeeParentAccountName))
+                                        {
+                                            @Model.EmployeeParentAccountName
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">لم يتم التعيين</span>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
                                     <th>الحالة:</th>
                                     <td>
                                         @if (Model.IsActive)

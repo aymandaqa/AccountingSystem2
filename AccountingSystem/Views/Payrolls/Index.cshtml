@@ -1,0 +1,450 @@
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "إدارة الرواتب";
+    Layout = "_AccountingLayout";
+    var branches = ViewBag.Branches as List<SelectListItem> ?? new();
+    var paymentAccounts = ViewBag.PaymentAccounts as List<SelectListItem> ?? new();
+    var history = ViewBag.History as List<AccountingSystem.ViewModels.PayrollBatchHistoryViewModel> ?? new();
+}
+
+<div class="container-fluid payroll-container">
+    @Html.AntiForgeryToken()
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <label class="form-label">الفرع</label>
+            <select id="branchSelect" class="form-select">
+                <option value="">اختر الفرع</option>
+                @foreach (var branch in branches)
+                {
+                    <option value="@branch.Value">@branch.Text</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">حساب الدفع</label>
+            <select id="paymentAccountSelect" class="form-select">
+                <option value="">اختر حساب الدفع</option>
+                @foreach (var account in paymentAccounts)
+                {
+                    <option value="@account.Value">@account.Text</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4 d-flex align-items-end justify-content-end">
+            <div class="btn-group">
+                <button class="btn btn-outline-secondary" id="selectAllBtn"><i class="fas fa-check-square"></i> تحديد الكل</button>
+                <button class="btn btn-outline-secondary" id="clearSelectionBtn"><i class="fas fa-times"></i> إلغاء التحديد</button>
+                <button class="btn btn-primary" id="processPayrollBtn" asp-require-permission="payroll.process">
+                    <i class="fas fa-download"></i> تنزيل الرواتب
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">الموظفون</h5>
+            <span class="badge bg-secondary" id="selectedCount">0 موظف محدد</span>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle" id="employeesTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th></th>
+                            <th>الاسم</th>
+                            <th>المسمى الوظيفي</th>
+                            <th>الراتب</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="text-center text-muted" id="employeesPlaceholder">
+                            <td colspan="4">اختر فرعاً لعرض الموظفين</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">سجل تنزيل الرواتب</h5>
+            <button class="btn btn-sm btn-outline-primary" id="refreshHistoryBtn">
+                <i class="fas fa-sync"></i> تحديث
+            </button>
+        </div>
+        <div class="card-body">
+            @if (history.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped" id="historyTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>الرقم</th>
+                                <th>الفرع</th>
+                                <th>حساب الدفع</th>
+                                <th>الموظفون</th>
+                                <th>الإجمالي</th>
+                                <th>الحالة</th>
+                                <th>التاريخ</th>
+                                <th>مرجع القيد</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in history)
+                            {
+                                <tr>
+                                    <td>#@item.Id</td>
+                                    <td>@item.BranchName</td>
+                                    <td>@item.PaymentAccountName</td>
+                                    <td>@item.EmployeeCount</td>
+                                    <td>@item.TotalAmount.ToString("N2")</td>
+                                    <td>
+                                        @switch (item.Status)
+                                        {
+                                            case "Draft":
+                                                <span class="badge bg-warning text-dark">مسودة</span>
+                                                break;
+                                            case "Confirmed":
+                                                <span class="badge bg-success">مؤكد</span>
+                                                break;
+                                            default:
+                                                <span class="badge bg-secondary">@item.Status</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        <div>@item.CreatedAt.ToString("yyyy-MM-dd HH:mm")</div>
+                                        @if (item.ConfirmedAt.HasValue)
+                                        {
+                                            <small class="text-muted">تم التأكيد: @item.ConfirmedAt.Value.ToString("yyyy-MM-dd HH:mm")</small>
+                                        }
+                                    </td>
+                                    <td>@item.ReferenceNumber</td>
+                                    <td>
+                                        <button class="btn btn-outline-info btn-sm view-batch" data-id="@item.Id">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info text-center">
+                    لا توجد عمليات تنزيل سابقة
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="summaryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">مراجعة تفاصيل التنزيل</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="summaryContent"></div>
+                <div class="alert alert-secondary mt-3" id="historyNotice">
+                    <i class="fas fa-history"></i> تم حفظ هذه الدفعة في سجل الرواتب ويمكن الرجوع إليها قبل التأكيد.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">رجوع</button>
+                <button type="button" class="btn btn-success" id="confirmPayrollBtn" asp-require-permission="payroll.process">
+                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                    تأكيد التنزيل
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تفاصيل الدفعة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="detailsContent"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="payroll-overlay d-none" id="loadingOverlay">
+    <div class="overlay-content text-center">
+        <div class="spinner-border text-primary mb-3" role="status"></div>
+        <div class="progress" style="height: 6px;">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+        </div>
+        <p class="mt-2">جاري معالجة الطلب...</p>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .payroll-container {
+            position: relative;
+        }
+        .payroll-overlay {
+            position: absolute;
+            inset: 0;
+            background-color: rgba(255, 255, 255, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1050;
+        }
+        #employeesTable tbody tr.selected {
+            background-color: rgba(0, 123, 255, 0.1);
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const branchSelect = document.getElementById('branchSelect');
+            const paymentAccountSelect = document.getElementById('paymentAccountSelect');
+            const employeesTable = document.getElementById('employeesTable').querySelector('tbody');
+            const selectAllBtn = document.getElementById('selectAllBtn');
+            const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+            const processBtn = document.getElementById('processPayrollBtn');
+            const confirmBtn = document.getElementById('confirmPayrollBtn');
+            const selectedCount = document.getElementById('selectedCount');
+            const overlay = document.getElementById('loadingOverlay');
+            const summaryModal = new bootstrap.Modal(document.getElementById('summaryModal'));
+            const detailsModal = new bootstrap.Modal(document.getElementById('detailsModal'));
+            const summaryContent = document.getElementById('summaryContent');
+            const detailsContent = document.getElementById('detailsContent');
+            const historyTable = document.getElementById('historyTable');
+            const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
+            const antiForgery = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            let currentBatchId = null;
+
+            function toggleOverlay(show) {
+                overlay.classList.toggle('d-none', !show);
+            }
+
+            function getSelectedBranchId() {
+                const value = branchSelect.value;
+                if (!value) {
+                    return null;
+                }
+
+                const id = parseInt(value, 10);
+                return Number.isNaN(id) ? null : id;
+            }
+
+            function updateSelectedCount() {
+                const checked = employeesTable.querySelectorAll('input[type="checkbox"]:checked').length;
+                selectedCount.textContent = checked + ' موظف محدد';
+            }
+
+            function renderEmployees(employees) {
+                employeesTable.innerHTML = '';
+                if (!employees.length) {
+                    const row = document.createElement('tr');
+                    row.className = 'text-center text-muted';
+                    row.innerHTML = '<td colspan="4">لا يوجد موظفون متاحون</td>';
+                    employeesTable.appendChild(row);
+                    return;
+                }
+
+                employees.forEach(emp => {
+                    const row = document.createElement('tr');
+                    row.dataset.id = emp.id;
+                    row.innerHTML = `
+                        <td><input type="checkbox" class="form-check-input" value="${emp.id}" /></td>
+                        <td><strong>${emp.name}</strong><div class="text-muted small">${emp.jobTitle || ''}</div></td>
+                        <td>${emp.jobTitle || ''}</td>
+                        <td>${Number(emp.salary).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>`;
+                    employeesTable.appendChild(row);
+                });
+
+                employeesTable.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    cb.addEventListener('change', () => {
+                        cb.closest('tr').classList.toggle('selected', cb.checked);
+                        updateSelectedCount();
+                    });
+                });
+
+                updateSelectedCount();
+            }
+
+            async function loadEmployees() {
+                const branchId = getSelectedBranchId();
+                employeesTable.innerHTML = '';
+                const row = document.createElement('tr');
+                row.className = 'text-center text-muted';
+                row.innerHTML = '<td colspan="4"><div class="spinner-border spinner-border-sm text-primary"></div> جاري تحميل الموظفين...</td>';
+                employeesTable.appendChild(row);
+
+                if (branchId === null) {
+                    row.innerHTML = '<td colspan="4">اختر فرعاً لعرض الموظفين</td>';
+                    return;
+                }
+
+                const response = await fetch(`@Url.Action("Employees")?branchId=${branchId}`);
+                const data = await response.json();
+                renderEmployees(data);
+            }
+
+            branchSelect.addEventListener('change', () => {
+                currentBatchId = null;
+                summaryContent.innerHTML = '';
+                loadEmployees();
+            });
+
+            selectAllBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                employeesTable.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    cb.checked = true;
+                    cb.closest('tr').classList.add('selected');
+                });
+                updateSelectedCount();
+            });
+
+            clearSelectionBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                employeesTable.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    cb.checked = false;
+                    cb.closest('tr').classList.remove('selected');
+                });
+                updateSelectedCount();
+            });
+
+            processBtn.addEventListener('click', async function (e) {
+                e.preventDefault();
+                const branchId = getSelectedBranchId();
+                const paymentAccountId = paymentAccountSelect.value;
+                const employees = Array.from(employeesTable.querySelectorAll('input[type="checkbox"]:checked')).map(cb => parseInt(cb.value));
+
+                if (branchId === null) {
+                    alert('يرجى اختيار الفرع.');
+                    return;
+                }
+                if (!paymentAccountId) {
+                    alert('يرجى اختيار حساب الدفع.');
+                    return;
+                }
+                if (employees.length === 0) {
+                    alert('يرجى اختيار موظف واحد على الأقل.');
+                    return;
+                }
+
+                toggleOverlay(true);
+                try {
+                    const response = await fetch('@Url.Action("CreateBatch")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': antiForgery
+                        },
+                        body: JSON.stringify({
+                            branchId,
+                            paymentAccountId: parseInt(paymentAccountId),
+                            employeeIds: employees
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (!response.ok || !result.success) {
+                        alert(result.message || 'حدث خطأ أثناء إنشاء الدفعة');
+                        return;
+                    }
+
+                    currentBatchId = result.summary.batchId;
+                    summaryContent.innerHTML = `
+                        <div class="list-group">
+                            <div class="list-group-item d-flex justify-content-between">
+                                <span>عدد الموظفين</span>
+                                <strong>${result.summary.employeeCount}</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between">
+                                <span>إجمالي الرواتب</span>
+                                <strong>${Number(result.summary.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                            </div>
+                        </div>`;
+
+                    summaryModal.show();
+                } finally {
+                    toggleOverlay(false);
+                }
+            });
+
+            confirmBtn.addEventListener('click', async function () {
+                if (!currentBatchId) {
+                    return;
+                }
+
+                confirmBtn.disabled = true;
+                confirmBtn.querySelector('.spinner-border').classList.remove('d-none');
+                try {
+                    const response = await fetch('@Url.Action("ConfirmBatch")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': antiForgery
+                        },
+                        body: JSON.stringify({ batchId: currentBatchId })
+                    });
+
+                    const result = await response.json();
+                    if (!response.ok || !result.success) {
+                        alert(result.message || 'حدث خطأ أثناء تأكيد الدفعة');
+                        return;
+                    }
+
+                    summaryModal.hide();
+                    alert('تم تأكيد تنزيل الرواتب بنجاح. أرقام القيود: ' + result.journals.join(', '));
+                    await loadEmployees();
+                    window.location.reload();
+                } finally {
+                    confirmBtn.disabled = false;
+                    confirmBtn.querySelector('.spinner-border').classList.add('d-none');
+                }
+            });
+
+            refreshHistoryBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                window.location.reload();
+            });
+
+            if (historyTable) {
+                historyTable.querySelectorAll('.view-batch').forEach(btn => {
+                    btn.addEventListener('click', async function () {
+                        const id = this.getAttribute('data-id');
+                        const response = await fetch(`@Url.Action("BatchDetails")?id=${id}`);
+                        if (!response.ok) {
+                            alert('تعذر تحميل تفاصيل الدفعة');
+                            return;
+                        }
+                        const data = await response.json();
+                        let html = `<div class="mb-3"><strong>الحالة:</strong> ${data.status}</div>`;
+                        html += `<div class="mb-3"><strong>المرجع:</strong> ${data.reference || '---'}</div>`;
+                        html += '<table class="table table-sm"><thead><tr><th>الموظف</th><th>المسمى الوظيفي</th><th>المبلغ</th></tr></thead><tbody>';
+                        data.employees.forEach(emp => {
+                            html += `<tr><td>${emp.name}</td><td>${emp.jobTitle || ''}</td><td>${Number(emp.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>`;
+                        });
+                        html += '</tbody></table>';
+                        detailsContent.innerHTML = html;
+                        detailsModal.show();
+                    });
+                });
+            }
+        });
+    </script>
+}

@@ -91,6 +91,19 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group mb-3">
+                                    <label asp-for="EmployeeParentAccountId" class="form-label">الحساب الرئيسي للموظفين</label>
+                                    <select asp-for="EmployeeParentAccountId" asp-items="Model.Accounts" class="form-select">
+                                        <option value="">اختر الحساب الرئيسي</option>
+                                    </select>
+                                    <small class="form-text text-muted">سيتم إنشاء حساب لكل موظف تحت هذا الحساب.</small>
+                                    <span asp-validation-for="EmployeeParentAccountId" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="card-footer">
                         <button type="submit" class="btn btn-primary">

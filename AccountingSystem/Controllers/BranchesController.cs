@@ -1,5 +1,9 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
@@ -24,6 +28,7 @@ namespace AccountingSystem.Controllers
             var branches = await _context.Branches
                 .Include(b => b.UserBranches)
                 .Include(b => b.Accounts)
+                .Include(b => b.EmployeeParentAccount)
                 .OrderBy(b => b.Code)
                 .ToListAsync();
 
@@ -40,7 +45,10 @@ namespace AccountingSystem.Controllers
                 IsActive = b.IsActive,
                 CreatedAt = b.CreatedAt,
                 UserCount = b.UserBranches.Count,
-                AccountCount = b.Accounts.Count
+                AccountCount = b.Accounts.Count,
+                EmployeeParentAccountName = b.EmployeeParentAccount != null
+                    ? $"{b.EmployeeParentAccount.Code} - {b.EmployeeParentAccount.NameAr}"
+                    : null
             }).ToList();
 
             return View(viewModels);
@@ -52,6 +60,7 @@ namespace AccountingSystem.Controllers
                 .Include(b => b.UserBranches)
                     .ThenInclude(ub => ub.User)
                 .Include(b => b.Accounts)
+                .Include(b => b.EmployeeParentAccount)
                 .FirstOrDefaultAsync(b => b.Id == id);
 
             if (branch == null)
@@ -84,16 +93,24 @@ namespace AccountingSystem.Controllers
                     AccountCode = a.Code,
                     AccountName = a.NameAr,
                     AccountType = a.AccountType.ToString()
-                }).ToList()
+                }).ToList(),
+                EmployeeParentAccountName = branch.EmployeeParentAccount != null
+                    ? $"{branch.EmployeeParentAccount.Code} - {branch.EmployeeParentAccount.NameAr}"
+                    : null
             };
 
             return View(viewModel);
         }
 
         [Authorize(Policy = "branches.create")]
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
-            return View(new CreateBranchViewModel());
+            var viewModel = new CreateBranchViewModel
+            {
+                Accounts = await GetEmployeeAccountOptionsAsync()
+            };
+
+            return View(viewModel);
         }
 
         [HttpPost]
@@ -101,6 +118,8 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "branches.create")]
         public async Task<IActionResult> Create(CreateBranchViewModel model)
         {
+            model.Accounts = await GetEmployeeAccountOptionsAsync();
+
             if (ModelState.IsValid)
             {
                 // Check if code already exists
@@ -108,6 +127,18 @@ namespace AccountingSystem.Controllers
                 {
                     ModelState.AddModelError("Code", "كود الفرع موجود مسبقاً");
                     return View(model);
+                }
+
+                if (model.EmployeeParentAccountId.HasValue)
+                {
+                    var accountExists = await _context.Accounts
+                        .AnyAsync(a => a.Id == model.EmployeeParentAccountId.Value && a.CanHaveChildren);
+
+                    if (!accountExists)
+                    {
+                        ModelState.AddModelError("EmployeeParentAccountId", "الحساب المحدد غير صالح للموظفين");
+                        return View(model);
+                    }
                 }
 
                 var branch = new Branch
@@ -119,7 +150,8 @@ namespace AccountingSystem.Controllers
                     Address = model.Address,
                     Phone = model.Phone,
                     Email = model.Email,
-                    IsActive = model.IsActive
+                    IsActive = model.IsActive,
+                    EmployeeParentAccountId = model.EmployeeParentAccountId
                 };
 
                 _context.Branches.Add(branch);
@@ -151,7 +183,9 @@ namespace AccountingSystem.Controllers
                 Address = branch.Address,
                 Phone = branch.Phone,
                 Email = branch.Email,
-                IsActive = branch.IsActive
+                IsActive = branch.IsActive,
+                EmployeeParentAccountId = branch.EmployeeParentAccountId,
+                Accounts = await GetEmployeeAccountOptionsAsync()
             };
 
             return View(viewModel);
@@ -162,6 +196,8 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "branches.edit")]
         public async Task<IActionResult> Edit(EditBranchViewModel model)
         {
+            model.Accounts = await GetEmployeeAccountOptionsAsync();
+
             if (ModelState.IsValid)
             {
                 // Check if code already exists for other branches
@@ -169,6 +205,18 @@ namespace AccountingSystem.Controllers
                 {
                     ModelState.AddModelError("Code", "كود الفرع موجود مسبقاً");
                     return View(model);
+                }
+
+                if (model.EmployeeParentAccountId.HasValue)
+                {
+                    var accountExists = await _context.Accounts
+                        .AnyAsync(a => a.Id == model.EmployeeParentAccountId.Value && a.CanHaveChildren);
+
+                    if (!accountExists)
+                    {
+                        ModelState.AddModelError("EmployeeParentAccountId", "الحساب المحدد غير صالح للموظفين");
+                        return View(model);
+                    }
                 }
 
                 var branch = await _context.Branches.FindAsync(model.Id);
@@ -185,6 +233,7 @@ namespace AccountingSystem.Controllers
                 branch.Phone = model.Phone;
                 branch.Email = model.Email;
                 branch.IsActive = model.IsActive;
+                branch.EmployeeParentAccountId = model.EmployeeParentAccountId;
                 branch.UpdatedAt = DateTime.Now;
 
                 await _context.SaveChangesAsync();
@@ -194,6 +243,20 @@ namespace AccountingSystem.Controllers
             }
 
             return View(model);
+        }
+
+        private async Task<IEnumerable<SelectListItem>> GetEmployeeAccountOptionsAsync()
+        {
+            return await _context.Accounts
+                .AsNoTracking()
+                .Where(a => a.CanHaveChildren)
+                .OrderBy(a => a.Code)
+                .Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = $"{a.Code} - {a.NameAr}"
+                })
+                .ToListAsync();
         }
 
         [HttpPost]
