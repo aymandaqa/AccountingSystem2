@@ -63,10 +63,8 @@
                     <div class="row g-3">
                         @foreach (var metric in Model.MonthlyMetrics)
                         {
-                            @{
-                                var varianceClass = metric.Variance >= 0 ? "text-success" : "text-danger";
-                                var progress = Math.Min(200d, Math.Max(0d, (double)metric.Achievement));
-                            }
+                            var varianceClass = metric.Variance >= 0 ? "text-success" : "text-danger";
+                            var progress = Math.Min(200d, Math.Max(0d, (double)metric.Achievement));
                             <div class="col-12 col-md-6">
                                 <div class="metric-card h-100">
                                     <div class="metric-title">@metric.Title</div>
@@ -98,10 +96,8 @@
                     <div class="row g-3">
                         @foreach (var metric in Model.YearToDateMetrics)
                         {
-                            @{
-                                var varianceClass = metric.Variance >= 0 ? "text-success" : "text-danger";
-                                var progress = Math.Min(200d, Math.Max(0d, (double)metric.Achievement));
-                            }
+                            var varianceClass = metric.Variance >= 0 ? "text-success" : "text-danger";
+                            var progress = Math.Min(200d, Math.Max(0d, (double)metric.Achievement));
                             <div class="col-12 col-md-6">
                                 <div class="metric-card h-100">
                                     <div class="metric-title">@metric.Title</div>
@@ -138,9 +134,7 @@
                     <ul class="list-group list-group-flush">
                         @foreach (var metric in Model.CashConversionMetrics)
                         {
-                            @{
-                                var daysProgress = Math.Min(200d, Math.Max(0d, (double)metric.MonthlyValue));
-                            }
+                            var daysProgress = Math.Min(200d, Math.Max(0d, (double)metric.MonthlyValue));
                             <li class="list-group-item px-0">
                                 <div class="d-flex justify-content-between">
                                     <span class="fw-semibold">@metric.Name</span>
@@ -217,9 +211,7 @@
                             <tbody>
                                 @foreach (var row in Model.IncomeStatement)
                                 {
-                                    @{
-                                        var rowClass = row.Name.Contains("ربح") ? "table-success" : string.Empty;
-                                    }
+                                    var rowClass = row.Name.Contains("ربح") ? "table-success" : string.Empty;
                                     <tr class="@rowClass">
                                         <td class="fw-semibold">@row.Name</td>
                                         <td class="text-end">@formatNumber(row.MonthlyActual) @Model.CurrencyCode</td>
@@ -264,9 +256,7 @@
                         {
                             @foreach (var point in Model.MonthlyTrend)
                             {
-                                @{
-                                    var rowClass = point.IsSelected ? "table-primary" : string.Empty;
-                                }
+                                var rowClass = point.IsSelected ? "table-primary" : string.Empty;
                                 <tr class="@rowClass">
                                     <td class="fw-semibold">@point.Label</td>
                                     <td class="text-end">@formatNumber(point.Revenue) @Model.CurrencyCode</td>
