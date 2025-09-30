@@ -31,7 +31,7 @@ namespace AccountingSystem.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("AccountType")
+                    b.Property<AccountType>("AccountType")
                         .HasColumnType("int");
 
                     b.Property<int?>("BranchId")
