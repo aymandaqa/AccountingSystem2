@@ -2,13 +2,17 @@
 
 @foreach (var node in Model)
 {
-    <div class="tree-node level-@node.Level" data-level="@node.Level">
+    var hasChildren = node.HasChildren;
+    var hasPreloadedChildren = node.Children.Any();
+    var containerDisplay = hasPreloadedChildren ? "block" : "none";
+    var toggleIcon = hasPreloadedChildren ? "minus" : "plus";
+    <div class="tree-node level-@node.Level" data-level="@node.Level" data-node-id="@node.Id" data-account-type="@(node.Id == 0 ? node.AccountType.ToString() : string.Empty)" data-has-children="@(hasChildren.ToString().ToLower())">
         <div class="tree-node-content">
             <div class="tree-node-info">
-                @if (node.Children.Any())
+                @if (hasChildren)
                 {
-                    <button class="toggle-btn" type="button">
-                        <i class="fas fa-minus"></i>
+                    <button class="toggle-btn" type="button" data-loaded="@(hasPreloadedChildren.ToString().ToLower())">
+                        <i class="fas fa-@toggleIcon"></i>
                     </button>
                 }
                 else
@@ -38,10 +42,13 @@
             </div>
         </div>
 
-        @if (node.Children.Any())
+        @if (hasChildren)
         {
-            <div class="tree-children">
-                @await Html.PartialAsync("_AccountBalanceTreeNode", node.Children)
+            <div class="tree-children" data-loaded="@(hasPreloadedChildren.ToString().ToLower())" style="display:@containerDisplay">
+                @if (hasPreloadedChildren)
+                {
+                    @await Html.PartialAsync("_AccountBalanceTreeNode", node.Children)
+                }
             </div>
         }
     </div>

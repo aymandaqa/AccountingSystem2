@@ -301,7 +301,13 @@
                             <div class="card-body">
                                 @if (Model.AccountTypeTrees.Any())
                                 {
-                                    <div class="tree-container">
+                                    <div id="dashboardAccountsTree" class="tree-container"
+                                         data-branch-id="@(Model.SelectedBranchId?.ToString() ?? string.Empty)"
+                                         data-from-date="@Model.FromDate.ToString("yyyy-MM-dd")"
+                                         data-to-date="@Model.ToDate.ToString("yyyy-MM-dd")"
+                                         data-currency-id="@(Model.SelectedCurrencyId?.ToString() ?? string.Empty)"
+                                         data-selected-currency="@Model.SelectedCurrencyCode"
+                                         data-base-currency="@Model.BaseCurrencyCode">
                                         @{
                                             ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode; ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
                                         }
@@ -1026,19 +1032,87 @@
                 });
             });
 
-            $('.toggle-btn').on('click', function () {
-                var $this = $(this);
-                var $children = $this.closest('.tree-node').find('> .tree-children');
-                if ($children.is(':visible')) {
-                    $children.hide();
-                    $this.html('<i class="fas fa-plus"></i>');
-                } else {
-                    $children.show();
-                    $this.html('<i class="fas fa-minus"></i>');
-                }
-            });
+            var $accountsTree = $('#dashboardAccountsTree');
+            var loadTreeUrl = '@Url.Action("LoadAccountTreeNodes")';
 
-            $('.tree-node[data-level="0"] .toggle-btn').trigger('click');
+            $(document).on('click', '#dashboardAccountsTree .toggle-btn', function () {
+                var $button = $(this);
+                var $node = $button.closest('.tree-node');
+                var hasChildren = $node.data('has-children');
+
+                if (!hasChildren) {
+                    return;
+                }
+
+                var $children = $node.find('> .tree-children');
+                var isVisible = $children.is(':visible');
+
+                if (isVisible) {
+                    $children.slideUp(200);
+                    $button.html('<i class="fas fa-plus"></i>');
+                    return;
+                }
+
+                if ($children.data('loaded')) {
+                    $children.slideDown(200);
+                    $button.html('<i class="fas fa-minus"></i>');
+                    return;
+                }
+
+                var nodeId = parseInt($node.data('node-id')) || 0;
+                var accountType = $node.data('account-type');
+                var requestData = {};
+
+                if (nodeId > 0) {
+                    requestData.parentId = nodeId;
+                }
+
+                if (accountType) {
+                    requestData.accountType = accountType;
+                }
+
+                var branchId = $accountsTree.data('branch-id');
+                var fromDate = $accountsTree.data('from-date');
+                var toDate = $accountsTree.data('to-date');
+                var currencyId = $accountsTree.data('currency-id');
+
+                if (branchId) {
+                    requestData.branchId = branchId;
+                }
+                if (fromDate) {
+                    requestData.fromDate = fromDate;
+                }
+                if (toDate) {
+                    requestData.toDate = toDate;
+                }
+                if (currencyId) {
+                    requestData.currencyId = currencyId;
+                }
+
+                $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+                $.get(loadTreeUrl, requestData)
+                    .done(function (html) {
+                        var trimmed = $.trim(html);
+                        if (trimmed.length) {
+                            $children.html(trimmed);
+                            $children.data('loaded', true);
+                            $children.slideDown(200);
+                            $button.html('<i class="fas fa-minus"></i>');
+                        } else {
+                            $children.data('loaded', true);
+                            $node.data('has-children', false);
+                            $button.replaceWith('<span style="width: 20px; display: inline-block;"></span>');
+                        }
+                    })
+                    .fail(function () {
+                        alert('تعذر تحميل بيانات الشجرة، يرجى المحاولة مرة أخرى.');
+                        $button.html('<i class="fas fa-plus"></i>');
+                    })
+                    .always(function () {
+                        $button.prop('disabled', false);
+                    });
+            });
         });
     </script>
 }
