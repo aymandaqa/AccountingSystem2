@@ -2,7 +2,6 @@
 
 @{
     ViewData["Title"] = "تفاصيل مركز التكلفة";
-    Layout = "_AccountingLayout";
 }
 
 <div class="container-fluid">
@@ -133,7 +132,7 @@
                                 @if (Model.Transactions.Count > 10)
                                 {
                                     <p class="text-muted">
-                                        عرض 10 من أصل @Model.Transactions.Count معاملة. 
+                                        عرض 10 من أصل @Model.Transactions.Count معاملة.
                                         <a href="@Url.Action("GetCostCenterReport", new { id = Model.Id })">عرض التقرير الكامل</a>
                                     </p>
                                 }

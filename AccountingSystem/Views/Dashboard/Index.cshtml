@@ -6,7 +6,6 @@
 
 @{
     ViewData["Title"] = "لوحة التحكم";
-    Layout = "_AccountingLayout";
     var canViewStats = (await AuthorizationService.AuthorizeAsync(User, "dashboard.widget.stats")).Succeeded;
     var canViewAccounts = (await AuthorizationService.AuthorizeAsync(User, "dashboard.widget.accounts")).Succeeded;
     var canViewLinks = (await AuthorizationService.AuthorizeAsync(User, "dashboard.widget.links")).Succeeded;

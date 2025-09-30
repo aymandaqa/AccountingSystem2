@@ -1,7 +1,6 @@
 @model AccountingSystem.ViewModels.EditEmployeeViewModel
 @{
     ViewData["Title"] = "تعديل بيانات الموظف";
-    Layout = "_AccountingLayout";
 }
 
 <div class="container-fluid">
@@ -85,5 +84,7 @@
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
 }

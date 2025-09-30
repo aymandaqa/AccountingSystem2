@@ -3,7 +3,6 @@
 
 @{
     ViewData["Title"] = "لوحة التقارير التنفيذية";
-    Layout = "~/Views/Shared/_AccountingLayout.cshtml";
     var culture = CultureInfo.CreateSpecificCulture("ar-SA");
     Func<decimal, string> formatNumber = value => string.Format(culture, "{0:N2}", value);
     Func<AccountingSystem.ViewModels.ExecutiveDashboardMetric, decimal, string> formatMetricValue = (metric, value) =>

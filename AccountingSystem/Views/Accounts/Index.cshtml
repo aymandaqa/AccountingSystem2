@@ -2,7 +2,6 @@
 
 @{
     ViewData["Title"] = "قائمة الحسابات";
-    Layout = "_AccountingLayout";
 }
 
 <div class="container-fluid">
@@ -93,7 +92,7 @@
                                             </td>
                                             <td>
                                                 <div class="btn-group" role="group">
-                                                    <a href="@Url.Action("Details", new { id = account.Id })" 
+                                                    <a href="@Url.Action("Details", new { id = account.Id })"
                                                        class="btn btn-info btn-sm" title="التفاصيل">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
@@ -109,7 +108,7 @@
                                                     </a>
                                                     @if (account.CanPostTransactions)
                                                     {
-                                                        <a href="@Url.Action("AccountStatement", "Reports", new { accountId = account.Id })" 
+                                                        <a href="@Url.Action("AccountStatement", "Reports", new { accountId = account.Id })"
                                                            class="btn btn-success btn-sm" title="كشف الحساب">
                                                             <i class="fas fa-file-alt"></i>
                                                         </a>

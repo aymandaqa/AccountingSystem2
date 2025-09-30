@@ -2,7 +2,6 @@
 
 @{
     ViewData["Title"] = "تعديل مركز التكلفة";
-    Layout = "_AccountingLayout";
 }
 
 <div class="container-fluid">
@@ -24,7 +23,7 @@
                     <input asp-for="Id" type="hidden" />
                     <div class="card-body">
                         <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
-                        
+
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
@@ -88,7 +87,9 @@
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
     <script>
         function deleteCostCenter(id) {
             if (confirm('هل أنت متأكد من حذف مركز التكلفة هذا؟ سيتم حذف جميع البيانات المرتبطة به.')) {

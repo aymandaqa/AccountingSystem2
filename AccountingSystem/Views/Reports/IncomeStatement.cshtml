@@ -1,7 +1,6 @@
 @model AccountingSystem.ViewModels.IncomeStatementViewModel
 @{
     ViewData["Title"] = "قائمة الدخل";
-    Layout = "~/Views/Shared/_AccountingLayout.cshtml";
 }
 
 <div class="container-fluid">
@@ -68,7 +67,9 @@
                             </div>
                         </div>
                     </form>
-                    @{ ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode; ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode; }
+                    @{
+                        ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode; ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
+                    }
 
                     <div class="row">
                         <div class="col-12">

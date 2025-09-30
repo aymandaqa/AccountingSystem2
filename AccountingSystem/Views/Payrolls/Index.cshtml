@@ -1,7 +1,6 @@
 @using Microsoft.AspNetCore.Mvc.Rendering
 @{
     ViewData["Title"] = "إدارة الرواتب";
-    Layout = "_AccountingLayout";
     var branches = ViewBag.Branches as List<SelectListItem> ?? new();
     var paymentAccounts = ViewBag.PaymentAccounts as List<SelectListItem> ?? new();
     var history = ViewBag.History as List<AccountingSystem.ViewModels.PayrollBatchHistoryViewModel> ?? new();
@@ -198,6 +197,7 @@
         .payroll-container {
             position: relative;
         }
+
         .payroll-overlay {
             position: absolute;
             inset: 0;
@@ -207,6 +207,7 @@
             justify-content: center;
             z-index: 1050;
         }
+
         #employeesTable tbody tr.selected {
             background-color: rgba(0, 123, 255, 0.1);
         }

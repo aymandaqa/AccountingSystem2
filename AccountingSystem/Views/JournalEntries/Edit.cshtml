@@ -1,7 +1,6 @@
 @model AccountingSystem.ViewModels.CreateJournalEntryViewModel
 @{
     ViewData["Title"] = "تعديل قيد مالي";
-    Layout = "~/Views/Shared/_AccountingLayout.cshtml";
 }
 
 <div class="container-fluid">
@@ -131,74 +130,74 @@
 </div>
 
 <script>
-let lineIndex = @Model.Lines.Count;
+    let lineIndex = @Model.Lines.Count;
 
-function addJournalLine() {
-    const tbody = document.getElementById('journalLinesBody');
-    const row = document.createElement('tr');
-    row.innerHTML = `
-        <td>
-            <select name="Lines[${lineIndex}].AccountId" class="form-select" required>
-                <option value="">اختر الحساب</option>
-                @foreach (var account in Model.Accounts)
-                {
-                    <option value="@account.Value">@account.Text</option>
-                }
-            </select>
-        </td>
-        <td>
-            <input name="Lines[${lineIndex}].Description" type="text" class="form-control" />
-        </td>
-        <td>
-            <input name="Lines[${lineIndex}].DebitAmount" type="number" step="0.01" min="0" class="form-control debit-amount" onchange="calculateTotals()" />
-        </td>
-        <td>
-            <input name="Lines[${lineIndex}].CreditAmount" type="number" step="0.01" min="0" class="form-control credit-amount" onchange="calculateTotals()" />
-        </td>
-        <td>
-            <button type="button" class="btn btn-sm btn-danger" onclick="removeJournalLine(this)">
-                <i class="fas fa-trash"></i>
-            </button>
-        </td>
-    `;
-    tbody.appendChild(row);
-    lineIndex++;
-    calculateTotals();
-}
-
-function removeJournalLine(button) {
-    button.closest('tr').remove();
-    calculateTotals();
-}
-
-function calculateTotals() {
-    let totalDebit = 0;
-    let totalCredit = 0;
-
-    document.querySelectorAll('.debit-amount').forEach(input => {
-        totalDebit += parseFloat(input.value) || 0;
-    });
-
-    document.querySelectorAll('.credit-amount').forEach(input => {
-        totalCredit += parseFloat(input.value) || 0;
-    });
-
-    document.getElementById('totalDebit').textContent = totalDebit.toFixed(2);
-    document.getElementById('totalCredit').textContent = totalCredit.toFixed(2);
-
-    const balanceAlert = document.getElementById('balanceAlert');
-    const saveButton = document.getElementById('saveButton');
-
-    if (Math.abs(totalDebit - totalCredit) > 0.01) {
-        balanceAlert.classList.remove('d-none');
-        saveButton.disabled = true;
-    } else {
-        balanceAlert.classList.add('d-none');
-        saveButton.disabled = false;
+    function addJournalLine() {
+        const tbody = document.getElementById('journalLinesBody');
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>
+                <select name="Lines[${lineIndex}].AccountId" class="form-select" required>
+                    <option value="">اختر الحساب</option>
+                    @foreach (var account in Model.Accounts)
+                    {
+                            <option value="@account.Value">@account.Text</option>
+                    }
+                </select>
+            </td>
+            <td>
+                <input name="Lines[${lineIndex}].Description" type="text" class="form-control" />
+            </td>
+            <td>
+                <input name="Lines[${lineIndex}].DebitAmount" type="number" step="0.01" min="0" class="form-control debit-amount" onchange="calculateTotals()" />
+            </td>
+            <td>
+                <input name="Lines[${lineIndex}].CreditAmount" type="number" step="0.01" min="0" class="form-control credit-amount" onchange="calculateTotals()" />
+            </td>
+            <td>
+                <button type="button" class="btn btn-sm btn-danger" onclick="removeJournalLine(this)">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+        lineIndex++;
+        calculateTotals();
     }
-}
 
-document.addEventListener('DOMContentLoaded', function() {
-    calculateTotals();
-});
+    function removeJournalLine(button) {
+        button.closest('tr').remove();
+        calculateTotals();
+    }
+
+    function calculateTotals() {
+        let totalDebit = 0;
+        let totalCredit = 0;
+
+        document.querySelectorAll('.debit-amount').forEach(input => {
+            totalDebit += parseFloat(input.value) || 0;
+        });
+
+        document.querySelectorAll('.credit-amount').forEach(input => {
+            totalCredit += parseFloat(input.value) || 0;
+        });
+
+        document.getElementById('totalDebit').textContent = totalDebit.toFixed(2);
+        document.getElementById('totalCredit').textContent = totalCredit.toFixed(2);
+
+        const balanceAlert = document.getElementById('balanceAlert');
+        const saveButton = document.getElementById('saveButton');
+
+        if (Math.abs(totalDebit - totalCredit) > 0.01) {
+            balanceAlert.classList.remove('d-none');
+            saveButton.disabled = true;
+        } else {
+            balanceAlert.classList.add('d-none');
+            saveButton.disabled = false;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        calculateTotals();
+    });
 </script>

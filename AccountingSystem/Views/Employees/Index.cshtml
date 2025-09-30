@@ -2,7 +2,6 @@
 @model List<AccountingSystem.ViewModels.EmployeeListItemViewModel>
 @{
     ViewData["Title"] = "إدارة الموظفين";
-    Layout = "_AccountingLayout";
     var branches = ViewBag.Branches as List<SelectListItem> ?? new List<SelectListItem>();
 }
 
@@ -52,41 +51,41 @@
                             </tr>
                         </thead>
                         <tbody>
-                        @foreach (var employee in Model)
-                        {
-                            <tr data-branch-id="@employee.BranchId">
-                                <td>
-                                    <strong>@employee.Name</strong>
-                                    <div class="text-muted small">@employee.AccountCode - @employee.AccountName</div>
-                                </td>
-                                <td>@employee.JobTitle</td>
-                                <td>@employee.Salary.ToString("N2")</td>
-                                <td>@employee.BranchName</td>
-                                <td>
-                                    <span class="badge bg-light text-dark">@employee.AccountCode</span>
-                                </td>
-                                <td>
-                                    @if (employee.IsActive)
-                                    {
-                                        <span class="badge bg-success">نشط</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-danger">موقوف</span>
-                                    }
-                                </td>
-                                <td class="text-center">
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <a href="@Url.Action("Edit", new { id = employee.Id })" class="btn btn-warning" asp-require-permission="employees.edit">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <button type="button" class="btn btn-outline-secondary toggle-status" data-id="@employee.Id" asp-require-permission="employees.delete">
-                                            <i class="fas fa-power-off"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
+                            @foreach (var employee in Model)
+                            {
+                                <tr data-branch-id="@employee.BranchId">
+                                    <td>
+                                        <strong>@employee.Name</strong>
+                                        <div class="text-muted small">@employee.AccountCode - @employee.AccountName</div>
+                                    </td>
+                                    <td>@employee.JobTitle</td>
+                                    <td>@employee.Salary.ToString("N2")</td>
+                                    <td>@employee.BranchName</td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">@employee.AccountCode</span>
+                                    </td>
+                                    <td>
+                                        @if (employee.IsActive)
+                                        {
+                                            <span class="badge bg-success">نشط</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">موقوف</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="@Url.Action("Edit", new { id = employee.Id })" class="btn btn-warning" asp-require-permission="employees.edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-outline-secondary toggle-status" data-id="@employee.Id" asp-require-permission="employees.delete">
+                                                <i class="fas fa-power-off"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
                         </tbody>
                     </table>
                 </div>
