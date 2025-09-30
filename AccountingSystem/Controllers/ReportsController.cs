@@ -2048,7 +2048,7 @@ namespace AccountingSystem.Controllers
         {
             return grouping switch
             {
-                BranchExpensesPeriodGrouping.Monthly => $"{culture.DateTimeFormat.GetMonthName(periodStart.Month)} {periodStart.Year}",
+                BranchExpensesPeriodGrouping.Monthly => periodStart.ToString("MM/yyyy", culture),
                 BranchExpensesPeriodGrouping.Quarterly => $"الربع {GetQuarterNumber(periodStart)} {periodStart.Year}",
                 BranchExpensesPeriodGrouping.Yearly => periodStart.Year.ToString(),
                 _ => periodStart.ToString("yyyy-MM")

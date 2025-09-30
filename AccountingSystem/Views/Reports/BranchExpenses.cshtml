@@ -97,39 +97,65 @@
                             </div>
                         </div>
                         <div class="table-responsive">
+                            @{ var rows = Model.Rows; }
                             <table class="table table-bordered table-hover align-middle">
                                 <thead class="table-light">
                                     <tr>
-                                        <th style="min-width: 200px;">@((Model.ViewMode == BranchExpensesViewMode.Combined) ? "إجمالي" : "الفرع")</th>
-                                        @foreach (var column in Model.Columns)
+                                        <th style="min-width: 180px;">@("الفترة")</th>
+                                        @if (Model.ViewMode == BranchExpensesViewMode.Combined)
                                         {
-                                            var periodRange = $"{column.PeriodStart:yyyy-MM-dd} - {column.PeriodEnd:yyyy-MM-dd}";
-                                            <th class="text-end" title="@periodRange">@column.Label</th>
+                                            <th class="text-end">إجمالي الفروع</th>
+                                        }
+                                        else
+                                        {
+                                            foreach (var row in rows)
+                                            {
+                                                <th class="text-end">@row.BranchName</th>
+                                            }
                                         }
                                         <th class="text-end">الإجمالي</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var row in Model.Rows)
+                                    @foreach (var column in Model.Columns)
                                     {
+                                        var periodRange = $"{column.PeriodStart:yyyy-MM-dd} - {column.PeriodEnd:yyyy-MM-dd}";
                                         <tr>
-                                            <td>@row.BranchName</td>
-                                            @foreach (var column in Model.Columns)
+                                            <td title="@periodRange">@column.Label</td>
+                                            @if (Model.ViewMode == BranchExpensesViewMode.Combined)
                                             {
-                                                var amount = row.Amounts.TryGetValue(column.PeriodStart, out var value) ? value : 0m;
+                                                var combinedRow = rows.FirstOrDefault();
+                                                var amount = combinedRow?.Amounts.TryGetValue(column.PeriodStart, out var value) == true ? value : 0m;
                                                 <td class="text-end">@amount.ToString("N2")</td>
                                             }
-                                            <td class="text-end fw-bold">@row.Total.ToString("N2")</td>
+                                            else
+                                            {
+                                                foreach (var row in rows)
+                                                {
+                                                    var amount = row.Amounts.TryGetValue(column.PeriodStart, out var value) ? value : 0m;
+                                                    <td class="text-end">@amount.ToString("N2")</td>
+                                                }
+                                            }
+
+                                            var total = Model.ColumnTotals.TryGetValue(column.PeriodStart, out var periodTotal) ? periodTotal : 0m;
+                                            <td class="text-end fw-bold">@total.ToString("N2")</td>
                                         </tr>
                                     }
                                 </tbody>
                                 <tfoot class="table-secondary">
                                     <tr class="fw-bold">
-                                        <td>الإجمالي الكلي</td>
-                                        @foreach (var column in Model.Columns)
+                                        <td>الإجمالي</td>
+                                        @if (Model.ViewMode == BranchExpensesViewMode.Combined)
                                         {
-                                            var total = Model.ColumnTotals.TryGetValue(column.PeriodStart, out var value) ? value : 0m;
-                                            <td class="text-end">@total.ToString("N2")</td>
+                                            var combinedRow = rows.FirstOrDefault();
+                                            <td class="text-end">@((combinedRow?.Total ?? 0m).ToString("N2"))</td>
+                                        }
+                                        else
+                                        {
+                                            foreach (var row in rows)
+                                            {
+                                                <td class="text-end">@row.Total.ToString("N2")</td>
+                                            }
                                         }
                                         <td class="text-end">@Model.GrandTotal.ToString("N2")</td>
                                     </tr>
