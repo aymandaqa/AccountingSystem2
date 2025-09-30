@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AccountingSystem.Models
 {
@@ -42,6 +43,7 @@ namespace AccountingSystem.Models
 
         public virtual Account Account { get; set; } = null!;
 
+        [InverseProperty(nameof(PayrollBatchLine.Employee))]
         public virtual ICollection<PayrollBatchLine> PayrollLines { get; set; } = new List<PayrollBatchLine>();
     }
 }

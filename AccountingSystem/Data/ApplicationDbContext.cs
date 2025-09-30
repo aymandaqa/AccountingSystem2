@@ -215,6 +215,11 @@ namespace AccountingSystem.Data
                     .WithMany()
                     .HasForeignKey(e => e.AccountId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(e => e.PayrollLines)
+                    .WithOne(l => l.Employee)
+                    .HasForeignKey(l => l.EmployeeId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<PayrollBatch>(entity =>
