@@ -7,20 +7,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - نظام المحاسبة</title>
 
-    <!-- Bootstrap RTL -->
-    <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <!-- Site styles -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS7P0YlC4eg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/AccountingSystem.styles.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/accounting.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/minible-theme.css" asp-append-version="true" />
     <link href="https://cdn.syncfusion.com/ej2/bootstrap5.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
 
     <script src="https://cdn.syncfusion.com/ej2/dist/ej2.min.js"></script>
 
     @await RenderSectionAsync("Styles", required: false)
 </head>
-<body>
+<body class="minible-rtl">
     @{
         var canBusinessStatementBulk = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.businessstatementbulk")).Succeeded;
         var canBusinessRetStatementBulk = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.businessretstatementbulk")).Succeeded;
@@ -60,393 +62,431 @@
         var hrActive = currentController == "employees" || currentController == "payrolls";
         var assetsActive = currentController == "assets" || currentController == "assetexpenses" || currentController == "assettypes";
     }
-    <div id="wrapper" class="d-flex">
-        <nav id="sidebar">
-            <div class="sidebar-header p-3 mb-3 border-bottom">
-                <a class="navbar-brand d-flex align-items-center text-white" href="@Url.Action("Index", "Dashboard")">
-                    <i class="fas fa-calculator me-2"></i> RoadFinity
+    <div id="layout-wrapper" class="d-flex">
+        <aside id="iconSidebar" class="icon-sidebar d-flex flex-column">
+            <div class="sidebar-brand text-center py-3">
+                <a class="brand-link d-flex flex-column align-items-center" href="@Url.Action("Index", "Dashboard")">
+                    <span class="brand-icon mb-2"><i class="fa-solid fa-calculator"></i></span>
+                    <span class="brand-text">RoadFinity</span>
                 </a>
             </div>
-            <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a class="nav-link @(currentController == "Dashboard" && currentAction == "Index" ? "active" : "")" href="@Url.Action("Index", "Dashboard")">
-                        <i class="fas fa-tachometer-alt"></i> لوحة التحكم
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(currentController == "Dashboard" && currentAction == "Index" ? "active" : "")" href="@Url.Action("Index", "home")">
-                        <i class="fas fa-tachometer-alt"></i> عرض اداء الشركة
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="collapse" href="#accountsMenu" role="button" aria-expanded="@(accountsActive ? "true" : "false")">
-                        <i class="fas fa-list-alt"></i> الحسابات
-                    </a>
-                    <ul class="collapse nav flex-column ms-3 @(accountsActive ? "show" : "")" id="accountsMenu">
-                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Tree", "Accounts")"><i class="fas fa-sitemap"></i> شجرة الحسابات</a></li>
-                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Accounts")"><i class="fas fa-list"></i> قائمة الحسابات</a></li>
-                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "Accounts")"><i class="fas fa-plus"></i> إضافة حساب جديد</a></li>
-                    </ul>
-                </li>
-                @if (canSuppliers)
-                {
+            <div class="sidebar-menu flex-grow-1 overflow-auto">
+                <ul class="nav flex-column" id="sidebarNav">
                     <li class="nav-item">
-                        <a class="nav-link @(currentController == "Suppliers" ? "active" : "")" href="@Url.Action("Index", "Suppliers")">
-                            <i class="fas fa-truck"></i> الموردين
+                        <a class="nav-link @(currentController == "dashboard" && currentAction == "index" ? "active" : "")" href="@Url.Action("Index", "Dashboard")" data-bs-toggle="tooltip" data-bs-placement="left" title="لوحة التحكم">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span class="menu-title">لوحة التحكم</span>
                         </a>
                     </li>
-                }
-                @if (canSystemSettings)
-                {
                     <li class="nav-item">
-                        <a class="nav-link @(currentController == "SystemSettings" ? "active" : "")" href="@Url.Action("Index", "SystemSettings")">
-                            <i class="fas fa-cog"></i> إعدادات النظام
+                        <a class="nav-link @(currentController == "home" && currentAction == "index" ? "active" : "")" href="@Url.Action("Index", "Home")" data-bs-toggle="tooltip" data-bs-placement="left" title="عرض أداء الشركة">
+                            <i class="fa-solid fa-gauge-high"></i>
+                            <span class="menu-title">عرض أداء الشركة</span>
                         </a>
                     </li>
-                }
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="collapse" href="#operationsMenu" role="button" aria-expanded="@(operationsActive ? "true" : "false")">
-                        <i class="fas fa-list-alt"></i> العمليات
-                    </a>
-                    <ul class="collapse nav flex-column ms-3 @(operationsActive ? "show" : "")" id="operationsMenu">
-                        <li class="nav-item"><a class="nav-link" href="@Url.Action("MyClosures", "CashBoxClosures")"><i class="fas fa-sitemap"></i> جرد الصندوق قائمة</a></li>
-                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Pending", "CashBoxClosures")"><i class="fas fa-sitemap"></i> جرد الصندوق مواقة</a></li>
-                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "CashBoxClosures")"><i class="fas fa-sitemap"></i> جرد الصندوق</a></li>
-                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Report", "CashBoxClosures")"><i class="fas fa-file-alt"></i> تقرير إغلاقات الصندوق</a></li>
-                        @*                         <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Expenses")"><i class="fas fa-money-bill"></i> المصاريف</a></li>
- *@                        <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "transfers")"><i class="fas fa-exchange"></i> الحوالات</a></li>
-                    </ul>
-                </li>
-                @if (showAssets)
-                {
                     <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="collapse" href="#assetsMenu" role="button" aria-expanded="@(assetsActive ? "true" : "false")">
-                            <i class="fas fa-boxes"></i> الاصول الثابته
+                        <a class="nav-link d-flex align-items-center @(accountsActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#accountsMenu" role="button" aria-expanded="@(accountsActive ? "true" : "false")" title="الحسابات">
+                            <i class="fa-solid fa-layer-group"></i>
+                            <span class="menu-title">الحسابات</span>
+                            <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
                         </a>
-                        <ul class="collapse nav flex-column ms-3 @(assetsActive ? "show" : "")" id="assetsMenu">
-                            @if (canAssets)
-                            {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Assets")"><i class="fas fa-list"></i> قائمة الأصول الثابته</a></li>
-                            }
-                            @if (canAssetTypes)
-                            {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "AssetTypes")"><i class="fas fa-tags"></i> أنواع الأصول</a></li>
-                            }
-                            @if (canAssetExpenses)
-                            {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "AssetExpenses")"><i class="fas fa-money-bill"></i> مصاريف الأصول الثابته</a></li>
-                            }
+                        <ul class="collapse menu-dropdown @(accountsActive ? "show" : "")" id="accountsMenu">
+                            <li><a class="dropdown-item" href="@Url.Action("Tree", "Accounts")"><i class="fa-solid fa-sitemap"></i><span>شجرة الحسابات</span></a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Index", "Accounts")"><i class="fa-solid fa-list"></i><span>قائمة الحسابات</span></a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Create", "Accounts")"><i class="fa-solid fa-plus"></i><span>إضافة حساب جديد</span></a></li>
                         </ul>
                     </li>
-                }
-                @if (showVouchers)
-                {
+                    @if (canSuppliers)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(currentController == "suppliers" ? "active" : "")" href="@Url.Action("Index", "Suppliers")" data-bs-toggle="tooltip" data-bs-placement="left" title="الموردين">
+                                <i class="fa-solid fa-truck"></i>
+                                <span class="menu-title">الموردين</span>
+                            </a>
+                        </li>
+                    }
+                    @if (canSystemSettings)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(currentController == "systemsettings" ? "active" : "")" href="@Url.Action("Index", "SystemSettings")" data-bs-toggle="tooltip" data-bs-placement="left" title="إعدادات النظام">
+                                <i class="fa-solid fa-sliders"></i>
+                                <span class="menu-title">إعدادات النظام</span>
+                            </a>
+                        </li>
+                    }
                     <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="collapse" href="#vouchersMenu" role="button" aria-expanded="@(vouchersActive ? "true" : "false")">
-                            <i class="fas fa-file-invoice-dollar"></i> السندات
+                        <a class="nav-link d-flex align-items-center @(operationsActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#operationsMenu" role="button" aria-expanded="@(operationsActive ? "true" : "false")" title="العمليات">
+                            <i class="fa-solid fa-arrows-spin"></i>
+                            <span class="menu-title">العمليات</span>
+                            <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
                         </a>
-                        <ul class="collapse nav flex-column ms-3 @(vouchersActive ? "show" : "")" id="vouchersMenu">
-                            @*   @if (canReceiptVouchers)
-                            {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "ReceiptVouchers")"><i class="fas fa-list"></i> سندات القبض</a></li>
-                            }
-                            @if (canReceiptVouchersCreate)
-                            {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "ReceiptVouchers")"><i class="fas fa-plus"></i> إضافة سند قبض</a></li>
-                            }*@
-                            @if (canDisbursementVouchers)
-                            {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "DisbursementVouchers")"><i class="fas fa-list"></i> سندات دفع</a></li>
-                            }
-                            @if (canDisbursementVouchersCreate)
-                            {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "DisbursementVouchers")"><i class="fas fa-plus"></i> إضافة سند دفع</a></li>
-                            }
-                            @if (canPaymentVouchers)
-                            {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "PaymentVouchers")"><i class="fas fa-list"></i> سندات المصاريف</a></li>
-                            }
-                            @if (canPaymentVouchersCreate)
-                            {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "PaymentVouchers")"><i class="fas fa-plus"></i> إضافة سند صرف</a></li>
-                            }
+                        <ul class="collapse menu-dropdown @(operationsActive ? "show" : "")" id="operationsMenu">
+                            <li><a class="dropdown-item" href="@Url.Action("MyClosures", "CashBoxClosures")"><i class="fa-solid fa-box-archive"></i><span>جرد الصندوق قائمة</span></a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Pending", "CashBoxClosures")"><i class="fa-solid fa-hourglass-half"></i><span>جرد الصندوق موقعة</span></a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Create", "CashBoxClosures")"><i class="fa-solid fa-plus"></i><span>جرد الصندوق</span></a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Report", "CashBoxClosures")"><i class="fa-solid fa-file-lines"></i><span>تقرير إغلاقات الصندوق</span></a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Index", "Transfers")"><i class="fa-solid fa-right-left"></i><span>الحوالات</span></a></li>
                         </ul>
                     </li>
-                }
-                @if (showAccountManagement)
-                {
-                    <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="collapse" href="#accountMgmtMenu" role="button" aria-expanded="@(accountMgmtActive ? "true" : "false")">
-                            <i class="fas fa-briefcase"></i> إدارة الحسابات
-                        </a>
-                        <ul class="collapse nav flex-column ms-3 @(accountMgmtActive ? "show" : "")" id="accountMgmtMenu">
-                            @if (canBusinessRetStatementBulk)
-                            {
-                                @*                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("BusinessRetStatementBulk", "AccountManagement")">اصدار كلي لفاتورة طرود مرتجعه</a></li>
- *@             }
+                    @if (showAssets)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center @(assetsActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#assetsMenu" role="button" aria-expanded="@(assetsActive ? "true" : "false")" title="الأصول الثابتة">
+                                <i class="fa-solid fa-cubes"></i>
+                                <span class="menu-title">الأصول الثابتة</span>
+                                <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
+                            </a>
+                            <ul class="collapse menu-dropdown @(assetsActive ? "show" : "")" id="assetsMenu">
+                                @if (canAssets)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "Assets")"><i class="fa-solid fa-list"></i><span>قائمة الأصول الثابتة</span></a></li>
+                                }
+                                @if (canAssetTypes)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "AssetTypes")"><i class="fa-solid fa-tags"></i><span>أنواع الأصول</span></a></li>
+                                }
+                                @if (canAssetExpenses)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "AssetExpenses")"><i class="fa-solid fa-money-bill"></i><span>مصاريف الأصول الثابتة</span></a></li>
+                                }
+                            </ul>
+                        </li>
+                    }
+                    @if (showVouchers)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center @(vouchersActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#vouchersMenu" role="button" aria-expanded="@(vouchersActive ? "true" : "false")" title="السندات">
+                                <i class="fa-solid fa-file-invoice-dollar"></i>
+                                <span class="menu-title">السندات</span>
+                                <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
+                            </a>
+                            <ul class="collapse menu-dropdown @(vouchersActive ? "show" : "")" id="vouchersMenu">
+                                @if (canDisbursementVouchers)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "DisbursementVouchers")"><i class="fa-solid fa-list"></i><span>سندات دفع</span></a></li>
+                                }
+                                @if (canDisbursementVouchersCreate)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Create", "DisbursementVouchers")"><i class="fa-solid fa-plus"></i><span>إضافة سند دفع</span></a></li>
+                                }
+                                @if (canPaymentVouchers)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "PaymentVouchers")"><i class="fa-solid fa-list"></i><span>سندات المصاريف</span></a></li>
+                                }
+                                @if (canPaymentVouchersCreate)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Create", "PaymentVouchers")"><i class="fa-solid fa-plus"></i><span>إضافة سند صرف</span></a></li>
+                                }
+                            </ul>
+                        </li>
+                    }
+                    @if (showAccountManagement)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center @(accountMgmtActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#accountMgmtMenu" role="button" aria-expanded="@(accountMgmtActive ? "true" : "false")" title="إدارة الحسابات">
+                                <i class="fa-solid fa-briefcase"></i>
+                                <span class="menu-title">إدارة الحسابات</span>
+                                <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
+                            </a>
+                            <ul class="collapse menu-dropdown @(accountMgmtActive ? "show" : "")" id="accountMgmtMenu">
                                 @if (canBusinessStatementBulk)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("BusinessStatementBulk", "AccountManagement")">حساب العميل كلي</a></li>
+                                    <li><a class="dropdown-item" href="@Url.Action("BusinessStatementBulk", "AccountManagement")"><i class="fa-solid fa-file-circle-check"></i><span>حساب العميل كلي</span></a></li>
                                 }
-                                @if (canBusnissShipmentsReturn)
+                                @if (canBusnissStatment)
                                 {
-                                    @*                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("BusnissShipmentsReturn", "AccountManagement")">اغلاق طرود مرتجعه</a></li>
- *@             }
-                                    @if (canBusnissStatment)
-                                    {
-                                        <li class="nav-item"><a class="nav-link" href="@Url.Action("BusnissStatment", "AccountManagement")">حساب العميل</a></li>
-                                    }
-                                    @if (canDriverPayment)
-                                    {
-                                        <li class="nav-item"><a class="nav-link" href="@Url.Action("DriverPayment", "AccountManagement")">دفعات السائق</a></li>
-                                    }
-                                    @if (canDriverStatment)
-                                    {
-                                        <li class="nav-item"><a class="nav-link" href="@Url.Action("DriverStatment", "AccountManagement")">حساب السائق</a></li>
-                                    }
-                                    @if (canPrintSlip)
-                                    {
-                                        @*                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("PrintSlip", "AccountManagement")">طباعة ايصال</a></li>
- *@             }
-                                        @if (canReceivePayments)
-                                        {
-                                            @*                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("ReceivePayments", "AccountManagement")">تسليم فواتير</a></li>
- *@             }
-                                            @if (canReceiveRetPayments)
-                                            {
-                                                @*                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("ReceiveRetPayments", "AccountManagement")">تسليم فواتير طرود مرتجعه</a></li>
- *@             }
-                                                @if (canUserPayment)
-                                                {
-                                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("UserPayment", "AccountManagement")">دفعات العميل</a></li>
-                                                }
-                                            </ul>
-                                        </li>
-                                    }
-                                    <li class="nav-item">
-                                        <a class="nav-link" data-bs-toggle="collapse" href="#journalMenu" role="button" aria-expanded="@(journalActive ? "true" : "false")">
-                                            <i class="fas fa-file-invoice"></i> القيود المالية
-                                        </a>
-                                        <ul class="collapse nav flex-column ms-3 @(journalActive ? "show" : "")" id="journalMenu">
-                                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "JournalEntries")"><i class="fas fa-list"></i> قائمة القيود</a></li>
-                                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "JournalEntries")"><i class="fas fa-plus"></i> إضافة قيد جديد</a></li>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Draft", "JournalEntries")"><i class="fas fa-edit"></i> المسودات</a></li>
-                                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Posted", "JournalEntries")"><i class="fas fa-check"></i> المرحلة</a></li>
-                                        </ul>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" data-bs-toggle="collapse" href="#hrMenu" role="button" aria-expanded="@(hrActive ? "true" : "false")">
-                                            <i class="fas fa-users-cog"></i> شؤون الموظفين
-                                        </a>
-                                        <ul class="collapse nav flex-column ms-3 @(hrActive ? "show" : "")" id="hrMenu">
-                                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Employees")" asp-require-permission="employees.view"><i class="fas fa-user"></i> إدارة الموظفين</a></li>
-                                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Payrolls")" asp-require-permission="payroll.view"><i class="fas fa-money-check-alt"></i> إدارة الرواتب</a></li>
-                                        </ul>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" data-bs-toggle="collapse" href="#reportsMenu" role="button" aria-expanded="@(reportsActive ? "true" : "false")">
-                                            <i class="fas fa-chart-bar"></i> التقارير
-                                        </a>
-                                        <ul class="collapse nav flex-column ms-3 @(reportsActive ? "show" : "")" id="reportsMenu">
-                                            <li class="px-3">
-                                                <input type="text" class="form-control" id="reportSearch" placeholder="ابحث عن تقرير...">
-                                            </li>
-                                            <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("TrialBalance", "Reports")"><i class="fas fa-balance-scale"></i> ميزان المراجعة</a></li>
-                                            <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("BalanceSheet", "Reports")"><i class="fas fa-chart-pie"></i> الميزانية العمومية</a></li>
-                                            <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("IncomeStatement", "Reports")"><i class="fas fa-chart-line"></i> قائمة الدخل</a></li>
-                                            <li class="report-item"><hr class="dropdown-divider"></li>
-                                            <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("GeneralLedger", "Reports")"><i class="fas fa-book"></i> دفتر الأستاذ العام</a></li>
-                                            <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("AccountStatement", "Reports")"><i class="fas fa-file-alt"></i> كشف حساب</a></li>
-                                            <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("PendingTransactions", "Reports")"><i class="fas fa-hourglass-half"></i> الحركات غير المرحلة</a></li>
-                                            <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("BranchExpenses", "Reports")"><i class="fas fa-code-branch"></i> تقرير مصروفات الفروع</a></li>
-                                            <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("DynamicPivot", "Reports")"><i class="fas fa-hourglass-half"></i>انشاء تقريرPivot </a></li>
-                                            <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("QueryBuilder", "Reports")"><i class="fas fa-project-diagram"></i> مصمم التقارير</a></li>
-                                        </ul>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" data-bs-toggle="collapse" href="#settingsMenu" role="button" aria-expanded="@(settingsActive ? "true" : "false")">
-                                            <i class="fas fa-cog"></i> الإعدادات
-                                        </a>
-                                        <ul class="collapse nav flex-column ms-3 @(settingsActive ? "show" : "")" id="settingsMenu">
-                                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Branches")"><i class="fas fa-building"></i> الفروع</a></li>
-                                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "CostCenters")"><i class="fas fa-bullseye"></i> مراكز التكلفة</a></li>
-                                            @if (canCurrencies)
-                                            {
-                                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Currencies")"><i class="fas fa-money-bill-wave"></i> العملات</a></li>
-                                            }
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Users")"><i class="fas fa-users"></i> المستخدمون</a></li>
-                                        </ul>
-                                    </li>
-                                </ul>
-                            </nav>
-                            <div id="content" class="flex-fill">
-                                <nav class="navbar top-navbar border-bottom mb-3">
-                                    <div class="container-fluid">
-                                        <button id="sidebarToggle" class="btn btn-outline-light" type="button">☰</button>
-                                        <ul class="navbar-nav ms-auto">
-                                            @if (User.Identity.IsAuthenticated)
-                                            {
-                                                <li class="nav-item dropdown">
-                                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                                        <i class="fas fa-user"></i> @User.Identity.Name
-                                                    </a>
-                                                    <ul class="dropdown-menu dropdown-menu-end">
-                                                        <li>
-                                                            <a class="dropdown-item" href="@Url.Action("Profile", "Account")"><i class="fas fa-user-edit"></i> الملف الشخصي</a>
-                                                        </li>
-                                                        <li><hr class="dropdown-divider"></li>
-                                                        <li>
-                                                            <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
-                                                                <button type="submit" class="dropdown-item"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
-                                                            </form>
-                                                        </li>
-                                                    </ul>
-                                                </li>
-                                            }
-                                            else
-                                            {
-                                                <li class="nav-item">
-                                                    <a class="nav-link" href="@Url.Action("Login", "Account")"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</a>
-                                                </li>
-                                            }
-                                        </ul>
-                                    </div>
-                                </nav>
-
-                                <!-- Main Content -->
-                                <main class="page-content">
-                                    <!-- Breadcrumb -->
-                                    <nav aria-label="breadcrumb" class="mb-3">
-                                        <ol class="breadcrumb">
-                                            <li class="breadcrumb-item">
-                                                <a href="@Url.Action("Index", "Dashboard")">الرئيسية</a>
-                                            </li>
-                                            @if (ViewData["Breadcrumb"] != null)
-                                            {
-                                                @Html.Raw(ViewData["Breadcrumb"])
-                                            }
-                                            else
-                                            {
-                                                <li class="breadcrumb-item active">@ViewData["Title"]</li>
-                                            }
-                                        </ol>
-                                    </nav>
-
-                                    <!-- Alerts -->
-                                    @if (TempData["SuccessMessage"] != null)
-                                    {
-                                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                                            <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
-                                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                        </div>
-                                    }
-
-                                    @if (TempData["ErrorMessage"] != null)
-                                    {
-                                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                            <i class="fas fa-exclamation-circle"></i> @TempData["ErrorMessage"]
-                                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                        </div>
-                                    }
-
-                                    @if (TempData["InfoMessage"] != null)
-                                    {
-                                        <div class="alert alert-info alert-dismissible fade show" role="alert">
-                                            <i class="fas fa-info-circle"></i> @TempData["InfoMessage"]
-                                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                        </div>
-                                    }
-
-                                    @RenderBody()
-                                </main>
-
-                                <!-- Footer -->
-                                <footer class="app-footer text-center py-3 mt-5">
-                                    <div class="container">
-                                        <p class="text-muted mb-0">
-                                            &copy; @DateTime.Now.Year - RoadFinity  - جميع الحقوق محفوظة
-                                        </p>
-                                    </div>
-                                </footer>
+                                    <li><a class="dropdown-item" href="@Url.Action("BusnissStatment", "AccountManagement")"><i class="fa-solid fa-file-invoice"></i><span>حساب العميل</span></a></li>
+                                }
+                                @if (canDriverPayment)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("DriverPayment", "AccountManagement")"><i class="fa-solid fa-money-check-dollar"></i><span>دفعات السائق</span></a></li>
+                                }
+                                @if (canDriverStatment)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("DriverStatment", "AccountManagement")"><i class="fa-solid fa-id-card"></i><span>حساب السائق</span></a></li>
+                                }
+                                @if (canUserPayment)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("UserPayment", "AccountManagement")"><i class="fa-solid fa-sack-dollar"></i><span>دفعات العميل</span></a></li>
+                                }
+                            </ul>
+                        </li>
+                    }
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center @(journalActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#journalMenu" role="button" aria-expanded="@(journalActive ? "true" : "false")" title="القيود المالية">
+                            <i class="fa-solid fa-file-pen"></i>
+                            <span class="menu-title">القيود المالية</span>
+                            <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
+                        </a>
+                        <ul class="collapse menu-dropdown @(journalActive ? "show" : "")" id="journalMenu">
+                            <li><a class="dropdown-item" href="@Url.Action("Index", "JournalEntries")"><i class="fa-solid fa-list"></i><span>قائمة القيود</span></a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Create", "JournalEntries")"><i class="fa-solid fa-plus"></i><span>إضافة قيد جديد</span></a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Draft", "JournalEntries")"><i class="fa-solid fa-pen-to-square"></i><span>المسودات</span></a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Posted", "JournalEntries")"><i class="fa-solid fa-circle-check"></i><span>المرحلة</span></a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center @(hrActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#hrMenu" role="button" aria-expanded="@(hrActive ? "true" : "false")" title="شؤون الموظفين">
+                            <i class="fa-solid fa-users-gear"></i>
+                            <span class="menu-title">شؤون الموظفين</span>
+                            <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
+                        </a>
+                        <ul class="collapse menu-dropdown @(hrActive ? "show" : "")" id="hrMenu">
+                            <li><a class="dropdown-item" href="@Url.Action("Index", "Employees")" asp-require-permission="employees.view"><i class="fa-solid fa-user"></i><span>إدارة الموظفين</span></a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Index", "Payrolls")" asp-require-permission="payroll.view"><i class="fa-solid fa-money-check-alt"></i><span>إدارة الرواتب</span></a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center @(reportsActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#reportsMenu" role="button" aria-expanded="@(reportsActive ? "true" : "false")" title="التقارير">
+                            <i class="fa-solid fa-chart-column"></i>
+                            <span class="menu-title">التقارير</span>
+                            <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
+                        </a>
+                        <div class="collapse menu-dropdown @(reportsActive ? "show" : "")" id="reportsMenu">
+                            <div class="px-3 pb-2">
+                                <input type="text" class="form-control form-control-sm" id="reportSearch" placeholder="ابحث عن تقرير...">
+                            </div>
+                            <ul class="list-unstyled mb-0" id="reportsList">
+                                <li class="report-item"><a class="dropdown-item" href="@Url.Action("TrialBalance", "Reports")"><i class="fa-solid fa-scale-balanced"></i><span>ميزان المراجعة</span></a></li>
+                                <li class="report-item"><a class="dropdown-item" href="@Url.Action("BalanceSheet", "Reports")"><i class="fa-solid fa-chart-pie"></i><span>الميزانية العمومية</span></a></li>
+                                <li class="report-item"><a class="dropdown-item" href="@Url.Action("IncomeStatement", "Reports")"><i class="fa-solid fa-chart-line"></i><span>قائمة الدخل</span></a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="report-item"><a class="dropdown-item" href="@Url.Action("GeneralLedger", "Reports")"><i class="fa-solid fa-book"></i><span>دفتر الأستاذ العام</span></a></li>
+                                <li class="report-item"><a class="dropdown-item" href="@Url.Action("AccountStatement", "Reports")"><i class="fa-solid fa-file-lines"></i><span>كشف حساب</span></a></li>
+                                <li class="report-item"><a class="dropdown-item" href="@Url.Action("PendingTransactions", "Reports")"><i class="fa-solid fa-clock"></i><span>الحركات غير المرحلة</span></a></li>
+                                <li class="report-item"><a class="dropdown-item" href="@Url.Action("BranchExpenses", "Reports")"><i class="fa-solid fa-code-branch"></i><span>تقرير مصروفات الفروع</span></a></li>
+                                <li class="report-item"><a class="dropdown-item" href="@Url.Action("DynamicPivot", "Reports")"><i class="fa-solid fa-table"></i><span>إنشاء تقرير Pivot</span></a></li>
+                                <li class="report-item"><a class="dropdown-item" href="@Url.Action("QueryBuilder", "Reports")"><i class="fa-solid fa-diagram-project"></i><span>مصمم التقارير</span></a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center @(settingsActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#settingsMenu" role="button" aria-expanded="@(settingsActive ? "true" : "false")" title="الإعدادات">
+                            <i class="fa-solid fa-gear"></i>
+                            <span class="menu-title">الإعدادات</span>
+                            <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
+                        </a>
+                        <ul class="collapse menu-dropdown @(settingsActive ? "show" : "")" id="settingsMenu">
+                            <li><a class="dropdown-item" href="@Url.Action("Index", "Branches")"><i class="fa-solid fa-building"></i><span>الفروع</span></a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Index", "CostCenters")"><i class="fa-solid fa-bullseye"></i><span>مراكز التكلفة</span></a></li>
+                            @if (canCurrencies)
+                            {
+                                <li><a class="dropdown-item" href="@Url.Action("Index", "Currencies")"><i class="fa-solid fa-coins"></i><span>العملات</span></a></li>
+                            }
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Index", "Users")"><i class="fa-solid fa-users"></i><span>المستخدمون</span></a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div class="sidebar-footer text-center py-3">
+                <button id="sidebarToggle" type="button" class="btn btn-outline-light btn-icon" data-bs-toggle="tooltip" data-bs-placement="left" title="طي القائمة">
+                    <i class="fa-solid fa-angles-right"></i>
+                </button>
+            </div>
+        </aside>
+        <div class="main-content flex-grow-1 d-flex flex-column">
+            <header class="topbar d-flex align-items-center">
+                <div class="topbar-left d-flex align-items-center gap-2">
+                    <button id="mobileMenuToggle" class="btn btn-soft-primary d-lg-none"><i class="fa-solid fa-bars"></i></button>
+                    <h1 class="page-title mb-0">@ViewData["Title"]</h1>
+                </div>
+                <div class="topbar-right ms-auto d-flex align-items-center gap-3">
+                    <form class="d-none d-md-block">
+                        <div class="search-box position-relative">
+                            <input type="text" class="form-control" placeholder="بحث...">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </div>
+                    </form>
+                    <div class="dropdown">
+                        <a class="btn btn-icon btn-soft-primary" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa-solid fa-bell"></i>
+                            <span class="badge bg-danger rounded-pill">3</span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end dropdown-menu-lg p-0">
+                            <div class="dropdown-header p-3 border-bottom">
+                                <h6 class="mb-0">الإشعارات</h6>
+                                <small class="text-muted">آخر التحديثات</small>
+                            </div>
+                            <div class="list-group list-group-flush">
+                                <span class="list-group-item text-muted small text-center">لا يوجد إشعارات حالياً</span>
                             </div>
                         </div>
-
-                        <!-- Scripts -->
-                        <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-                        <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-                        @*     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
- *@
-
-                        <script src="~/js/sweetalert.min.js"></script>
-
-                        <script src="~/js/site.js" asp-append-version="true"></script>
-
-                        <!-- Loading Overlay -->
-                        <div id="loadingOverlay" class="loading-overlay" style="display: none;">
-                            <div class="loading-spinner">
-                                <i class="fas fa-spinner fa-spin fa-3x"></i>
-                                <p class="mt-3">جاري التحميل...</p>
-                            </div>
+                    </div>
+                    <div class="dropdown">
+                        <a class="d-flex align-items-center dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <span class="avatar flex-shrink-0"><i class="fa-solid fa-user"></i></span>
+                            <span class="ms-2 d-none d-sm-block">
+                                <span class="user-name">@User.Identity?.Name ?? "زائر"</span>
+                                <small class="text-muted">مرحباً بك</small>
+                            </span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end">
+                            @if (User.Identity.IsAuthenticated)
+                            {
+                                <a class="dropdown-item" href="@Url.Action("Profile", "Account")"><i class="fa-solid fa-user-pen"></i> الملف الشخصي</a>
+                                <div class="dropdown-divider"></div>
+                                <form asp-controller="Account" asp-action="Logout" method="post">
+                                    <button type="submit" class="dropdown-item"><i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <a class="dropdown-item" href="@Url.Action("Login", "Account")"><i class="fa-solid fa-right-to-bracket"></i> تسجيل الدخول</a>
+                            }
                         </div>
-
-                        @await RenderSectionAsync("Scripts", required: false)
-
-                        <script>
-                            // Global functions
-                            function showLoading() {
-                                $('#loadingOverlay').show();
+                    </div>
+                </div>
+            </header>
+            <main class="flex-grow-1 overflow-auto">
+                <div class="content-wrapper">
+                    <nav aria-label="breadcrumb" class="mb-3">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Dashboard")">الرئيسية</a></li>
+                            @if (ViewData["Breadcrumb"] != null)
+                            {
+                                @Html.Raw(ViewData["Breadcrumb"])
                             }
-
-                            function hideLoading() {
-                                $('#loadingOverlay').hide();
+                            else
+                            {
+                                <li class="breadcrumb-item active">@ViewData["Title"]</li>
                             }
+                        </ol>
+                    </nav>
 
-                            // Auto-hide alerts after 5 seconds
-                            setTimeout(function() {
-                                $('.alert').fadeOut();
-                            }, 5000);
+                    @if (TempData["SuccessMessage"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fa-solid fa-circle-check me-1"></i> @TempData["SuccessMessage"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
 
-                            // AJAX setup for CSRF token
-                            $.ajaxSetup({
-                                beforeSend: function(xhr, settings) {
-                                    if (settings.type === 'POST' || settings.type === 'PUT' || settings.type === 'DELETE') {
-                                        xhr.setRequestHeader("RequestVerificationToken",
-                                            $('input[name="__RequestVerificationToken"]').val());
-                                    }
-                                }
-                            });
+                    @if (TempData["ErrorMessage"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fa-solid fa-triangle-exclamation me-1"></i> @TempData["ErrorMessage"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
 
-                            // Reports dropdown search filter
-                            $('#reportSearch').on('input', function () {
-                                var value = $(this).val().toLowerCase();
-                                $('#reportsDropdown li.report-item').each(function () {
-                                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
-                                });
-                            });
+                    @if (TempData["InfoMessage"] != null)
+                    {
+                        <div class="alert alert-info alert-dismissible fade show" role="alert">
+                            <i class="fa-solid fa-circle-info me-1"></i> @TempData["InfoMessage"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
 
-                            // Filter account options based on selected currency in voucher forms
-                            document.addEventListener('DOMContentLoaded', function () {
-                                var currencySelect = document.querySelector('select[name="CurrencyId"]');
-                                var accountSelect = document.querySelector('select[name="AccountId"]');
-                                if (currencySelect && accountSelect) {
-                                    function filterAccounts() {
-                                        var currency = currencySelect.value;
-                                        Array.from(accountSelect.options).forEach(function (opt) {
-                                            opt.hidden = opt.getAttribute('data-currency') !== currency;
-                                        });
-                                        var firstVisible = Array.from(accountSelect.options).find(function (opt) { return !opt.hidden; });
-                                        if (firstVisible) accountSelect.value = firstVisible.value;
-                                    }
-                                    filterAccounts();
-                                    currencySelect.addEventListener('change', filterAccounts);
-                                }
-                            });
-                        </script>
+                    @RenderBody()
+                </div>
+            </main>
+            <footer class="app-footer text-center py-3">
+                <p class="mb-0 text-muted">&copy; @DateTime.Now.Year - RoadFinity - جميع الحقوق محفوظة</p>
+            </footer>
+        </div>
+    </div>
 
-                        <ejs-scripts></ejs-scripts>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/sweetalert.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
 
-                    </body>
-                    </html>
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin fa-3x"></i>
+            <p class="mt-3">جاري التحميل...</p>
+        </div>
+    </div>
 
+    @await RenderSectionAsync("Scripts", required: false)
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            var sidebar = document.getElementById('iconSidebar');
+            var toggleButton = document.getElementById('sidebarToggle');
+            var mobileToggle = document.getElementById('mobileMenuToggle');
+
+            toggleButton?.addEventListener('click', function () {
+                sidebar.classList.toggle('collapsed');
+                var icon = this.querySelector('i');
+                if (icon) {
+                    icon.classList.toggle('fa-angles-right');
+                    icon.classList.toggle('fa-angles-left');
+                }
+            });
+
+            mobileToggle?.addEventListener('click', function () {
+                var isOpen = sidebar.classList.toggle('open');
+                document.body.classList.toggle('sidebar-open', isOpen);
+            });
+
+            document.querySelectorAll('#sidebarNav .nav-link').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    if (window.innerWidth < 992 && this.getAttribute('data-bs-toggle') !== 'collapse') {
+                        sidebar.classList.remove('open');
+                        document.body.classList.remove('sidebar-open');
+                    }
+                });
+            });
+
+            document.addEventListener('click', function (event) {
+                if (window.innerWidth >= 992) {
+                    return;
+                }
+                var clickedInsideSidebar = sidebar.contains(event.target);
+                var clickedToggle = mobileToggle && mobileToggle.contains(event.target);
+                if (!clickedInsideSidebar && !clickedToggle && sidebar.classList.contains('open')) {
+                    sidebar.classList.remove('open');
+                    document.body.classList.remove('sidebar-open');
+                }
+            });
+
+            window.addEventListener('resize', function () {
+                if (window.innerWidth >= 992) {
+                    sidebar.classList.remove('open');
+                    document.body.classList.remove('sidebar-open');
+                }
+            });
+
+            $('#reportSearch').on('input', function () {
+                var value = $(this).val().toLowerCase();
+                $('#reportsList .report-item').each(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+            });
+
+            setTimeout(function () {
+                document.querySelectorAll('.alert').forEach(function (alert) {
+                    var fade = new bootstrap.Alert(alert);
+                    fade.close();
+                });
+            }, 5000);
+        });
+
+        function showLoading() {
+            $('#loadingOverlay').show();
+        }
+
+        function hideLoading() {
+            $('#loadingOverlay').hide();
+        }
+
+        $.ajaxSetup({
+            beforeSend: function (xhr, settings) {
+                if (settings.type === 'POST' || settings.type === 'PUT' || settings.type === 'DELETE') {
+                    xhr.setRequestHeader("RequestVerificationToken", $('input[name="__RequestVerificationToken"]').val());
+                }
+            }
+        });
+    </script>
+
+    <ejs-scripts></ejs-scripts>
+</body>
+</html>
