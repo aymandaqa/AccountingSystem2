@@ -398,7 +398,7 @@ namespace AccountingSystem.Migrations
                     b.ToTable("CashBoxClosures");
                 });
 
-            modelBuilder.Entity<Employee>(b =>
+            modelBuilder.Entity("AccountingSystem.Models.Employee", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -2072,25 +2072,25 @@ namespace AccountingSystem.Migrations
                     b.Navigation("Branch");
                 });
 
-            modelBuilder.Entity<Employee>(b =>
+            modelBuilder.Entity("AccountingSystem.Models.Employee", b =>
                 {
-                    b.HasOne<Account>(e => e.Account)
+                    b.HasOne("AccountingSystem.Models.Account", "Account")
                         .WithMany()
                         .HasForeignKey("AccountId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne<Branch>(e => e.Branch)
-                        .WithMany(b => b.Employees)
+                    b.HasOne("AccountingSystem.Models.Branch", "Branch")
+                        .WithMany("Employees")
                         .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation(e => e.Account);
+                    b.Navigation("Account");
 
-                    b.Navigation(e => e.Branch);
+                    b.Navigation("Branch");
 
-                    b.Navigation(e => e.PayrollLines);
+                    b.Navigation("PayrollLines");
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.AssetExpense", b =>
