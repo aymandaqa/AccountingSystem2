@@ -2074,23 +2074,23 @@ namespace AccountingSystem.Migrations
 
             modelBuilder.Entity<Employee>(b =>
                 {
-                    b.HasOne("AccountingSystem.Models.Account", "Account")
+                    b.HasOne<Account>(e => e.Account)
                         .WithMany()
                         .HasForeignKey("AccountId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("AccountingSystem.Models.Branch", "Branch")
-                        .WithMany("Employees")
+                    b.HasOne<Branch>(e => e.Branch)
+                        .WithMany(b => b.Employees)
                         .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Account");
+                    b.Navigation(e => e.Account);
 
-                    b.Navigation("Branch");
+                    b.Navigation(e => e.Branch);
 
-                    b.Navigation("PayrollLines");
+                    b.Navigation(e => e.PayrollLines);
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.AssetExpense", b =>
