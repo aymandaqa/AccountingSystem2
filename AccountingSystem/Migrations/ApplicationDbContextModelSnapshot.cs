@@ -398,57 +398,57 @@ namespace AccountingSystem.Migrations
                     b.ToTable("CashBoxClosures");
                 });
 
-            modelBuilder.Entity("AccountingSystem.Models.Employee", b =>
+            modelBuilder.Entity<Employee>(b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property(e => e.Id)
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property(e => e.Id));
 
-                    b.Property<int>("AccountId")
+                    b.Property(e => e.AccountId)
                         .HasColumnType("int");
 
-                    b.Property<string>("Address")
+                    b.Property(e => e.Address)
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<int>("BranchId")
+                    b.Property(e => e.BranchId)
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property(e => e.CreatedAt)
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsActive")
+                    b.Property(e => e.IsActive)
                         .HasColumnType("bit");
 
-                    b.Property<DateTime>("HireDate")
+                    b.Property(e => e.HireDate)
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("JobTitle")
+                    b.Property(e => e.JobTitle)
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<string>("Name")
+                    b.Property(e => e.Name)
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<string>("PhoneNumber")
+                    b.Property(e => e.PhoneNumber)
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<decimal>("Salary")
+                    b.Property(e => e.Salary)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<DateTime?>("UpdatedAt")
+                    b.Property(e => e.UpdatedAt)
                         .HasColumnType("datetime2");
 
-                    b.HasKey("Id");
+                    b.HasKey(e => e.Id);
 
-                    b.HasIndex("AccountId");
+                    b.HasIndex(e => e.AccountId);
 
-                    b.HasIndex("BranchId");
+                    b.HasIndex(e => e.BranchId);
 
                     b.ToTable("Employees");
                 });
@@ -2072,25 +2072,25 @@ namespace AccountingSystem.Migrations
                     b.Navigation("Branch");
                 });
 
-            modelBuilder.Entity("AccountingSystem.Models.Employee", b =>
+            modelBuilder.Entity<Employee>(b =>
                 {
-                    b.HasOne("AccountingSystem.Models.Account", "Account")
+                    b.HasOne(e => e.Account)
                         .WithMany()
-                        .HasForeignKey("AccountId")
+                        .HasForeignKey(e => e.AccountId)
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("AccountingSystem.Models.Branch", "Branch")
-                        .WithMany("Employees")
-                        .HasForeignKey("BranchId")
+                    b.HasOne(e => e.Branch)
+                        .WithMany(b => b.Employees)
+                        .HasForeignKey(e => e.BranchId)
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Account");
+                    b.Navigation(e => e.Account);
 
-                    b.Navigation("Branch");
+                    b.Navigation(e => e.Branch);
 
-                    b.Navigation("PayrollLines");
+                    b.Navigation(e => e.PayrollLines);
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.AssetExpense", b =>
