@@ -1,0 +1,353 @@
+@model AccountingSystem.ViewModels.ExecutiveDashboardViewModel
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "لوحة التقارير التنفيذية";
+    Layout = "~/Views/Shared/_AccountingLayout.cshtml";
+    var culture = CultureInfo.CreateSpecificCulture("ar-SA");
+    Func<decimal, string> formatNumber = value => string.Format(culture, "{0:N2}", value);
+    Func<AccountingSystem.ViewModels.ExecutiveDashboardMetric, decimal, string> formatMetricValue = (metric, value) =>
+    {
+        var formatted = string.Format(culture, "{0:N2}", value);
+        return metric.IsPercentage ? $"{formatted}%" : $"{formatted} {Model.CurrencyCode}";
+    };
+    Func<decimal, string> formatDays = value => string.Format(culture, "{0:N1}", value);
+    string selectedPeriodLabel = $"{Model.MonthDisplay}/{Model.YearDisplay}";
+}
+
+<div class="container-fluid executive-dashboard-page">
+    <div class="card shadow-sm mb-4">
+        <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+                <h4 class="mb-1">لوحة التقارير التنفيذية</h4>
+                <p class="text-muted mb-0">مرصد مالي شهري وتراكمي لتتبع الأداء واتخاذ القرار بسرعة.</p>
+            </div>
+            <form method="get" class="row g-2 align-items-end dashboard-filters">
+                <div class="col-auto">
+                    <label class="form-label">السنة</label>
+                    <select class="form-select" name="year" onchange="this.form.submit()">
+                        @foreach (var year in Model.AvailableYears.OrderByDescending(y => y))
+                        {
+                            <option value="@year" selected="@(year == Model.Year ? "selected" : null)">@year.ToString("0000", culture)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label">الشهر</label>
+                    <select class="form-select" name="month" onchange="this.form.submit()">
+                        @foreach (var month in Model.AvailableMonths.OrderBy(m => m))
+                        {
+                            var monthLabel = new DateTime(Model.Year, Math.Clamp(month, 1, 12), 1).ToString("MM", culture);
+                            <option value="@month" selected="@(month == Model.Month ? "selected" : null)">@monthLabel</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <span class="badge bg-light text-dark border fw-semibold">الفترة المختارة: @selectedPeriodLabel</span>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-xl-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white border-bottom-0 pb-0">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h5 class="card-title mb-0">ملخص شهري (@selectedPeriodLabel)</h5>
+                        <span class="badge bg-primary-subtle text-primary">@Model.CurrencyCode</span>
+                    </div>
+                    <p class="text-muted small mb-0">الأرقام الحالية مقارنةً بنفس الشهر من العام السابق.</p>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        @foreach (var metric in Model.MonthlyMetrics)
+                        {
+                            @{
+                                var varianceClass = metric.Variance >= 0 ? "text-success" : "text-danger";
+                                var progress = Math.Min(200d, Math.Max(0d, (double)metric.Achievement));
+                            }
+                            <div class="col-12 col-md-6">
+                                <div class="metric-card h-100">
+                                    <div class="metric-title">@metric.Title</div>
+                                    <div class="metric-value">@formatMetricValue(metric, metric.Actual)</div>
+                                    <div class="d-flex justify-content-between align-items-center small text-muted">
+                                        <span>المستهدف: @formatMetricValue(metric, metric.Target)</span>
+                                        <span class="@varianceClass">@formatMetricValue(metric, metric.Variance)</span>
+                                    </div>
+                                    <div class="progress mt-2" role="progressbar" aria-valuenow="@progress" aria-valuemin="0" aria-valuemax="200">
+                                        <div class="progress-bar" style="width: @progress%;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white border-bottom-0 pb-0">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h5 class="card-title mb-0">ملخص تراكمي منذ بداية السنة</h5>
+                        <span class="badge bg-primary-subtle text-primary">@Model.CurrencyCode</span>
+                    </div>
+                    <p class="text-muted small mb-0">مقارنة الأداء التراكمي مع نفس الفترة من العام السابق.</p>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        @foreach (var metric in Model.YearToDateMetrics)
+                        {
+                            @{
+                                var varianceClass = metric.Variance >= 0 ? "text-success" : "text-danger";
+                                var progress = Math.Min(200d, Math.Max(0d, (double)metric.Achievement));
+                            }
+                            <div class="col-12 col-md-6">
+                                <div class="metric-card h-100">
+                                    <div class="metric-title">@metric.Title</div>
+                                    <div class="metric-value">@formatMetricValue(metric, metric.Actual)</div>
+                                    <div class="d-flex justify-content-between align-items-center small text-muted">
+                                        <span>المستهدف: @formatMetricValue(metric, metric.Target)</span>
+                                        <span class="@varianceClass">@formatMetricValue(metric, metric.Variance)</span>
+                                    </div>
+                                    <div class="progress mt-2" role="progressbar" aria-valuenow="@progress" aria-valuemin="0" aria-valuemax="200">
+                                        <div class="progress-bar" style="width: @progress%;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-1">
+        <div class="col-12 col-xl-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white border-bottom-0 pb-0">
+                    <h5 class="card-title mb-0">دورة التحويل النقدي</h5>
+                    <p class="text-muted small mb-0">قياس سرعة تحويل النقد بين المخزون والموردين والعملاء.</p>
+                </div>
+                <div class="card-body">
+                    <div class="cash-cycle-summary mb-3">
+                        <span class="text-muted">القيمة الشهرية</span>
+                        <div class="display-6 fw-bold">@formatDays(Model.CashConversionCycleMonthly) يوم</div>
+                        <span class="badge bg-secondary-subtle text-secondary">التراكمي: @formatDays(Model.CashConversionCycleYearToDate) يوم</span>
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        @foreach (var metric in Model.CashConversionMetrics)
+                        {
+                            @{
+                                var daysProgress = Math.Min(200d, Math.Max(0d, (double)metric.MonthlyValue));
+                            }
+                            <li class="list-group-item px-0">
+                                <div class="d-flex justify-content-between">
+                                    <span class="fw-semibold">@metric.Name</span>
+                                    <span class="text-muted">@formatDays(metric.MonthlyValue) يوم</span>
+                                </div>
+                                <div class="progress mt-2" role="progressbar" aria-valuemin="0" aria-valuemax="200">
+                                    <div class="progress-bar bg-info" style="width: @daysProgress%;"></div>
+                                </div>
+                                <div class="small text-muted mt-1">التراكمي: @formatDays(metric.YearToDateValue) يوم</div>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white border-bottom-0 pb-0">
+                    <h5 class="card-title mb-0">تفاصيل المصروفات التشغيلية</h5>
+                    <p class="text-muted small mb-0">أهم البنود للشهر الحالي ومقارنتها تراكميًا.</p>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>البند</th>
+                                    <th class="text-end">الشهر</th>
+                                    <th class="text-end">التراكمي</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (!Model.OperatingExpenseBreakdown.Any())
+                                {
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted">لا توجد بيانات مصروفات في الفترة المختارة.</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var item in Model.OperatingExpenseBreakdown)
+                                    {
+                                        <tr>
+                                            <td class="fw-semibold">@item.Name</td>
+                                            <td class="text-end">@formatNumber(item.MonthlyAmount) @Model.CurrencyCode</td>
+                                            <td class="text-end">@formatNumber(item.YearToDateAmount) @Model.CurrencyCode</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white border-bottom-0 pb-0">
+                    <h5 class="card-title mb-0">بيان الدخل المختصر</h5>
+                    <p class="text-muted small mb-0">عرض سريع للنتائج المالية الرئيسة.</p>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>البند</th>
+                                    <th class="text-end">الشهر</th>
+                                    <th class="text-end">المستهدف</th>
+                                    <th class="text-end">التراكمي</th>
+                                    <th class="text-end">مستهدف تراكمي</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in Model.IncomeStatement)
+                                {
+                                    @{
+                                        var rowClass = row.Name.Contains("ربح") ? "table-success" : string.Empty;
+                                    }
+                                    <tr class="@rowClass">
+                                        <td class="fw-semibold">@row.Name</td>
+                                        <td class="text-end">@formatNumber(row.MonthlyActual) @Model.CurrencyCode</td>
+                                        <td class="text-end">@formatNumber(row.MonthlyTarget) @Model.CurrencyCode</td>
+                                        <td class="text-end">@formatNumber(row.YearToDateActual) @Model.CurrencyCode</td>
+                                        <td class="text-end">@formatNumber(row.YearToDateTarget) @Model.CurrencyCode</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-white border-bottom-0 pb-0">
+            <h5 class="card-title mb-0">تتبع الأداء خلال السنة المالية</h5>
+            <p class="text-muted small mb-0">أرقام الإيرادات والمصاريف والأرباح لكل شهر.</p>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>الشهر</th>
+                            <th class="text-end">الإيرادات</th>
+                            <th class="text-end">تكلفة المبيعات</th>
+                            <th class="text-end">المصروفات التشغيلية</th>
+                            <th class="text-end">صافي الربح</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.MonthlyTrend.Any())
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">لا توجد بيانات لعرضها.</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var point in Model.MonthlyTrend)
+                            {
+                                @{
+                                    var rowClass = point.IsSelected ? "table-primary" : string.Empty;
+                                }
+                                <tr class="@rowClass">
+                                    <td class="fw-semibold">@point.Label</td>
+                                    <td class="text-end">@formatNumber(point.Revenue) @Model.CurrencyCode</td>
+                                    <td class="text-end">@formatNumber(point.CostOfSales) @Model.CurrencyCode</td>
+                                    <td class="text-end">@formatNumber(point.OperatingExpenses) @Model.CurrencyCode</td>
+                                    <td class="text-end">@formatNumber(point.Profit) @Model.CurrencyCode</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .executive-dashboard-page {
+            direction: rtl;
+        }
+
+        .executive-dashboard-page .metric-card {
+            background: var(--bs-light);
+            border-radius: 1rem;
+            padding: 1rem 1.25rem;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .executive-dashboard-page .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.08);
+        }
+
+        .executive-dashboard-page .metric-title {
+            font-size: 0.9rem;
+            color: var(--bs-secondary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .executive-dashboard-page .metric-value {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--bs-dark);
+        }
+
+        .executive-dashboard-page .progress {
+            height: 0.4rem;
+            background-color: rgba(13, 110, 253, 0.1);
+        }
+
+        .executive-dashboard-page .progress-bar {
+            background: linear-gradient(90deg, var(--bs-primary), var(--bs-info));
+        }
+
+        .executive-dashboard-page .cash-cycle-summary .display-6 {
+            font-size: 2rem;
+        }
+
+        .executive-dashboard-page table thead th {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+
+        .dashboard-filters .form-label {
+            font-size: 0.85rem;
+            color: var(--bs-secondary);
+        }
+
+        .dashboard-filters .form-select {
+            min-width: 100px;
+        }
+
+        @media (max-width: 767.98px) {
+            .dashboard-filters .form-select {
+                min-width: auto;
+            }
+        }
+    </style>
+}
