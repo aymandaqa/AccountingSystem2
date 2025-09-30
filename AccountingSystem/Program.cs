@@ -7,6 +7,7 @@ using AccountingSystem.Models;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Roadfn.Services;
 using Microsoft.Extensions.Configuration;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using AccountingSystem.Services;
 
@@ -54,7 +55,8 @@ builder.Services.AddControllersWithViews().AddNewtonsoftJson(options =>
 {
     options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-    options.JsonSerializerOptions.PropertyNamingPolicy = null;
+    options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
 
 });
 builder.Services.AddHttpContextAccessor();
