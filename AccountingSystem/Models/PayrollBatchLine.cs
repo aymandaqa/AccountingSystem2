@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AccountingSystem.Models
 {
@@ -20,6 +21,7 @@ namespace AccountingSystem.Models
 
         public virtual PayrollBatch PayrollBatch { get; set; } = null!;
 
+        [InverseProperty(nameof(Employee.PayrollLines))]
         public virtual Employee Employee { get; set; } = null!;
 
         public virtual Branch Branch { get; set; } = null!;
