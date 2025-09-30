@@ -372,7 +372,53 @@
                                 </footer>
                             </div>
                         </div>
+                        <div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-lg modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">تفاصيل الدفعة</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body" id="detailsContent"></div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
+                        <div class="payroll-overlay d-none" id="loadingOverlay">
+                            <div class="overlay-content text-center">
+                                <div class="spinner-border text-primary mb-3" role="status"></div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                                </div>
+                                <p class="mt-2">جاري معالجة الطلب...</p>
+                            </div>
+                        </div>
+                        <div class="modal fade" id="summaryModal" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-lg modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">مراجعة تفاصيل التنزيل</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div id="summaryContent"></div>
+                                        <div class="alert alert-secondary mt-3" id="historyNotice">
+                                            <i class="fas fa-history"></i> تم حفظ هذه الدفعة في سجل الرواتب ويمكن الرجوع إليها قبل التأكيد.
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">رجوع</button>
+                                        <button type="button" class="btn btn-success" id="confirmPayrollBtn" asp-require-permission="payroll.process">
+                                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                            تأكيد التنزيل
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <!-- Scripts -->
                         <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
                         <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
