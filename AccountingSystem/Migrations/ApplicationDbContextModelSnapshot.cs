@@ -307,6 +307,9 @@ namespace AccountingSystem.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int?>("EmployeeParentAccountId")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -330,6 +333,8 @@ namespace AccountingSystem.Migrations
 
                     b.HasIndex("Code")
                         .IsUnique();
+
+                    b.HasIndex("EmployeeParentAccountId");
 
                     b.ToTable("Branches");
                 });
@@ -390,6 +395,146 @@ namespace AccountingSystem.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("CashBoxClosures");
+                });
+
+            modelBuilder.Entity("AccountingSystem.Models.Employee", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("HireDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("JobTitle")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("Salary")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("BranchId");
+
+                    b.ToTable("Employees");
+                });
+
+            modelBuilder.Entity("AccountingSystem.Models.PayrollBatch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ConfirmedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ConfirmedById")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedById")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("PaymentAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("ConfirmedById");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("PaymentAccountId");
+
+                    b.ToTable("PayrollBatches");
+                });
+
+            modelBuilder.Entity("AccountingSystem.Models.PayrollBatchLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PayrollBatchId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("PayrollBatchId");
+
+                    b.ToTable("PayrollBatchLines");
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.CostCenter", b =>
@@ -1926,6 +2071,27 @@ namespace AccountingSystem.Migrations
                     b.Navigation("Branch");
                 });
 
+            modelBuilder.Entity("AccountingSystem.Models.Employee", b =>
+                {
+                    b.HasOne("AccountingSystem.Models.Account", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AccountingSystem.Models.Branch", "Branch")
+                        .WithMany("Employees")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("PayrollLines");
+                });
+
             modelBuilder.Entity("AccountingSystem.Models.AssetExpense", b =>
                 {
                     b.HasOne("AccountingSystem.Models.Account", "Account")
@@ -2451,6 +2617,15 @@ namespace AccountingSystem.Migrations
 
             modelBuilder.Entity("AccountingSystem.Models.Branch", b =>
                 {
+                    b.HasOne("AccountingSystem.Models.Account", "EmployeeParentAccount")
+                        .WithMany()
+                        .HasForeignKey("EmployeeParentAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("EmployeeParentAccount");
+
+                    b.Navigation("Employees");
+
                     b.Navigation("Accounts");
 
                     b.Navigation("Assets");
@@ -2475,6 +2650,69 @@ namespace AccountingSystem.Migrations
             modelBuilder.Entity("AccountingSystem.Models.JournalEntry", b =>
                 {
                     b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("AccountingSystem.Models.PayrollBatch", b =>
+                {
+                    b.HasOne("AccountingSystem.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AccountingSystem.Models.Account", "PaymentAccount")
+                        .WithMany()
+                        .HasForeignKey("PaymentAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AccountingSystem.Models.User", "ConfirmedBy")
+                        .WithMany()
+                        .HasForeignKey("ConfirmedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("AccountingSystem.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("ConfirmedBy");
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Lines");
+
+                    b.Navigation("PaymentAccount");
+                });
+
+            modelBuilder.Entity("AccountingSystem.Models.PayrollBatchLine", b =>
+                {
+                    b.HasOne("AccountingSystem.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AccountingSystem.Models.Employee", "Employee")
+                        .WithMany("PayrollLines")
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AccountingSystem.Models.PayrollBatch", "PayrollBatch")
+                        .WithMany("Lines")
+                        .HasForeignKey("PayrollBatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("PayrollBatch");
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.Permission", b =>

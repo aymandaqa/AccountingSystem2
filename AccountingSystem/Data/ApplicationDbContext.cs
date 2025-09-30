@@ -47,6 +47,9 @@ namespace AccountingSystem.Data
         public DbSet<AssetExpense> AssetExpenses { get; set; }
         public DbSet<PivotReport> PivotReports { get; set; }
         public DbSet<ReportQuery> ReportQueries { get; set; }
+        public DbSet<Employee> Employees { get; set; }
+        public DbSet<PayrollBatch> PayrollBatches { get; set; }
+        public DbSet<PayrollBatchLine> PayrollBatchLines { get; set; }
 
         public override int SaveChanges()
         {
@@ -134,6 +137,11 @@ namespace AccountingSystem.Data
                 entity.Property(e => e.Code).IsRequired().HasMaxLength(10);
                 entity.Property(e => e.NameAr).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.NameEn).HasMaxLength(200);
+
+                entity.HasOne(e => e.EmployeeParentAccount)
+                    .WithMany()
+                    .HasForeignKey(e => e.EmployeeParentAccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             // CostCenter configuration
@@ -186,6 +194,75 @@ namespace AccountingSystem.Data
                 entity.HasOne(e => e.Currency)
                     .WithMany(e => e.Accounts)
                     .HasForeignKey(e => e.CurrencyId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<Employee>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Address).HasMaxLength(500);
+                entity.Property(e => e.PhoneNumber).HasMaxLength(50);
+                entity.Property(e => e.JobTitle).HasMaxLength(200);
+                entity.Property(e => e.Salary).HasColumnType("decimal(18,2)");
+
+                entity.HasOne(e => e.Branch)
+                    .WithMany(b => b.Employees)
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Account)
+                    .WithMany()
+                    .HasForeignKey(e => e.AccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<PayrollBatch>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.ReferenceNumber).HasMaxLength(200);
+                entity.Property(e => e.Notes).HasMaxLength(500);
+
+                entity.HasOne(e => e.Branch)
+                    .WithMany()
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.PaymentAccount)
+                    .WithMany()
+                    .HasForeignKey(e => e.PaymentAccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.CreatedBy)
+                    .WithMany()
+                    .HasForeignKey(e => e.CreatedById)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.ConfirmedBy)
+                    .WithMany()
+                    .HasForeignKey(e => e.ConfirmedById)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<PayrollBatchLine>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+
+                entity.HasOne(e => e.PayrollBatch)
+                    .WithMany(b => b.Lines)
+                    .HasForeignKey(e => e.PayrollBatchId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Employee)
+                    .WithMany(e => e.PayrollLines)
+                    .HasForeignKey(e => e.EmployeeId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Branch)
+                    .WithMany()
+                    .HasForeignKey(e => e.BranchId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 

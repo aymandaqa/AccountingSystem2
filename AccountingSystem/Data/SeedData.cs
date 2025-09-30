@@ -132,7 +132,13 @@ namespace AccountingSystem.Data
                 new Permission { Name = "systemsettings.view", DisplayName = "عرض إعدادات النظام", Category = "إعدادات النظام" },
                 new Permission { Name = "systemsettings.create", DisplayName = "إنشاء إعدادات النظام", Category = "إعدادات النظام" },
                 new Permission { Name = "systemsettings.edit", DisplayName = "تعديل إعدادات النظام", Category = "إعدادات النظام" },
-                new Permission { Name = "systemsettings.delete", DisplayName = "حذف إعدادات النظام", Category = "إعدادات النظام" }
+                new Permission { Name = "systemsettings.delete", DisplayName = "حذف إعدادات النظام", Category = "إعدادات النظام" },
+                new Permission { Name = "employees.view", DisplayName = "عرض الموظفين", Category = "شؤون الموظفين" },
+                new Permission { Name = "employees.create", DisplayName = "إضافة موظف", Category = "شؤون الموظفين" },
+                new Permission { Name = "employees.edit", DisplayName = "تعديل موظف", Category = "شؤون الموظفين" },
+                new Permission { Name = "employees.delete", DisplayName = "تغيير حالة موظف", Category = "شؤون الموظفين" },
+                new Permission { Name = "payroll.view", DisplayName = "عرض إدارة الرواتب", Category = "شؤون الموظفين" },
+                new Permission { Name = "payroll.process", DisplayName = "تنزيل الرواتب", Category = "شؤون الموظفين" }
             };
 
 

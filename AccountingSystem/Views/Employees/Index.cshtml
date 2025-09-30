@@ -1,0 +1,165 @@
+@using Microsoft.AspNetCore.Mvc.Rendering
+@model List<AccountingSystem.ViewModels.EmployeeListItemViewModel>
+@{
+    ViewData["Title"] = "إدارة الموظفين";
+    Layout = "_AccountingLayout";
+    var branches = ViewBag.Branches as List<SelectListItem> ?? new List<SelectListItem>();
+}
+
+<div class="container-fluid">
+    @Html.AntiForgeryToken()
+    <div class="row mb-3 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label">تصفية حسب الفرع</label>
+            <select id="branchFilter" class="form-select">
+                <option value="">جميع الفروع</option>
+                @foreach (var branch in branches)
+                {
+                    <option value="@branch.Value">@branch.Text</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">بحث</label>
+            <input type="text" id="employeeSearch" class="form-control" placeholder="ابحث باسم الموظف أو المسمى الوظيفي" />
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <a href="@Url.Action("Create")" class="btn btn-primary" asp-require-permission="employees.create">
+                <i class="fas fa-user-plus"></i> إضافة موظف جديد
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="card-title">قائمة الموظفين</h3>
+            <span class="badge bg-secondary" id="employeeCount">@Model.Count موظف</span>
+        </div>
+        <div class="card-body">
+            @if (Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped" id="employeesTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>الاسم</th>
+                                <th>المسمى الوظيفي</th>
+                                <th>الراتب</th>
+                                <th>الفرع</th>
+                                <th>الحساب</th>
+                                <th>الحالة</th>
+                                <th class="text-center">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var employee in Model)
+                        {
+                            <tr data-branch-id="@employee.BranchId">
+                                <td>
+                                    <strong>@employee.Name</strong>
+                                    <div class="text-muted small">@employee.AccountCode - @employee.AccountName</div>
+                                </td>
+                                <td>@employee.JobTitle</td>
+                                <td>@employee.Salary.ToString("N2")</td>
+                                <td>@employee.BranchName</td>
+                                <td>
+                                    <span class="badge bg-light text-dark">@employee.AccountCode</span>
+                                </td>
+                                <td>
+                                    @if (employee.IsActive)
+                                    {
+                                        <span class="badge bg-success">نشط</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">موقوف</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="@Url.Action("Edit", new { id = employee.Id })" class="btn btn-warning" asp-require-permission="employees.edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-outline-secondary toggle-status" data-id="@employee.Id" asp-require-permission="employees.delete">
+                                            <i class="fas fa-power-off"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle"></i>
+                    لا يوجد موظفون مسجلون حالياً
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const branchFilter = document.getElementById('branchFilter');
+            const searchInput = document.getElementById('employeeSearch');
+            const table = document.getElementById('employeesTable');
+            const countBadge = document.getElementById('employeeCount');
+
+            function applyFilters() {
+                const branchValue = branchFilter.value;
+                const searchValue = searchInput.value.toLowerCase();
+                let visibleCount = 0;
+
+                table.querySelectorAll('tbody tr').forEach(row => {
+                    const branchId = row.getAttribute('data-branch-id');
+                    const text = row.textContent.toLowerCase();
+                    const matchesBranch = !branchValue || branchId === branchValue;
+                    const matchesSearch = !searchValue || text.includes(searchValue);
+
+                    if (matchesBranch && matchesSearch) {
+                        row.style.display = '';
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                countBadge.textContent = visibleCount + ' موظف';
+            }
+
+            branchFilter.addEventListener('change', applyFilters);
+            searchInput.addEventListener('input', applyFilters);
+
+            document.querySelectorAll('.toggle-status').forEach(button => {
+                button.addEventListener('click', function () {
+                    const id = this.getAttribute('data-id');
+                    if (!confirm('هل ترغب في تغيير حالة هذا الموظف؟')) {
+                        return;
+                    }
+
+                    fetch('@Url.Action("ToggleStatus")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                        },
+                        body: JSON.stringify({ id: id })
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                location.reload();
+                            } else {
+                                alert(data.message || 'تعذر تحديث حالة الموظف');
+                            }
+                        });
+                });
+            });
+        });
+    </script>
+}

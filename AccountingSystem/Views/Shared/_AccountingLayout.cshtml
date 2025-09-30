@@ -57,6 +57,7 @@
         var journalActive = currentController == "journalentries";
         var reportsActive = currentController == "reports";
         var settingsActive = currentController == "branches" || currentController == "costcenters" || currentController == "currencies" || currentController == "users";
+        var hrActive = currentController == "employees" || currentController == "payrolls";
         var assetsActive = currentController == "assets" || currentController == "assetexpenses" || currentController == "assettypes";
     }
     <div id="wrapper" class="d-flex">
@@ -232,6 +233,15 @@
                                             <li><hr class="dropdown-divider"></li>
                                             <li class="nav-item"><a class="nav-link" href="@Url.Action("Draft", "JournalEntries")"><i class="fas fa-edit"></i> المسودات</a></li>
                                             <li class="nav-item"><a class="nav-link" href="@Url.Action("Posted", "JournalEntries")"><i class="fas fa-check"></i> المرحلة</a></li>
+                                        </ul>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" data-bs-toggle="collapse" href="#hrMenu" role="button" aria-expanded="@(hrActive ? "true" : "false")">
+                                            <i class="fas fa-users-cog"></i> شؤون الموظفين
+                                        </a>
+                                        <ul class="collapse nav flex-column ms-3 @(hrActive ? "show" : "")" id="hrMenu">
+                                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Employees")" asp-require-permission="employees.view"><i class="fas fa-user"></i> إدارة الموظفين</a></li>
+                                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Payrolls")" asp-require-permission="payroll.view"><i class="fas fa-money-check-alt"></i> إدارة الرواتب</a></li>
                                         </ul>
                                     </li>
                                     <li class="nav-item">

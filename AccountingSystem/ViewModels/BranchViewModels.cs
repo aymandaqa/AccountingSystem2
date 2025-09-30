@@ -1,4 +1,8 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace AccountingSystem.ViewModels
 {
@@ -16,6 +20,7 @@ namespace AccountingSystem.ViewModels
         public DateTime CreatedAt { get; set; }
         public int UserCount { get; set; }
         public int AccountCount { get; set; }
+        public string? EmployeeParentAccountName { get; set; }
     }
 
     public class BranchDetailsViewModel
@@ -33,6 +38,7 @@ namespace AccountingSystem.ViewModels
         public DateTime? UpdatedAt { get; set; }
         public List<BranchUserViewModel> Users { get; set; } = new List<BranchUserViewModel>();
         public List<BranchAccountViewModel> Accounts { get; set; } = new List<BranchAccountViewModel>();
+        public string? EmployeeParentAccountName { get; set; }
     }
 
     public class CreateBranchViewModel
@@ -70,6 +76,11 @@ namespace AccountingSystem.ViewModels
 
         [Display(Name = "نشط")]
         public bool IsActive { get; set; } = true;
+
+        [Display(Name = "الحساب الرئيسي للموظفين")]
+        public int? EmployeeParentAccountId { get; set; }
+
+        public IEnumerable<SelectListItem> Accounts { get; set; } = Enumerable.Empty<SelectListItem>();
     }
 
     public class EditBranchViewModel
@@ -109,6 +120,11 @@ namespace AccountingSystem.ViewModels
 
         [Display(Name = "نشط")]
         public bool IsActive { get; set; } = true;
+
+        [Display(Name = "الحساب الرئيسي للموظفين")]
+        public int? EmployeeParentAccountId { get; set; }
+
+        public IEnumerable<SelectListItem> Accounts { get; set; } = Enumerable.Empty<SelectListItem>();
     }
 
     public class BranchUserViewModel

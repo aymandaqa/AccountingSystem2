@@ -43,6 +43,7 @@ namespace AccountingSystem.Services
                 Classification = parent.Classification,
                 SubClassification = parent.SubClassification,
                 CurrencyId = parent.CurrencyId,
+                BranchId = parent.BranchId,
                 CanHaveChildren = true,
                 CanPostTransactions = true
             };
