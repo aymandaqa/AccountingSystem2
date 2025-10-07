@@ -3,7 +3,7 @@
 @using System.Linq
 @{
     ViewData["Title"] = "تقرير مصروفات الفروع";
- }
+}
 
 <div class="container-fluid">
     <div class="row">
@@ -74,17 +74,17 @@
                             _ => "شهري"
                         };
                         var branchSummary = Model.ViewMode == BranchExpensesViewMode.Combined
-                            ? (Model.SelectedBranchIds.Any()
-                                ? $"إجمالي {Model.SelectedBranchIds.Count} فرع/فروع"
-                                : "إجمالي جميع الفروع")
-                            : (Model.SelectedBranchIds.Any()
-                                ? $"عدد الفروع المختارة: {Model.SelectedBranchIds.Count}"
-                                : "جميع الفروع");
+                        ? (Model.SelectedBranchIds.Any()
+                        ? $"إجمالي {Model.SelectedBranchIds.Count} فرع/فروع"
+                        : "إجمالي جميع الفروع")
+                        : (Model.SelectedBranchIds.Any()
+                        ? $"عدد الفروع المختارة: {Model.SelectedBranchIds.Count}"
+                        : "جميع الفروع");
                         var selectedBranchNames = Model.SelectedBranchIds.Any()
-                            ? string.Join("، ", Model.Branches
-                                .Where(b => int.TryParse(b.Value, out var id) && Model.SelectedBranchIds.Contains(id))
-                                .Select(b => b.Text))
-                            : string.Empty;
+                        ? string.Join("، ", Model.Branches
+                        .Where(b => int.TryParse(b.Value, out var id) && Model.SelectedBranchIds.Contains(id))
+                        .Select(b => b.Text))
+                        : string.Empty;
                         <div class="alert alert-info d-flex align-items-center gap-3">
                             <i class="fas fa-info-circle fa-lg"></i>
                             <div>
@@ -97,7 +97,9 @@
                             </div>
                         </div>
                         <div class="table-responsive">
-                            @{ var rows = Model.Rows; }
+                            @{
+                                var rows = Model.Rows;
+                            }
                             <table class="table table-bordered table-hover align-middle">
                                 <thead class="table-light">
                                     <tr>
@@ -138,8 +140,8 @@
                                             }
 
                                             var total = Model.ColumnTotals.TryGetValue(column.PeriodStart, out var periodTotal) ? periodTotal : 0m;
-                                            <td class="text-end fw-bold">@total.ToString("N2")</td>
-                                        </tr>
+                                            @*                                             <td class="text-end fw-bold">@total.ToString("N2")</td>
+ *@                                        </tr>
                                     }
                                 </tbody>
                                 <tfoot class="table-secondary">
