@@ -168,7 +168,7 @@ namespace AccountingSystem.Controllers
         {
             ViewBag.Users = await _context.Users
                 .Where(u => u.IsActive)
-                .Select(u => new { u.Id, Name = u.FullName ?? u.UserName })
+                .Select(u => new { u.Id, Name = (u.FirstName + " " + u.LastName).Trim() })
                 .OrderBy(u => u.Name)
                 .ToListAsync();
 
