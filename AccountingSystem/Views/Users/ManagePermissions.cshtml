@@ -176,11 +176,14 @@
                 });
 
                 permissionMap.forEach((value, permissionId) => {
+                    const wasInherited = value.checkbox?.dataset.inherited === 'true';
                     const isInherited = inherited.has(permissionId);
                     if (value.checkbox) {
                         value.checkbox.dataset.inherited = isInherited ? 'true' : 'false';
                         if (isInherited) {
                             value.checkbox.checked = true;
+                        } else if (wasInherited && !isInherited) {
+                            value.checkbox.checked = false;
                         }
                     }
                     if (value.badge) {
