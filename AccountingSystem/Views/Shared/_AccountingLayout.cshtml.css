@@ -27,6 +27,122 @@
   border-radius: 0 20px 20px 0;
   margin: 2px 0;
   transition: background-color 0.2s, color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 1rem;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+#sidebar .nav-link i {
+  font-size: 0.95rem;
+}
+
+#sidebar .nav-link .nav-link-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+#sidebar .nav-link.nav-link-toggle {
+  justify-content: space-between;
+  border-radius: 16px;
+  padding-inline-end: 0.85rem;
+}
+
+#sidebar .nav-link .toggle-icon {
+  transition: transform 0.2s ease;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+#sidebar .nav-link.open .toggle-icon,
+#sidebar .nav-link[aria-expanded="true"] .toggle-icon {
+  transform: rotate(180deg);
+}
+
+
+.sidebar-search .input-group {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-search .input-group-text,
+.sidebar-search .form-control {
+  background: transparent;
+  border: none;
+  color: #fff;
+}
+
+.sidebar-search .input-group-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+}
+
+.sidebar-search .form-control {
+  padding: 0.55rem 0.75rem;
+}
+
+.sidebar-search .form-control::placeholder {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.sidebar-search .input-group:focus-within {
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: transparent;
+}
+
+.sidebar-search .form-control:focus {
+  box-shadow: none;
+  color: #fff;
+}
+
+.sidebar-menu {
+  padding-bottom: 2rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+.sidebar-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-menu::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.28);
+  border-radius: 10px;
+}
+
+#sidebar .submenu {
+  background: rgba(255, 255, 255, 0.06);
+  margin: 0.35rem 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 16px;
+  border-inline-end: 2px solid rgba(255, 255, 255, 0.08);
+}
+
+#sidebar .submenu .nav-link {
+  font-size: 0.9rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 12px;
+  margin: 2px 0;
+  background: transparent;
+  color: rgba(233, 236, 239, 0.9);
+}
+
+#sidebar .submenu .nav-link i {
+  font-size: 0.85rem;
+}
+
+#sidebar .submenu .nav-link.active,
+#sidebar .submenu .nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.18);
+  color: #fff;
 }
 
 #sidebar .nav-link.active,
