@@ -141,6 +141,11 @@
             <a href="@Url.Action("Print", "JournalEntries")/${Id}" target="_blank" class="btn btn-sm btn-outline-secondary" title="طباعة">
                 <i class="fas fa-print"></i>
             </a>
+            ${if(CanDelete)}
+            <button type="button" class="btn btn-sm btn-outline-danger btn-delete-entry" data-id="${Id}" data-number="${Number}" title="حذف" asp-require-permission="journal.delete">
+                <i class="fas fa-trash"></i>
+            </button>
+            ${/if}
         </div>
     </script>
 
@@ -148,6 +153,7 @@
         document.addEventListener('DOMContentLoaded', function () {
             var dataUrl = '@Url.Action("UrlDatasourceJournalEntries", "JournalEntries")';
             var postUrlBase = '@Url.Action("Post", "JournalEntries")';
+            var deleteUrlBase = '@Url.Action("Delete", "JournalEntries")';
             var gridElement = document.getElementById('journalEntriesGrid');
             if (!gridElement || !gridElement.ej2_instances || !gridElement.ej2_instances.length) {
                 return;
@@ -253,37 +259,75 @@
             }
 
             document.getElementById('journalEntriesGrid').addEventListener('click', function (event) {
-                var button = event.target.closest('.btn-post-entry');
-                if (!button) {
+                var postButton = event.target.closest('.btn-post-entry');
+                if (postButton) {
+                    var postId = postButton.getAttribute('data-id');
+                    var postNumber = postButton.getAttribute('data-number');
+                    if (!postId) {
+                        return;
+                    }
+
+                    if (!confirm('هل تريد ترحيل القيد رقم ' + postNumber + '?')) {
+                        return;
+                    }
+
+                    showLoading();
+                    $.ajax({
+                        url: postUrlBase + '/' + postId,
+                        type: 'POST',
+                        success: function () {
+                            hideLoading();
+                            grid.refresh();
+                            if (window.swal) {
+                                swal({ title: 'تم الترحيل بنجاح', icon: 'success', button: 'حسناً' });
+                            } else {
+                                alert('تم ترحيل القيد بنجاح');
+                            }
+                        },
+                        error: function (xhr) {
+                            hideLoading();
+                            var message = xhr.responseText || 'تعذر ترحيل القيد.';
+                            if (window.swal) {
+                                swal({ title: 'خطأ', text: message, icon: 'error', button: 'إغلاق' });
+                            } else {
+                                alert(message);
+                            }
+                        }
+                    });
                     return;
                 }
 
-                var id = button.getAttribute('data-id');
-                var number = button.getAttribute('data-number');
-                if (!id) {
+                var deleteButton = event.target.closest('.btn-delete-entry');
+                if (!deleteButton) {
                     return;
                 }
 
-                if (!confirm('هل تريد ترحيل القيد رقم ' + number + '?')) {
+                var deleteId = deleteButton.getAttribute('data-id');
+                var deleteNumber = deleteButton.getAttribute('data-number');
+                if (!deleteId) {
+                    return;
+                }
+
+                if (!confirm('هل تريد حذف القيد رقم ' + deleteNumber + '?')) {
                     return;
                 }
 
                 showLoading();
                 $.ajax({
-                    url: postUrlBase + '/' + id,
+                    url: deleteUrlBase + '/' + deleteId,
                     type: 'POST',
                     success: function () {
                         hideLoading();
                         grid.refresh();
                         if (window.swal) {
-                            swal({ title: 'تم الترحيل بنجاح', icon: 'success', button: 'حسناً' });
+                            swal({ title: 'تم الحذف بنجاح', icon: 'success', button: 'حسناً' });
                         } else {
-                            alert('تم ترحيل القيد بنجاح');
+                            alert('تم حذف القيد بنجاح');
                         }
                     },
                     error: function (xhr) {
                         hideLoading();
-                        var message = xhr.responseText || 'تعذر ترحيل القيد.';
+                        var message = xhr.responseText || 'تعذر حذف القيد.';
                         if (window.swal) {
                             swal({ title: 'خطأ', text: message, icon: 'error', button: 'إغلاق' });
                         } else {

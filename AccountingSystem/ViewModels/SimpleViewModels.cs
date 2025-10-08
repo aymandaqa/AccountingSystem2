@@ -453,6 +453,7 @@ namespace AccountingSystem.ViewModels
         public string DateGroup { get; set; } = string.Empty;
         public string TotalAmountFormatted { get; set; } = string.Empty;
         public bool IsDraft { get; set; }
+        public bool CanDelete { get; set; }
     }
 
     public class JournalEntriesIndexViewModel

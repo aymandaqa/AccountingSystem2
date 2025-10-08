@@ -63,6 +63,14 @@
                                                     <a asp-action="Edit" asp-route-id="@entry.Id" class="btn btn-sm btn-outline-warning">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
+                                                    @if (entry.CanDelete)
+                                                    {
+                                                        <form asp-action="Delete" asp-route-id="@entry.Id" method="post" class="d-inline" asp-require-permission="journal.delete" onsubmit="return confirm('هل تريد حذف القيد رقم @entry.Number؟');">
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </form>
+                                                    }
                                                 </div>
                                             </td>
                                         </tr>
