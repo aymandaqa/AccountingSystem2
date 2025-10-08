@@ -1,11 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.Services;
 using AccountingSystem.ViewModels;
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -33,6 +37,196 @@ namespace AccountingSystem.Controllers
             _accountService = accountService;
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "assets.create")]
+        public async Task<IActionResult> ImportExcel(IFormFile? file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                TempData["ImportErrors"] = "يرجى اختيار ملف Excel صالح.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (!string.Equals(Path.GetExtension(file.FileName), ".xlsx", StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["ImportErrors"] = "يجب أن يكون الملف بامتداد .xlsx";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var errors = new List<string>();
+            var assetsToAdd = new List<Asset>();
+
+            try
+            {
+                var assetTypes = await _context.AssetTypes
+                    .Include(t => t.Account)
+                    .ToListAsync();
+                var branches = await _context.Branches
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                var existingAssets = await _context.Assets
+                    .Select(a => new { a.BranchId, a.Name })
+                    .ToListAsync();
+                var existingKeys = new HashSet<string>(existingAssets
+                    .Select(a => $"{a.BranchId}|{a.Name}".ToLowerInvariant()));
+
+                using var stream = new MemoryStream();
+                await file.CopyToAsync(stream);
+                stream.Position = 0;
+
+                using var workbook = new XLWorkbook(stream);
+                var worksheet = workbook.Worksheets.FirstOrDefault();
+
+                if (worksheet == null)
+                {
+                    errors.Add("تعذر قراءة ورقة العمل من الملف.");
+                }
+                else
+                {
+                    var range = worksheet.RangeUsed();
+                    if (range == null)
+                    {
+                        errors.Add("الملف لا يحتوي على بيانات.");
+                    }
+                    else
+                    {
+                        foreach (var excelRow in range.RowsUsed().Skip(1))
+                        {
+                            var usedCells = excelRow.CellsUsed().ToList();
+                            if (!usedCells.Any() || usedCells.All(c => string.IsNullOrWhiteSpace(c.GetValue<string>())))
+                            {
+                                continue;
+                            }
+
+                            var rowNumber = excelRow.RowNumber();
+                            var name = excelRow.Cell(1).GetValue<string>().Trim();
+                            if (string.IsNullOrEmpty(name))
+                            {
+                                errors.Add($"السطر {rowNumber}: اسم الأصل مطلوب.");
+                                continue;
+                            }
+
+                            var assetTypeValue = excelRow.Cell(2).GetValue<string>().Trim();
+                            if (string.IsNullOrEmpty(assetTypeValue))
+                            {
+                                errors.Add($"السطر {rowNumber}: نوع الأصل مطلوب.");
+                                continue;
+                            }
+
+                            var assetType = assetTypes.FirstOrDefault(t =>
+                                string.Equals(t.Name, assetTypeValue, StringComparison.OrdinalIgnoreCase) ||
+                                (t.Account != null && string.Equals(t.Account.Code, assetTypeValue, StringComparison.OrdinalIgnoreCase)));
+
+                            if (assetType == null)
+                            {
+                                errors.Add($"السطر {rowNumber}: نوع الأصل \"{assetTypeValue}\" غير معروف.");
+                                continue;
+                            }
+
+                            if (assetType.AccountId == 0)
+                            {
+                                errors.Add($"السطر {rowNumber}: نوع الأصل \"{assetType.Name}\" لا يحتوي على حساب مرتبط.");
+                                continue;
+                            }
+
+                            var branchValue = excelRow.Cell(3).GetValue<string>().Trim();
+                            if (string.IsNullOrEmpty(branchValue))
+                            {
+                                errors.Add($"السطر {rowNumber}: الفرع مطلوب.");
+                                continue;
+                            }
+
+                            var branch = branches.FirstOrDefault(b =>
+                                string.Equals(b.Code, branchValue, StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(b.NameAr, branchValue, StringComparison.OrdinalIgnoreCase) ||
+                                (!string.IsNullOrWhiteSpace(b.NameEn) && string.Equals(b.NameEn, branchValue, StringComparison.OrdinalIgnoreCase)));
+
+                            if (branch == null)
+                            {
+                                errors.Add($"السطر {rowNumber}: الفرع \"{branchValue}\" غير موجود.");
+                                continue;
+                            }
+
+                            var key = $"{branch.Id}|{name}".ToLowerInvariant();
+                            if (existingKeys.Contains(key))
+                            {
+                                errors.Add($"السطر {rowNumber}: الأصل \"{name}\" موجود مسبقاً للفرع المحدد.");
+                                continue;
+                            }
+
+                            decimal openingBalance = 0;
+                            var openingCell = excelRow.Cell(5);
+                            if (!openingCell.IsEmpty())
+                            {
+                                if (openingCell.TryGetValue<decimal>(out var openingDecimal))
+                                {
+                                    openingBalance = openingDecimal;
+                                }
+                                else
+                                {
+                                    var openingText = openingCell.GetValue<string>();
+                                    if (!string.IsNullOrWhiteSpace(openingText) &&
+                                        (decimal.TryParse(openingText, NumberStyles.Any, CultureInfo.InvariantCulture, out openingDecimal) ||
+                                         decimal.TryParse(openingText, NumberStyles.Any, CultureInfo.CurrentCulture, out openingDecimal)))
+                                    {
+                                        openingBalance = openingDecimal;
+                                    }
+                                    else
+                                    {
+                                        errors.Add($"السطر {rowNumber}: لا يمكن تحويل قيمة الرصيد الافتتاحي \"{openingText}\".");
+                                        continue;
+                                    }
+                                }
+                            }
+
+                            var accountResult = await _accountService.CreateAccountAsync(name, assetType.AccountId);
+
+                            var assetNumber = excelRow.Cell(4).GetValue<string>()?.Trim();
+                            var notes = excelRow.Cell(6).GetValue<string>()?.Trim();
+
+                            var asset = new Asset
+                            {
+                                Name = name,
+                                AssetTypeId = assetType.Id,
+                                BranchId = branch.Id,
+                                AssetNumber = string.IsNullOrWhiteSpace(assetNumber) ? null : assetNumber,
+                                Notes = string.IsNullOrWhiteSpace(notes) ? null : notes,
+                                OpeningBalance = openingBalance,
+                                AccountId = accountResult.Id
+                            };
+
+                            assetsToAdd.Add(asset);
+                            existingKeys.Add(key);
+                        }
+                    }
+                }
+
+                if (assetsToAdd.Any())
+                {
+                    _context.Assets.AddRange(assetsToAdd);
+                    await _context.SaveChangesAsync();
+                    TempData["ImportSuccess"] = $"تم استيراد {assetsToAdd.Count} أصل بنجاح.";
+                }
+
+                if (errors.Any())
+                {
+                    TempData["ImportErrors"] = string.Join(";;", errors);
+                }
+                else if (!assetsToAdd.Any())
+                {
+                    TempData["ImportErrors"] = "لم يتم العثور على بيانات لاستيرادها.";
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["ImportErrors"] = $"حدث خطأ أثناء قراءة الملف: {ex.Message}";
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
         public async Task<IActionResult> Index()
         {
             var assets = await _context.Assets
@@ -55,6 +249,60 @@ namespace AccountingSystem.Controllers
             }).ToList();
 
             return View(model);
+        }
+
+        [Authorize(Policy = "assets.view")]
+        public async Task<IActionResult> ExportExcel()
+        {
+            var assets = await _context.Assets
+                .AsNoTracking()
+                .Include(a => a.Branch)
+                .Include(a => a.AssetType)
+                .Include(a => a.Account)
+                .OrderBy(a => a.Name)
+                .ToListAsync();
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Assets");
+
+            worksheet.Cell(1, 1).Value = "اسم الأصل";
+            worksheet.Cell(1, 2).Value = "نوع الأصل";
+            worksheet.Cell(1, 3).Value = "الفرع (الكود أو الاسم)";
+            worksheet.Cell(1, 4).Value = "رقم الأصل";
+            worksheet.Cell(1, 5).Value = "الرصيد الافتتاحي";
+            worksheet.Cell(1, 6).Value = "الملاحظات";
+            worksheet.Cell(1, 7).Value = "تاريخ الإنشاء";
+            worksheet.Cell(1, 8).Value = "كود الحساب";
+
+            worksheet.Row(1).Style.Font.Bold = true;
+
+            var row = 2;
+            foreach (var asset in assets)
+            {
+                worksheet.Cell(row, 1).Value = asset.Name;
+                worksheet.Cell(row, 2).Value = asset.AssetType?.Name ?? string.Empty;
+                worksheet.Cell(row, 3).Value = string.IsNullOrWhiteSpace(asset.Branch?.Code)
+                    ? asset.Branch?.NameAr ?? string.Empty
+                    : $"{asset.Branch.Code} - {asset.Branch.NameAr}";
+                worksheet.Cell(row, 4).Value = asset.AssetNumber ?? string.Empty;
+                worksheet.Cell(row, 5).Value = asset.OpeningBalance;
+                worksheet.Cell(row, 6).Value = asset.Notes ?? string.Empty;
+                worksheet.Cell(row, 7).Value = asset.CreatedAt;
+                worksheet.Cell(row, 7).Style.DateFormat.Format = "yyyy-mm-dd";
+                worksheet.Cell(row, 8).Value = asset.Account?.Code ?? string.Empty;
+                row++;
+            }
+
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            var fileName = $"Assets_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+            return File(stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
         }
 
         [Authorize(Policy = "assets.create")]

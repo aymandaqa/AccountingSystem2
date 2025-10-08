@@ -3,10 +3,37 @@
 @{
     ViewData["Title"] = "إدارة الموظفين";
     var branches = ViewBag.Branches as List<SelectListItem> ?? new List<SelectListItem>();
+    var importSuccess = TempData["ImportSuccess"] as string;
+    var importErrorsRaw = TempData["ImportErrors"] as string;
+    var importErrors = !string.IsNullOrWhiteSpace(importErrorsRaw)
+        ? importErrorsRaw.Split(";;", StringSplitOptions.RemoveEmptyEntries)
+        : Array.Empty<string>();
 }
 
 <div class="container-fluid">
     @Html.AntiForgeryToken()
+    @if (!string.IsNullOrEmpty(importSuccess))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-1"></i> @importSuccess
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (importErrors.Length > 0)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-1"></i>
+            <ul class="mb-0">
+                @foreach (var message in importErrors)
+                {
+                    <li>@message</li>
+                }
+            </ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
     <div class="row mb-3 align-items-end">
         <div class="col-md-4">
             <label class="form-label">تصفية حسب الفرع</label>
@@ -23,9 +50,37 @@
             <input type="text" id="employeeSearch" class="form-control" placeholder="ابحث باسم الموظف أو المسمى الوظيفي" />
         </div>
         <div class="col-md-4 text-md-end mt-3 mt-md-0">
-            <a href="@Url.Action("Create")" class="btn btn-primary" asp-require-permission="employees.create">
-                <i class="fas fa-user-plus"></i> إضافة موظف جديد
-            </a>
+            <div class="btn-toolbar justify-content-md-end gap-2">
+                <a href="@Url.Action("Create")" class="btn btn-primary" asp-require-permission="employees.create">
+                    <i class="fas fa-user-plus"></i> إضافة موظف جديد
+                </a>
+                <div class="btn-group">
+                    <a asp-action="ExportExcel" class="btn btn-success" asp-require-permission="employees.view">
+                        <i class="fas fa-file-excel me-1"></i> تصدير Excel
+                    </a>
+                    <button type="button" class="btn btn-outline-success" data-bs-toggle="collapse" data-bs-target="#employeeImportForm" aria-expanded="false" aria-controls="employeeImportForm" asp-require-permission="employees.create">
+                        <i class="fas fa-file-import me-1"></i> استيراد Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapse" id="employeeImportForm">
+        <div class="card card-body border shadow-sm mb-3">
+            <form asp-action="ImportExcel" method="post" enctype="multipart/form-data" class="row g-3 align-items-end">
+                @Html.AntiForgeryToken()
+                <div class="col-md-6">
+                    <label class="form-label">ملف Excel</label>
+                    <input type="file" name="file" class="form-control" accept=".xlsx" required />
+                    <div class="form-text">استخدم ملف يحتوي على الأعمدة: اسم الموظف، المسمى الوظيفي، الراتب، الفرع، الهاتف، العنوان، تاريخ التعيين، الحالة.</div>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-success" asp-require-permission="employees.create">
+                        <i class="fas fa-upload me-1"></i> بدء الاستيراد
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
