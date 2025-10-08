@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace AccountingSystem.Controllers
 {
-    [Authorize(Policy = "paymentvouchers.view")]
+    [Authorize(Policy = "workflowapprovals.view")]
     public class WorkflowApprovalsController : Controller
     {
         private readonly IWorkflowService _workflowService;
@@ -75,6 +75,7 @@ namespace AccountingSystem.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "workflowapprovals.process")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Approve(int actionId, string? notes)
         {
@@ -88,6 +89,7 @@ namespace AccountingSystem.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "workflowapprovals.process")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Reject(int actionId, string? notes)
         {

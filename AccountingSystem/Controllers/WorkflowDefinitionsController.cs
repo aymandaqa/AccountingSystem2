@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace AccountingSystem.Controllers
 {
-    [Authorize(Policy = "paymentvouchers.create")]
+    [Authorize(Policy = "workflowdefinitions.manage")]
     public class WorkflowDefinitionsController : Controller
     {
         private readonly ApplicationDbContext _context;

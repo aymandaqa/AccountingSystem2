@@ -934,7 +934,12 @@ namespace AccountingSystem.Data
                 new Permission { Id = 56, Name = "permissiongroups.view", DisplayName = "عرض مجموعات الصلاحيات", Category = "الصلاحيات", CreatedAt = createdAt },
                 new Permission { Id = 57, Name = "permissiongroups.create", DisplayName = "إنشاء مجموعة صلاحيات", Category = "الصلاحيات", CreatedAt = createdAt },
                 new Permission { Id = 58, Name = "permissiongroups.edit", DisplayName = "تعديل مجموعة صلاحيات", Category = "الصلاحيات", CreatedAt = createdAt },
-                new Permission { Id = 59, Name = "permissiongroups.delete", DisplayName = "حذف مجموعة صلاحيات", Category = "الصلاحيات", CreatedAt = createdAt }
+                new Permission { Id = 59, Name = "permissiongroups.delete", DisplayName = "حذف مجموعة صلاحيات", Category = "الصلاحيات", CreatedAt = createdAt },
+                new Permission { Id = 60, Name = "paymentvouchers.approve", DisplayName = "اعتماد سندات الدفع", Category = "السندات", CreatedAt = createdAt },
+                new Permission { Id = 61, Name = "workflowapprovals.view", DisplayName = "عرض موافقات سندات الدفع", Category = "سير العمل", CreatedAt = createdAt },
+                new Permission { Id = 62, Name = "workflowapprovals.process", DisplayName = "معالجة موافقات سندات الدفع", Category = "سير العمل", CreatedAt = createdAt },
+                new Permission { Id = 63, Name = "workflowdefinitions.manage", DisplayName = "إدارة سير عمل السندات", Category = "سير العمل", CreatedAt = createdAt },
+                new Permission { Id = 64, Name = "notifications.view", DisplayName = "عرض الإشعارات", Category = "سير العمل", CreatedAt = createdAt }
             );
         }
     }
