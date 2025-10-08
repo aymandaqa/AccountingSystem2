@@ -71,7 +71,17 @@
                 </a>
             </div>
             <div class="sidebar-menu flex-grow-1 overflow-auto">
-                <ul class="nav flex-column" id="sidebarNav">
+                <div class="sidebar-search px-3 pb-3">
+                    <label class="form-label visually-hidden" for="sidebarSearch">ابحث في القائمة</label>
+                    <div class="input-group sidebar-search-input">
+                        <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="search" class="form-control" id="sidebarSearch" placeholder="ابحث في القائمة..." aria-label="ابحث في القائمة">
+                        <button type="button" class="btn btn-outline-light sidebar-search-clear" id="sidebarSearchClear" aria-label="مسح البحث">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+                <ul class="nav flex-column gap-1" id="sidebarNav">
                     <li class="nav-item">
                         <a class="nav-link @(currentController == "dashboard" && currentAction == "index" ? "active" : "")" href="@Url.Action("Index", "Dashboard")" data-bs-toggle="tooltip" data-bs-placement="left" title="لوحة التحكم">
                             <i class="fa-solid fa-chart-line"></i>
@@ -461,6 +471,151 @@
                     document.body.classList.remove('sidebar-open');
                 }
             });
+
+            var sidebarSearchInput = document.getElementById('sidebarSearch');
+            var sidebarSearchClear = document.getElementById('sidebarSearchClear');
+            if (sidebarSearchInput) {
+                var navItems = Array.from(document.querySelectorAll('#sidebarNav > li.nav-item'));
+                var collapseInitialState = new Map();
+                var isSearchFiltering = false;
+
+                document.querySelectorAll('#sidebarNav .collapse').forEach(function (collapseEl) {
+                    collapseInitialState.set(collapseEl, collapseEl.classList.contains('show'));
+                    collapseEl.addEventListener('shown.bs.collapse', function () {
+                        if (!isSearchFiltering) {
+                            collapseInitialState.set(collapseEl, true);
+                        }
+                    });
+                    collapseEl.addEventListener('hidden.bs.collapse', function () {
+                        if (!isSearchFiltering) {
+                            collapseInitialState.set(collapseEl, false);
+                        }
+                    });
+                });
+
+                var toggleClearButton = function () {
+                    if (!sidebarSearchClear) {
+                        return;
+                    }
+                    if (sidebarSearchInput.value.trim().length > 0) {
+                        sidebarSearchClear.classList.add('show');
+                    } else {
+                        sidebarSearchClear.classList.remove('show');
+                    }
+                };
+
+                var resetNavItem = function (item) {
+                    item.classList.remove('d-none');
+                    var navLink = item.querySelector('.nav-link');
+                    if (navLink) {
+                        navLink.classList.remove('search-highlight');
+                    }
+
+                    item.querySelectorAll('.menu-dropdown .dropdown-item').forEach(function (dropdownItem) {
+                        dropdownItem.classList.remove('search-highlight');
+                        var parentLi = dropdownItem.closest('li');
+                        if (parentLi) {
+                            parentLi.classList.remove('d-none');
+                        }
+                    });
+
+                    item.querySelectorAll('.menu-dropdown li').forEach(function (li) {
+                        li.classList.remove('d-none');
+                    });
+
+                    var collapseEl = item.querySelector('.collapse');
+                    if (collapseEl) {
+                        var collapseInstance = bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false });
+                        if (collapseInitialState.get(collapseEl)) {
+                            collapseInstance.show();
+                        } else {
+                            collapseInstance.hide();
+                        }
+                    }
+                };
+
+                var filterSidebarMenu = function () {
+                    var query = sidebarSearchInput.value.trim().toLowerCase();
+                    if (!query) {
+                        isSearchFiltering = true;
+                        navItems.forEach(resetNavItem);
+                        isSearchFiltering = false;
+                        return;
+                    }
+
+                    isSearchFiltering = true;
+                    navItems.forEach(function (item) {
+                        var navLink = item.querySelector('.nav-link');
+                        var titleElement = navLink ? navLink.querySelector('.menu-title') : null;
+                        var navTitle = titleElement ? titleElement.textContent.trim().toLowerCase() : (navLink ? navLink.textContent.trim().toLowerCase() : '');
+                        var navMatch = navTitle.indexOf(query) > -1;
+                        var hasSubMatch = false;
+                        var dropdownItems = item.querySelectorAll('.menu-dropdown .dropdown-item');
+                        var hasDropdown = dropdownItems.length > 0;
+
+                        dropdownItems.forEach(function (dropdownItem) {
+                            var text = dropdownItem.textContent.trim().toLowerCase();
+                            var isMatch = text.indexOf(query) > -1;
+                            var parentLi = dropdownItem.closest('li');
+
+                            dropdownItem.classList.toggle('search-highlight', isMatch);
+
+                            if (navMatch) {
+                                if (parentLi) {
+                                    parentLi.classList.remove('d-none');
+                                }
+                            } else if (parentLi) {
+                                parentLi.classList.toggle('d-none', !isMatch);
+                            }
+
+                            if (isMatch) {
+                                hasSubMatch = true;
+                            }
+                        });
+
+                        if (query) {
+                            item.querySelectorAll('.menu-dropdown li').forEach(function (li) {
+                                if (!li.querySelector('.dropdown-item')) {
+                                    li.classList.toggle('d-none', !(navMatch || hasSubMatch));
+                                }
+                            });
+                        }
+
+                        var shouldShow = navMatch || (hasDropdown && hasSubMatch);
+                        item.classList.toggle('d-none', !shouldShow);
+
+                        if (navLink) {
+                            navLink.classList.toggle('search-highlight', shouldShow && query.length > 0);
+                        }
+
+                        var collapseEl = item.querySelector('.collapse');
+                        if (collapseEl) {
+                            var collapseInstance = bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false });
+                            if (shouldShow) {
+                                collapseInstance.show();
+                            } else {
+                                collapseInstance.hide();
+                            }
+                        }
+                    });
+                    isSearchFiltering = false;
+                };
+
+                sidebarSearchInput.addEventListener('input', function () {
+                    filterSidebarMenu();
+                    toggleClearButton();
+                });
+
+                sidebarSearchClear?.addEventListener('click', function () {
+                    sidebarSearchInput.value = '';
+                    filterSidebarMenu();
+                    toggleClearButton();
+                    sidebarSearchInput.focus();
+                });
+
+                filterSidebarMenu();
+                toggleClearButton();
+            }
 
             $('#reportSearch').on('input', function () {
                 var value = $(this).val().toLowerCase();
