@@ -388,7 +388,7 @@ namespace AccountingSystem.Controllers
                     Description = line.Description,
                     DebitAmount = line.DebitAmount,
                     CreditAmount = line.CreditAmount,
-
+                    CostCenterId = line.CostCenterId
                 });
             }
 
@@ -425,11 +425,18 @@ namespace AccountingSystem.Controllers
                 }).ToListAsync();
 
             model.CostCenters = await _context.CostCenters
+                .OrderBy(c => c.NameAr)
                 .Select(c => new SelectListItem
                 {
                     Value = c.Id.ToString(),
                     Text = c.NameAr
                 }).ToListAsync();
+
+            model.CostCenters.Insert(0, new SelectListItem
+            {
+                Value = string.Empty,
+                Text = "بدون"
+            });
 
             model.Accounts = await _context.Accounts
                 .Where(a => a.CanPostTransactions)
@@ -447,6 +454,8 @@ namespace AccountingSystem.Controllers
                 .Include(j => j.Branch)
                 .Include(j => j.Lines)
                     .ThenInclude(l => l.Account).ThenInclude(c => c.Currency)
+                .Include(j => j.Lines)
+                    .ThenInclude(l => l.CostCenter)
                 .FirstOrDefaultAsync(j => j.Id == id);
 
             if (entry == null)
@@ -465,6 +474,8 @@ namespace AccountingSystem.Controllers
                 .Include(j => j.Lines)
                     .ThenInclude(l => l.Account)
                         .ThenInclude(a => a.Currency)
+                .Include(j => j.Lines)
+                    .ThenInclude(l => l.CostCenter)
                 .FirstOrDefaultAsync(j => j.Id == id);
 
             if (entry == null)
@@ -499,7 +510,8 @@ namespace AccountingSystem.Controllers
                     AccountId = l.AccountId,
                     Description = l.Description ?? string.Empty,
                     DebitAmount = l.DebitAmount,
-                    CreditAmount = l.CreditAmount
+                    CreditAmount = l.CreditAmount,
+                    CostCenterId = l.CostCenterId
                 }).ToList()
             };
 
@@ -559,7 +571,8 @@ namespace AccountingSystem.Controllers
                 AccountId = l.AccountId,
                 Description = l.Description,
                 DebitAmount = l.DebitAmount,
-                CreditAmount = l.CreditAmount
+                CreditAmount = l.CreditAmount,
+                CostCenterId = l.CostCenterId
             }).ToList();
 
             await _context.SaveChangesAsync();
@@ -720,6 +733,8 @@ namespace AccountingSystem.Controllers
                     AccountCode = l.Account.Code,
                     AccountName = $"{l.Account.NameAr} ({l.Account?.Currency?.Code})",
                     Description = l.Description ?? string.Empty,
+                    CostCenterId = l.CostCenterId,
+                    CostCenterName = l.CostCenter?.NameAr,
                     DebitAmount = l.DebitAmount,
                     CreditAmount = l.CreditAmount
                 }).ToList(),

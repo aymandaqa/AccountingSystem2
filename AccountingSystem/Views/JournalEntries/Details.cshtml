@@ -78,6 +78,7 @@
                                     <th>الكود</th>
                                     <th>اسم الحساب</th>
                                     <th>البيان</th>
+                                    <th>مركز التكلفة</th>
                                     <th>مدين</th>
                                     <th>دائن</th>
                                 </tr>
@@ -89,6 +90,7 @@
                                         <td>@line.AccountCode</td>
                                         <td>@line.AccountName</td>
                                         <td>@line.Description</td>
+                                        <td>@(string.IsNullOrWhiteSpace(line.CostCenterName) ? "-" : line.CostCenterName)</td>
                                         <td>@line.DebitAmount.ToString("N2")</td>
                                         <td>@line.CreditAmount.ToString("N2")</td>
                                     </tr>
@@ -96,7 +98,7 @@
                             </tbody>
                             <tfoot>
                                 <tr class="table-info">
-                                    <td colspan="3"><strong>الإجمالي:</strong></td>
+                                    <td colspan="4"><strong>الإجمالي:</strong></td>
                                     <td><strong>@Model.TotalDebit.ToString("N2")</strong></td>
                                     <td><strong>@Model.TotalCredit.ToString("N2")</strong></td>
                                 </tr>
