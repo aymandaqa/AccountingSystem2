@@ -284,11 +284,11 @@ namespace AccountingSystem.Migrations
                 columns: new[] { "Id", "Category", "CreatedAt", "Description", "DisplayName", "IsActive", "Name" },
                 values: new object[,]
                 {
-                    { 60, "السندات", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "اعتماد سندات الدفع", true, "paymentvouchers.approve" },
-                    { 61, "سير العمل", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض موافقات سندات الدفع", true, "workflowapprovals.view" },
-                    { 62, "سير العمل", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "معالجة موافقات سندات الدفع", true, "workflowapprovals.process" },
-                    { 63, "سير العمل", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "إدارة سير عمل السندات", true, "workflowdefinitions.manage" },
-                    { 64, "سير العمل", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض الإشعارات", true, "notifications.view" }
+                    { 2260, "السندات", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "اعتماد سندات الدفع", true, "paymentvouchers.approve" },
+                    { 2261, "سير العمل", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض موافقات سندات الدفع", true, "workflowapprovals.view" },
+                    { 2262, "سير العمل", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "معالجة موافقات سندات الدفع", true, "workflowapprovals.process" },
+                    { 2263, "سير العمل", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "إدارة سير عمل السندات", true, "workflowdefinitions.manage" },
+                    { 2264, "سير العمل", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض الإشعارات", true, "notifications.view" }
                 });
         }
 
