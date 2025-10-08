@@ -82,10 +82,10 @@ namespace AccountingSystem.Migrations
                 columns: new[] { "Id", "Category", "CreatedAt", "Description", "DisplayName", "IsActive", "Name" },
                 values: new object[,]
                 {
-                    { 56, "الصلاحيات", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض مجموعات الصلاحيات", true, "permissiongroups.view" },
-                    { 57, "الصلاحيات", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "إنشاء مجموعة صلاحيات", true, "permissiongroups.create" },
-                    { 58, "الصلاحيات", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "تعديل مجموعة صلاحيات", true, "permissiongroups.edit" },
-                    { 59, "الصلاحيات", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "حذف مجموعة صلاحيات", true, "permissiongroups.delete" }
+                    { 556, "الصلاحيات", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض مجموعات الصلاحيات", true, "permissiongroups.view" },
+                    { 557, "الصلاحيات", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "إنشاء مجموعة صلاحيات", true, "permissiongroups.create" },
+                    { 558, "الصلاحيات", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "تعديل مجموعة صلاحيات", true, "permissiongroups.edit" },
+                    { 559, "الصلاحيات", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "حذف مجموعة صلاحيات", true, "permissiongroups.delete" }
                 });
 
             migrationBuilder.CreateIndex(
