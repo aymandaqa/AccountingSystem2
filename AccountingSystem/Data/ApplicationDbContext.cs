@@ -29,8 +29,11 @@ namespace AccountingSystem.Data
         public DbSet<JournalEntry> JournalEntries { get; set; }
         public DbSet<JournalEntryLine> JournalEntryLines { get; set; }
         public DbSet<Permission> Permissions { get; set; }
+        public DbSet<PermissionGroup> PermissionGroups { get; set; }
+        public DbSet<PermissionGroupPermission> PermissionGroupPermissions { get; set; }
         public DbSet<UserBranch> UserBranches { get; set; }
         public DbSet<UserPermission> UserPermissions { get; set; }
+        public DbSet<UserPermissionGroup> UserPermissionGroups { get; set; }
         public DbSet<Expense> Expenses { get; set; }
         public DbSet<PaymentTransfer> PaymentTransfers { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
@@ -731,6 +734,47 @@ namespace AccountingSystem.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
+            builder.Entity<PermissionGroup>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.Name).IsUnique();
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(150);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            });
+
+            builder.Entity<PermissionGroupPermission>(entity =>
+            {
+                entity.HasKey(e => new { e.PermissionGroupId, e.PermissionId });
+
+                entity.HasOne(e => e.PermissionGroup)
+                    .WithMany(e => e.PermissionGroupPermissions)
+                    .HasForeignKey(e => e.PermissionGroupId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Permission)
+                    .WithMany(e => e.PermissionGroupPermissions)
+                    .HasForeignKey(e => e.PermissionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<UserPermissionGroup>(entity =>
+            {
+                entity.HasKey(e => new { e.UserId, e.PermissionGroupId });
+
+                entity.Property(e => e.AssignedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.HasOne(e => e.User)
+                    .WithMany(e => e.UserPermissionGroups)
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.PermissionGroup)
+                    .WithMany(e => e.UserPermissionGroups)
+                    .HasForeignKey(e => e.PermissionGroupId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
             // Seed data
             SeedData(builder);
         }
@@ -805,7 +849,11 @@ namespace AccountingSystem.Data
                 new Permission { Id = 52, Name = "assetexpenses.view", DisplayName = "عرض مصاريف الأصول", Category = "الأصول", CreatedAt = createdAt },
                 new Permission { Id = 53, Name = "assetexpenses.create", DisplayName = "إنشاء مصروف أصل", Category = "الأصول", CreatedAt = createdAt },
                 new Permission { Id = 54, Name = "reports.pending", DisplayName = "عرض الحركات غير المرحلة", Category = "التقارير", CreatedAt = createdAt },
-                new Permission { Id = 55, Name = "reports.dynamic", DisplayName = "التقارير التفاعلية", Category = "التقارير", CreatedAt = createdAt }
+                new Permission { Id = 55, Name = "reports.dynamic", DisplayName = "التقارير التفاعلية", Category = "التقارير", CreatedAt = createdAt },
+                new Permission { Id = 56, Name = "permissiongroups.view", DisplayName = "عرض مجموعات الصلاحيات", Category = "الصلاحيات", CreatedAt = createdAt },
+                new Permission { Id = 57, Name = "permissiongroups.create", DisplayName = "إنشاء مجموعة صلاحيات", Category = "الصلاحيات", CreatedAt = createdAt },
+                new Permission { Id = 58, Name = "permissiongroups.edit", DisplayName = "تعديل مجموعة صلاحيات", Category = "الصلاحيات", CreatedAt = createdAt },
+                new Permission { Id = 59, Name = "permissiongroups.delete", DisplayName = "حذف مجموعة صلاحيات", Category = "الصلاحيات", CreatedAt = createdAt }
             );
         }
     }

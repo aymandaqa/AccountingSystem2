@@ -30,6 +30,17 @@ namespace AccountingSystem.ViewModels
         public string DisplayName { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
         public bool IsGranted { get; set; }
+        public bool IsInherited { get; set; }
+    }
+
+    public class PermissionGroupSelectionViewModel
+    {
+        public int PermissionGroupId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public int PermissionsCount { get; set; }
+        public bool IsAssigned { get; set; }
+        public List<int> PermissionIds { get; set; } = new List<int>();
     }
 
     public class ManageUserPermissionsViewModel
@@ -37,6 +48,7 @@ namespace AccountingSystem.ViewModels
         public string UserId { get; set; } = string.Empty;
         public string UserName { get; set; } = string.Empty;
         public List<PermissionSelectionViewModel> Permissions { get; set; } = new List<PermissionSelectionViewModel>();
+        public List<PermissionGroupSelectionViewModel> Groups { get; set; } = new List<PermissionGroupSelectionViewModel>();
     }
 
     public class CreateUserViewModel

@@ -29,6 +29,14 @@ namespace AccountingSystem.Authorization
                 .Include(up => up.Permission)
                 .AnyAsync(up => up.UserId == user.Id && up.Permission.Name == requirement.Permission && up.IsGranted);
 
+            if (!hasPermission)
+            {
+                hasPermission = await _context.UserPermissionGroups
+                    .Where(ug => ug.UserId == user.Id)
+                    .SelectMany(ug => ug.PermissionGroup.PermissionGroupPermissions)
+                    .AnyAsync(pgp => pgp.Permission.Name == requirement.Permission);
+            }
+
             if (hasPermission)
             {
                 context.Succeed(requirement);

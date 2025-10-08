@@ -488,6 +488,30 @@ namespace AccountingSystem.Controllers
                 .Where(up => up.UserId == id && up.IsGranted)
                 .ToListAsync();
 
+            var groups = await _context.PermissionGroups
+                .Include(pg => pg.PermissionGroupPermissions)
+                .OrderBy(pg => pg.Name)
+                .ToListAsync();
+
+            var userGroups = await _context.UserPermissionGroups
+                .Where(ug => ug.UserId == id)
+                .Include(ug => ug.PermissionGroup)
+                    .ThenInclude(pg => pg.PermissionGroupPermissions)
+                .ToListAsync();
+
+            var assignedGroupIds = userGroups
+                .Select(ug => ug.PermissionGroupId)
+                .ToHashSet();
+
+            var inheritedPermissionIds = userGroups
+                .SelectMany(ug => ug.PermissionGroup.PermissionGroupPermissions)
+                .Select(pgp => pgp.PermissionId)
+                .ToHashSet();
+
+            var directPermissionIds = userPermissions
+                .Select(up => up.PermissionId)
+                .ToHashSet();
+
             var model = new ManageUserPermissionsViewModel
             {
                 UserId = user.Id,
@@ -497,7 +521,19 @@ namespace AccountingSystem.Controllers
                     PermissionId = p.Id,
                     DisplayName = p.DisplayName,
                     Category = p.Category,
-                    IsGranted = userPermissions.Any(up => up.PermissionId == p.Id)
+                    IsGranted = directPermissionIds.Contains(p.Id) || inheritedPermissionIds.Contains(p.Id),
+                    IsInherited = inheritedPermissionIds.Contains(p.Id)
+                }).ToList(),
+                Groups = groups.Select(g => new PermissionGroupSelectionViewModel
+                {
+                    PermissionGroupId = g.Id,
+                    Name = g.Name,
+                    Description = g.Description,
+                    PermissionsCount = g.PermissionGroupPermissions.Count,
+                    IsAssigned = assignedGroupIds.Contains(g.Id),
+                    PermissionIds = g.PermissionGroupPermissions
+                        .Select(pgp => pgp.PermissionId)
+                        .ToList()
                 }).ToList()
             };
 
@@ -512,6 +548,37 @@ namespace AccountingSystem.Controllers
             var user = await _userManager.FindByIdAsync(model.UserId);
             if (user == null) return NotFound();
 
+            model.Groups ??= new List<PermissionGroupSelectionViewModel>();
+            model.Permissions ??= new List<PermissionSelectionViewModel>();
+
+            var selectedGroupIds = model.Groups
+                .Where(g => g.IsAssigned)
+                .Select(g => g.PermissionGroupId)
+                .ToList();
+
+            var existingGroups = await _context.UserPermissionGroups
+                .Where(ug => ug.UserId == model.UserId)
+                .ToListAsync();
+
+            _context.UserPermissionGroups.RemoveRange(existingGroups);
+
+            foreach (var groupId in selectedGroupIds)
+            {
+                _context.UserPermissionGroups.Add(new UserPermissionGroup
+                {
+                    UserId = model.UserId,
+                    PermissionGroupId = groupId,
+                    AssignedAt = DateTime.Now
+                });
+            }
+
+            var inheritedPermissionIds = await _context.PermissionGroupPermissions
+                .Where(pgp => selectedGroupIds.Contains(pgp.PermissionGroupId))
+                .Select(pgp => pgp.PermissionId)
+                .ToListAsync();
+
+            var inheritedSet = inheritedPermissionIds.ToHashSet();
+
             var existing = await _context.UserPermissions
                 .Where(up => up.UserId == model.UserId)
                 .ToListAsync();
@@ -520,6 +587,11 @@ namespace AccountingSystem.Controllers
 
             foreach (var perm in model.Permissions.Where(p => p.IsGranted))
             {
+                if (inheritedSet.Contains(perm.PermissionId))
+                {
+                    continue;
+                }
+
                 _context.UserPermissions.Add(new UserPermission
                 {
                     UserId = model.UserId,

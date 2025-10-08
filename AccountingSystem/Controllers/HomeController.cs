@@ -244,7 +244,15 @@ public class HomeController : Controller
                 .Select(up => up.Permission!.Name)
                 .ToListAsync();
 
+            var groupPermissions = await _context.UserPermissionGroups
+                .Where(ug => ug.UserId == user.Id)
+                .SelectMany(ug => ug.PermissionGroup.PermissionGroupPermissions)
+                .Where(pgp => pgp.Permission != null)
+                .Select(pgp => pgp.Permission!.Name)
+                .ToListAsync();
+
             grantedPermissions = userPermissions
+                .Concat(groupPermissions)
                 .Where(p => !string.IsNullOrWhiteSpace(p))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
         }

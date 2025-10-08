@@ -37,6 +37,7 @@
         var canCurrencies = (await AuthorizationService.AuthorizeAsync(User, "currencies.view")).Succeeded;
         var canSuppliers = (await AuthorizationService.AuthorizeAsync(User, "suppliers.view")).Succeeded;
         var canSystemSettings = (await AuthorizationService.AuthorizeAsync(User, "systemsettings.view")).Succeeded;
+        var canPermissionGroups = (await AuthorizationService.AuthorizeAsync(User, "permissiongroups.view")).Succeeded;
         var canReceiptVouchers = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.view")).Succeeded;
         var canDisbursementVouchers = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.view")).Succeeded;
         var canPaymentVouchers = (await AuthorizationService.AuthorizeAsync(User, "paymentvouchers.view")).Succeeded;
@@ -58,7 +59,7 @@
         var accountMgmtActive = currentController == "accountmanagement";
         var journalActive = currentController == "journalentries";
         var reportsActive = currentController == "reports";
-        var settingsActive = currentController == "branches" || currentController == "costcenters" || currentController == "currencies" || currentController == "users";
+        var settingsActive = currentController == "branches" || currentController == "costcenters" || currentController == "currencies" || currentController == "users" || currentController == "permissiongroups";
         var hrActive = currentController == "employees" || currentController == "payrolls";
         var assetsActive = currentController == "assets" || currentController == "assetexpenses" || currentController == "assettypes";
     }
@@ -288,6 +289,10 @@
                             }
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="@Url.Action("Index", "Users")"><i class="fa-solid fa-users"></i><span>المستخدمون</span></a></li>
+                            @if (canPermissionGroups)
+                            {
+                                <li><a class="dropdown-item" href="@Url.Action("Index", "PermissionGroups")"><i class="fa-solid fa-key"></i><span>مجموعات الصلاحيات</span></a></li>
+                            }
                         </ul>
                     </li>
                 </ul>
