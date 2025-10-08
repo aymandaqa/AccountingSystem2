@@ -314,18 +314,39 @@
             </div>
         </nav>
                             <div id="content" class="flex-fill">
-                                <nav class="navbar top-navbar border-bottom mb-3">
-                                    <div class="container-fluid">
-                                        <button id="sidebarToggle" class="btn btn-outline-light" type="button">☰</button>
-                                        <ul class="navbar-nav ms-auto">
+                                <header class="top-navbar shadow-lg">
+                                    <div class="container-fluid d-flex align-items-center flex-wrap gap-3">
+                                        <div class="d-flex align-items-center gap-3 flex-grow-1 flex-lg-grow-0">
+                                            <button id="sidebarToggle" class="btn btn-outline-light btn-icon" type="button" aria-label="تبديل القائمة الجانبية">
+                                                <i class="fas fa-bars"></i>
+                                            </button>
+                                            <a class="navbar-brand d-flex align-items-center text-white" href="@Url.Action("Index", "Dashboard")">
+                                                <span class="brand-icon">
+                                                    <i class="fa-solid fa-chart-line"></i>
+                                                </span>
+                                                <span class="brand-text">
+                                                    <span class="brand-title">RoadFinity</span>
+                                                    <span class="brand-subtitle">نظام المحاسبة</span>
+                                                </span>
+                                            </a>
+                                        </div>
+                                        <div class="top-navbar-search flex-grow-1 order-3 order-lg-2 w-100 w-lg-auto">
+                                            <label for="topNavbarSearch" class="visually-hidden">ابحث في النظام</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                                                <input type="search" id="topNavbarSearch" class="form-control" placeholder="ابحث في النظام..." aria-label="حقل البحث في النظام">
+                                            </div>
+                                        </div>
+                                        <ul class="navbar-nav ms-auto align-items-center flex-row flex-wrap gap-2 top-navbar-actions order-2 order-lg-3">
                                             <li class="nav-item">
                                                 @await Component.InvokeAsync("Notifications")
                                             </li>
                                             @if (User.Identity.IsAuthenticated)
                                             {
                                                 <li class="nav-item dropdown">
-                                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                                        <i class="fas fa-user"></i> @User.Identity.Name
+                                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <span class="user-avatar"><i class="fas fa-user"></i></span>
+                                                        <span class="user-name">@User.Identity.Name</span>
                                                     </a>
                                                     <ul class="dropdown-menu dropdown-menu-end">
                                                         <li>
@@ -348,7 +369,7 @@
                                             }
                                         </ul>
                                     </div>
-                                </nav>
+                                </header>
 
                                 <!-- Main Content -->
                                 <main class="page-content">
