@@ -278,11 +278,48 @@ namespace AccountingSystem.Migrations
                 principalTable: "WorkflowInstances",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Restrict);
+
+            migrationBuilder.InsertData(
+                table: "Permissions",
+                columns: new[] { "Id", "Category", "CreatedAt", "Description", "DisplayName", "IsActive", "Name" },
+                values: new object[,]
+                {
+                    { 60, "السندات", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "اعتماد سندات الدفع", true, "paymentvouchers.approve" },
+                    { 61, "سير العمل", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض موافقات سندات الدفع", true, "workflowapprovals.view" },
+                    { 62, "سير العمل", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "معالجة موافقات سندات الدفع", true, "workflowapprovals.process" },
+                    { 63, "سير العمل", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "إدارة سير عمل السندات", true, "workflowdefinitions.manage" },
+                    { 64, "سير العمل", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "عرض الإشعارات", true, "notifications.view" }
+                });
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DeleteData(
+                table: "Permissions",
+                keyColumn: "Id",
+                keyValue: 60);
+
+            migrationBuilder.DeleteData(
+                table: "Permissions",
+                keyColumn: "Id",
+                keyValue: 61);
+
+            migrationBuilder.DeleteData(
+                table: "Permissions",
+                keyColumn: "Id",
+                keyValue: 62);
+
+            migrationBuilder.DeleteData(
+                table: "Permissions",
+                keyColumn: "Id",
+                keyValue: 63);
+
+            migrationBuilder.DeleteData(
+                table: "Permissions",
+                keyColumn: "Id",
+                keyValue: 64);
+
             migrationBuilder.DropForeignKey(
                 name: "FK_PaymentVouchers_AspNetUsers_ApprovedById",
                 table: "PaymentVouchers");
