@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace AccountingSystem.Migrations
 {
     /// <inheritdoc />
-    public partial class AddSalaryPaymentsAndEmployeeAdvances : Migration
+    public partial class upddb888 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -24,7 +24,7 @@ namespace AccountingSystem.Migrations
                     Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Date = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    CreatedById = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CreatedById = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
                     JournalEntryId = table.Column<int>(type: "int", nullable: true),
                     ReferenceNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true)
                 },
@@ -82,7 +82,7 @@ namespace AccountingSystem.Migrations
                     Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Date = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    CreatedById = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CreatedById = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
                     JournalEntryId = table.Column<int>(type: "int", nullable: true),
                     ReferenceNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true)
                 },
