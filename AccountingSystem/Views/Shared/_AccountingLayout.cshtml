@@ -35,6 +35,7 @@
         var canCurrencies = (await AuthorizationService.AuthorizeAsync(User, "currencies.view")).Succeeded;
         var canSuppliers = (await AuthorizationService.AuthorizeAsync(User, "suppliers.view")).Succeeded;
         var canSystemSettings = (await AuthorizationService.AuthorizeAsync(User, "systemsettings.view")).Succeeded;
+        var canPermissionGroups = (await AuthorizationService.AuthorizeAsync(User, "permissiongroups.view")).Succeeded;
         var canReceiptVouchers = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.view")).Succeeded;
         var canDisbursementVouchers = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.view")).Succeeded;
         var canPaymentVouchers = (await AuthorizationService.AuthorizeAsync(User, "paymentvouchers.view")).Succeeded;
@@ -56,7 +57,7 @@
         var accountMgmtActive = currentController == "accountmanagement";
         var journalActive = currentController == "journalentries";
         var reportsActive = currentController == "reports";
-        var settingsActive = currentController == "branches" || currentController == "costcenters" || currentController == "currencies" || currentController == "users";
+        var settingsActive = currentController == "branches" || currentController == "costcenters" || currentController == "currencies" || currentController == "users" || currentController == "permissiongroups";
         var hrActive = currentController == "employees" || currentController == "payrolls";
         var assetsActive = currentController == "assets" || currentController == "assetexpenses" || currentController == "assettypes";
     }
@@ -277,6 +278,10 @@
                                             @if (canCurrencies)
                                             {
                                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Currencies")"><i class="fas fa-money-bill-wave"></i> العملات</a></li>
+                                            }
+                                            @if (canPermissionGroups)
+                                            {
+                                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "PermissionGroups")"><i class="fas fa-key"></i> مجموعات الصلاحيات</a></li>
                                             }
                                             <li><hr class="dropdown-divider"></li>
                                             <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Users")"><i class="fas fa-users"></i> المستخدمون</a></li>
