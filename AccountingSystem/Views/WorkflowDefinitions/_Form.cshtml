@@ -170,17 +170,19 @@
                 stepElements.forEach((element, index) => {
                     const type = parseInt(element.querySelector('.step-type').value);
                     const step = {
-                        order: index + 1,
-                        stepType: type
+                        Order: index + 1,
+                        StepType: type
                     };
 
                     if (type === 1) {
-                        step.approverUserId = element.querySelector('.step-user').value || null;
+                        const userValue = element.querySelector('.step-user').value;
+                        step.ApproverUserId = userValue || null;
                     } else if (type === 2) {
-                        step.requiredPermission = element.querySelector('.step-permission').value || null;
+                        const permissionValue = element.querySelector('.step-permission').value;
+                        step.RequiredPermission = permissionValue || null;
                     } else if (type === 3) {
                         const branchValue = element.querySelector('.step-branch').value;
-                        step.branchId = branchValue ? parseInt(branchValue) : null;
+                        step.BranchId = branchValue ? parseInt(branchValue) : null;
                     }
 
                     steps.push(step);
