@@ -3055,6 +3055,12 @@ namespace AccountingSystem.Migrations
                         .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasMany("AccountingSystem.Models.Workflows.WorkflowStep", "Steps")
+                        .WithOne("WorkflowDefinition")
+                        .HasForeignKey("WorkflowDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Branch");
 
                     b.Navigation("Steps");
