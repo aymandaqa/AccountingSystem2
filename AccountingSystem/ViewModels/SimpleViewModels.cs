@@ -27,6 +27,8 @@ namespace AccountingSystem.ViewModels
         public int AccountId { get; set; }
         public string AccountCode { get; set; } = string.Empty;
         public string AccountName { get; set; } = string.Empty;
+        public int? CostCenterId { get; set; }
+        public string? CostCenterName { get; set; }
         public decimal DebitAmount { get; set; } = 0;
         public decimal CreditAmount { get; set; } = 0;
         public string Description { get; set; } = "-";

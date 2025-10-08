@@ -62,10 +62,11 @@
                                     <table class="table table-bordered" id="journalLinesTable">
                                         <thead class="table-dark">
                                             <tr>
-                                                <th style="width: 40%">الحساب</th>
-                                                <th style="width: 25%">البيان</th>
-                                                <th style="width: 15%">مدين</th>
-                                                <th style="width: 15%">دائن</th>
+                                                <th style="width: 30%">الحساب</th>
+                                                <th style="width: 20%">البيان</th>
+                                                <th style="width: 20%">مركز التكلفة</th>
+                                                <th style="width: 12.5%">مدين</th>
+                                                <th style="width: 12.5%">دائن</th>
                                                 <th style="width: 5%">حذف</th>
                                             </tr>
                                         </thead>
@@ -76,12 +77,15 @@
                                                     <td>
                                                         <select asp-for="Lines[@i].AccountId" asp-items="Model.Accounts" class="form-select" required></select>
                                                     </td>
-                                                    <td>
-                                                        <input name="Lines[@i].Description" class="form-control" value="@Model.Lines[i].Description" />
-                                                    </td>
-                                                    <td>
-                                                        <input name="Lines[@i].DebitAmount" type="number" step="0.01" min="0" class="form-control debit-amount" value="@Model.Lines[i].DebitAmount" onchange="calculateTotals()" />
-                                                    </td>
+                                                <td>
+                                                    <input name="Lines[@i].Description" class="form-control" value="@Model.Lines[i].Description" />
+                                                </td>
+                                                <td>
+                                                    <select asp-for="Lines[@i].CostCenterId" asp-items="Model.CostCenters" class="form-select cost-center-select"></select>
+                                                </td>
+                                                <td>
+                                                    <input name="Lines[@i].DebitAmount" type="number" step="0.01" min="0" class="form-control debit-amount" value="@Model.Lines[i].DebitAmount" onchange="calculateTotals()" />
+                                                </td>
                                                     <td>
                                                         <input name="Lines[@i].CreditAmount" type="number" step="0.01" min="0" class="form-control credit-amount" value="@Model.Lines[i].CreditAmount" onchange="calculateTotals()" />
                                                     </td>
@@ -95,7 +99,7 @@
                                         </tbody>
                                         <tfoot>
                                             <tr class="table-info">
-                                                <td colspan="2"><strong>الإجمالي:</strong></td>
+                                                <td colspan="3"><strong>الإجمالي:</strong></td>
                                                 <td><strong id="totalDebit">0.00</strong></td>
                                                 <td><strong id="totalCredit">0.00</strong></td>
                                                 <td></td>
@@ -147,6 +151,14 @@
             </td>
             <td>
                 <input name="Lines[${lineIndex}].Description" type="text" class="form-control" />
+            </td>
+            <td>
+                <select name="Lines[${lineIndex}].CostCenterId" class="form-select cost-center-select">
+                    @foreach (var costCenter in Model.CostCenters)
+                    {
+                            <option value="@costCenter.Value">@costCenter.Text</option>
+                    }
+                </select>
             </td>
             <td>
                 <input name="Lines[${lineIndex}].DebitAmount" type="number" step="0.01" min="0" class="form-control debit-amount" onchange="calculateTotals()" />
