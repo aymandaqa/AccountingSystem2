@@ -1,0 +1,124 @@
+@model AccountingSystem.Models.EmployeeAdvance
+@{
+    Layout = null;
+    var currencyCode = Model.Currency.Code;
+    var createdBy = string.IsNullOrWhiteSpace(Model.CreatedBy.FullName) ? Model.CreatedBy.UserName : Model.CreatedBy.FullName;
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <title>سند صرف سلفة</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .slip-container {
+            background: #fff;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            text-align: right;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #f1f3f5;
+        }
+
+        .print-actions {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        @media print {
+            body {
+                background-color: #fff;
+            }
+
+            .print-actions {
+                display: none;
+            }
+
+            .slip-container {
+                box-shadow: none;
+                border: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="slip-container">
+        <h1>سند صرف سلفة</h1>
+
+        <table>
+            <tr>
+                <th>رقم القيد</th>
+                <td>@Model.ReferenceNumber</td>
+            </tr>
+            <tr>
+                <th>التاريخ</th>
+                <td>@Model.Date.ToString("yyyy-MM-dd")</td>
+            </tr>
+            <tr>
+                <th>الموظف</th>
+                <td>@Model.Employee.Name</td>
+            </tr>
+            <tr>
+                <th>الفرع</th>
+                <td>@Model.Branch.NameAr</td>
+            </tr>
+            <tr>
+                <th>المبلغ</th>
+                <td>@Model.Amount.ToString("N2") @currencyCode</td>
+            </tr>
+            <tr>
+                <th>حساب الدفع</th>
+                <td>@Model.PaymentAccount.Code - @Model.PaymentAccount.NameAr</td>
+            </tr>
+            <tr>
+                <th>أنشئ بواسطة</th>
+                <td>@createdBy</td>
+            </tr>
+        </table>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Notes))
+        {
+            <div>
+                <strong>ملاحظات:</strong>
+                <p>@Model.Notes</p>
+            </div>
+        }
+
+        <div class="print-actions">
+            <button onclick="window.print()" style="padding: 10px 30px; font-size: 16px;">طباعة</button>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('load', function () {
+            window.print();
+        });
+    </script>
+</body>
+</html>

@@ -138,7 +138,11 @@ namespace AccountingSystem.Data
                 new Permission { Name = "employees.edit", DisplayName = "تعديل موظف", Category = "شؤون الموظفين" },
                 new Permission { Name = "employees.delete", DisplayName = "تغيير حالة موظف", Category = "شؤون الموظفين" },
                 new Permission { Name = "payroll.view", DisplayName = "عرض إدارة الرواتب", Category = "شؤون الموظفين" },
-                new Permission { Name = "payroll.process", DisplayName = "تنزيل الرواتب", Category = "شؤون الموظفين" }
+                new Permission { Name = "payroll.process", DisplayName = "تنزيل الرواتب", Category = "شؤون الموظفين" },
+                new Permission { Name = "salarypayments.view", DisplayName = "عرض سندات صرف الرواتب", Category = "شؤون الموظفين" },
+                new Permission { Name = "salarypayments.create", DisplayName = "إنشاء سند صرف راتب", Category = "شؤون الموظفين" },
+                new Permission { Name = "employeeadvances.view", DisplayName = "عرض سندات صرف السلف", Category = "شؤون الموظفين" },
+                new Permission { Name = "employeeadvances.create", DisplayName = "إنشاء سند صرف سلفة", Category = "شؤون الموظفين" }
             };
 
 

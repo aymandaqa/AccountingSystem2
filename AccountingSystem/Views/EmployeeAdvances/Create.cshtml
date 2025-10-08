@@ -1,0 +1,98 @@
+@model AccountingSystem.ViewModels.EmployeeAdvanceCreateViewModel
+@{
+    ViewData["Title"] = "سند صرف سلفة";
+}
+
+<div class="container-fluid">
+    <h2 class="mb-4">سند صرف سلفة</h2>
+
+    <div class="alert alert-info">
+        <div><strong>حساب الدفع:</strong> @Model.PaymentAccountName</div>
+        <div><strong>الرصيد المتاح:</strong> @Model.PaymentAccountBalance.ToString("N2") @Model.CurrencyCode</div>
+    </div>
+
+    <form asp-action="Create" method="post" class="row g-3">
+        <div class="col-12">
+            <label asp-for="EmployeeId" class="form-label"></label>
+            <select asp-for="EmployeeId" class="form-select" id="employeeSelect">
+                <option value="">اختر الموظف</option>
+                @foreach (var employee in Model.Employees)
+                {
+                    <option value="@employee.Id" data-salary="@employee.Salary" data-balance="@employee.AccountBalance">
+                        @employee.Name
+                    </option>
+                }
+            </select>
+            <span asp-validation-for="EmployeeId" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">راتب الموظف</label>
+            <input type="text" class="form-control" id="employeeSalary" readonly />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">رصيد حساب الموظف</label>
+            <input type="text" class="form-control" id="employeeBalance" readonly />
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="Amount" class="form-label"></label>
+            <input asp-for="Amount" class="form-control" />
+            <span asp-validation-for="Amount" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="Date" class="form-label"></label>
+            <input asp-for="Date" type="date" class="form-control" />
+            <span asp-validation-for="Date" class="text-danger"></span>
+        </div>
+
+        <div class="col-12">
+            <label asp-for="Notes" class="form-label"></label>
+            <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+            <span asp-validation-for="Notes" class="text-danger"></span>
+        </div>
+
+        <div class="col-12 d-flex gap-2">
+            <button type="submit" class="btn btn-success">حفظ وطباعة</button>
+            <a asp-action="Index" class="btn btn-secondary">إلغاء</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const select = document.getElementById('employeeSelect');
+            const salaryInput = document.getElementById('employeeSalary');
+            const balanceInput = document.getElementById('employeeBalance');
+
+            function formatValue(value) {
+                if (value === null || value === undefined || value === '') {
+                    return '';
+                }
+                const number = Number(value);
+                if (isNaN(number)) {
+                    return value;
+                }
+                return number.toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            function updateEmployeeInfo() {
+                const option = select.options[select.selectedIndex];
+                if (!option || !option.dataset) {
+                    salaryInput.value = '';
+                    balanceInput.value = '';
+                    return;
+                }
+
+                salaryInput.value = formatValue(option.dataset.salary) + ' @Model.CurrencyCode';
+                balanceInput.value = formatValue(option.dataset.balance) + ' @Model.CurrencyCode';
+            }
+
+            select.addEventListener('change', updateEmployeeInfo);
+            updateEmployeeInfo();
+        });
+    </script>
+}
