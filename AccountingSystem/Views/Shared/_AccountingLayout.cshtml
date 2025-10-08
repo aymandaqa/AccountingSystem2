@@ -242,6 +242,8 @@
                                         <ul class="collapse nav flex-column ms-3 @(hrActive ? "show" : "")" id="hrMenu">
                                             <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Employees")" asp-require-permission="employees.view"><i class="fas fa-user"></i> إدارة الموظفين</a></li>
                                             <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Payrolls")" asp-require-permission="payroll.view"><i class="fas fa-money-check-alt"></i> إدارة الرواتب</a></li>
+                                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "SalaryPayments")" asp-require-permission="salarypayments.view"><i class="fas fa-file-invoice-dollar"></i> سندات صرف الرواتب</a></li>
+                                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "EmployeeAdvances")" asp-require-permission="employeeadvances.view"><i class="fas fa-hand-holding-usd"></i> سندات صرف السلف</a></li>
                                         </ul>
                                     </li>
                                     <li class="nav-item">
