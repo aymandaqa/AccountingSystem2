@@ -1,0 +1,79 @@
+@model IEnumerable<AccountingSystem.ViewModels.Workflows.WorkflowApprovalViewModel>
+@{
+    ViewData["Title"] = "الموافقات المعلقة";
+}
+
+<h2 class="mb-4">الموافقات المعلقة</h2>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">لا توجد أي طلبات موافقة حالياً.</div>
+}
+else
+{
+    foreach (var request in Model)
+    {
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>@request.Title</strong>
+                    <div class="text-muted small">تاريخ الإنشاء: @request.CreatedAt.ToString("yyyy/MM/dd HH:mm")</div>
+                </div>
+                <div>
+                    <form asp-action="Approve" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="actionId" value="@request.ActionId" />
+                        <button type="submit" class="btn btn-success btn-sm"><i class="fa fa-check ms-1"></i> موافقة</button>
+                    </form>
+                    <button class="btn btn-outline-danger btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#reject-@request.ActionId"><i class="fa fa-times ms-1"></i> رفض</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <p>@request.Description</p>
+                @if (request.PaymentVoucher != null)
+                {
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="fw-bold">المورد</div>
+                            <div>@request.PaymentVoucher.Supplier.NameAr</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="fw-bold">المبلغ</div>
+                            <div>@request.PaymentVoucher.Amount.ToString("N2") @request.PaymentVoucher.Currency.Code</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="fw-bold">أنشئ بواسطة</div>
+                            <div>@(request.PaymentVoucher.CreatedBy?.FullName ?? request.PaymentVoucher.CreatedById)</div>
+                        </div>
+                        <div class="col-12">
+                            <div class="fw-bold">ملاحظات</div>
+                            <div>@(string.IsNullOrWhiteSpace(request.PaymentVoucher.Notes) ? "لا يوجد" : request.PaymentVoucher.Notes)</div>
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="collapse" id="reject-@request.ActionId">
+                <div class="card-body border-top">
+                    <form asp-action="Reject" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="actionId" value="@request.ActionId" />
+                        <div class="mb-3">
+                            <label class="form-label">سبب الرفض</label>
+                            <textarea name="notes" class="form-control" rows="3"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-danger"><i class="fa fa-times ms-1"></i> تأكيد الرفض</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+}

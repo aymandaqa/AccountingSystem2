@@ -183,6 +183,14 @@
                             {
                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "PaymentVouchers")"><i class="fas fa-plus"></i> إضافة سند صرف</a></li>
                             }
+                            @if (canPaymentVouchers)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "WorkflowApprovals")"><i class="fas fa-check-circle"></i> موافقات سندات الدفع</a></li>
+                            }
+                            @if (canPaymentVouchersCreate)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "WorkflowDefinitions")"><i class="fas fa-project-diagram"></i> سير عمل السندات</a></li>
+                            }
                         </ul>
                     </li>
                 }
@@ -308,6 +316,9 @@
                                     <div class="container-fluid">
                                         <button id="sidebarToggle" class="btn btn-outline-light" type="button">☰</button>
                                         <ul class="navbar-nav ms-auto">
+                                            <li class="nav-item">
+                                                @await Component.InvokeAsync("Notifications")
+                                            </li>
                                             @if (User.Identity.IsAuthenticated)
                                             {
                                                 <li class="nav-item dropdown">

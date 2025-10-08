@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
+using AccountingSystem.Models.Workflows;
 
 namespace AccountingSystem.Data
 {
@@ -55,6 +56,11 @@ namespace AccountingSystem.Data
         public DbSet<PayrollBatchLine> PayrollBatchLines { get; set; }
         public DbSet<SalaryPayment> SalaryPayments { get; set; }
         public DbSet<EmployeeAdvance> EmployeeAdvances { get; set; }
+        public DbSet<WorkflowDefinition> WorkflowDefinitions { get; set; }
+        public DbSet<WorkflowStep> WorkflowSteps { get; set; }
+        public DbSet<WorkflowInstance> WorkflowInstances { get; set; }
+        public DbSet<WorkflowAction> WorkflowActions { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
 
         public override int SaveChanges()
         {
@@ -772,6 +778,81 @@ namespace AccountingSystem.Data
                 entity.HasOne(e => e.PermissionGroup)
                     .WithMany(e => e.UserPermissionGroups)
                     .HasForeignKey(e => e.PermissionGroupId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<WorkflowDefinition>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.HasMany(e => e.Steps)
+                    .WithOne(e => e.WorkflowDefinition)
+                    .HasForeignKey(e => e.WorkflowDefinitionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<WorkflowStep>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.RequiredPermission).HasMaxLength(200);
+                entity.HasOne(e => e.ApproverUser)
+                    .WithMany()
+                    .HasForeignKey(e => e.ApproverUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Branch)
+                    .WithMany()
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<WorkflowInstance>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.WorkflowDefinition)
+                    .WithMany()
+                    .HasForeignKey(e => e.WorkflowDefinitionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Initiator)
+                    .WithMany()
+                    .HasForeignKey(e => e.InitiatorId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<WorkflowAction>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.WorkflowInstance)
+                    .WithMany(e => e.Actions)
+                    .HasForeignKey(e => e.WorkflowInstanceId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.WorkflowStep)
+                    .WithMany(e => e.Actions)
+                    .HasForeignKey(e => e.WorkflowStepId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<Notification>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Message).HasMaxLength(1000);
+
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.WorkflowAction)
+                    .WithMany()
+                    .HasForeignKey(e => e.WorkflowActionId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 

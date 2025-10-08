@@ -188,6 +188,14 @@
                                 {
                                     <li><a class="dropdown-item" href="@Url.Action("Create", "PaymentVouchers")"><i class="fa-solid fa-plus"></i><span>إضافة سند صرف</span></a></li>
                                 }
+                                @if (canPaymentVouchers)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "WorkflowApprovals")"><i class="fa-solid fa-check-to-slot"></i><span>موافقات سندات الدفع</span></a></li>
+                                }
+                                @if (canPaymentVouchersCreate)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "WorkflowDefinitions")"><i class="fa-solid fa-diagram-project"></i><span>سير عمل السندات</span></a></li>
+                                }
                             </ul>
                         </li>
                     }
@@ -316,21 +324,7 @@
                             <i class="fa-solid fa-magnifying-glass"></i>
                         </div>
                     </form>
-                    <div class="dropdown">
-                        <a class="btn btn-icon btn-soft-primary" href="#" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fa-solid fa-bell"></i>
-                            <span class="badge bg-danger rounded-pill">3</span>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-end dropdown-menu-lg p-0">
-                            <div class="dropdown-header p-3 border-bottom">
-                                <h6 class="mb-0">الإشعارات</h6>
-                                <small class="text-muted">آخر التحديثات</small>
-                            </div>
-                            <div class="list-group list-group-flush">
-                                <span class="list-group-item text-muted small text-center">لا يوجد إشعارات حالياً</span>
-                            </div>
-                        </div>
-                    </div>
+                    @await Component.InvokeAsync("Notifications")
                     <div class="dropdown">
                         <a class="d-flex align-items-center dropdown-toggle" href="#" data-bs-toggle="dropdown">
                             <span class="avatar flex-shrink-0"><i class="fa-solid fa-user"></i></span>

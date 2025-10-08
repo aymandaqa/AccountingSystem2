@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using AccountingSystem.Models.Workflows;
 
 namespace AccountingSystem.Models
 {
@@ -32,6 +33,14 @@ namespace AccountingSystem.Models
 
         public bool IsCash { get; set; }
 
+        public PaymentVoucherStatus Status { get; set; } = PaymentVoucherStatus.Draft;
+
+        public DateTime? ApprovedAt { get; set; }
+
+        public string? ApprovedById { get; set; }
+
+        public int? WorkflowInstanceId { get; set; }
+
         [ValidateNever]
         public virtual Supplier Supplier { get; set; } = null!;
 
@@ -43,6 +52,12 @@ namespace AccountingSystem.Models
 
         [ValidateNever]
         public virtual User CreatedBy { get; set; } = null!;
+
+        [ValidateNever]
+        public virtual User? ApprovedBy { get; set; }
+
+        [ValidateNever]
+        public virtual WorkflowInstance? WorkflowInstance { get; set; }
     }
 }
 
