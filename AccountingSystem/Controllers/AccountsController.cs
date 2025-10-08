@@ -83,35 +83,14 @@ namespace AccountingSystem.Controllers
         // GET: Accounts/Tree
         public async Task<IActionResult> Tree()
         {
-            var accountTypes = Enum.GetValues(typeof(AccountType))
-                .Cast<AccountType>();
+            var treeNodes = await BuildRootTreeNodesAsync();
+            return View(treeNodes);
+        }
 
-            var treeNodes = new List<AccountTreeNodeViewModel>();
-
-            foreach (var type in accountTypes)
-            {
-                var hasChildren = await _context.Accounts
-                    .AnyAsync(a => a.ParentId == null && a.IsActive && a.AccountType == type);
-
-                if (!hasChildren)
-                {
-                    continue;
-                }
-
-                treeNodes.Add(new AccountTreeNodeViewModel
-                {
-                    Id = 0,
-                    Code = string.Empty,
-                    NameAr = type.ToString(),
-                    AccountType = type,
-                    Level = 0,
-                    CanPostTransactions = false,
-                    IsActive = true,
-                    HasChildren = true,
-                    Children = new List<AccountTreeNodeViewModel>()
-                });
-            }
-
+        // GET: Accounts/ManageTree
+        public async Task<IActionResult> ManageTree()
+        {
+            var treeNodes = await BuildRootTreeNodesAsync();
             return View(treeNodes);
         }
 
@@ -161,6 +140,92 @@ namespace AccountingSystem.Controllers
             }
 
             return PartialView("_AccountTreeNode", nodes);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAccountChildren(int? parentId, AccountType? accountType)
+        {
+            IQueryable<Account> query = _context.Accounts
+                .Include(a => a.Branch)
+                .Include(a => a.Currency)
+                .Include(a => a.Parent)
+                .Where(a => a.IsActive);
+
+            if (parentId.HasValue && parentId.Value > 0)
+            {
+                query = query.Where(a => a.ParentId == parentId.Value);
+            }
+            else
+            {
+                query = query.Where(a => a.ParentId == null);
+
+                if (accountType.HasValue)
+                {
+                    query = query.Where(a => a.AccountType == accountType.Value);
+                }
+            }
+
+            var accounts = await query
+                .OrderBy(a => a.Code)
+                .Select(a => new AccountViewModel
+                {
+                    Id = a.Id,
+                    Code = a.Code,
+                    NameAr = a.NameAr,
+                    NameEn = a.NameEn,
+                    AccountType = a.AccountType,
+                    Nature = a.Nature,
+                    Classification = a.Classification,
+                    OpeningBalance = a.OpeningBalance,
+                    CurrentBalance = a.CurrentBalance,
+                    IsActive = a.IsActive,
+                    CanPostTransactions = a.CanPostTransactions,
+                    ParentId = a.ParentId,
+                    ParentAccountName = a.Parent != null ? a.Parent.NameAr : string.Empty,
+                    BranchId = a.BranchId,
+                    BranchName = a.Branch != null ? a.Branch.NameAr : string.Empty,
+                    Level = a.Level,
+                    HasChildren = a.Children.Any(c => c.IsActive),
+                    HasTransactions = false,
+                    CurrencyCode = a.Currency.Code
+                })
+                .ToListAsync();
+
+            return PartialView("_AccountTreeManageList", accounts);
+        }
+
+        private async Task<List<AccountTreeNodeViewModel>> BuildRootTreeNodesAsync()
+        {
+            var accountTypes = Enum.GetValues(typeof(AccountType))
+                .Cast<AccountType>();
+
+            var treeNodes = new List<AccountTreeNodeViewModel>();
+
+            foreach (var type in accountTypes)
+            {
+                var hasChildren = await _context.Accounts
+                    .AnyAsync(a => a.ParentId == null && a.IsActive && a.AccountType == type);
+
+                if (!hasChildren)
+                {
+                    continue;
+                }
+
+                treeNodes.Add(new AccountTreeNodeViewModel
+                {
+                    Id = 0,
+                    Code = string.Empty,
+                    NameAr = type.ToString(),
+                    AccountType = type,
+                    Level = 0,
+                    CanPostTransactions = false,
+                    IsActive = true,
+                    HasChildren = true,
+                    Children = new List<AccountTreeNodeViewModel>()
+                });
+            }
+
+            return treeNodes;
         }
 
         private AccountTreeNodeViewModel MapToTreeNode(Account account)

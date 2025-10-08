@@ -6,7 +6,8 @@
     var hasPreloadedChildren = node.Children.Any();
     var containerDisplay = hasPreloadedChildren ? "block" : "none";
     var toggleIcon = hasPreloadedChildren ? "minus" : "plus";
-    <div class="tree-node level-@node.Level" data-level="@node.Level" data-node-id="@node.Id" data-account-type="@(node.Id == 0 ? node.AccountType.ToString() : string.Empty)" data-has-children="@(hasChildren.ToString().ToLower())">
+    var nodeLabel = node.Id == 0 ? node.NameAr : $"{node.Code} - {node.NameAr}";
+    <div class="tree-node level-@node.Level" data-level="@node.Level" data-node-id="@node.Id" data-account-type="@(node.Id == 0 ? node.AccountType.ToString() : string.Empty)" data-has-children="@(hasChildren.ToString().ToLower())" data-node-name="@node.NameAr" data-node-code="@node.Code" data-node-label="@nodeLabel">
         <div class="tree-node-content">
             <div class="tree-node-info">
                 @if (hasChildren)
