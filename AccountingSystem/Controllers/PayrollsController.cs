@@ -247,8 +247,8 @@ namespace AccountingSystem.Controllers
                     lines.Add(new JournalEntryLine
                     {
                         AccountId = line.Employee.AccountId,
-                        DebitAmount = line.Amount,
-                        CreditAmount = 0,
+                        CreditAmount = line.Amount,
+                        DebitAmount = 0,
                         Description = $"راتب {line.Employee.Name}"
                     });
                 }
@@ -257,8 +257,8 @@ namespace AccountingSystem.Controllers
                 lines.Add(new JournalEntryLine
                 {
                     AccountId = batch.PaymentAccountId,
-                    DebitAmount = 0,
-                    CreditAmount = groupTotal,
+                    CreditAmount = 0,
+                    DebitAmount = groupTotal,
                     Description = "صرف رواتب الموظفين"
                 });
 
