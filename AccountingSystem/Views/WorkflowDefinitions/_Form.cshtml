@@ -189,10 +189,12 @@
                 stepsJsonInput.value = JSON.stringify(steps);
             }
 
-            const form = document.querySelector('form');
-            form.addEventListener('submit', function () {
-                serializeSteps();
-            });
+            const form = stepsJsonInput?.form;
+            if (form) {
+                form.addEventListener('submit', function () {
+                    serializeSteps();
+                });
+            }
 
             const existingSteps = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Steps ?? new List<AccountingSystem.ViewModels.Workflows.WorkflowStepInputModel>()));
             const stepsArray = Array.isArray(existingSteps) ? existingSteps : [];
