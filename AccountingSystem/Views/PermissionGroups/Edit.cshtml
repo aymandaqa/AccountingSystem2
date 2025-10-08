@@ -1,0 +1,158 @@
+@model AccountingSystem.ViewModels.EditPermissionGroupViewModel
+@using System.Linq
+
+@{
+    var isEdit = Model.Id.HasValue;
+    ViewData["Title"] = isEdit ? "تعديل مجموعة صلاحيات" : "إنشاء مجموعة صلاحيات";
+    var groupedPermissions = Model.Permissions
+        .Select((permission, index) => new { Permission = permission, Index = index })
+        .GroupBy(x => x.Permission.Category)
+        .OrderBy(group => group.Key)
+        .ToList();
+}
+
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-10 col-xl-8">
+        <form asp-action="@(isEdit ? "Edit" : "Create")" asp-route-id="@(isEdit ? Model.Id : null)" method="post" class="card shadow-sm border-0">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <div class="card-header bg-white py-3">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                    <div>
+                        <h1 class="h4 mb-1">@ViewData["Title"]</h1>
+                        <p class="text-muted mb-0">حدد مجموعة من الصلاحيات لتعيينها للمستخدمين بسهولة.</p>
+                    </div>
+                    <span class="badge bg-light text-primary border fw-semibold px-3 py-2">
+                        إجمالي الصلاحيات: @Model.Permissions.Count
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label asp-for="Name" class="form-label fw-semibold"></label>
+                        <input asp-for="Name" class="form-control" />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Description" class="form-label fw-semibold"></label>
+                        <input asp-for="Description" class="form-control" />
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="permissionSearch" class="form-label fw-semibold">ابحث في الصلاحيات</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
+                        <input type="search" id="permissionSearch" class="form-control" placeholder="ابحث باسم الصلاحية أو الفئة" autocomplete="off" />
+                    </div>
+                </div>
+
+                <div class="accordion" id="permissionGroupAccordion">
+                    @for (int categoryIndex = 0; categoryIndex < groupedPermissions.Count; categoryIndex++)
+                    {
+                        var categoryGroup = groupedPermissions[categoryIndex];
+                        var collapseId = $"groupPermissionCategory{categoryIndex}";
+                        var headingId = $"groupPermissionHeading{categoryIndex}";
+                        <div class="accordion-item permission-category mb-2" data-category-name="@categoryGroup.Key.ToLowerInvariant()">
+                            <h2 class="accordion-header" id="@headingId">
+                                <button class="accordion-button @((categoryIndex == 0) ? string.Empty : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId" aria-expanded="@(categoryIndex == 0 ? "true" : "false")" aria-controls="@collapseId">
+                                    <span class="fw-semibold">@categoryGroup.Key</span>
+                                    <span class="badge bg-secondary ms-3 permission-count">@categoryGroup.Count()</span>
+                                </button>
+                            </h2>
+                            <div id="@collapseId" class="accordion-collapse collapse @((categoryIndex == 0) ? "show" : string.Empty)" aria-labelledby="@headingId" data-bs-parent="#permissionGroupAccordion">
+                                <div class="accordion-body">
+                                    <div class="row g-3">
+                                        @foreach (var entry in categoryGroup)
+                                        {
+                                            var permission = entry.Permission;
+                                            var index = entry.Index;
+                                            var searchData = $"{permission.DisplayName} {permission.Category}".ToLowerInvariant();
+                                            <div class="col-sm-6 permission-item" data-permission-text="@searchData">
+                                                <div class="form-check rounded border p-3 h-100 shadow-sm">
+                                                    <input asp-for="Permissions[index].IsGranted" class="form-check-input me-2" />
+                                                    <input asp-for="Permissions[index].PermissionId" type="hidden" />
+                                                    <input asp-for="Permissions[index].DisplayName" type="hidden" />
+                                                    <input asp-for="Permissions[index].Category" type="hidden" />
+                                                    <label class="form-check-label fw-semibold" asp-for="Permissions[index].IsGranted">@permission.DisplayName</label>
+                                                    <div class="text-muted small mt-1">ضمن فئة: @permission.Category</div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div id="noResultsMessage" class="alert alert-light border d-none text-center mt-4" role="status">
+                    لا توجد صلاحيات مطابقة لبحثك.
+                </div>
+            </div>
+            <div class="card-footer bg-white d-flex flex-column flex-sm-row gap-2 justify-content-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save ms-1"></i> حفظ
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary">عودة</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const searchInput = document.getElementById('permissionSearch');
+            const categories = Array.from(document.querySelectorAll('.permission-category'));
+            const noResultsMessage = document.getElementById('noResultsMessage');
+
+            function updateFilter() {
+                const query = (searchInput.value || '').trim().toLowerCase();
+                let anyVisible = false;
+
+                categories.forEach(category => {
+                    const categoryName = (category.dataset.categoryName || '').toLowerCase();
+                    const items = Array.from(category.querySelectorAll('.permission-item'));
+                    let visibleCount = 0;
+
+                    items.forEach(item => {
+                        const text = (item.dataset.permissionText || '').toLowerCase();
+                        const matches = !query || text.includes(query) || categoryName.includes(query);
+
+                        if (matches) {
+                            item.classList.remove('d-none');
+                            visibleCount++;
+                        } else {
+                            item.classList.add('d-none');
+                        }
+                    });
+
+                    const badge = category.querySelector('.permission-count');
+                    if (badge) {
+                        badge.textContent = visibleCount;
+                    }
+
+                    if (visibleCount > 0) {
+                        category.classList.remove('d-none');
+                        anyVisible = true;
+                    } else {
+                        category.classList.add('d-none');
+                    }
+                });
+
+                if (noResultsMessage) {
+                    noResultsMessage.classList.toggle('d-none', anyVisible);
+                }
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', updateFilter);
+                updateFilter();
+            }
+        });
+    </script>
+}

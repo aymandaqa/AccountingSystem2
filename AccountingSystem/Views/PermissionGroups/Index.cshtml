@@ -1,0 +1,122 @@
+@model List<AccountingSystem.ViewModels.PermissionGroupListItemViewModel>
+
+@{
+    ViewData["Title"] = "مجموعات الصلاحيات";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                    <div>
+                        <h3 class="card-title mb-0">مجموعات الصلاحيات</h3>
+                        <p class="text-muted mb-0">قم بتنظيم الصلاحيات في مجموعات وإعادة استخدامها بسهولة.</p>
+                    </div>
+                    <a class="btn btn-primary" asp-action="Create" asp-require-permission="permissiongroups.create">
+                        <i class="fas fa-plus ms-1"></i> إنشاء مجموعة جديدة
+                    </a>
+                </div>
+                <div class="card-body">
+                    @Html.AntiForgeryToken()
+                    @if (Model.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>الاسم</th>
+                                        <th>الوصف</th>
+                                        <th>عدد الصلاحيات</th>
+                                        <th>عدد المستخدمين</th>
+                                        <th>تاريخ الإنشاء</th>
+                                        <th class="text-center">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var group in Model)
+                                    {
+                                        <tr>
+                                            <td class="fw-semibold">@group.Name</td>
+                                            <td>
+                                                @if (!string.IsNullOrWhiteSpace(group.Description))
+                                                {
+                                                    @group.Description
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">لا يوجد وصف</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info text-dark"><i class="fas fa-key ms-1"></i>@group.PermissionsCount</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary"><i class="fas fa-users ms-1"></i>@group.UsersCount</span>
+                                            </td>
+                                            <td>@group.CreatedAt.ToString("yyyy-MM-dd")</td>
+                                            <td class="text-center">
+                                                <div class="btn-group" role="group">
+                                                    <a class="btn btn-sm btn-warning" asp-action="Edit" asp-route-id="@group.Id" asp-require-permission="permissiongroups.edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-danger" data-group-id="@group.Id" data-group-name="@group.Name" asp-require-permission="permissiongroups.delete">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-light border text-center">
+                            <i class="fas fa-info-circle ms-1"></i> لا توجد مجموعات صلاحيات حتى الآن.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('button[data-group-id]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    const groupId = this.getAttribute('data-group-id');
+                    const groupName = this.getAttribute('data-group-name');
+                    if (!groupId) {
+                        return;
+                    }
+
+                    if (!confirm(`هل أنت متأكد من حذف مجموعة "${groupName}"؟`)) {
+                        return;
+                    }
+
+                    fetch('@Url.Action("Delete")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        body: `id=${groupId}`
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            location.reload();
+                        } else {
+                            alert(result.message || 'تعذر حذف مجموعة الصلاحيات.');
+                        }
+                    })
+                    .catch(() => alert('حدث خطأ غير متوقع أثناء تنفيذ العملية.'));
+                });
+            });
+        });
+    </script>
+}

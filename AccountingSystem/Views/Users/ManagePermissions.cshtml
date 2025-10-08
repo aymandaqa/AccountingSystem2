@@ -27,6 +27,46 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-4">
+                        <h2 class="h5 fw-semibold mb-3">مجموعات الصلاحيات</h2>
+                        @if (Model.Groups.Any())
+                        {
+                            <div class="row g-3">
+                                @for (int i = 0; i < Model.Groups.Count; i++)
+                                {
+                                    var group = Model.Groups[i];
+                                    var permissionIds = string.Join(',', group.PermissionIds);
+                                    <div class="col-md-6">
+                                        <div class="form-check border rounded p-3 h-100 shadow-sm permission-group-option" data-permission-ids="@permissionIds">
+                                            <input asp-for="Groups[i].IsAssigned" class="form-check-input me-2" />
+                                            <input asp-for="Groups[i].PermissionGroupId" type="hidden" />
+                                            <label class="form-check-label fw-semibold" asp-for="Groups[i].IsAssigned">@group.Name</label>
+                                            <div class="text-muted small mt-1">
+                                                @if (!string.IsNullOrWhiteSpace(group.Description))
+                                                {
+                                                    @group.Description
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">لا يوجد وصف</span>
+                                                }
+                                            </div>
+                                            <div class="mt-2">
+                                                <span class="badge bg-info text-dark"><i class="fas fa-key ms-1"></i>@group.PermissionsCount صلاحية</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-light border mb-0" role="status">
+                                لا توجد مجموعات صلاحيات متاحة حالياً.
+                            </div>
+                        }
+                    </div>
+
+                    <div class="mb-4">
                         <label for="permissionSearch" class="form-label fw-semibold">ابحث في الصلاحيات</label>
                         <div class="input-group">
                             <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
@@ -55,13 +95,14 @@
                                                 var permission = entry.Permission;
                                                 var index = entry.Index;
                                                 var searchData = $"{permission.DisplayName} {permission.Category}".ToLowerInvariant();
-                                                <div class="col-sm-6 permission-item" data-permission-text="@searchData">
+                                                <div class="col-sm-6 permission-item" data-permission-text="@searchData" data-permission-id="@permission.PermissionId">
                                                     <div class="form-check rounded border p-3 h-100 shadow-sm">
-                                                        <input asp-for="Permissions[index].IsGranted" class="form-check-input me-2" />
+                                                        <input asp-for="Permissions[index].IsGranted" class="form-check-input me-2" data-inherited="@permission.IsInherited.ToString().ToLowerInvariant()" />
                                                         <input asp-for="Permissions[index].PermissionId" type="hidden" />
                                                         <input asp-for="Permissions[index].DisplayName" type="hidden" />
                                                         <input asp-for="Permissions[index].Category" type="hidden" />
                                                         <label class="form-check-label fw-semibold" asp-for="Permissions[index].IsGranted">@permission.DisplayName</label>
+                                                        <span class="badge bg-success ms-2 inherited-badge @(permission.IsInherited ? string.Empty : "d-none")">موروثة من مجموعة</span>
                                                         <div class="text-muted small mt-1">ضمن فئة: @permission.Category</div>
                                                     </div>
                                                 </div>
@@ -92,6 +133,61 @@
             const searchInput = document.getElementById('permissionSearch');
             const categories = Array.from(document.querySelectorAll('.permission-category'));
             const noResultsMessage = document.getElementById('noResultsMessage');
+            const groupOptions = Array.from(document.querySelectorAll('.permission-group-option input[type="checkbox"]'));
+            const permissionItems = Array.from(document.querySelectorAll('.permission-item'));
+
+            const permissionMap = new Map();
+            permissionItems.forEach(item => {
+                const permissionId = item.dataset.permissionId;
+                if (!permissionId) {
+                    return;
+                }
+
+                const checkbox = item.querySelector('input[type="checkbox"]');
+                const badge = item.querySelector('.inherited-badge');
+                if (checkbox) {
+                    checkbox.addEventListener('change', function () {
+                        if (this.dataset.inherited === 'true' && !this.checked) {
+                            this.checked = true;
+                        }
+                    });
+                }
+
+                permissionMap.set(permissionId, { checkbox, badge });
+            });
+
+            function parsePermissionIds(element) {
+                const container = element.closest('.permission-group-option');
+                if (!container) {
+                    return [];
+                }
+
+                const ids = (container.dataset.permissionIds || '').split(',');
+                return ids.map(id => id.trim()).filter(Boolean);
+            }
+
+            function updateInheritedFromGroups() {
+                const inherited = new Set();
+
+                groupOptions.forEach(option => {
+                    if (option.checked) {
+                        parsePermissionIds(option).forEach(id => inherited.add(id));
+                    }
+                });
+
+                permissionMap.forEach((value, permissionId) => {
+                    const isInherited = inherited.has(permissionId);
+                    if (value.checkbox) {
+                        value.checkbox.dataset.inherited = isInherited ? 'true' : 'false';
+                        if (isInherited) {
+                            value.checkbox.checked = true;
+                        }
+                    }
+                    if (value.badge) {
+                        value.badge.classList.toggle('d-none', !isInherited);
+                    }
+                });
+            }
 
             function updateFilter() {
                 const query = (searchInput.value || '').trim().toLowerCase();
@@ -136,6 +232,12 @@
                 searchInput.addEventListener('input', updateFilter);
                 updateFilter();
             }
+
+            groupOptions.forEach(option => {
+                option.addEventListener('change', updateInheritedFromGroups);
+            });
+
+            updateInheritedFromGroups();
         });
     </script>
 }
