@@ -2,15 +2,69 @@
 
 @{
     ViewData["Title"] = "الأصول الثابته";
+    var importSuccess = TempData["ImportSuccess"] as string;
+    var importErrorsRaw = TempData["ImportErrors"] as string;
+    var importErrors = !string.IsNullOrWhiteSpace(importErrorsRaw)
+        ? importErrorsRaw.Split(";;", StringSplitOptions.RemoveEmptyEntries)
+        : Array.Empty<string>();
 }
 
 <div class="container-fluid">
+    @if (!string.IsNullOrEmpty(importSuccess))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-1"></i> @importSuccess
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (importErrors.Length > 0)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-1"></i>
+            <ul class="mb-0">
+                @foreach (var message in importErrors)
+                {
+                    <li>@message</li>
+                }
+            </ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
     <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h3 class="card-title"> إدارة الأصول الثابته</h3>
-            <a asp-action="Create" class="btn btn-primary" asp-require-permission="assets.create">
-                <i class="fas fa-plus"></i> إضافة أصل ثابت
-            </a>
+            <div class="btn-toolbar gap-2">
+                <a asp-action="Create" class="btn btn-primary" asp-require-permission="assets.create">
+                    <i class="fas fa-plus"></i> إضافة أصل ثابت
+                </a>
+                <div class="btn-group">
+                    <a asp-action="ExportExcel" class="btn btn-success" asp-require-permission="assets.view">
+                        <i class="fas fa-file-excel me-1"></i> تصدير Excel
+                    </a>
+                    <button type="button" class="btn btn-outline-success" data-bs-toggle="collapse" data-bs-target="#assetImportForm" aria-expanded="false" aria-controls="assetImportForm" asp-require-permission="assets.create">
+                        <i class="fas fa-file-import me-1"></i> استيراد Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="collapse border-top" id="assetImportForm">
+            <div class="card-body bg-light">
+                <form asp-action="ImportExcel" method="post" enctype="multipart/form-data" class="row g-3 align-items-end">
+                    @Html.AntiForgeryToken()
+                    <div class="col-md-6">
+                        <label class="form-label">ملف Excel</label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx" required />
+                        <div class="form-text">استخدم ملف Excel يحتوي على الأعمدة: اسم الأصل، نوع الأصل، الفرع، رقم الأصل، الرصيد الافتتاحي، الملاحظات.</div>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-success" asp-require-permission="assets.create">
+                            <i class="fas fa-upload me-1"></i> بدء الاستيراد
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
         <div class="card-body">
             @if (Model.Any())
