@@ -2607,7 +2607,31 @@ namespace AccountingSystem.Controllers
                     viewModel.AccountName = account.NameAr;
                     viewModel.CurrencyCode = account.Currency.Code;
 
+                    var priorLinesQuery = _context.JournalEntryLines
+                        .AsNoTracking()
+                        .Where(l => l.AccountId == accountId.Value)
+                        .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
+                        .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
+                        .Where(l => l.JournalEntry.Date < viewModel.FromDate);
+
+                    decimal running = account.OpeningBalance;
+                    decimal runningBase = _currencyService.Convert(running, account.Currency, baseCurrency);
+
+                    var priorDebitTotal = await priorLinesQuery.SumAsync(line => line.DebitAmount);
+                    var priorCreditTotal = await priorLinesQuery.SumAsync(line => line.CreditAmount);
+                    var priorNet = account.Nature == AccountNature.Debit
+                        ? priorDebitTotal - priorCreditTotal
+                        : priorCreditTotal - priorDebitTotal;
+                    var priorNetBase = _currencyService.Convert(priorNet, account.Currency, baseCurrency);
+
+                    running += priorNet;
+                    runningBase += priorNetBase;
+
+                    var openingBalance = running;
+                    var openingBalanceBase = runningBase;
+
                     var lines = await _context.JournalEntryLines
+                        .AsNoTracking()
                         .Include(l => l.JournalEntry)
                         .Where(l => l.AccountId == accountId.Value)
                         .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
@@ -2617,8 +2641,6 @@ namespace AccountingSystem.Controllers
                         .ThenBy(l => l.JournalEntry.Number)
                         .ToListAsync();
 
-                    decimal running = account.OpeningBalance;
-                    decimal runningBase = _currencyService.Convert(running, account.Currency, baseCurrency);
                     foreach (var line in lines)
                     {
                         var debitBase = _currencyService.Convert(line.DebitAmount, account.Currency, baseCurrency);
@@ -2646,8 +2668,8 @@ namespace AccountingSystem.Controllers
                         });
                     }
 
-                    viewModel.OpeningBalance = account.OpeningBalance;
-                    viewModel.OpeningBalanceBase = _currencyService.Convert(account.OpeningBalance, account.Currency, baseCurrency);
+                    viewModel.OpeningBalance = openingBalance;
+                    viewModel.OpeningBalanceBase = openingBalanceBase;
                     viewModel.ClosingBalance = running;
                     viewModel.ClosingBalanceBase = runningBase;
                     viewModel.TotalDebit = viewModel.Transactions.Sum(t => t.DebitAmount);
