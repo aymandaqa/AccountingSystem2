@@ -41,10 +41,12 @@
         var canReceiptVouchers = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.view")).Succeeded;
         var canDisbursementVouchers = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.view")).Succeeded;
         var canPaymentVouchers = (await AuthorizationService.AuthorizeAsync(User, "paymentvouchers.view")).Succeeded;
+        var canWorkflowApprovalsView = (await AuthorizationService.AuthorizeAsync(User, "workflowapprovals.view")).Succeeded;
+        var canWorkflowDefinitionsManage = (await AuthorizationService.AuthorizeAsync(User, "workflowdefinitions.manage")).Succeeded;
         var canReceiptVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.create")).Succeeded;
         var canDisbursementVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.create")).Succeeded;
         var canPaymentVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "paymentvouchers.create")).Succeeded;
-        var showVouchers = canReceiptVouchers || canDisbursementVouchers || canPaymentVouchers || canReceiptVouchersCreate || canDisbursementVouchersCreate || canPaymentVouchersCreate;
+        var showVouchers = canReceiptVouchers || canDisbursementVouchers || canPaymentVouchers || canWorkflowApprovalsView || canWorkflowDefinitionsManage || canReceiptVouchersCreate || canDisbursementVouchersCreate || canPaymentVouchersCreate;
         var showAccountManagement = canBusinessStatementBulk || canBusinessRetStatementBulk || canBusnissShipmentsReturn || canBusnissStatment || canDriverPayment || canDriverStatment || canPrintSlip || canReceivePayments || canReceiveRetPayments || canUserPayment;
         var canAssets = (await AuthorizationService.AuthorizeAsync(User, "assets.view")).Succeeded;
         var canAssetTypes = (await AuthorizationService.AuthorizeAsync(User, "assettypes.view")).Succeeded;
@@ -55,7 +57,7 @@
         var currentAction = ViewContext.RouteData.Values["action"]?.ToString()?.ToLower();
         var accountsActive = currentController == "accounts";
         var operationsActive = currentController == "cashboxclosures" || currentController == "expenses" || currentController == "transfers";
-        var vouchersActive = currentController == "receiptvouchers" || currentController == "disbursementvouchers" || currentController == "paymentvouchers";
+        var vouchersActive = currentController == "receiptvouchers" || currentController == "disbursementvouchers" || currentController == "paymentvouchers" || currentController == "workflowapprovals" || currentController == "workflowdefinitions";
         var accountMgmtActive = currentController == "accountmanagement";
         var journalActive = currentController == "journalentries";
         var reportsActive = currentController == "reports";
@@ -188,6 +190,14 @@
                                 {
                                     <li><a class="dropdown-item" href="@Url.Action("Create", "PaymentVouchers")"><i class="fa-solid fa-plus"></i><span>إضافة سند صرف</span></a></li>
                                 }
+                                @if (canWorkflowApprovalsView)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "WorkflowApprovals")"><i class="fa-solid fa-check-to-slot"></i><span>موافقات سندات الدفع</span></a></li>
+                                }
+                                @if (canWorkflowDefinitionsManage)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "WorkflowDefinitions")"><i class="fa-solid fa-diagram-project"></i><span>سير عمل السندات</span></a></li>
+                                }
                             </ul>
                         </li>
                     }
@@ -316,21 +326,7 @@
                             <i class="fa-solid fa-magnifying-glass"></i>
                         </div>
                     </form>
-                    <div class="dropdown">
-                        <a class="btn btn-icon btn-soft-primary" href="#" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fa-solid fa-bell"></i>
-                            <span class="badge bg-danger rounded-pill">3</span>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-end dropdown-menu-lg p-0">
-                            <div class="dropdown-header p-3 border-bottom">
-                                <h6 class="mb-0">الإشعارات</h6>
-                                <small class="text-muted">آخر التحديثات</small>
-                            </div>
-                            <div class="list-group list-group-flush">
-                                <span class="list-group-item text-muted small text-center">لا يوجد إشعارات حالياً</span>
-                            </div>
-                        </div>
-                    </div>
+                    @await Component.InvokeAsync("Notifications")
                     <div class="dropdown">
                         <a class="d-flex align-items-center dropdown-toggle" href="#" data-bs-toggle="dropdown">
                             <span class="avatar flex-shrink-0"><i class="fa-solid fa-user"></i></span>

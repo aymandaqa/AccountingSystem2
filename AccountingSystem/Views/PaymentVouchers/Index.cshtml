@@ -1,3 +1,4 @@
+@using AccountingSystem.Models
 @model IEnumerable<AccountingSystem.Models.PaymentVoucher>
 @{
     ViewData["Title"] = "سندات   صرف موردين";
@@ -13,6 +14,8 @@
                 <th>العملة</th>
                 <th>سعر الصرف</th>
                 <th>المبلغ</th>
+                <th>الحالة</th>
+                <th>ملاحظات</th>
             </tr>
         </thead>
         <tbody>
@@ -24,6 +27,24 @@
                     <td>@v.Currency.Code</td>
                     <td>@v.ExchangeRate.ToString("N6")</td>
                     <td>@v.Amount.ToString("N2")</td>
+                    <td>
+                        @switch (v.Status)
+                        {
+                            case PaymentVoucherStatus.PendingApproval:
+                                <span class="badge bg-warning text-dark">بانتظار الموافقة</span>
+                                break;
+                            case PaymentVoucherStatus.Approved:
+                                <span class="badge bg-success">معتمد</span>
+                                break;
+                            case PaymentVoucherStatus.Rejected:
+                                <span class="badge bg-danger">مرفوض</span>
+                                break;
+                            default:
+                                <span class="badge bg-secondary">مسودة</span>
+                                break;
+                        }
+                    </td>
+                    <td>@(string.IsNullOrWhiteSpace(v.Notes) ? "-" : v.Notes)</td>
                 </tr>
             }
         </tbody>

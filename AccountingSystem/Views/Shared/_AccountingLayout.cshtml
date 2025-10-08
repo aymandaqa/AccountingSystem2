@@ -39,10 +39,12 @@
         var canReceiptVouchers = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.view")).Succeeded;
         var canDisbursementVouchers = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.view")).Succeeded;
         var canPaymentVouchers = (await AuthorizationService.AuthorizeAsync(User, "paymentvouchers.view")).Succeeded;
+        var canWorkflowApprovalsView = (await AuthorizationService.AuthorizeAsync(User, "workflowapprovals.view")).Succeeded;
+        var canWorkflowDefinitionsManage = (await AuthorizationService.AuthorizeAsync(User, "workflowdefinitions.manage")).Succeeded;
         var canReceiptVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.create")).Succeeded;
         var canDisbursementVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.create")).Succeeded;
         var canPaymentVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "paymentvouchers.create")).Succeeded;
-        var showVouchers = canReceiptVouchers || canDisbursementVouchers || canPaymentVouchers || canReceiptVouchersCreate || canDisbursementVouchersCreate || canPaymentVouchersCreate;
+        var showVouchers = canReceiptVouchers || canDisbursementVouchers || canPaymentVouchers || canWorkflowApprovalsView || canWorkflowDefinitionsManage || canReceiptVouchersCreate || canDisbursementVouchersCreate || canPaymentVouchersCreate;
         var showAccountManagement = canBusinessStatementBulk || canBusinessRetStatementBulk || canBusnissShipmentsReturn || canBusnissStatment || canDriverPayment || canDriverStatment || canPrintSlip || canReceivePayments || canReceiveRetPayments || canUserPayment;
         var canAssets = (await AuthorizationService.AuthorizeAsync(User, "assets.view")).Succeeded;
         var canAssetTypes = (await AuthorizationService.AuthorizeAsync(User, "assettypes.view")).Succeeded;
@@ -53,7 +55,7 @@
         var currentAction = ViewContext.RouteData.Values["action"]?.ToString()?.ToLower();
         var accountsActive = currentController == "accounts";
         var operationsActive = currentController == "cashboxclosures" || currentController == "expenses" || currentController == "transfers";
-        var vouchersActive = currentController == "receiptvouchers" || currentController == "disbursementvouchers" || currentController == "paymentvouchers";
+        var vouchersActive = currentController == "receiptvouchers" || currentController == "disbursementvouchers" || currentController == "paymentvouchers" || currentController == "workflowapprovals" || currentController == "workflowdefinitions";
         var accountMgmtActive = currentController == "accountmanagement";
         var journalActive = currentController == "journalentries";
         var reportsActive = currentController == "reports";
@@ -183,6 +185,14 @@
                             {
                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "PaymentVouchers")"><i class="fas fa-plus"></i> إضافة سند صرف</a></li>
                             }
+                            @if (canWorkflowApprovalsView)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "WorkflowApprovals")"><i class="fas fa-check-circle"></i> موافقات سندات الدفع</a></li>
+                            }
+                            @if (canWorkflowDefinitionsManage)
+                            {
+                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "WorkflowDefinitions")"><i class="fas fa-project-diagram"></i> سير عمل السندات</a></li>
+                            }
                         </ul>
                     </li>
                 }
@@ -308,6 +318,9 @@
                                     <div class="container-fluid">
                                         <button id="sidebarToggle" class="btn btn-outline-light" type="button">☰</button>
                                         <ul class="navbar-nav ms-auto">
+                                            <li class="nav-item">
+                                                @await Component.InvokeAsync("Notifications")
+                                            </li>
                                             @if (User.Identity.IsAuthenticated)
                                             {
                                                 <li class="nav-item dropdown">

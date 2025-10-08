@@ -1,0 +1,11 @@
+@model AccountingSystem.ViewModels.Workflows.WorkflowDefinitionViewModel
+@{
+    ViewData["Title"] = "إضافة مخطط سير عمل";
+}
+
+<h2 class="mb-4">إضافة مخطط سير عمل</h2>
+
+<form asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+    <partial name="_Form" model="Model" />
+</form>

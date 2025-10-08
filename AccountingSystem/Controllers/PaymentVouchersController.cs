@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.Services;
-using System.Collections.Generic;
+using AccountingSystem.Models.Workflows;
 
 namespace AccountingSystem.Controllers
 {
@@ -14,13 +14,15 @@ namespace AccountingSystem.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<User> _userManager;
-        private readonly IJournalEntryService _journalEntryService;
+        private readonly IWorkflowService _workflowService;
+        private readonly IPaymentVoucherProcessor _paymentVoucherProcessor;
 
-        public PaymentVouchersController(ApplicationDbContext context, UserManager<User> userManager, IJournalEntryService journalEntryService)
+        public PaymentVouchersController(ApplicationDbContext context, UserManager<User> userManager, IWorkflowService workflowService, IPaymentVoucherProcessor paymentVoucherProcessor)
         {
             _context = context;
             _userManager = userManager;
-            _journalEntryService = journalEntryService;
+            _workflowService = workflowService;
+            _paymentVoucherProcessor = paymentVoucherProcessor;
         }
 
         public async Task<IActionResult> Index()
@@ -131,31 +133,28 @@ namespace AccountingSystem.Controllers
             model.ExchangeRate = currency?.ExchangeRate ?? 1m;
 
             model.CreatedById = user.Id;
+            var definition = await _workflowService.GetActiveDefinitionAsync(WorkflowDocumentType.PaymentVoucher, user.PaymentBranchId);
+            model.Status = definition != null ? PaymentVoucherStatus.PendingApproval : PaymentVoucherStatus.Approved;
+
             _context.PaymentVouchers.Add(model);
             await _context.SaveChangesAsync();
 
-            var lines = new List<JournalEntryLine>
+            if (definition != null)
             {
-                new JournalEntryLine { AccountId =model.AccountId!.Value , DebitAmount = model.Amount },
-                new JournalEntryLine { AccountId = supplier.AccountId!.Value, CreditAmount = model.Amount }
-            };
+                var instance = await _workflowService.StartWorkflowAsync(definition, WorkflowDocumentType.PaymentVoucher, model.Id, user.Id, user.PaymentBranchId);
+                if (instance != null)
+                {
+                    model.WorkflowInstanceId = instance.Id;
+                    await _context.SaveChangesAsync();
+                }
 
-            if (model.IsCash)
-            {
-                lines.Add(new JournalEntryLine { AccountId = supplier.AccountId!.Value, DebitAmount = model.Amount });
-                lines.Add(new JournalEntryLine { AccountId = user.PaymentAccountId.Value, CreditAmount = model.Amount });
+                TempData["InfoMessage"] = "تم إرسال سند الدفع لاعتمادات الموافقة";
             }
-
-            var reference = $"PAYV:{model.Id}";
-
-            await _journalEntryService.CreateJournalEntryAsync(
-                model.Date,
-                model.Notes == null ? "سند دفع" : "سند دفع" + Environment.NewLine + model.Notes,
-                user.PaymentBranchId.Value,
-                user.Id,
-                lines,
-                JournalEntryStatus.Posted,
-                reference: reference);
+            else
+            {
+                await _paymentVoucherProcessor.FinalizeVoucherAsync(model, user.Id);
+                TempData["SuccessMessage"] = "تم إنشاء سند الدفع واعتماده فوراً";
+            }
 
             return RedirectToAction(nameof(Index));
         }
