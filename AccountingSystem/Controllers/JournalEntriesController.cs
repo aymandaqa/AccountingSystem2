@@ -205,7 +205,8 @@ namespace AccountingSystem.Controllers
                     TotalAmount = totalAmount,
                     TotalAmountFormatted = totalAmount.ToString("N2"),
                     LinesCount = entry.Lines.Count,
-                    IsDraft = entry.Status == JournalEntryStatus.Draft
+                    IsDraft = entry.Status == JournalEntryStatus.Draft,
+                    CanDelete = entry.Status == JournalEntryStatus.Draft || entry.Status == JournalEntryStatus.Posted
                 };
             }).ToList();
 
@@ -283,7 +284,8 @@ namespace AccountingSystem.Controllers
                         DateFormatted = entry.Date.ToString("yyyy-MM-dd"),
                         DateGroup = entry.Date.ToString("yyyy-MM"),
                         TotalAmountFormatted = entry.TotalAmount.ToString("N2"),
-                        IsDraft = entry.Status == JournalEntryStatus.Draft
+                        IsDraft = entry.Status == JournalEntryStatus.Draft,
+                        CanDelete = entry.Status == JournalEntryStatus.Draft || entry.Status == JournalEntryStatus.Posted
                     };
                 });
 
@@ -607,6 +609,52 @@ namespace AccountingSystem.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "journal.delete")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var entry = await _context.JournalEntries
+                .Include(j => j.Lines)
+                    .ThenInclude(l => l.Account)
+                .FirstOrDefaultAsync(j => j.Id == id);
+
+            if (entry == null)
+            {
+                return NotFound();
+            }
+
+            if (entry.Status != JournalEntryStatus.Draft && entry.Status != JournalEntryStatus.Posted)
+            {
+                return BadRequest("لا يمكن حذف هذا القيد في حالته الحالية.");
+            }
+
+            if (entry.Status == JournalEntryStatus.Posted)
+            {
+                foreach (var line in entry.Lines)
+                {
+                    var account = line.Account;
+                    var netAmount = account.Nature == AccountNature.Debit
+                        ? line.DebitAmount - line.CreditAmount
+                        : line.CreditAmount - line.DebitAmount;
+
+                    account.CurrentBalance -= netAmount;
+                    account.UpdatedAt = DateTime.Now;
+                }
+            }
+
+            _context.JournalEntryLines.RemoveRange(entry.Lines);
+            _context.JournalEntries.Remove(entry);
+            await _context.SaveChangesAsync();
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return Ok(new { success = true });
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
         [Authorize(Policy = "journal.view")]
         public async Task<IActionResult> Draft(string? searchTerm, int page = 1, int pageSize = 10)
         {
@@ -715,7 +763,8 @@ namespace AccountingSystem.Controllers
                 Status = j.Status.ToString(),
                 BranchName = j.Branch.NameAr,
                 TotalAmount = j.Lines.Sum(l => l.DebitAmount),
-                LinesCount = j.Lines.Count
+                LinesCount = j.Lines.Count,
+                CanDelete = j.Status == JournalEntryStatus.Draft || j.Status == JournalEntryStatus.Posted
             }).ToList();
 
             var result = new PagedResult<JournalEntryViewModel>
