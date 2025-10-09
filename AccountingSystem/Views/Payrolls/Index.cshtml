@@ -402,7 +402,11 @@
                     }
 
                     const summary = result.summary ?? {};
-                    currentBatchId = summary.batchId ?? null;
+                    const batchId = getProperty(summary, 'batchId', 'BatchId');
+                    const employeeCount = getProperty(summary, 'employeeCount', 'EmployeeCount');
+                    const totalAmount = getProperty(summary, 'totalAmount', 'TotalAmount');
+
+                    currentBatchId = batchId ?? null;
                     summaryContent.innerHTML = `
                         <div class="list-group">
                             <div class="list-group-item d-flex justify-content-between">
@@ -411,11 +415,11 @@
                             </div>
                             <div class="list-group-item d-flex justify-content-between">
                                 <span>عدد الموظفين</span>
-                                <strong>${summary.employeeCount ?? 0}</strong>
+                                <strong>${employeeCount ?? 0}</strong>
                             </div>
                             <div class="list-group-item d-flex justify-content-between">
                                 <span>إجمالي الرواتب</span>
-                                <strong>${Number(summary.totalAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                                <strong>${Number(totalAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                             </div>
                         </div>`;
 
@@ -486,18 +490,29 @@
                             return;
                         }
                         const data = await response.json();
-                        const periodDate = data.year && data.month
-                            ? new Date(data.year, data.month - 1, 1).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long' })
+                        const year = getProperty(data, 'year', 'Year');
+                        const monthValue = getProperty(data, 'month', 'Month');
+                        const status = getProperty(data, 'status', 'Status');
+                        const reference = getProperty(data, 'reference', 'Reference');
+                        const rawEmployees = getProperty(data, 'employees', 'Employees');
+                        const employees = Array.isArray(rawEmployees) ? rawEmployees : [];
+
+                        const periodDate = year && monthValue
+                            ? new Date(year, monthValue - 1, 1).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long' })
                             : '';
                         let html = '';
                         if (periodDate) {
                             html += `<div class="mb-3"><strong>شهر الرواتب:</strong> ${periodDate}</div>`;
                         }
-                        html += `<div class="mb-3"><strong>الحالة:</strong> ${data.status}</div>`;
-                        html += `<div class="mb-3"><strong>المرجع:</strong> ${data.reference || '---'}</div>`;
+                        html += `<div class="mb-3"><strong>الحالة:</strong> ${status ?? ''}</div>`;
+                        html += `<div class="mb-3"><strong>المرجع:</strong> ${reference ?? '---'}</div>`;
                         html += '<table class="table table-sm"><thead><tr><th>الموظف</th><th>المسمى الوظيفي</th><th>المبلغ</th></tr></thead><tbody>';
-                        data.employees.forEach(emp => {
-                            html += `<tr><td>${emp.name}</td><td>${emp.jobTitle || ''}</td><td>${Number(emp.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>`;
+                        employees.forEach(emp => {
+                            const name = getProperty(emp, 'name', 'Name');
+                            const jobTitle = getProperty(emp, 'jobTitle', 'JobTitle');
+                            const amount = getProperty(emp, 'amount', 'Amount');
+
+                            html += `<tr><td>${name ?? ''}</td><td>${jobTitle ?? ''}</td><td>${Number(amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>`;
                         });
                         html += '</tbody></table>';
                         detailsContent.innerHTML = html;
