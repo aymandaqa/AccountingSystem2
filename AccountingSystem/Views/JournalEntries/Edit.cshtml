@@ -1,5 +1,4 @@
 @model AccountingSystem.ViewModels.CreateJournalEntryViewModel
-@using System.Text.Encodings.Web
 @using System.Text.Json
 @using Microsoft.AspNetCore.Mvc.Rendering
 @{
@@ -10,7 +9,6 @@
         code = (a.Text ?? string.Empty).Split(" - ")[0],
         text = a.Text ?? string.Empty
     }));
-    var encodedAccountsDataJson = JavaScriptEncoder.Default.Encode(accountsDataJson);
 }
 
 <div class="container-fluid">
@@ -155,7 +153,7 @@
 </div>
 
 <script>
-    const accountsData = JSON.parse('@Html.Raw(encodedAccountsDataJson)');
+    const accountsData = @Html.Raw(accountsDataJson);
     const accountsLookup = accountsData.reduce((acc, item) => {
         if (item && item.id) {
             acc[item.id] = item;
