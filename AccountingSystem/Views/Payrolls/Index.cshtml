@@ -396,13 +396,25 @@
                     });
 
                     const result = await response.json();
-                    if (!response.ok || !result.success) {
-                        alert(result.message || 'حدث خطأ أثناء إنشاء الدفعة');
+                    const createSuccess = getProperty(result, 'success', 'Success');
+                    const isCreateSuccess = createSuccess === true || createSuccess === 'true';
+                    if (!response.ok || !isCreateSuccess) {
+                        const message = getProperty(result, 'message', 'Message');
+                        alert(message || 'حدث خطأ أثناء إنشاء الدفعة');
                         return;
                     }
 
-                    const summary = result.summary ?? {};
-                    currentBatchId = summary.batchId ?? null;
+                    const summary = getProperty(result, 'summary', 'Summary') ?? {};
+                    const batchId = getProperty(summary, 'batchId', 'BatchId');
+                    const employeeCountRaw = getProperty(summary, 'employeeCount', 'EmployeeCount');
+                    const totalAmountRaw = getProperty(summary, 'totalAmount', 'TotalAmount');
+                    const employeeCount = Number.isFinite(employeeCountRaw) ? employeeCountRaw : parseInt(employeeCountRaw ?? '0', 10) || 0;
+                    const totalAmountValue = Number(totalAmountRaw ?? 0);
+                    const totalAmount = Number.isNaN(totalAmountValue) ? 0 : totalAmountValue;
+                    currentBatchId = typeof batchId === 'number' ? batchId : parseInt(batchId ?? '', 10);
+                    if (Number.isNaN(currentBatchId)) {
+                        currentBatchId = null;
+                    }
                     summaryContent.innerHTML = `
                         <div class="list-group">
                             <div class="list-group-item d-flex justify-content-between">
@@ -411,11 +423,11 @@
                             </div>
                             <div class="list-group-item d-flex justify-content-between">
                                 <span>عدد الموظفين</span>
-                                <strong>${summary.employeeCount ?? 0}</strong>
+                                <strong>${employeeCount}</strong>
                             </div>
                             <div class="list-group-item d-flex justify-content-between">
                                 <span>إجمالي الرواتب</span>
-                                <strong>${Number(summary.totalAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                                <strong>${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                             </div>
                         </div>`;
 
@@ -451,13 +463,20 @@
                     });
 
                     const result = await response.json();
-                    if (!response.ok || !result.success) {
-                        alert(result.message || 'حدث خطأ أثناء تأكيد الدفعة');
+                    const success = getProperty(result, 'success', 'Success');
+                    const isSuccess = success === true || success === 'true';
+                    if (!response.ok || !isSuccess) {
+                        const message = getProperty(result, 'message', 'Message');
+                        alert(message || 'حدث خطأ أثناء تأكيد الدفعة');
                         return;
                     }
 
                     summaryModal.hide();
-                    alert('تم تأكيد تنزيل الرواتب بنجاح. أرقام القيود: ' + result.journals.join(', '));
+                    const journalsRaw = getProperty(result, 'journals', 'Journals');
+                    const journals = Array.isArray(journalsRaw)
+                        ? journalsRaw
+                        : (journalsRaw ? [journalsRaw] : []);
+                    alert('تم تأكيد تنزيل الرواتب بنجاح. أرقام القيود: ' + journals.join(', '));
                     await loadEmployees();
                     window.location.reload();
                 } finally {
