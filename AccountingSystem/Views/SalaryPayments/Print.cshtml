@@ -106,7 +106,17 @@
             </div>
         }
 
-        <div class="print-actions">
+        <div class="print-actions" style="display: flex; justify-content: center; gap: 10px;">
+            @if (Model.JournalEntryId.HasValue)
+            {
+                <a asp-controller="JournalEntries"
+                   asp-action="Details"
+                   asp-route-id="@Model.JournalEntryId.Value"
+                   asp-require-permission="journal.view"
+                   style="padding: 10px 30px; font-size: 16px; text-decoration: none; border: 1px solid #0d6efd; color: #0d6efd; border-radius: 4px; display: inline-block;">
+                    عرض القيد
+                </a>
+            }
             <button onclick="window.print()" style="padding: 10px 30px; font-size: 16px;">طباعة</button>
         </div>
     </div>

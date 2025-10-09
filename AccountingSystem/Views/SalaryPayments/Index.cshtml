@@ -31,7 +31,26 @@
                         <td>@item.Branch.NameAr</td>
                         <td>@item.Amount.ToString("N2") @item.Currency.Code</td>
                         <td>@item.PaymentAccount.NameAr</td>
-                        <td>@item.ReferenceNumber</td>
+                        <td>
+                            @if (item.JournalEntryId.HasValue)
+                            {
+                                <div class="d-flex flex-column align-items-start">
+                                    <span class="fw-semibold">@item.ReferenceNumber</span>
+                                    <a asp-controller="JournalEntries"
+                                       asp-action="Details"
+                                       asp-route-id="@item.JournalEntryId.Value"
+                                       asp-require-permission="journal.view"
+                                       class="btn btn-sm btn-outline-primary mt-2">
+                                        <i class="fas fa-book-open me-1"></i>
+                                        عرض القيد
+                                    </a>
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
                         <td class="text-end">
                             <a asp-action="Print" asp-route-id="@item.Id" class="btn btn-sm btn-secondary">طباعة</a>
                         </td>
