@@ -12,6 +12,10 @@ namespace AccountingSystem.Models
         [Required]
         public int PaymentAccountId { get; set; }
 
+        public int Year { get; set; }
+
+        public int Month { get; set; }
+
         [Required]
         public PayrollBatchStatus Status { get; set; } = PayrollBatchStatus.Draft;
 
