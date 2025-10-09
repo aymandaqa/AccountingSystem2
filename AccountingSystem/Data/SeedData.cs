@@ -341,6 +341,11 @@ namespace AccountingSystem.Data
                 context.SystemSettings.Add(new SystemSetting { Key = "AssetTypesParentAccountCode", Value = null });
             }
 
+            if (!context.SystemSettings.Any(s => s.Key == "PayrollExpenseAccountId"))
+            {
+                context.SystemSettings.Add(new SystemSetting { Key = "PayrollExpenseAccountId", Value = null });
+            }
+
             await context.SaveChangesAsync();
         }
 
