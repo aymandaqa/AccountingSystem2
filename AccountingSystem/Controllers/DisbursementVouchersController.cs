@@ -70,6 +70,9 @@ namespace AccountingSystem.Controllers
             if (supplier?.Account != null && paymentAccount != null && paymentAccount.CurrencyId != supplier.Account.CurrencyId)
                 ModelState.AddModelError("SupplierId", "يجب أن تكون الحسابات بنفس العملة");
 
+            ModelState.Remove(nameof(DisbursementVoucher.AccountId));
+            ModelState.Remove(nameof(DisbursementVoucher.CurrencyId));
+
             if (!ModelState.IsValid)
             {
                 ViewBag.Suppliers = await _context.Suppliers

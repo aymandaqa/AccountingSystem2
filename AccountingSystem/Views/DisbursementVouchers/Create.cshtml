@@ -5,6 +5,7 @@
 
 <div class="container-fluid">
     <form asp-action="Create" method="post" class="row g-3">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
         <div class="col-md-6">
             <label class="form-label">العملة</label>
             <input type="text" class="form-control" id="currencyDisplay" readonly />
@@ -20,22 +21,27 @@
                     </option>
                 }
             </select>
+            <span asp-validation-for="SupplierId" class="text-danger"></span>
         </div>
         <div class="col-md-6">
             <label class="form-label">سعر الصرف</label>
             <input asp-for="ExchangeRate" class="form-control" />
+            <span asp-validation-for="ExchangeRate" class="text-danger"></span>
         </div>
         <div class="col-md-6">
             <label class="form-label">المبلغ</label>
             <input asp-for="Amount" class="form-control" />
+            <span asp-validation-for="Amount" class="text-danger"></span>
         </div>
         <div class="col-md-6">
             <label class="form-label">التاريخ</label>
             <input asp-for="Date" type="date" class="form-control" />
+            <span asp-validation-for="Date" class="text-danger"></span>
         </div>
         <div class="col-md-6">
             <label class="form-label">ملاحظات</label>
             <textarea asp-for="Notes" class="form-control"></textarea>
+            <span asp-validation-for="Notes" class="text-danger"></span>
         </div>
         <div class="col-12">
             <button type="submit" class="btn btn-primary">حفظ</button>
