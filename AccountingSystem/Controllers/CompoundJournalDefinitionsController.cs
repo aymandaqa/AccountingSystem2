@@ -4,11 +4,13 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AccountingSystem.Data;
+using AccountingSystem.Models;
 using AccountingSystem.Models.CompoundJournals;
 using AccountingSystem.Services;
 using AccountingSystem.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace AccountingSystem.Controllers
@@ -74,7 +76,7 @@ namespace AccountingSystem.Controllers
         }
 
         [Authorize(Policy = "journal.create")]
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
             var sampleTemplate = JsonSerializer.Serialize(new CompoundJournalTemplate
             {
@@ -107,6 +109,8 @@ namespace AccountingSystem.Controllers
                 IsActive = true
             };
 
+            await PopulateTemplateLookupsAsync(viewModel);
+
             return View(viewModel);
         }
 
@@ -119,6 +123,7 @@ namespace AccountingSystem.Controllers
             await ValidateTemplateAsync(viewModel.TemplateJson);
             if (!ModelState.IsValid)
             {
+                await PopulateTemplateLookupsAsync(viewModel);
                 return View(viewModel);
             }
 
@@ -176,6 +181,8 @@ namespace AccountingSystem.Controllers
                 RecurrenceInterval = definition.RecurrenceInterval
             };
 
+            await PopulateTemplateLookupsAsync(viewModel);
+
             return View(viewModel);
         }
 
@@ -193,6 +200,7 @@ namespace AccountingSystem.Controllers
             await ValidateTemplateAsync(viewModel.TemplateJson);
             if (!ModelState.IsValid)
             {
+                await PopulateTemplateLookupsAsync(viewModel);
                 return View(viewModel);
             }
 
@@ -366,6 +374,62 @@ namespace AccountingSystem.Controllers
             {
                 ModelState.AddModelError(nameof(CompoundJournalDefinitionFormViewModel.TemplateJson), ex.Message);
             }
+        }
+
+        private async Task PopulateTemplateLookupsAsync(CompoundJournalDefinitionFormViewModel viewModel)
+        {
+            viewModel.Branches = await _context.Branches
+                .OrderBy(b => b.NameAr)
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = string.IsNullOrWhiteSpace(b.NameAr)
+                        ? (string.IsNullOrWhiteSpace(b.NameEn) ? b.Code : b.NameEn)
+                        : b.NameAr
+                })
+                .ToListAsync();
+
+            viewModel.Accounts = await _context.Accounts
+                .OrderBy(a => a.Code)
+                .Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = string.IsNullOrWhiteSpace(a.Code)
+                        ? (string.IsNullOrWhiteSpace(a.NameAr) ? a.NameEn ?? $"حساب #{a.Id}" : a.NameAr)
+                        : $"{a.Code} - {(string.IsNullOrWhiteSpace(a.NameAr) ? a.NameEn ?? $"حساب #{a.Id}" : a.NameAr)}"
+                })
+                .ToListAsync();
+
+            viewModel.CostCenters = await _context.CostCenters
+                .OrderBy(c => c.NameAr)
+                .Select(c => new SelectListItem
+                {
+                    Value = c.Id.ToString(),
+                    Text = string.IsNullOrWhiteSpace(c.NameAr)
+                        ? (string.IsNullOrWhiteSpace(c.NameEn) ? c.Code : c.NameEn)
+                        : c.NameAr
+                })
+                .ToListAsync();
+
+            viewModel.JournalStatuses = Enum.GetValues<JournalEntryStatus>()
+                .Select(status => new SelectListItem
+                {
+                    Value = status.ToString(),
+                    Text = GetJournalStatusDisplay(status)
+                })
+                .ToList();
+        }
+
+        private static string GetJournalStatusDisplay(JournalEntryStatus status)
+        {
+            return status switch
+            {
+                JournalEntryStatus.Draft => "مسودة",
+                JournalEntryStatus.Posted => "مرحَّل",
+                JournalEntryStatus.Approved => "معتمد",
+                JournalEntryStatus.Cancelled => "ملغى",
+                _ => status.ToString()
+            };
         }
 
         private void ValidateRecurringSettings(CompoundJournalDefinitionFormViewModel viewModel)

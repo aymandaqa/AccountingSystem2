@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using AccountingSystem.Models.CompoundJournals;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace AccountingSystem.ViewModels
 {
@@ -42,5 +43,13 @@ namespace AccountingSystem.ViewModels
         [Required]
         [Display(Name = "قالب التعريف (JSON)")]
         public string TemplateJson { get; set; } = "";
+
+        public List<SelectListItem> Branches { get; set; } = new();
+
+        public List<SelectListItem> Accounts { get; set; } = new();
+
+        public List<SelectListItem> CostCenters { get; set; } = new();
+
+        public List<SelectListItem> JournalStatuses { get; set; } = new();
     }
 }
