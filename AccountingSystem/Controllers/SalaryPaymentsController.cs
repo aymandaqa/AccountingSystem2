@@ -40,6 +40,7 @@ namespace AccountingSystem.Controllers
             var payments = await _context.SalaryPayments
                 .Where(p => p.CreatedById == user.Id)
                 .Include(p => p.Employee).ThenInclude(e => e.Branch)
+                .Include(p => p.Branch)
                 .Include(p => p.PaymentAccount)
                 .Include(p => p.Currency)
                 .OrderByDescending(p => p.Date)
