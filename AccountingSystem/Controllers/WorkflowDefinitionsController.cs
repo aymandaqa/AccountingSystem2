@@ -135,6 +135,16 @@ namespace AccountingSystem.Controllers
                 return View(model);
             }
 
+            var hasActiveInstances = await _context.WorkflowInstances
+                .AnyAsync(i => i.WorkflowDefinitionId == definition.Id && i.Status == WorkflowInstanceStatus.InProgress);
+
+            if (hasActiveInstances)
+            {
+                ModelState.AddModelError(string.Empty, "لا يمكن تعديل هذا التعريف لوجود معاملات جارية تعتمد عليه.");
+                await PopulateLookupsAsync();
+                return View(model);
+            }
+
             definition.Name = model.Name;
             definition.BranchId = model.BranchId;
             definition.DocumentType = model.DocumentType;
