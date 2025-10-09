@@ -492,6 +492,9 @@ namespace AccountingSystem.Controllers
         {
             var entry = await _context.JournalEntries
                 .Include(j => j.Lines)
+                    .ThenInclude(l => l.Account)
+                .Include(j => j.Lines)
+                    .ThenInclude(l => l.CostCenter)
                 .FirstOrDefaultAsync(j => j.Id == id);
 
             if (entry == null)
@@ -508,10 +511,13 @@ namespace AccountingSystem.Controllers
                 Lines = entry.Lines.Select(l => new JournalEntryLineViewModel
                 {
                     AccountId = l.AccountId,
+                    AccountCode = l.Account?.Code ?? string.Empty,
+                    AccountName = l.Account?.NameAr ?? string.Empty,
                     Description = l.Description ?? string.Empty,
                     DebitAmount = l.DebitAmount,
                     CreditAmount = l.CreditAmount,
-                    CostCenterId = l.CostCenterId
+                    CostCenterId = l.CostCenterId,
+                    CostCenterName = l.CostCenter?.NameAr ?? string.Empty
                 }).ToList()
             };
 

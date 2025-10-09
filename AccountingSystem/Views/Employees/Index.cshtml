@@ -73,7 +73,7 @@
                 <div class="col-md-6">
                     <label class="form-label">ملف Excel</label>
                     <input type="file" name="file" class="form-control" accept=".xlsx" required />
-                    <div class="form-text">استخدم ملف يحتوي على الأعمدة: اسم الموظف، المسمى الوظيفي، الراتب، الفرع، الهاتف، العنوان، تاريخ التعيين، الحالة.</div>
+                    <div class="form-text">استخدم ملف يحتوي على الأعمدة: اسم الموظف، رقم الهوية، المسمى الوظيفي، الراتب، الفرع، الهاتف، العنوان، تاريخ التعيين، الحالة.</div>
                 </div>
                 <div class="col-md-3">
                     <button type="submit" class="btn btn-success" asp-require-permission="employees.create">
@@ -97,6 +97,7 @@
                         <thead class="table-dark">
                             <tr>
                                 <th>الاسم</th>
+                                <th>رقم الهوية</th>
                                 <th>المسمى الوظيفي</th>
                                 <th>الراتب</th>
                                 <th>الفرع</th>
@@ -113,6 +114,7 @@
                                         <strong>@employee.Name</strong>
                                         <div class="text-muted small">@employee.AccountCode - @employee.AccountName</div>
                                     </td>
+                                    <td>@employee.NationalId</td>
                                     <td>@employee.JobTitle</td>
                                     <td>@employee.Salary.ToString("N2")</td>
                                     <td>@employee.BranchName</td>

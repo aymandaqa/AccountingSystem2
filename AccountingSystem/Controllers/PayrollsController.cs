@@ -150,6 +150,26 @@ namespace AccountingSystem.Controllers
                 return BadRequest(new { message = "تم تنزيل رواتب هذا الشهر لهذا الفرع مسبقاً" });
             }
 
+            var payrollExpenseSetting = await _context.SystemSettings
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Key == "PayrollExpenseAccountId");
+
+            if (payrollExpenseSetting == null || string.IsNullOrWhiteSpace(payrollExpenseSetting.Value) ||
+                !int.TryParse(payrollExpenseSetting.Value, out var payrollExpenseAccountId))
+            {
+                return BadRequest(new { message = "لم يتم ضبط حساب مصروف الرواتب في الإعدادات." });
+            }
+
+            var payrollExpenseAccount = await _context.Accounts
+                .AsNoTracking()
+                .Include(a => a.Currency)
+                .FirstOrDefaultAsync(a => a.Id == payrollExpenseAccountId);
+
+            if (payrollExpenseAccount == null)
+            {
+                return BadRequest(new { message = "حساب مصروف الرواتب المحدد غير موجود." });
+            }
+
             var employees = await _context.Employees
                 .Include(e => e.Account)
                 .Where(e => request.EmployeeIds.Contains(e.Id) && e.IsActive)
@@ -170,9 +190,11 @@ namespace AccountingSystem.Controllers
                 .Distinct()
                 .ToList();
 
-            if (currencies.Count > 1 || (currencies.Count == 1 && currencies[0] != paymentAccount.CurrencyId))
+            if (currencies.Count > 1 ||
+                (currencies.Count == 1 && currencies[0] != paymentAccount.CurrencyId) ||
+                (currencies.Count == 1 && currencies[0] != payrollExpenseAccount.CurrencyId))
             {
-                return BadRequest(new { message = "يجب أن تكون جميع الحسابات بنفس العملة الخاصة بحساب الرواتب" });
+                return BadRequest(new { message = "يجب أن تكون حسابات الموظفين، والدفع، ومصروف الرواتب بنفس العملة." });
             }
 
             var total = employees.Sum(e => e.Salary);
@@ -251,6 +273,25 @@ namespace AccountingSystem.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             var journalNumbers = new List<string>();
 
+            var payrollExpenseSetting = await _context.SystemSettings
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Key == "PayrollExpenseAccountId");
+
+            if (payrollExpenseSetting == null || string.IsNullOrWhiteSpace(payrollExpenseSetting.Value) ||
+                !int.TryParse(payrollExpenseSetting.Value, out var payrollExpenseAccountId))
+            {
+                return BadRequest(new { message = "لم يتم ضبط حساب مصروف الرواتب في الإعدادات." });
+            }
+
+            var payrollExpenseAccount = await _context.Accounts
+                .Include(a => a.Currency)
+                .FirstOrDefaultAsync(a => a.Id == payrollExpenseAccountId);
+
+            if (payrollExpenseAccount == null)
+            {
+                return BadRequest(new { message = "حساب مصروف الرواتب المحدد غير موجود." });
+            }
+
             var branchLines = batch.Lines.GroupBy(l => l.BranchId);
             foreach (var group in branchLines)
             {
@@ -261,6 +302,18 @@ namespace AccountingSystem.Controllers
                     return BadRequest(new { message = "تعذر العثور على بيانات الفرع" });
                 }
 
+                var groupCurrencyIds = group
+                    .Select(l => l.Employee.Account.CurrencyId)
+                    .Distinct()
+                    .ToList();
+
+                if (groupCurrencyIds.Count > 1 || groupCurrencyIds.Any(id => id != payrollExpenseAccount.CurrencyId))
+                {
+                    return BadRequest(new { message = "عملة حساب مصروف الرواتب لا تطابق عملة حسابات الموظفين." });
+                }
+
+                var entryDate = System.DateTime.Today;
+                var entryDescription = $"صرف رواتب الموظفين لفرع {batchBranch.NameAr} بتاريخ {entryDate:yyyy-MM-dd}";
                 var lines = new List<JournalEntryLine>();
                 foreach (var line in group)
                 {
@@ -269,17 +322,17 @@ namespace AccountingSystem.Controllers
                         AccountId = line.Employee.AccountId,
                         CreditAmount = line.Amount,
                         DebitAmount = 0,
-                        Description = $"راتب {line.Employee.Name}"
+                        Description = $"راتب {line.Employee.Name} عن {entryDate:yyyy-MM-dd}"
                     });
                 }
 
                 var groupTotal = group.Sum(l => l.Amount);
                 lines.Add(new JournalEntryLine
                 {
-                    AccountId = batch.PaymentAccountId,
+                    AccountId = payrollExpenseAccount.Id,
                     CreditAmount = 0,
                     DebitAmount = groupTotal,
-                    Description = "صرف رواتب الموظفين"
+                    Description = $"مصروف رواتب فرع {batchBranch.NameAr} عن {entryDate:yyyy-MM-dd}"
                 });
 
                 var periodDate = new DateTime(
@@ -288,8 +341,8 @@ namespace AccountingSystem.Controllers
                     1);
 
                 var entry = await _journalEntryService.CreateJournalEntryAsync(
-                    System.DateTime.Today,
-                    $"صرف رواتب الموظفين لشهر {periodDate.ToString("MMMM yyyy", new CultureInfo("ar-SA"))} - {batchBranch.NameAr}",
+                    entryDate,
+                    entryDescription,
                     branchId,
                     userId,
                     lines,

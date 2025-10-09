@@ -16,6 +16,7 @@ namespace AccountingSystem.ViewModels
         public string AccountCode { get; set; } = string.Empty;
         public string AccountName { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+        public string? NationalId { get; set; }
     }
 
     public abstract class EmployeeFormViewModel
@@ -32,6 +33,10 @@ namespace AccountingSystem.ViewModels
         [StringLength(50)]
         [Display(Name = "رقم الهاتف")]
         public string? PhoneNumber { get; set; }
+
+        [StringLength(50)]
+        [Display(Name = "رقم الهوية")]
+        public string? NationalId { get; set; }
 
         [Required]
         [Display(Name = "الفرع")]
