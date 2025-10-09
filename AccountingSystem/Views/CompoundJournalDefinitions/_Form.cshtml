@@ -1,5 +1,42 @@
 @model AccountingSystem.ViewModels.CompoundJournalDefinitionFormViewModel
 @using AccountingSystem.Models.CompoundJournals
+@using System.Linq
+@using System.Text.Json
+
+@{
+    Func<CompoundJournalConditionOperator, string> operatorDisplay = op => op switch
+    {
+        CompoundJournalConditionOperator.Equals => "يساوي",
+        CompoundJournalConditionOperator.NotEquals => "لا يساوي",
+        CompoundJournalConditionOperator.GreaterThan => "أكبر من",
+        CompoundJournalConditionOperator.GreaterThanOrEqual => "أكبر أو يساوي",
+        CompoundJournalConditionOperator.LessThan => "أقل من",
+        CompoundJournalConditionOperator.LessThanOrEqual => "أقل أو يساوي",
+        CompoundJournalConditionOperator.Contains => "يحتوي",
+        CompoundJournalConditionOperator.NotContains => "لا يحتوي",
+        CompoundJournalConditionOperator.Exists => "موجود",
+        CompoundJournalConditionOperator.NotExists => "غير موجود",
+        _ => op.ToString()
+    };
+
+    Func<TemplateValueType, string> valueTypeDisplay = type => type switch
+    {
+        TemplateValueType.Fixed => "قيمة ثابتة",
+        TemplateValueType.ContextValue => "من متغير السياق",
+        TemplateValueType.Expression => "معادلة",
+        _ => type.ToString()
+    };
+
+    var conditionOptionsJson = JsonSerializer.Serialize(
+        Enum.GetValues<CompoundJournalConditionOperator>()
+            .Cast<CompoundJournalConditionOperator>()
+            .Select(op => new { value = op.ToString(), label = operatorDisplay(op) }));
+
+    var valueTypeOptionsJson = JsonSerializer.Serialize(
+        Enum.GetValues<TemplateValueType>()
+            .Cast<TemplateValueType>()
+            .Select(type => new { value = type.ToString(), label = valueTypeDisplay(type) }));
+}
 
 <div class="mb-3">
     <label asp-for="Name" class="form-label"></label>
@@ -70,9 +107,571 @@
     </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="TemplateJson" class="form-label"></label>
-    <textarea asp-for="TemplateJson" class="form-control" rows="18" spellcheck="false" style="direction:ltr"></textarea>
-    <div class="form-text">استخدم JSON لتحديد البنود والشروط والسياق. يمكن استخدام المتغيرات داخل الصيغة مثل {amount}.</div>
-    <span asp-validation-for="TemplateJson" class="text-danger"></span>
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <strong><i class="fas fa-project-diagram me-2"></i>منشئ قالب القيد المركب</strong>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label class="form-label" for="templateDescription">وصف القيد</label>
+                <input type="text" id="templateDescription" class="form-control" placeholder="وصف اختياري للقيد" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="templateBranch">الفرع الافتراضي</label>
+                <select id="templateBranch" class="form-select">
+                    <option value="">بدون</option>
+                    @foreach (var branch in Model.Branches)
+                    {
+                        <option value="@branch.Value">@branch.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="templateStatus">حالة القيد</label>
+                <select id="templateStatus" class="form-select">
+                    @foreach (var status in Model.JournalStatuses)
+                    {
+                        <option value="@status.Value">@status.Text</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0">السياق الافتراضي</h5>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="addContextRow"><i class="fas fa-plus me-1"></i>إضافة متغير</button>
+            </div>
+            <p class="text-muted small mb-2">استخدم هذه المتغيرات كقيم افتراضية يمكن تعديلها عند تنفيذ القيد.</p>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 35%">مفتاح المتغير</th>
+                            <th>القيمة</th>
+                            <th style="width: 60px"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="contextRows"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0">الشروط</h5>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="addConditionRow"><i class="fas fa-plus me-1"></i>إضافة شرط</button>
+            </div>
+            <p class="text-muted small mb-2">يتم التحقق من الشروط قبل إنشاء القيد. في حال لم يتحقق أي شرط سيتم إيقاف التنفيذ.</p>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 30%">المتغير</th>
+                            <th style="width: 30%">المقارنة</th>
+                            <th>القيمة</th>
+                            <th style="width: 60px"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="conditionRows"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0">بنود القيد</h5>
+                <button type="button" class="btn btn-sm btn-success" id="addLineRow"><i class="fas fa-plus me-1"></i>إضافة بند</button>
+            </div>
+            <p class="text-muted small mb-2">حدد الحسابات وقيم المدين والدائن لكل بند. يمكن استخدام القيم الثابتة أو المتغيرات أو المعادلات.</p>
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 22%">الحساب</th>
+                            <th style="width: 18%">البيان</th>
+                            <th style="width: 18%">مركز التكلفة</th>
+                            <th style="width: 21%">المدين</th>
+                            <th style="width: 21%">الدائن</th>
+                            <th style="width: 60px"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="lineRows"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="mb-2 d-flex align-items-center">
+            <i class="fas fa-code text-muted me-2"></i>
+            <strong>معاينة JSON الناتج</strong>
+        </div>
+        <pre id="templatePreview" class="bg-light border rounded p-3 small" style="direction: ltr; white-space: pre-wrap; min-height: 150px;"></pre>
+    </div>
 </div>
+
+<template id="accountOptionsTemplate">
+    <option value="">اختر الحساب</option>
+    @foreach (var account in Model.Accounts)
+    {
+        <option value="@account.Value">@account.Text</option>
+    }
+</template>
+
+<template id="costCenterOptionsTemplate">
+    <option value="">بدون</option>
+    @foreach (var costCenter in Model.CostCenters)
+    {
+        <option value="@costCenter.Value">@costCenter.Text</option>
+    }
+</template>
+
+<input asp-for="TemplateJson" type="hidden" id="TemplateJson" />
+<span asp-validation-for="TemplateJson" class="text-danger"></span>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const templateField = document.getElementById('TemplateJson');
+        const descriptionInput = document.getElementById('templateDescription');
+        const branchSelect = document.getElementById('templateBranch');
+        const statusSelect = document.getElementById('templateStatus');
+        const contextRows = document.getElementById('contextRows');
+        const conditionRows = document.getElementById('conditionRows');
+        const lineRows = document.getElementById('lineRows');
+        const templatePreview = document.getElementById('templatePreview');
+        const conditionOperators = @Html.Raw(conditionOptionsJson);
+        const valueTypes = @Html.Raw(valueTypeOptionsJson);
+        const accountOptionsTemplate = document.getElementById('accountOptionsTemplate');
+        const costCenterOptionsTemplate = document.getElementById('costCenterOptionsTemplate');
+        const accountOptionsHtml = accountOptionsTemplate ? accountOptionsTemplate.innerHTML : '<option value="">اختر الحساب</option>';
+        const costCenterOptionsHtml = costCenterOptionsTemplate ? costCenterOptionsTemplate.innerHTML : '<option value="">بدون</option>';
+
+        const createValue = () => ({ type: 'Fixed', fixedValue: 0, contextKey: '', expression: '' });
+        const createLine = () => ({ accountId: 0, description: '', costCenterId: null, debit: createValue(), credit: createValue() });
+
+        let templateData;
+        try {
+            templateData = JSON.parse(templateField.value || '{}');
+        } catch (error) {
+            templateData = {};
+        }
+
+        if (!templateData || typeof templateData !== 'object' || Array.isArray(templateData)) {
+            templateData = {};
+        }
+
+        templateData.description = templateData.description ?? '';
+        templateData.branchId = templateData.branchId ?? null;
+        templateData.status = templateData.status ?? (statusSelect?.options.length ? statusSelect.options[0].value : 'Posted');
+        templateData.defaultContext = templateData.defaultContext ?? {};
+        templateData.conditions = Array.isArray(templateData.conditions) ? templateData.conditions : [];
+        templateData.lines = Array.isArray(templateData.lines) ? templateData.lines : [];
+
+        let defaultContextEntries = Object.entries(templateData.defaultContext)
+            .map(entry => ({ key: entry[0], value: entry[1] ?? '' }));
+
+        if (templateData.lines.length === 0) {
+            templateData.lines.push(createLine());
+        }
+
+        if (descriptionInput) {
+            descriptionInput.value = templateData.description ?? '';
+            descriptionInput.addEventListener('input', event => {
+                templateData.description = event.target.value;
+                updatePreview();
+            });
+        }
+
+        if (branchSelect) {
+            branchSelect.value = templateData.branchId != null ? String(templateData.branchId) : '';
+            branchSelect.addEventListener('change', event => {
+                const value = event.target.value;
+                templateData.branchId = value ? parseInt(value, 10) : null;
+                updatePreview();
+            });
+        }
+
+        if (statusSelect) {
+            statusSelect.value = templateData.status ?? statusSelect.value;
+            statusSelect.addEventListener('change', event => {
+                templateData.status = event.target.value;
+                updatePreview();
+            });
+        }
+
+        function renderContextRows() {
+            contextRows.innerHTML = '';
+
+            if (defaultContextEntries.length === 0) {
+                const emptyRow = document.createElement('tr');
+                emptyRow.innerHTML = '<td colspan="3" class="text-center text-muted">لا توجد متغيرات معرفة</td>';
+                contextRows.appendChild(emptyRow);
+                return;
+            }
+
+            defaultContextEntries.forEach((entry, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <input type="text" class="form-control form-control-sm context-key" data-index="${index}" placeholder="مثال: amount" />
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm context-value" data-index="${index}" placeholder="القيمة الافتراضية" />
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-danger context-remove" data-index="${index}"><i class="fas fa-trash"></i></button>
+                    </td>`;
+
+                contextRows.appendChild(row);
+
+                const keyInput = row.querySelector('.context-key');
+                const valueInput = row.querySelector('.context-value');
+
+                keyInput.value = entry.key ?? '';
+                valueInput.value = entry.value ?? '';
+
+                keyInput.addEventListener('input', evt => {
+                    defaultContextEntries[index].key = evt.target.value;
+                    updatePreview();
+                });
+
+                valueInput.addEventListener('input', evt => {
+                    defaultContextEntries[index].value = evt.target.value;
+                    updatePreview();
+                });
+
+                row.querySelector('.context-remove').addEventListener('click', () => {
+                    defaultContextEntries.splice(index, 1);
+                    renderContextRows();
+                    updatePreview();
+                });
+            });
+        }
+
+        function renderConditionRows() {
+            conditionRows.innerHTML = '';
+
+            if (!templateData.conditions || templateData.conditions.length === 0) {
+                const emptyRow = document.createElement('tr');
+                emptyRow.innerHTML = '<td colspan="4" class="text-center text-muted">لا توجد شروط معرفة</td>';
+                conditionRows.appendChild(emptyRow);
+                return;
+            }
+
+            templateData.conditions.forEach((condition, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <input type="text" class="form-control form-control-sm condition-context" data-index="${index}" placeholder="اسم المتغير" />
+                    </td>
+                    <td>
+                        <select class="form-select form-select-sm condition-operator" data-index="${index}">
+                            ${conditionOperators.map(op => `<option value="${op.value}">${op.label}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm condition-value" data-index="${index}" placeholder="القيمة للمقارنة" />
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-danger condition-remove" data-index="${index}"><i class="fas fa-trash"></i></button>
+                    </td>`;
+
+                conditionRows.appendChild(row);
+
+                const contextInput = row.querySelector('.condition-context');
+                const operatorSelect = row.querySelector('.condition-operator');
+                const valueInput = row.querySelector('.condition-value');
+
+                contextInput.value = condition.contextKey ?? '';
+                operatorSelect.value = condition.operator ?? conditionOperators[0].value;
+                valueInput.value = condition.value ?? '';
+
+                contextInput.addEventListener('input', evt => {
+                    templateData.conditions[index].contextKey = evt.target.value;
+                    updatePreview();
+                });
+
+                operatorSelect.addEventListener('change', evt => {
+                    templateData.conditions[index].operator = evt.target.value;
+                    updatePreview();
+                });
+
+                valueInput.addEventListener('input', evt => {
+                    templateData.conditions[index].value = evt.target.value;
+                    updatePreview();
+                });
+
+                row.querySelector('.condition-remove').addEventListener('click', () => {
+                    templateData.conditions.splice(index, 1);
+                    renderConditionRows();
+                    updatePreview();
+                });
+            });
+        }
+
+        function buildValueEditorHtml(field, index) {
+            return `
+                <div class="input-group input-group-sm value-editor" data-field="${field}" data-index="${index}">
+                    <span class="input-group-text"><i class="fas ${field === 'debit' ? 'fa-arrow-down' : 'fa-arrow-up'}"></i></span>
+                    <select class="form-select form-select-sm value-type" data-field="${field}" data-index="${index}">
+                        ${valueTypes.map(type => `<option value="${type.value}">${type.label}</option>`).join('')}
+                    </select>
+                    <input type="number" step="0.01" class="form-control form-control-sm value-fixed" data-field="${field}" data-index="${index}" placeholder="0.00" />
+                    <input type="text" class="form-control form-control-sm value-context d-none" data-field="${field}" data-index="${index}" placeholder="اسم المتغير" />
+                    <input type="text" class="form-control form-control-sm value-expression d-none" data-field="${field}" data-index="${index}" placeholder="مثال: {amount} * 0.05" />
+                </div>`;
+        }
+
+        function renderLineRows() {
+            lineRows.innerHTML = '';
+
+            if (!templateData.lines || templateData.lines.length === 0) {
+                const emptyRow = document.createElement('tr');
+                emptyRow.innerHTML = '<td colspan="6" class="text-center text-muted">أضف بنداً واحداً على الأقل للقيد</td>';
+                lineRows.appendChild(emptyRow);
+                return;
+            }
+
+            templateData.lines.forEach((line, index) => {
+                if (!line.debit) {
+                    line.debit = createValue();
+                }
+
+                if (!line.credit) {
+                    line.credit = createValue();
+                }
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <select class="form-select form-select-sm line-account" data-index="${index}">
+                            ${accountOptionsHtml}
+                        </select>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm line-description" data-index="${index}" placeholder="بيان البند" />
+                    </td>
+                    <td>
+                        <select class="form-select form-select-sm line-cost-center" data-index="${index}">
+                            ${costCenterOptionsHtml}
+                        </select>
+                    </td>
+                    <td>
+                        ${buildValueEditorHtml('debit', index)}
+                    </td>
+                    <td>
+                        ${buildValueEditorHtml('credit', index)}
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-danger line-remove" data-index="${index}"><i class="fas fa-trash"></i></button>
+                    </td>`;
+
+                lineRows.appendChild(row);
+
+                const accountSelect = row.querySelector('.line-account');
+                const descriptionInput = row.querySelector('.line-description');
+                const costCenterSelect = row.querySelector('.line-cost-center');
+
+                accountSelect.value = line.accountId ? String(line.accountId) : '';
+                descriptionInput.value = line.description ?? '';
+                costCenterSelect.value = line.costCenterId ? String(line.costCenterId) : '';
+
+                accountSelect.addEventListener('change', evt => {
+                    const value = evt.target.value;
+                    templateData.lines[index].accountId = value ? parseInt(value, 10) : 0;
+                    updatePreview();
+                });
+
+                descriptionInput.addEventListener('input', evt => {
+                    templateData.lines[index].description = evt.target.value;
+                    updatePreview();
+                });
+
+                costCenterSelect.addEventListener('change', evt => {
+                    const value = evt.target.value;
+                    templateData.lines[index].costCenterId = value ? parseInt(value, 10) : null;
+                    updatePreview();
+                });
+
+                setupValueEditor(row, index, 'debit');
+                setupValueEditor(row, index, 'credit');
+
+                row.querySelector('.line-remove').addEventListener('click', () => {
+                    templateData.lines.splice(index, 1);
+                    renderLineRows();
+                    updatePreview();
+                });
+            });
+        }
+
+        function setupValueEditor(row, index, field) {
+            const editor = row.querySelector(`.value-editor[data-field="${field}"]`);
+            if (!editor) {
+                return;
+            }
+
+            const typeSelect = editor.querySelector('.value-type');
+            const fixedInput = editor.querySelector('.value-fixed');
+            const contextInput = editor.querySelector('.value-context');
+            const expressionInput = editor.querySelector('.value-expression');
+
+            const value = templateData.lines[index][field] ?? createValue();
+            templateData.lines[index][field] = value;
+
+            const applyVisibility = type => {
+                fixedInput.classList.toggle('d-none', type !== 'Fixed');
+                contextInput.classList.toggle('d-none', type !== 'ContextValue');
+                expressionInput.classList.toggle('d-none', type !== 'Expression');
+            };
+
+            typeSelect.value = value.type ?? 'Fixed';
+            fixedInput.value = value.fixedValue != null ? value.fixedValue : 0;
+            contextInput.value = value.contextKey ?? '';
+            expressionInput.value = value.expression ?? '';
+            applyVisibility(typeSelect.value);
+
+            typeSelect.addEventListener('change', evt => {
+                const type = evt.target.value;
+                value.type = type;
+
+                if (type === 'Fixed') {
+                    value.fixedValue = value.fixedValue != null ? value.fixedValue : 0;
+                    fixedInput.value = value.fixedValue;
+                } else if (type === 'ContextValue') {
+                    value.contextKey = value.contextKey ?? '';
+                    contextInput.value = value.contextKey;
+                } else if (type === 'Expression') {
+                    value.expression = value.expression ?? '';
+                    expressionInput.value = value.expression;
+                }
+
+                applyVisibility(type);
+                updatePreview();
+            });
+
+            fixedInput.addEventListener('input', evt => {
+                const parsed = parseFloat(evt.target.value);
+                value.fixedValue = Number.isNaN(parsed) ? 0 : parsed;
+                updatePreview();
+            });
+
+            contextInput.addEventListener('input', evt => {
+                value.contextKey = evt.target.value;
+                updatePreview();
+            });
+
+            expressionInput.addEventListener('input', evt => {
+                value.expression = evt.target.value;
+                updatePreview();
+            });
+        }
+
+        document.getElementById('addContextRow')?.addEventListener('click', () => {
+            defaultContextEntries.push({ key: '', value: '' });
+            renderContextRows();
+            updatePreview();
+        });
+
+        document.getElementById('addConditionRow')?.addEventListener('click', () => {
+            templateData.conditions = Array.isArray(templateData.conditions) ? templateData.conditions : [];
+            templateData.conditions.push({ contextKey: '', operator: conditionOperators[0].value, value: '' });
+            renderConditionRows();
+            updatePreview();
+        });
+
+        document.getElementById('addLineRow')?.addEventListener('click', () => {
+            templateData.lines.push(createLine());
+            renderLineRows();
+            updatePreview();
+        });
+
+        function sanitizeValue(value) {
+            const result = {
+                type: value?.type ?? 'Fixed',
+                fixedValue: value?.fixedValue ?? 0,
+                contextKey: value?.contextKey ?? '',
+                expression: value?.expression ?? ''
+            };
+
+            if (result.type === 'Fixed') {
+                const parsed = parseFloat(result.fixedValue);
+                result.fixedValue = Number.isNaN(parsed) ? 0 : parsed;
+                delete result.contextKey;
+                delete result.expression;
+            } else if (result.type === 'ContextValue') {
+                result.contextKey = result.contextKey ?? '';
+                delete result.fixedValue;
+                delete result.expression;
+            } else if (result.type === 'Expression') {
+                result.expression = result.expression ?? '';
+                delete result.fixedValue;
+                delete result.contextKey;
+            }
+
+            return result;
+        }
+
+        function buildTemplatePayload() {
+            const payload = {
+                description: (templateData.description ?? '').trim() || null,
+                branchId: templateData.branchId != null ? templateData.branchId : null,
+                status: templateData.status || 'Posted',
+                defaultContext: null,
+                conditions: [],
+                lines: []
+            };
+
+            const contextObject = {};
+            defaultContextEntries.forEach(entry => {
+                const key = (entry.key ?? '').trim();
+                if (key.length > 0) {
+                    contextObject[key] = entry.value ?? '';
+                }
+            });
+            payload.defaultContext = Object.keys(contextObject).length > 0 ? contextObject : null;
+
+            if (Array.isArray(templateData.conditions)) {
+                payload.conditions = templateData.conditions
+                    .map(condition => ({
+                        contextKey: (condition.contextKey ?? '').trim(),
+                        operator: condition.operator ?? conditionOperators[0].value,
+                        value: condition.value ?? ''
+                    }))
+                    .filter(condition => condition.contextKey.length > 0);
+            }
+
+            if (Array.isArray(templateData.lines)) {
+                payload.lines = templateData.lines
+                    .map(line => ({
+                        accountId: line.accountId ? parseInt(line.accountId, 10) : 0,
+                        description: line.description ?? '',
+                        costCenterId: line.costCenterId ? parseInt(line.costCenterId, 10) : null,
+                        debit: sanitizeValue(line.debit),
+                        credit: sanitizeValue(line.credit)
+                    }))
+                    .filter(line => line.accountId > 0);
+            }
+
+            return payload;
+        }
+
+        function updatePreview() {
+            const payload = buildTemplatePayload();
+            const jsonText = JSON.stringify(payload, null, 2);
+            templateField.value = jsonText;
+            if (templatePreview) {
+                templatePreview.textContent = jsonText;
+            }
+        }
+
+        const form = templateField.closest('form');
+        form?.addEventListener('submit', () => {
+            updatePreview();
+        });
+
+        renderContextRows();
+        renderConditionRows();
+        renderLineRows();
+        updatePreview();
+    });
+</script>

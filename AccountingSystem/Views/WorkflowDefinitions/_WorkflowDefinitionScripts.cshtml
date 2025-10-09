@@ -1,0 +1,183 @@
+@using System.Collections.Generic
+@using AccountingSystem.ViewModels.Workflows
+@model WorkflowDefinitionViewModel
+@{
+    var usersJson = ViewData["WorkflowUsersJson"] as string ?? "[]";
+    var permissionsJson = ViewData["WorkflowPermissionsJson"] as string ?? "[]";
+    var branchesJson = ViewData["WorkflowBranchesJson"] as string ?? "[]";
+    var existingStepsJson = System.Text.Json.JsonSerializer.Serialize(Model.Steps ?? new List<WorkflowStepInputModel>());
+}
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+    (function () {
+        const users = @Html.Raw(usersJson);
+        const permissions = @Html.Raw(permissionsJson);
+        const branches = @Html.Raw(branchesJson);
+        const existingSteps = @Html.Raw(existingStepsJson);
+        const stepsList = document.getElementById('stepsList');
+        const stepsJsonInput = document.getElementById('stepsJson');
+        const noStepsMessage = document.getElementById('noStepsMessage');
+        const addStepBtn = document.getElementById('addStepBtn');
+
+        if (!stepsList || !stepsJsonInput || !noStepsMessage || !addStepBtn) {
+            return;
+        }
+
+        function createOption(value, text) {
+            const option = document.createElement('option');
+            option.value = value ?? '';
+            option.textContent = text;
+            return option;
+        }
+
+        function toggleEmptyMessage() {
+            const hasSteps = stepsList.children.length > 0;
+            noStepsMessage.style.display = hasSteps ? 'none' : 'block';
+        }
+
+        function buildStepElement(step) {
+            const container = document.createElement('div');
+            container.className = 'list-group-item workflow-step mb-2';
+            container.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label">نوع الخطوة</label>
+                                <select class="form-select step-type">
+                                    <option value="1">مستخدم محدد</option>
+                                    <option value="2">حسب الصلاحية</option>
+                                    <option value="3">مسؤولو الفرع</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 step-user-container">
+                                <label class="form-label">المستخدم</label>
+                                <select class="form-select step-user">
+                                    <option value="">اختر المستخدم</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 step-permission-container">
+                                <label class="form-label">الصلاحية</label>
+                                <select class="form-select step-permission">
+                                    <option value="">اختر الصلاحية</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 step-branch-container">
+                                <label class="form-label">الفرع</label>
+                                <select class="form-select step-branch">
+                                    <option value="">اختر الفرع</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ms-2">
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-step"><i class="fa fa-trash"></i></button>
+                    </div>
+                </div>`;
+
+            const typeSelect = container.querySelector('.step-type');
+            const userSelect = container.querySelector('.step-user');
+            const permissionSelect = container.querySelector('.step-permission');
+            const branchSelect = container.querySelector('.step-branch');
+
+            users.forEach(user => userSelect.appendChild(createOption(user.id ?? user.Id, user.name ?? user.Name)));
+            permissions.forEach(permission => permissionSelect.appendChild(createOption(permission.name ?? permission.Name, permission.displayName ?? permission.DisplayName)));
+            branches.forEach(branch => branchSelect.appendChild(createOption(branch.id ?? branch.Id, branch.name ?? branch.Name)));
+
+            typeSelect.value = step.stepType || step.StepType || '1';
+            if (step.approverUserId || step.ApproverUserId) {
+                userSelect.value = step.approverUserId || step.ApproverUserId;
+            }
+            if (step.requiredPermission || step.RequiredPermission) {
+                permissionSelect.value = step.requiredPermission || step.RequiredPermission;
+            }
+            if (step.branchId || step.BranchId) {
+                branchSelect.value = step.branchId || step.BranchId;
+            }
+
+            function updateVisibility() {
+                const type = parseInt(typeSelect.value);
+                container.querySelector('.step-user-container').style.display = type === 1 ? 'block' : 'none';
+                container.querySelector('.step-permission-container').style.display = type === 2 ? 'block' : 'none';
+                container.querySelector('.step-branch-container').style.display = type === 3 ? 'block' : 'none';
+            }
+
+            typeSelect.addEventListener('change', updateVisibility);
+            updateVisibility();
+
+            container.querySelector('.remove-step').addEventListener('click', function () {
+                container.remove();
+                toggleEmptyMessage();
+                serializeSteps();
+            });
+
+            return container;
+        }
+
+        function addStep(step = {}) {
+            const element = buildStepElement(step);
+            stepsList.appendChild(element);
+            toggleEmptyMessage();
+            serializeSteps();
+        }
+
+        addStepBtn.addEventListener('click', function () {
+            addStep({ stepType: 1 });
+        });
+
+        Sortable.create(stepsList, {
+            animation: 150,
+            handle: '.workflow-step',
+            onUpdate: () => serializeSteps()
+        });
+
+        function serializeSteps() {
+            const steps = [];
+            const stepElements = stepsList.querySelectorAll('.workflow-step');
+            stepElements.forEach((element, index) => {
+                const type = parseInt(element.querySelector('.step-type').value);
+                const step = {
+                    Order: index + 1,
+                    StepType: type
+                };
+
+                if (type === 1) {
+                    const userValue = element.querySelector('.step-user').value;
+                    step.ApproverUserId = userValue || null;
+                } else if (type === 2) {
+                    const permissionValue = element.querySelector('.step-permission').value;
+                    step.RequiredPermission = permissionValue || null;
+                } else if (type === 3) {
+                    const branchValue = element.querySelector('.step-branch').value;
+                    step.BranchId = branchValue ? parseInt(branchValue) : null;
+                }
+
+                steps.push(step);
+            });
+
+            stepsJsonInput.value = JSON.stringify(steps);
+        }
+
+        stepsList.addEventListener('change', function (event) {
+            const target = event.target;
+            if (target && (target.classList.contains('step-type') || target.classList.contains('step-user') || target.classList.contains('step-permission') || target.classList.contains('step-branch'))) {
+                serializeSteps();
+            }
+        });
+
+        const form = stepsJsonInput?.form;
+        if (form) {
+            form.addEventListener('submit', function () {
+                serializeSteps();
+            });
+        }
+
+        const stepsArray = Array.isArray(existingSteps) ? existingSteps : [];
+        if (stepsArray.length > 0) {
+            stepsArray.forEach(step => addStep(step));
+        }
+
+        toggleEmptyMessage();
+    })();
+</script>

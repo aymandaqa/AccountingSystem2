@@ -41,7 +41,7 @@ namespace AccountingSystem.Controllers
                 })
                 .ToListAsync();
 
-            var culture = new CultureInfo("ar-SA");
+            var culture = new CultureInfo("ar");
             var history = await _context.PayrollBatches
                 .AsNoTracking()
                 .Include(b => b.Branch)
@@ -432,7 +432,7 @@ namespace AccountingSystem.Controllers
                 .ToListAsync();
 
             var processedSet = new HashSet<string>(processed.Select(p => $"{p.Year}-{p.Month}"));
-            var culture = new CultureInfo("ar-SA");
+            var culture = new CultureInfo("ar");
             var start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
             var months = Enumerable.Range(0, 12)
                 .Select(offset => start.AddMonths(-offset))
