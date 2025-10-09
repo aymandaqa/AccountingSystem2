@@ -294,10 +294,10 @@ namespace AccountingSystem.Controllers
 
                 var entryDate = System.DateTime.Today;
                 var entryDescription = $"صرف رواتب الموظفين لفرع {batchBranch.NameAr} بتاريخ {entryDate:yyyy-MM-dd}";
-                var lines = new List<JournalEntryLine>();
+                var accrualLines = new List<JournalEntryLine>();
                 foreach (var line in group)
                 {
-                    lines.Add(new JournalEntryLine
+                    accrualLines.Add(new JournalEntryLine
                     {
                         AccountId = line.Employee.AccountId,
                         CreditAmount = line.Amount,
@@ -307,7 +307,7 @@ namespace AccountingSystem.Controllers
                 }
 
                 var groupTotal = group.Sum(l => l.Amount);
-                lines.Add(new JournalEntryLine
+                accrualLines.Add(new JournalEntryLine
                 {
                     AccountId = payrollExpenseAccount.Id,
                     CreditAmount = 0,
@@ -315,16 +315,47 @@ namespace AccountingSystem.Controllers
                     Description = $"مصروف رواتب فرع {batchBranch.NameAr} عن {entryDate:yyyy-MM-dd}"
                 });
 
-                var entry = await _journalEntryService.CreateJournalEntryAsync(
+                var accrualEntry = await _journalEntryService.CreateJournalEntryAsync(
                     entryDate,
                     entryDescription,
                     branchId,
                     userId,
-                    lines,
+                    accrualLines,
                     JournalEntryStatus.Posted,
                     reference: $"PR-{batch.Id}");
 
-                journalNumbers.Add(entry.Number);
+                journalNumbers.Add(accrualEntry.Number);
+
+                var settlementLines = new List<JournalEntryLine>();
+                foreach (var line in group)
+                {
+                    settlementLines.Add(new JournalEntryLine
+                    {
+                        AccountId = line.Employee.AccountId,
+                        CreditAmount = 0,
+                        DebitAmount = line.Amount,
+                        Description = $"سداد راتب {line.Employee.Name} عن {entryDate:yyyy-MM-dd}"
+                    });
+                }
+
+                settlementLines.Add(new JournalEntryLine
+                {
+                    AccountId = batch.PaymentAccountId,
+                    CreditAmount = groupTotal,
+                    DebitAmount = 0,
+                    Description = $"دفع رواتب فرع {batchBranch.NameAr} عن {entryDate:yyyy-MM-dd}"
+                });
+
+                var settlementEntry = await _journalEntryService.CreateJournalEntryAsync(
+                    entryDate,
+                    $"دفع رواتب الموظفين لفرع {batchBranch.NameAr} بتاريخ {entryDate:yyyy-MM-dd}",
+                    branchId,
+                    userId,
+                    settlementLines,
+                    JournalEntryStatus.Posted,
+                    reference: $"PR-{batch.Id}");
+
+                journalNumbers.Add(settlementEntry.Number);
             }
 
             batch.Status = PayrollBatchStatus.Confirmed;
