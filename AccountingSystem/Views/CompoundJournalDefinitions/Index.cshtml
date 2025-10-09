@@ -1,0 +1,84 @@
+@model IEnumerable<AccountingSystem.Models.CompoundJournals.CompoundJournalDefinition>
+@{
+    ViewData["Title"] = "التعاريف المركبة";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">@ViewData["Title"]</h2>
+    <a class="btn btn-primary" asp-action="Create"><i class="fas fa-plus"></i> تعريف جديد</a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Warning"] != null)
+{
+    <div class="alert alert-warning">@TempData["Warning"]</div>
+}
+
+<div class="card">
+    <div class="card-body table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>الاسم</th>
+                    <th>الوصف</th>
+                    <th>نوع التنفيذ</th>
+                    <th>نشط؟</th>
+                    <th>موعد التنفيذ القادم</th>
+                    <th>آخر تنفيذ</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.Name</td>
+                        <td>@item.Description</td>
+                        <td>@GetTriggerTypeText(item.TriggerType)</td>
+                        <td>
+                            @if (item.IsActive)
+                            {
+                                <span class="badge bg-success">نشط</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">متوقف</span>
+                            }
+                        </td>
+                        <td>@FormatDate(item.NextRunUtc)</td>
+                        <td>@FormatDate(item.LastRunUtc)</td>
+                        <td class="text-end">
+                            <div class="btn-group">
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@item.Id"><i class="fas fa-eye"></i></a>
+                                <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@item.Id"><i class="fas fa-edit"></i></a>
+                                <a class="btn btn-sm btn-outline-success" asp-action="Execute" asp-route-id="@item.Id"><i class="fas fa-play"></i></a>
+                                <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@item.Id"><i class="fas fa-trash"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@functions {
+    private static string FormatDate(DateTime? date)
+    {
+        return date.HasValue ? date.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm") : "-";
+    }
+
+    private static string GetTriggerTypeText(AccountingSystem.Models.CompoundJournals.CompoundJournalTriggerType triggerType)
+    {
+        return triggerType switch
+        {
+            AccountingSystem.Models.CompoundJournals.CompoundJournalTriggerType.Manual => "يدوي",
+            AccountingSystem.Models.CompoundJournals.CompoundJournalTriggerType.OneTime => "مرة واحدة",
+            AccountingSystem.Models.CompoundJournals.CompoundJournalTriggerType.Recurring => "متكرر",
+            _ => triggerType.ToString()
+        };
+    }
+}

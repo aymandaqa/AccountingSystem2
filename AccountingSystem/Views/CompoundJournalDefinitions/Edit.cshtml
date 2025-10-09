@@ -1,0 +1,20 @@
+@model AccountingSystem.ViewModels.CompoundJournalDefinitionFormViewModel
+@{
+    ViewData["Title"] = "تعديل تعريف قيد مركب";
+}
+
+<h2 class="mb-4">@ViewData["Title"]</h2>
+
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="Id" />
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <partial name="_Form" />
+    <div class="d-flex justify-content-between">
+        <a class="btn btn-secondary" asp-action="Details" asp-route-id="@Model.Id">إلغاء</a>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ التعديلات</button>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
