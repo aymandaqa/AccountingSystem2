@@ -268,12 +268,20 @@
 
                 employees.forEach(emp => {
                     const row = document.createElement('tr');
-                    row.dataset.id = emp.Id;
+                    const employeeId = typeof emp.id === 'number' ? emp.id : parseInt(emp.id, 10);
+                    if (Number.isNaN(employeeId)) {
+                        return;
+                    }
+                    const employeeName = emp.name ?? '';
+                    const jobTitle = emp.jobTitle ?? '';
+                    const salary = Number(emp.salary ?? 0);
+
+                    row.dataset.id = String(employeeId);
                     row.innerHTML = `
-                        <td><input type="checkbox" class="form-check-input" value="${emp.Id}" /></td>
-                        <td><strong>${emp.Name}</strong><div class="text-muted small">${emp.JobTitle || ''}</div></td>
-                        <td>${emp.JobTitle || ''}</td>
-                        <td>${Number(emp.Salary).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>`;
+                        <td><input type="checkbox" class="form-check-input" value="${employeeId}" /></td>
+                        <td><strong>${employeeName}</strong><div class="text-muted small">${jobTitle}</div></td>
+                        <td>${jobTitle}</td>
+                        <td>${salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>`;
                     employeesTable.appendChild(row);
                 });
 
@@ -334,7 +342,9 @@
                 e.preventDefault();
                 const branchId = getSelectedBranchId();
                 const periodValue = monthSelect.value;
-                const employees = Array.from(employeesTable.querySelectorAll('input[type="checkbox"]:checked')).map(cb => parseInt(cb.value));
+                const employees = Array.from(employeesTable.querySelectorAll('input[type="checkbox"]:checked'))
+                    .map(cb => parseInt(cb.value, 10))
+                    .filter(id => !Number.isNaN(id));
 
                 if (branchId === null) {
                     alert('يرجى اختيار الفرع.');
@@ -373,7 +383,8 @@
                         return;
                     }
 
-                    currentBatchId = result.summary.BatchId;
+                    const summary = result.summary ?? {};
+                    currentBatchId = summary.batchId ?? null;
                     summaryContent.innerHTML = `
                         <div class="list-group">
                             <div class="list-group-item d-flex justify-content-between">
@@ -382,11 +393,11 @@
                             </div>
                             <div class="list-group-item d-flex justify-content-between">
                                 <span>عدد الموظفين</span>
-                                <strong>${result.summary.EmployeeCount}</strong>
+                                <strong>${summary.employeeCount ?? 0}</strong>
                             </div>
                             <div class="list-group-item d-flex justify-content-between">
                                 <span>إجمالي الرواتب</span>
-                                <strong>${Number(result.summary.TotalAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                                <strong>${Number(summary.totalAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                             </div>
                         </div>`;
 
