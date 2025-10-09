@@ -4,7 +4,7 @@
     ViewData["Title"] = "إدارة الرواتب";
     var branches = ViewBag.Branches as List<SelectListItem> ?? new();
     var history = ViewBag.History as List<AccountingSystem.ViewModels.PayrollBatchHistoryViewModel> ?? new();
-    var culture = new CultureInfo("ar-SA");
+    var culture = new CultureInfo("ar");
 }
 
 <div class="container-fluid payroll-container">
@@ -487,7 +487,7 @@
                         }
                         const data = await response.json();
                         const periodDate = data.year && data.month
-                            ? new Date(data.year, data.month - 1, 1).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long' })
+                            ? new Date(data.year, data.month - 1, 1).toLocaleDateString('ar', { year: 'numeric', month: 'long' })
                             : '';
                         let html = '';
                         if (periodDate) {
