@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using AccountingSystem.Models;
+using AccountingSystem.Models.CompoundJournals;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -61,6 +62,8 @@ namespace AccountingSystem.Data
         public DbSet<WorkflowInstance> WorkflowInstances { get; set; }
         public DbSet<WorkflowAction> WorkflowActions { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<CompoundJournalDefinition> CompoundJournalDefinitions { get; set; }
+        public DbSet<CompoundJournalExecutionLog> CompoundJournalExecutionLogs { get; set; }
 
         public override int SaveChanges()
         {
@@ -854,6 +857,32 @@ namespace AccountingSystem.Data
                     .WithMany()
                     .HasForeignKey(e => e.WorkflowActionId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<CompoundJournalDefinition>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Description).HasMaxLength(1000);
+                entity.Property(e => e.TemplateJson).IsRequired();
+                entity.HasOne(e => e.CreatedBy)
+                    .WithMany()
+                    .HasForeignKey(e => e.CreatedById)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<CompoundJournalExecutionLog>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Message).HasMaxLength(2000);
+                entity.HasOne(e => e.Definition)
+                    .WithMany(d => d.ExecutionLogs)
+                    .HasForeignKey(e => e.DefinitionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.JournalEntry)
+                    .WithMany()
+                    .HasForeignKey(e => e.JournalEntryId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             // Seed data

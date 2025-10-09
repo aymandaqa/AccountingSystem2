@@ -1,0 +1,78 @@
+@model AccountingSystem.ViewModels.CompoundJournalDefinitionFormViewModel
+@using AccountingSystem.Models.CompoundJournals
+
+<div class="mb-3">
+    <label asp-for="Name" class="form-label"></label>
+    <input asp-for="Name" class="form-control" />
+    <span asp-validation-for="Name" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Description" class="form-label"></label>
+    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+    <span asp-validation-for="Description" class="text-danger"></span>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="mb-3">
+            <label asp-for="TriggerType" class="form-label"></label>
+            <select asp-for="TriggerType" class="form-select" asp-items="Html.GetEnumSelectList<CompoundJournalTriggerType>()"></select>
+            <span asp-validation-for="TriggerType" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="form-check mt-4 pt-2">
+            <input asp-for="IsActive" class="form-check-input" />
+            <label asp-for="IsActive" class="form-check-label"></label>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="mb-3">
+            <label asp-for="StartDateUtc" class="form-label"></label>
+            <input asp-for="StartDateUtc" class="form-control" type="datetime-local" />
+            <span asp-validation-for="StartDateUtc" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="mb-3">
+            <label asp-for="EndDateUtc" class="form-label"></label>
+            <input asp-for="EndDateUtc" class="form-control" type="datetime-local" />
+            <span asp-validation-for="EndDateUtc" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="mb-3">
+            <label asp-for="NextRunUtc" class="form-label"></label>
+            <input asp-for="NextRunUtc" class="form-control" type="datetime-local" />
+            <span asp-validation-for="NextRunUtc" class="text-danger"></span>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label asp-for="Recurrence" class="form-label"></label>
+            <select asp-for="Recurrence" class="form-select" asp-items="Html.GetEnumSelectList<CompoundJournalRecurrence>()"></select>
+            <span asp-validation-for="Recurrence" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label asp-for="RecurrenceInterval" class="form-label"></label>
+            <input asp-for="RecurrenceInterval" class="form-control" type="number" min="1" />
+            <span asp-validation-for="RecurrenceInterval" class="text-danger"></span>
+        </div>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="TemplateJson" class="form-label"></label>
+    <textarea asp-for="TemplateJson" class="form-control" rows="18" spellcheck="false" style="direction:ltr"></textarea>
+    <div class="form-text">استخدم JSON لتحديد البنود والشروط والسياق. يمكن استخدام المتغيرات داخل الصيغة مثل {amount}.</div>
+    <span asp-validation-for="TemplateJson" class="text-danger"></span>
+</div>

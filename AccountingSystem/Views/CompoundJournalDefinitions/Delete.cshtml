@@ -1,0 +1,15 @@
+@model AccountingSystem.Models.CompoundJournals.CompoundJournalDefinition
+@{
+    ViewData["Title"] = "حذف تعريف القيد المركب";
+}
+
+<h2 class="mb-4 text-danger">@ViewData["Title"]</h2>
+<p>هل أنت متأكد من حذف التعريف <strong>@Model.Name</strong>؟ سيتم حذف سجل التنفيذ المرتبط به.</p>
+
+<form asp-action="Delete" method="post">
+    <input type="hidden" asp-for="Id" />
+    <div class="d-flex justify-content-between">
+        <a class="btn btn-secondary" asp-action="Details" asp-route-id="@Model.Id">إلغاء</a>
+        <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> حذف</button>
+    </div>
+</form>
