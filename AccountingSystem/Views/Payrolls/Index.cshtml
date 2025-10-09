@@ -1,9 +1,10 @@
 @using Microsoft.AspNetCore.Mvc.Rendering
+@using System.Globalization
 @{
     ViewData["Title"] = "إدارة الرواتب";
     var branches = ViewBag.Branches as List<SelectListItem> ?? new();
-    var paymentAccounts = ViewBag.PaymentAccounts as List<SelectListItem> ?? new();
     var history = ViewBag.History as List<AccountingSystem.ViewModels.PayrollBatchHistoryViewModel> ?? new();
+    var culture = new CultureInfo("ar-SA");
 }
 
 <div class="container-fluid payroll-container">
@@ -20,13 +21,9 @@
             </select>
         </div>
         <div class="col-md-4">
-            <label class="form-label">حساب الدفع</label>
-            <select id="paymentAccountSelect" class="form-select">
-                <option value="">اختر حساب الدفع</option>
-                @foreach (var account in paymentAccounts)
-                {
-                    <option value="@account.Value">@account.Text</option>
-                }
+            <label class="form-label">رواتب شهر</label>
+            <select id="monthSelect" class="form-select" disabled>
+                <option value="">اختر شهر الرواتب</option>
             </select>
         </div>
         <div class="col-md-4 d-flex align-items-end justify-content-end">
@@ -82,7 +79,7 @@
                             <tr>
                                 <th>الرقم</th>
                                 <th>الفرع</th>
-                                <th>حساب الدفع</th>
+                                <th>شهر الرواتب</th>
                                 <th>الموظفون</th>
                                 <th>الإجمالي</th>
                                 <th>الحالة</th>
@@ -97,7 +94,20 @@
                                 <tr>
                                     <td>#@item.Id</td>
                                     <td>@item.BranchName</td>
-                                    <td>@item.PaymentAccountName</td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(item.PeriodName))
+                                        {
+                                            @item.PeriodName
+                                        }
+                                        else if (item.Year > 0 && item.Month > 0)
+                                        {
+                                            @(new System.DateTime(item.Year, item.Month, 1).ToString("MMMM yyyy", culture))
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">---</span>
+                                        }
+                                    </td>
                                     <td>@item.EmployeeCount</td>
                                     <td>@item.TotalAmount.ToString("N2")</td>
                                     <td>
@@ -175,7 +185,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const branchSelect = document.getElementById('branchSelect');
-            const paymentAccountSelect = document.getElementById('paymentAccountSelect');
+            const monthSelect = document.getElementById('monthSelect');
             const employeesTable = document.getElementById('employeesTable').querySelector('tbody');
             const selectAllBtn = document.getElementById('selectAllBtn');
             const clearSelectionBtn = document.getElementById('clearSelectionBtn');
@@ -209,6 +219,41 @@
             function updateSelectedCount() {
                 const checked = employeesTable.querySelectorAll('input[type="checkbox"]:checked').length;
                 selectedCount.textContent = checked + ' موظف محدد';
+            }
+
+            async function loadMonths() {
+                monthSelect.innerHTML = '<option value="">اختر شهر الرواتب</option>';
+                monthSelect.disabled = true;
+
+                const branchId = getSelectedBranchId();
+                if (branchId === null) {
+                    return;
+                }
+
+                const response = await fetch(`@Url.Action("AvailableMonths")?branchId=${branchId}`);
+                if (!response.ok) {
+                    alert('تعذر تحميل أشهر الرواتب المتاحة');
+                    return;
+                }
+
+                const data = await response.json();
+                if (!Array.isArray(data) || data.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'لا توجد أشهر متاحة';
+                    option.disabled = true;
+                    monthSelect.appendChild(option);
+                    return;
+                }
+
+                data.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = `${item.year}-${item.month}`;
+                    option.textContent = item.name;
+                    monthSelect.appendChild(option);
+                });
+
+                monthSelect.disabled = false;
             }
 
             function renderEmployees(employees) {
@@ -263,6 +308,7 @@
             branchSelect.addEventListener('change', () => {
                 currentBatchId = null;
                 summaryContent.innerHTML = '';
+                loadMonths();
                 loadEmployees();
             });
 
@@ -287,21 +333,23 @@
             processBtn.addEventListener('click', async function (e) {
                 e.preventDefault();
                 const branchId = getSelectedBranchId();
-                const paymentAccountId = paymentAccountSelect.value;
+                const periodValue = monthSelect.value;
                 const employees = Array.from(employeesTable.querySelectorAll('input[type="checkbox"]:checked')).map(cb => parseInt(cb.value));
 
                 if (branchId === null) {
                     alert('يرجى اختيار الفرع.');
                     return;
                 }
-                if (!paymentAccountId) {
-                    alert('يرجى اختيار حساب الدفع.');
+                if (!periodValue) {
+                    alert('يرجى اختيار شهر الرواتب.');
                     return;
                 }
                 if (employees.length === 0) {
                     alert('يرجى اختيار موظف واحد على الأقل.');
                     return;
                 }
+
+                const [year, month] = periodValue.split('-').map(part => parseInt(part, 10));
 
                 toggleOverlay(true);
                 try {
@@ -313,7 +361,8 @@
                         },
                         body: JSON.stringify({
                             branchId,
-                            paymentAccountId: parseInt(paymentAccountId),
+                            year,
+                            month,
                             employeeIds: employees
                         })
                     });
@@ -328,6 +377,10 @@
                     summaryContent.innerHTML = `
                         <div class="list-group">
                             <div class="list-group-item d-flex justify-content-between">
+                                <span>شهر الرواتب</span>
+                                <strong>${monthSelect.options[monthSelect.selectedIndex]?.textContent ?? ''}</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between">
                                 <span>عدد الموظفين</span>
                                 <strong>${result.summary.EmployeeCount}</strong>
                             </div>
@@ -338,6 +391,14 @@
                         </div>`;
 
                     summaryModal.show();
+                    const selectedOption = monthSelect.querySelector(`option[value="${periodValue}"]`);
+                    if (selectedOption) {
+                        selectedOption.remove();
+                    }
+                    if (monthSelect.options.length === 1) {
+                        monthSelect.selectedIndex = 0;
+                        monthSelect.disabled = true;
+                    }
                 } finally {
                     toggleOverlay(false);
                 }
@@ -381,6 +442,11 @@
                 window.location.reload();
             });
 
+            if (branchSelect.value) {
+                loadMonths();
+                loadEmployees();
+            }
+
             if (historyTable) {
                 historyTable.querySelectorAll('.view-batch').forEach(btn => {
                     btn.addEventListener('click', async function () {
@@ -391,7 +457,14 @@
                             return;
                         }
                         const data = await response.json();
-                        let html = `<div class="mb-3"><strong>الحالة:</strong> ${data.status}</div>`;
+                        const periodDate = data.year && data.month
+                            ? new Date(data.year, data.month - 1, 1).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long' })
+                            : '';
+                        let html = '';
+                        if (periodDate) {
+                            html += `<div class="mb-3"><strong>شهر الرواتب:</strong> ${periodDate}</div>`;
+                        }
+                        html += `<div class="mb-3"><strong>الحالة:</strong> ${data.status}</div>`;
                         html += `<div class="mb-3"><strong>المرجع:</strong> ${data.reference || '---'}</div>`;
                         html += '<table class="table table-sm"><thead><tr><th>الموظف</th><th>المسمى الوظيفي</th><th>المبلغ</th></tr></thead><tbody>';
                         data.employees.forEach(emp => {
