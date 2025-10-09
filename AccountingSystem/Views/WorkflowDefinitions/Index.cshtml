@@ -47,7 +47,7 @@
                                     }
                                 </td>
                                 <td>@definition.Steps.Count()</td>
-                                <td>@definition.UpdatedAt?.ToString("yyyy/MM/dd HH:mm") ?? definition.CreatedAt.ToString("yyyy/MM/dd HH:mm")</td>
+                                <td>@(definition.UpdatedAt?.ToString("yyyy/MM/dd HH:mm") ?? definition.CreatedAt.ToString("yyyy/MM/dd HH:mm"))</td>
                                 <td class="text-end">
                                     <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@definition.Id"><i class="fa fa-pen ms-1"></i> تعديل</a>
                                     <form asp-action="ToggleStatus" asp-route-id="@definition.Id" method="post" class="d-inline">
