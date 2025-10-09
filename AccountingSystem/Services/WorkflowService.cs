@@ -105,7 +105,9 @@ namespace AccountingSystem.Services
             var actions = await _context.WorkflowActions
                 .Include(a => a.WorkflowStep)
                 .Include(a => a.WorkflowInstance).ThenInclude(i => i.WorkflowDefinition)
-                .Where(a => a.Status == WorkflowActionStatus.Pending && a.WorkflowInstance.Status == WorkflowInstanceStatus.InProgress)
+                .Where(a => a.Status == WorkflowActionStatus.Pending
+                    && a.WorkflowInstance.Status == WorkflowInstanceStatus.InProgress
+                    && a.WorkflowStep.Order == a.WorkflowInstance.CurrentStepOrder)
                 .ToListAsync(cancellationToken);
 
             var eligible = actions.Where(a => IsUserEligibleForStep(a.WorkflowStep, user)).ToList();
@@ -139,6 +141,9 @@ namespace AccountingSystem.Services
 
             if (!IsUserEligibleForStep(action.WorkflowStep, user))
                 throw new InvalidOperationException("لا تملك صلاحية اعتماد هذه الخطوة");
+
+            if (action.WorkflowStep.Order != action.WorkflowInstance.CurrentStepOrder)
+                throw new InvalidOperationException("لا يمكن اعتماد خطوة غير الحالية");
 
             action.Status = approve ? WorkflowActionStatus.Approved : WorkflowActionStatus.Rejected;
             action.UserId = userId;
