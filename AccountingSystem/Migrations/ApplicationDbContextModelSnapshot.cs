@@ -610,6 +610,10 @@ namespace AccountingSystem.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<string>("NationalId")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<decimal>("Salary")
                         .HasColumnType("decimal(18,2)");
 

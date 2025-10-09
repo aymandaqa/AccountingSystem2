@@ -18,6 +18,9 @@ namespace AccountingSystem.Models
         [StringLength(50)]
         public string? PhoneNumber { get; set; }
 
+        [StringLength(50)]
+        public string? NationalId { get; set; }
+
         [Required]
         public int BranchId { get; set; }
 

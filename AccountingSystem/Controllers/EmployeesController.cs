@@ -63,7 +63,8 @@ namespace AccountingSystem.Controllers
                     Salary = employee.Salary,
                     AccountCode = employee.Account.Code,
                     AccountName = employee.Account.NameAr,
-                    IsActive = employee.IsActive
+                    IsActive = employee.IsActive,
+                    NationalId = employee.NationalId
                 });
             }
 
@@ -85,14 +86,15 @@ namespace AccountingSystem.Controllers
             var worksheet = workbook.Worksheets.Add("Employees");
 
             worksheet.Cell(1, 1).Value = "اسم الموظف";
-            worksheet.Cell(1, 2).Value = "المسمى الوظيفي";
-            worksheet.Cell(1, 3).Value = "الراتب";
-            worksheet.Cell(1, 4).Value = "الفرع (الكود أو الاسم)";
-            worksheet.Cell(1, 5).Value = "رقم الهاتف";
-            worksheet.Cell(1, 6).Value = "العنوان";
-            worksheet.Cell(1, 7).Value = "تاريخ التعيين";
-            worksheet.Cell(1, 8).Value = "الحالة";
-            worksheet.Cell(1, 9).Value = "كود الحساب";
+            worksheet.Cell(1, 2).Value = "رقم الهوية";
+            worksheet.Cell(1, 3).Value = "المسمى الوظيفي";
+            worksheet.Cell(1, 4).Value = "الراتب";
+            worksheet.Cell(1, 5).Value = "الفرع (الكود أو الاسم)";
+            worksheet.Cell(1, 6).Value = "رقم الهاتف";
+            worksheet.Cell(1, 7).Value = "العنوان";
+            worksheet.Cell(1, 8).Value = "تاريخ التعيين";
+            worksheet.Cell(1, 9).Value = "الحالة";
+            worksheet.Cell(1, 10).Value = "كود الحساب";
 
             worksheet.Row(1).Style.Font.Bold = true;
 
@@ -100,17 +102,18 @@ namespace AccountingSystem.Controllers
             foreach (var employee in employees)
             {
                 worksheet.Cell(row, 1).Value = employee.Name;
-                worksheet.Cell(row, 2).Value = employee.JobTitle ?? string.Empty;
-                worksheet.Cell(row, 3).Value = employee.Salary;
-                worksheet.Cell(row, 4).Value = string.IsNullOrWhiteSpace(employee.Branch?.Code)
+                worksheet.Cell(row, 2).Value = employee.NationalId ?? string.Empty;
+                worksheet.Cell(row, 3).Value = employee.JobTitle ?? string.Empty;
+                worksheet.Cell(row, 4).Value = employee.Salary;
+                worksheet.Cell(row, 5).Value = string.IsNullOrWhiteSpace(employee.Branch?.Code)
                     ? employee.Branch?.NameAr ?? string.Empty
                     : $"{employee.Branch.Code} - {employee.Branch.NameAr}";
-                worksheet.Cell(row, 5).Value = employee.PhoneNumber ?? string.Empty;
-                worksheet.Cell(row, 6).Value = employee.Address ?? string.Empty;
-                worksheet.Cell(row, 7).Value = employee.HireDate;
-                worksheet.Cell(row, 7).Style.DateFormat.Format = "yyyy-mm-dd";
-                worksheet.Cell(row, 8).Value = employee.IsActive ? "نشط" : "موقوف";
-                worksheet.Cell(row, 9).Value = employee.Account?.Code ?? string.Empty;
+                worksheet.Cell(row, 6).Value = employee.PhoneNumber ?? string.Empty;
+                worksheet.Cell(row, 7).Value = employee.Address ?? string.Empty;
+                worksheet.Cell(row, 8).Value = employee.HireDate;
+                worksheet.Cell(row, 8).Style.DateFormat.Format = "yyyy-mm-dd";
+                worksheet.Cell(row, 9).Value = employee.IsActive ? "نشط" : "موقوف";
+                worksheet.Cell(row, 10).Value = employee.Account?.Code ?? string.Empty;
                 row++;
             }
 
@@ -173,6 +176,7 @@ namespace AccountingSystem.Controllers
                 Name = model.Name,
                 Address = model.Address,
                 PhoneNumber = model.PhoneNumber,
+                NationalId = model.NationalId,
                 BranchId = model.BranchId,
                 HireDate = model.HireDate,
                 Salary = model.Salary,
@@ -205,6 +209,7 @@ namespace AccountingSystem.Controllers
                 Name = employee.Name,
                 Address = employee.Address,
                 PhoneNumber = employee.PhoneNumber,
+                NationalId = employee.NationalId,
                 BranchId = employee.BranchId,
                 HireDate = employee.HireDate,
                 Salary = employee.Salary,
@@ -285,6 +290,7 @@ namespace AccountingSystem.Controllers
             employee.Name = model.Name;
             employee.Address = model.Address;
             employee.PhoneNumber = model.PhoneNumber;
+            employee.NationalId = model.NationalId;
             employee.BranchId = model.BranchId;
             employee.HireDate = model.HireDate;
             employee.Salary = model.Salary;
@@ -389,7 +395,7 @@ namespace AccountingSystem.Controllers
                                 continue;
                             }
 
-                            var branchValue = excelRow.Cell(4).GetValue<string>().Trim();
+                            var branchValue = excelRow.Cell(5).GetValue<string>().Trim();
                             if (string.IsNullOrEmpty(branchValue))
                             {
                                 errors.Add($"السطر {rowNumber}: الفرع مطلوب.");
@@ -421,7 +427,7 @@ namespace AccountingSystem.Controllers
                             }
 
                             decimal salary = 0;
-                            var salaryCell = excelRow.Cell(3);
+                            var salaryCell = excelRow.Cell(4);
                             if (!salaryCell.IsEmpty())
                             {
                                 if (salaryCell.TryGetValue<decimal>(out var salaryDecimal))
@@ -446,7 +452,7 @@ namespace AccountingSystem.Controllers
                             }
 
                             DateTime hireDate = DateTime.Today;
-                            var hireDateCell = excelRow.Cell(7);
+                            var hireDateCell = excelRow.Cell(8);
                             if (!hireDateCell.IsEmpty())
                             {
                                 if (hireDateCell.TryGetValue<DateTime>(out var hireDateValue))
@@ -470,7 +476,7 @@ namespace AccountingSystem.Controllers
                                 }
                             }
 
-                            var statusText = excelRow.Cell(8).GetValue<string>().Trim();
+                            var statusText = excelRow.Cell(9).GetValue<string>().Trim();
                             var isActive = true;
                             if (!string.IsNullOrEmpty(statusText))
                             {
@@ -494,9 +500,10 @@ namespace AccountingSystem.Controllers
 
                             var accountResult = await _accountService.CreateAccountAsync($"{branch.NameAr} - {name}", branch.EmployeeParentAccountId.Value);
 
-                            var jobTitle = excelRow.Cell(2).GetValue<string>()?.Trim();
-                            var phone = excelRow.Cell(5).GetValue<string>()?.Trim();
-                            var address = excelRow.Cell(6).GetValue<string>()?.Trim();
+                            var nationalId = excelRow.Cell(2).GetValue<string>()?.Trim();
+                            var jobTitle = excelRow.Cell(3).GetValue<string>()?.Trim();
+                            var phone = excelRow.Cell(6).GetValue<string>()?.Trim();
+                            var address = excelRow.Cell(7).GetValue<string>()?.Trim();
 
                             var employee = new Employee
                             {
@@ -505,6 +512,7 @@ namespace AccountingSystem.Controllers
                                 Salary = salary,
                                 BranchId = branch.Id,
                                 PhoneNumber = string.IsNullOrWhiteSpace(phone) ? null : phone,
+                                NationalId = string.IsNullOrWhiteSpace(nationalId) ? null : nationalId,
                                 Address = string.IsNullOrWhiteSpace(address) ? null : address,
                                 HireDate = hireDate,
                                 AccountId = accountResult.Id,
