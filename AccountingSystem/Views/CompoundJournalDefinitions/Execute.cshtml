@@ -25,7 +25,7 @@
                     <option value="">-- بدون تغيير --</option>
                     @foreach (var branch in Model.Branches)
                     {
-                        <option value="@branch.Key" @(Model.BranchIdOverride == branch.Key ? "selected" : string.Empty)>@branch.Value</option>
+                        <option value="@branch.Key" selected="@(Model.BranchIdOverride == branch.Key ? "selected" : null)">@branch.Value</option>
                     }
                 </select>
                 <span asp-validation-for="BranchIdOverride" class="text-danger"></span>
