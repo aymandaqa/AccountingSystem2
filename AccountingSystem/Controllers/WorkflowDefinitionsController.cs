@@ -140,8 +140,21 @@ namespace AccountingSystem.Controllers
             definition.DocumentType = model.DocumentType;
             definition.UpdatedAt = DateTime.UtcNow;
 
-            _context.WorkflowSteps.RemoveRange(definition.Steps);
-            await _context.SaveChangesAsync();
+            var stepIds = definition.Steps.Select(s => s.Id).ToList();
+            if (stepIds.Count > 0)
+            {
+                var relatedActions = await _context.WorkflowActions
+                    .Where(a => stepIds.Contains(a.WorkflowStepId))
+                    .ToListAsync();
+
+                if (relatedActions.Count > 0)
+                {
+                    _context.WorkflowActions.RemoveRange(relatedActions);
+                }
+
+                _context.WorkflowSteps.RemoveRange(definition.Steps);
+                await _context.SaveChangesAsync();
+            }
 
             await SaveStepsAsync(definition, model.Steps);
 
