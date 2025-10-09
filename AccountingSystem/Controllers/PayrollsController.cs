@@ -285,7 +285,7 @@ namespace AccountingSystem.Controllers
 
             var payrollExpenseAccount = await _context.Accounts
                 .Include(a => a.Currency)
-                .FirstOrDefaultAsync(a => a.Id == payrollExpenseAccountId);
+                .FirstOrDefaultAsync(a => a.Code == payrollExpenseAccountId.ToString());
 
             if (payrollExpenseAccount == null)
             {
