@@ -41,7 +41,10 @@ namespace AccountingSystem.Controllers
                 })
                 .ToListAsync();
 
-            var culture = new CultureInfo("ar");
+            var culture = new CultureInfo("ar-EG")
+            {
+                DateTimeFormat = { Calendar = new GregorianCalendar() }
+            };
             var history = await _context.PayrollBatches
                 .AsNoTracking()
                 .Include(b => b.Branch)
@@ -432,7 +435,10 @@ namespace AccountingSystem.Controllers
                 .ToListAsync();
 
             var processedSet = new HashSet<string>(processed.Select(p => $"{p.Year}-{p.Month}"));
-            var culture = new CultureInfo("ar");
+            var culture = new CultureInfo("ar-EG")
+            {
+                DateTimeFormat = { Calendar = new GregorianCalendar() }
+            };
             var start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
             var months = Enumerable.Range(0, 12)
                 .Select(offset => start.AddMonths(-offset))
