@@ -221,6 +221,15 @@
                 selectedCount.textContent = checked + ' موظف محدد';
             }
 
+            function getProperty(obj, ...names) {
+                for (const name of names) {
+                    if (obj && Object.prototype.hasOwnProperty.call(obj, name) && obj[name] !== undefined && obj[name] !== null) {
+                        return obj[name];
+                    }
+                }
+                return undefined;
+            }
+
             async function loadMonths() {
                 monthSelect.innerHTML = '<option value="">اختر شهر الرواتب</option>';
                 monthSelect.disabled = true;
@@ -247,9 +256,16 @@
                 }
 
                 data.forEach(item => {
+                    const year = getProperty(item, 'year', 'Year');
+                    const month = getProperty(item, 'month', 'Month');
+                    const name = getProperty(item, 'name', 'Name') ?? '';
+                    if (year === undefined || month === undefined) {
+                        return;
+                    }
+
                     const option = document.createElement('option');
-                    option.value = `${item.year}-${item.month}`;
-                    option.textContent = item.name;
+                    option.value = `${year}-${month}`;
+                    option.textContent = name;
                     monthSelect.appendChild(option);
                 });
 
@@ -268,13 +284,15 @@
 
                 employees.forEach(emp => {
                     const row = document.createElement('tr');
-                    const employeeId = typeof emp.id === 'number' ? emp.id : parseInt(emp.id, 10);
+                    const employeeIdRaw = getProperty(emp, 'id', 'Id');
+                    const employeeId = typeof employeeIdRaw === 'number' ? employeeIdRaw : parseInt(employeeIdRaw, 10);
                     if (Number.isNaN(employeeId)) {
                         return;
                     }
-                    const employeeName = emp.name ?? '';
-                    const jobTitle = emp.jobTitle ?? '';
-                    const salary = Number(emp.salary ?? 0);
+                    const employeeName = getProperty(emp, 'name', 'Name') ?? '';
+                    const jobTitle = getProperty(emp, 'jobTitle', 'JobTitle') ?? '';
+                    const salaryRaw = getProperty(emp, 'salary', 'Salary');
+                    const salary = Number(salaryRaw ?? 0);
 
                     row.dataset.id = String(employeeId);
                     row.innerHTML = `
