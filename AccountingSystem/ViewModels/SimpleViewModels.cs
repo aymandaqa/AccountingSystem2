@@ -293,6 +293,38 @@ namespace AccountingSystem.ViewModels
         Yearly = 2
     }
 
+    public class BranchIncomeStatementReportViewModel
+    {
+        public BranchIncomeStatementRangeMode RangeMode { get; set; } = BranchIncomeStatementRangeMode.DateRange;
+        public DateTime FromDate { get; set; } = new DateTime(DateTime.Now.Year, 1, 1);
+        public DateTime ToDate { get; set; } = DateTime.Today;
+        public int SelectedYear { get; set; } = DateTime.Today.Year;
+        public int SelectedQuarter { get; set; } = (DateTime.Today.Month - 1) / 3 + 1;
+        public List<SelectListItem> AvailableYears { get; set; } = new List<SelectListItem>();
+        public List<BranchIncomeStatementRow> Rows { get; set; } = new List<BranchIncomeStatementRow>();
+        public decimal TotalRevenue { get; set; }
+        public decimal TotalExpenses { get; set; }
+        public decimal NetIncome { get; set; }
+        public string BaseCurrencyCode { get; set; } = string.Empty;
+        public bool FiltersApplied { get; set; }
+        public bool HasResults => Rows.Any();
+    }
+
+    public class BranchIncomeStatementRow
+    {
+        public int? BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+        public decimal Revenue { get; set; }
+        public decimal Expenses { get; set; }
+        public decimal NetIncome => Revenue - Expenses;
+    }
+
+    public enum BranchIncomeStatementRangeMode
+    {
+        DateRange = 0,
+        Quarter = 1
+    }
+
     public class AccountStatementViewModel
     {
         public int? AccountId { get; set; }
