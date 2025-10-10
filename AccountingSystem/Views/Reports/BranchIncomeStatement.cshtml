@@ -1,0 +1,156 @@
+@model AccountingSystem.ViewModels.BranchIncomeStatementReportViewModel
+@using AccountingSystem.ViewModels
+@{
+    ViewData["Title"] = "قائمة الدخل حسب الفروع";
+    var dateRangeHiddenClass = Model.RangeMode == BranchIncomeStatementRangeMode.DateRange ? string.Empty : "d-none";
+    var quarterHiddenClass = Model.RangeMode == BranchIncomeStatementRangeMode.Quarter ? string.Empty : "d-none";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="fas fa-sitemap me-2"></i>قائمة الدخل حسب الفروع</h4>
+                    <span class="small">حلل صافي الربح والإيرادات والمصروفات لكل فرع</span>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3 mb-4">
+                        <div class="col-lg-4 col-md-6">
+                            <label class="form-label d-block">نوع الفترة</label>
+                            <div class="btn-group" role="group">
+                                <input type="radio" class="btn-check" name="rangeMode" id="rangeModeDate" value="DateRange" @(Model.RangeMode == BranchIncomeStatementRangeMode.DateRange ? "checked" : null) />
+                                <label class="btn btn-outline-info" for="rangeModeDate"><i class="fas fa-calendar-alt me-1"></i>حسب فترة</label>
+                                <input type="radio" class="btn-check" name="rangeMode" id="rangeModeQuarter" value="Quarter" @(Model.RangeMode == BranchIncomeStatementRangeMode.Quarter ? "checked" : null) />
+                                <label class="btn btn-outline-info" for="rangeModeQuarter"><i class="fas fa-calendar-week me-1"></i>حسب ربع</label>
+                            </div>
+                            <small class="text-muted d-block mt-1">اختر بين تحديد فترة زمنية مخصصة أو اختيار ربع سنوي</small>
+                        </div>
+                        <div id="dateRangeFrom" class="col-lg-2 col-md-3 @dateRangeHiddenClass">
+                            <label class="form-label">من تاريخ</label>
+                            <input type="date" name="fromDate" class="form-control" value="@Model.FromDate.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div id="dateRangeTo" class="col-lg-2 col-md-3 @dateRangeHiddenClass">
+                            <label class="form-label">إلى تاريخ</label>
+                            <input type="date" name="toDate" class="form-control" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div id="quarterYear" class="col-lg-2 col-md-3 @quarterHiddenClass">
+                            <label class="form-label">السنة</label>
+                            <select name="year" class="form-select">
+                                @foreach (var year in Model.AvailableYears)
+                                {
+                                    <option value="@year.Value" selected="@(year.Selected ? "selected" : null)">@year.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div id="quarterSelection" class="col-lg-2 col-md-3 @quarterHiddenClass">
+                            <label class="form-label">الربع</label>
+                            <select name="quarter" class="form-select">
+                                @for (var i = 1; i <= 4; i++)
+                                {
+                                    <option value="@i" selected="@(Model.SelectedQuarter == i ? "selected" : null)">الربع @i</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-lg-4 col-md-6 align-self-end">
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-info flex-grow-1">
+                                    <i class="fas fa-search me-1"></i>عرض التقرير
+                                </button>
+                                <a asp-action="BranchIncomeStatement" class="btn btn-outline-secondary">
+                                    <i class="fas fa-undo me-1"></i>إعادة تعيين
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+
+                    @if (Model.HasResults)
+                    {
+                        <div class="alert alert-info d-flex align-items-center gap-3">
+                            <i class="fas fa-info-circle fa-lg"></i>
+                            <div>
+                                <div>الفترة: من <strong>@Model.FromDate.ToString("dd/MM/yyyy")</strong> إلى <strong>@Model.ToDate.ToString("dd/MM/yyyy")</strong></div>
+                                <div>العملة: <strong>@Model.BaseCurrencyCode</strong></div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-striped table-bordered align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>الفرع</th>
+                                        <th class="text-end">الإيرادات (@Model.BaseCurrencyCode)</th>
+                                        <th class="text-end">المصروفات (@Model.BaseCurrencyCode)</th>
+                                        <th class="text-end">صافي الدخل (@Model.BaseCurrencyCode)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var row in Model.Rows)
+                                    {
+                                        <tr>
+                                            <td>@row.BranchName</td>
+                                            <td class="text-end">@row.Revenue.ToString("N2")</td>
+                                            <td class="text-end">@row.Expenses.ToString("N2")</td>
+                                            <td class="text-end fw-bold">@row.NetIncome.ToString("N2")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot class="table-secondary">
+                                    <tr class="fw-bold">
+                                        <td>الإجمالي</td>
+                                        <td class="text-end">@Model.TotalRevenue.ToString("N2")</td>
+                                        <td class="text-end">@Model.TotalExpenses.ToString("N2")</td>
+                                        <td class="text-end">@Model.NetIncome.ToString("N2")</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    }
+                    else if (Model.FiltersApplied)
+                    {
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-inbox fa-2x mb-3"></i>
+                            <p class="mb-0">لا توجد حركات ضمن الفترة المحددة.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-secondary">استخدم المرشحات أعلاه لعرض التقرير.</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const dateRangeElements = [
+                document.getElementById('dateRangeFrom'),
+                document.getElementById('dateRangeTo')
+            ];
+            const quarterElements = [
+                document.getElementById('quarterYear'),
+                document.getElementById('quarterSelection')
+            ];
+
+            function toggleSections() {
+                const selectedMode = document.querySelector('input[name="rangeMode"]:checked')?.value;
+                if (selectedMode === 'Quarter') {
+                    dateRangeElements.forEach(el => el?.classList.add('d-none'));
+                    quarterElements.forEach(el => el?.classList.remove('d-none'));
+                } else {
+                    dateRangeElements.forEach(el => el?.classList.remove('d-none'));
+                    quarterElements.forEach(el => el?.classList.add('d-none'));
+                }
+            }
+
+            document.querySelectorAll('input[name="rangeMode"]').forEach(radio => {
+                radio.addEventListener('change', toggleSections);
+            });
+
+            toggleSections();
+        });
+    </script>
+}

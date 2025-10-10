@@ -2009,6 +2009,140 @@ namespace AccountingSystem.Controllers
             return View(model);
         }
 
+        // GET: Reports/BranchIncomeStatement
+        public async Task<IActionResult> BranchIncomeStatement(
+            BranchIncomeStatementRangeMode rangeMode = BranchIncomeStatementRangeMode.DateRange,
+            DateTime? fromDate = null,
+            DateTime? toDate = null,
+            int? year = null,
+            int? quarter = null)
+        {
+            var today = DateTime.Today;
+            var defaultFrom = new DateTime(today.Year, 1, 1);
+            var defaultTo = today;
+
+            var availableYearsRaw = await _context.JournalEntries
+                .AsNoTracking()
+                .Where(e => e.Status == JournalEntryStatus.Posted)
+                .Select(e => e.Date.Year)
+                .Distinct()
+                .OrderByDescending(y => y)
+                .ToListAsync();
+
+            if (!availableYearsRaw.Any())
+            {
+                availableYearsRaw.Add(today.Year);
+            }
+
+            var selectedYear = year.HasValue && availableYearsRaw.Contains(year.Value)
+                ? year.Value
+                : availableYearsRaw.First();
+
+            var currentQuarter = ((today.Month - 1) / 3) + 1;
+            var selectedQuarter = quarter.HasValue && quarter.Value is >= 1 and <= 4
+                ? quarter.Value
+                : currentQuarter;
+            selectedQuarter = Math.Max(1, Math.Min(4, selectedQuarter));
+
+            DateTime actualFrom;
+            DateTime actualTo;
+
+            if (rangeMode == BranchIncomeStatementRangeMode.Quarter)
+            {
+                var quarterStartMonth = (selectedQuarter - 1) * 3 + 1;
+                actualFrom = new DateTime(selectedYear, quarterStartMonth, 1);
+                actualTo = actualFrom.AddMonths(3).AddDays(-1);
+            }
+            else
+            {
+                actualFrom = (fromDate ?? defaultFrom).Date;
+                actualTo = (toDate ?? defaultTo).Date;
+                if (actualFrom > actualTo)
+                {
+                    (actualFrom, actualTo) = (actualTo, actualFrom);
+                }
+            }
+
+            var baseCurrency = await _context.Currencies.AsNoTracking().FirstAsync(c => c.IsBase);
+
+            var lines = await _context.JournalEntryLines
+                .AsNoTracking()
+                .Include(l => l.JournalEntry)
+                    .ThenInclude(j => j.Branch)
+                .Include(l => l.Account)
+                    .ThenInclude(a => a.Currency)
+                .Where(l => l.Account.Classification == AccountClassification.IncomeStatement)
+                .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
+                .Where(l => l.JournalEntry.Date >= actualFrom && l.JournalEntry.Date <= actualTo)
+                .ToListAsync();
+
+            var rowsDictionary = new Dictionary<int?, BranchIncomeStatementRow>();
+
+            foreach (var line in lines)
+            {
+                var branchId = line.JournalEntry.BranchId;
+                var branchName = line.JournalEntry.Branch?.NameAr ?? "بدون فرع";
+
+                if (!rowsDictionary.TryGetValue(branchId, out var row))
+                {
+                    row = new BranchIncomeStatementRow
+                    {
+                        BranchId = branchId,
+                        BranchName = branchName
+                    };
+                    rowsDictionary[branchId] = row;
+                }
+
+                var amount = line.Account.Nature == AccountNature.Debit
+                    ? line.DebitAmount - line.CreditAmount
+                    : line.CreditAmount - line.DebitAmount;
+
+                var accountCurrency = line.Account.Currency ?? baseCurrency;
+                var amountInBase = _currencyService.Convert(amount, accountCurrency, baseCurrency);
+
+                if (line.Account.AccountType == AccountType.Revenue)
+                {
+                    row.Revenue += amountInBase;
+                }
+                else if (line.Account.AccountType == AccountType.Expenses)
+                {
+                    row.Expenses += amountInBase;
+                }
+            }
+
+            var rows = rowsDictionary.Values
+                .Where(r => r.Revenue != 0 || r.Expenses != 0)
+                .OrderBy(r => r.BranchName)
+                .ToList();
+
+            var model = new BranchIncomeStatementReportViewModel
+            {
+                RangeMode = rangeMode,
+                FromDate = actualFrom,
+                ToDate = actualTo,
+                SelectedYear = selectedYear,
+                SelectedQuarter = selectedQuarter,
+                AvailableYears = availableYearsRaw
+                    .OrderByDescending(y => y)
+                    .Select(y => new SelectListItem
+                    {
+                        Value = y.ToString(),
+                        Text = y.ToString(),
+                        Selected = y == selectedYear
+                    })
+                    .ToList(),
+                Rows = rows,
+                TotalRevenue = rows.Sum(r => r.Revenue),
+                TotalExpenses = rows.Sum(r => r.Expenses),
+                BaseCurrencyCode = baseCurrency.Code,
+                FiltersApplied = true
+            };
+
+            model.NetIncome = model.TotalRevenue - model.TotalExpenses;
+
+            return View(model);
+        }
+
         private static List<BranchExpensesReportColumn> BuildBranchExpensesColumns(DateTime fromDate, DateTime toDate, BranchExpensesPeriodGrouping grouping, CultureInfo culture)
         {
             var columns = new List<BranchExpensesReportColumn>();
