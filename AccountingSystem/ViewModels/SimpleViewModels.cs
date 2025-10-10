@@ -391,6 +391,7 @@ namespace AccountingSystem.ViewModels
         public List<AccountTreeNodeViewModel> AccountTypeTrees { get; set; } = new List<AccountTreeNodeViewModel>();
         public List<AccountTreeNodeViewModel> CashBoxTree { get; set; } = new List<AccountTreeNodeViewModel>();
         public bool CashBoxParentAccountConfigured { get; set; }
+        public List<AccountTreeNodeViewModel> ParentAccountTree { get; set; } = new List<AccountTreeNodeViewModel>();
     }
 
     public class CashBoxTreeViewModel

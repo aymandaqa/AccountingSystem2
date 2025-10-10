@@ -40,6 +40,40 @@ namespace AccountingSystem.Controllers
 
             var treeData = await ComputeDashboardTreeAsync(userBranchIds, branchId, fromDate, toDate, currencyId);
 
+            List<AccountTreeNodeViewModel> CloneTree(IEnumerable<AccountTreeNodeViewModel> source)
+            {
+                return source
+                    .OrderBy(n => n.Code ?? string.Empty)
+                    .Select(n =>
+                    {
+                        var clone = new AccountTreeNodeViewModel
+                        {
+                            Id = n.Id,
+                            Code = n.Code,
+                            Name = n.Name,
+                            NameAr = n.NameAr,
+                            AccountType = n.AccountType,
+                            Nature = n.Nature,
+                            CurrencyCode = n.CurrencyCode,
+                            OpeningBalance = n.OpeningBalance,
+                            CurrentBalance = n.CurrentBalance,
+                            Balance = n.Balance,
+                            BalanceSelected = n.BalanceSelected,
+                            BalanceBase = n.BalanceBase,
+                            IsActive = n.IsActive,
+                            CanPostTransactions = n.CanPostTransactions,
+                            ParentId = n.ParentId,
+                            Level = n.Level,
+                            Children = new List<AccountTreeNodeViewModel>()
+                        };
+
+                        clone.Children = CloneTree(n.Children);
+                        clone.HasChildren = clone.Children.Any();
+                        return clone;
+                    })
+                    .ToList();
+            }
+
             var accountTypeTrees = treeData.RootNodes
                 .GroupBy(n => n.AccountType)
                 .Select(g => new AccountTreeNodeViewModel
@@ -63,6 +97,8 @@ namespace AccountingSystem.Controllers
                     : 0m;
             }
 
+            var parentAccountTree = CloneTree(treeData.RootNodes);
+
             var viewModel = new DashboardViewModel
             {
                 SelectedBranchId = branchId,
@@ -83,7 +119,8 @@ namespace AccountingSystem.Controllers
                 TotalExpensesBase = GetTotal(AccountType.Expenses, true),
                 AccountTypeTrees = accountTypeTrees,
                 CashBoxTree = treeData.CashBoxTree,
-                CashBoxParentAccountConfigured = treeData.CashBoxParentAccountConfigured
+                CashBoxParentAccountConfigured = treeData.CashBoxParentAccountConfigured,
+                ParentAccountTree = parentAccountTree
             };
 
             viewModel.NetIncome = viewModel.TotalRevenues - viewModel.TotalExpenses;
@@ -334,6 +371,20 @@ namespace AccountingSystem.Controllers
                 }
             }
 
+            void SortChildren(AccountTreeNodeViewModel node)
+            {
+                node.Children = node.Children
+                    .OrderBy(c => c.Code ?? string.Empty)
+                    .ToList();
+
+                node.HasChildren = node.Children.Any();
+
+                foreach (var child in node.Children)
+                {
+                    SortChildren(child);
+                }
+            }
+
             void ComputeBalances(AccountTreeNodeViewModel node)
             {
                 foreach (var child in node.Children)
@@ -349,9 +400,14 @@ namespace AccountingSystem.Controllers
                 }
             }
 
-            var rootNodes = nodes.Values.Where(n => n.ParentId == null).ToList();
+            var rootNodes = nodes.Values
+                .Where(n => n.ParentId == null)
+                .OrderBy(n => n.Code ?? string.Empty)
+                .ToList();
+
             foreach (var root in rootNodes)
             {
+                SortChildren(root);
                 ComputeBalances(root);
             }
 
