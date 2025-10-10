@@ -265,7 +265,7 @@
                                         @{
                                             ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode; ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
                                         }
-                                        @await Html.PartialAsync("_AccountBalanceTreeNode", Model.CashBoxTree)
+                                        @await Html.PartialAsync("_CashBoxTreeContent", Model.CashBoxTree)
                                     </div>
                                 }
                                 else
