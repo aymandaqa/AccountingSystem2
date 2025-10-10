@@ -13,7 +13,7 @@
 <div class="mb-3">
     <p><strong>البريد الإلكتروني:</strong> @Model.Email</p>
     <p><strong>الاسم:</strong> @Model.FullName</p>
-    <p><strong>آخر تسجيل دخول:</strong> @(Model.LastLoginAt?.ToString("yyyy-MM-dd HH:mm") ?? "-")</p>
+    <p><strong>آخر تسجيل دخول:</strong> @(Model.LastLoginAt?.ToString("dd/MM/yyyy HH:mm") ?? "-")</p>
 </div>
 
 <h3>تغيير كلمة المرور</h3>

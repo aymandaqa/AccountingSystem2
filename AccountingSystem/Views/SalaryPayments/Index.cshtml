@@ -26,7 +26,7 @@
                 @foreach (var item in Model)
                 {
                     <tr>
-                        <td>@item.Date.ToString("yyyy-MM-dd")</td>
+                        <td>@item.Date.ToString("dd/MM/yyyy")</td>
                         <td>@item.Employee.Name</td>
                         <td>@item.Branch.NameAr</td>
                         <td>@item.Amount.ToString("N2") @item.Currency.Code</td>

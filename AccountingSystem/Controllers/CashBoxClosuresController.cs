@@ -254,7 +254,7 @@ namespace AccountingSystem.Controllers
             foreach (var c in closures)
             {
                 var diff = c.CountedAmount - (c.ClosingBalance - c.OpeningBalance);
-                sb.AppendLine($"{c.CreatedAt:yyyy-MM-dd},{c.Account?.NameAr},{c.Branch?.NameAr},{c.OpeningBalance},{c.CountedAmount},{c.ClosingBalance},{diff},{c.Status}");
+                sb.AppendLine($"{c.CreatedAt:dd/MM/yyyy},{c.Account?.NameAr},{c.Branch?.NameAr},{c.OpeningBalance},{c.CountedAmount},{c.ClosingBalance},{diff},{c.Status}");
             }
 
             return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", "cashbox_closures.csv");

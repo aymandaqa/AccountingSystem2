@@ -101,7 +101,7 @@
         </div>
         <div class="document-header text-center">
             <h1>كشف حساب</h1>
-            <p class="document-meta mb-0">تاريخ الطباعة: @printDate.ToString("yyyy/MM/dd HH:mm")</p>
+            <p class="document-meta mb-0">تاريخ الطباعة: @printDate.ToString("dd/MM/yyyy HH:mm")</p>
         </div>
         <div class="row mb-4">
             <div class="col-6">
@@ -109,7 +109,7 @@
                     <div class="summary-title">بيانات الحساب</div>
                     <div><strong>الحساب:</strong> @Model.AccountName</div>
                     <div><strong>رقم الحساب:</strong> @Model.AccountCode</div>
-                    <div><strong>الفترة:</strong> @Model.FromDate.ToString("yyyy/MM/dd") - @Model.ToDate.ToString("yyyy/MM/dd")</div>
+                    <div><strong>الفترة:</strong> @Model.FromDate.ToString("dd/MM/yyyy") - @Model.ToDate.ToString("dd/MM/yyyy")</div>
                     @if (Model.BranchId.HasValue)
                     {
                         var selectedBranch = Model.Branches.FirstOrDefault(b => b.Value == Model.BranchId.Value.ToString());
@@ -172,7 +172,7 @@
                     foreach (var transaction in Model.Transactions)
                     {
                         <tr>
-                            <td>@transaction.Date.ToString("yyyy/MM/dd")</td>
+                            <td>@transaction.Date.ToString("dd/MM/yyyy")</td>
                             <td>@transaction.JournalEntryNumber</td>
                             <td>@(string.IsNullOrWhiteSpace(transaction.Reference) ? "-" : transaction.Reference)</td>
                             <td>@transaction.MovementType</td>

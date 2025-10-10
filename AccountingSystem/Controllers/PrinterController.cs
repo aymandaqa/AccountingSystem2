@@ -199,7 +199,7 @@ namespace Roadfn.Controllers
                 dataRow[0] = item?.ClientName;
                 //dataRow[3] = item?.CityName;
                 dataRow[7] = item?.AreaName;
-                dataRow[6] = Convert.ToDateTime(item.EntryDate).ToString("yyyy-MM-dd");
+                dataRow[6] = Convert.ToDateTime(item.EntryDate).ToString("dd/MM/yyyy");
                 dataRow[3] = item?.ShipmentPrice;
                 dataRow[4] = item?.ShipmentFees;
                 dataRow[8] = item?.ShipmentExtraFees;
@@ -219,7 +219,7 @@ namespace Roadfn.Controllers
             var company = await _accDB.Branches.FirstOrDefaultAsync(t => t.Id == usera.PaymentBranchId);
             var t = await _context.CompanyBranches.FirstOrDefaultAsync(t => t.Id.ToString() == company.Code);
 
-            document.Replace("{Date}", Convert.ToDateTime(header?.PaymentDate).ToString("yyyy-MM-dd"), true, true);
+            document.Replace("{Date}", Convert.ToDateTime(header?.PaymentDate).ToString("dd/MM/yyyy"), true, true);
             document.Replace("{Total delivery shipments}", details.Count().ToString(), true, true);
             document.Replace("{Total Amount}", header?.PaymentValue.ToString(), true, true);
             document.Replace("{Ref}", header?.Id.ToString(), true, true);

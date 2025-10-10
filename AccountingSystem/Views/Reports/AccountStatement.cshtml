@@ -111,7 +111,7 @@
                                         @foreach (var transaction in Model.Transactions)
                                         {
                                             <tr>
-                                                <td>@transaction.Date.ToString("yyyy/MM/dd")</td>
+                                                <td>@transaction.Date.ToString("dd/MM/yyyy")</td>
                                                 <td>
                                                     <a href="@Url.Action("Details", "JournalEntries", new { id = transaction.JournalEntryId })" class="text-decoration-none" target="_blank">
                                                         @transaction.JournalEntryNumber

@@ -75,13 +75,13 @@
                             <table class="table table-borderless">
                                 <tr>
                                     <th width="30%">تاريخ الإنشاء:</th>
-                                    <td>@Model.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td>@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
                                 </tr>
                                 @if (Model.UpdatedAt.HasValue)
                                 {
                                     <tr>
                                         <th>تاريخ التحديث:</th>
-                                        <td>@Model.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm")</td>
+                                        <td>@Model.UpdatedAt.Value.ToString("dd/MM/yyyy HH:mm")</td>
                                     </tr>
                                 }
                                 <tr>

@@ -313,7 +313,7 @@ namespace AccountingSystem.Controllers
                 }
 
                 var entryDate = System.DateTime.Today;
-                var entryDescription = $"صرف رواتب الموظفين لفرع {batchBranch.NameAr} بتاريخ {entryDate:yyyy-MM-dd}";
+                var entryDescription = $"صرف رواتب الموظفين لفرع {batchBranch.NameAr} بتاريخ {entryDate:dd/MM/yyyy}";
                 var lines = new List<JournalEntryLine>();
                 foreach (var line in group)
                 {
@@ -322,7 +322,7 @@ namespace AccountingSystem.Controllers
                         AccountId = line.Employee.AccountId,
                         CreditAmount = line.Amount,
                         DebitAmount = 0,
-                        Description = $"راتب {line.Employee.Name} عن {entryDate:yyyy-MM-dd}"
+                        Description = $"راتب {line.Employee.Name} عن {entryDate:dd/MM/yyyy}"
                     });
                 }
 
@@ -332,7 +332,7 @@ namespace AccountingSystem.Controllers
                     AccountId = payrollExpenseAccount.Id,
                     CreditAmount = 0,
                     DebitAmount = groupTotal,
-                    Description = $"مصروف رواتب فرع {batchBranch.NameAr} عن {entryDate:yyyy-MM-dd}"
+                    Description = $"مصروف رواتب فرع {batchBranch.NameAr} عن {entryDate:dd/MM/yyyy}"
                 });
 
                 var periodDate = new DateTime(
