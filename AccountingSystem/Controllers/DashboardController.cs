@@ -173,6 +173,64 @@ namespace AccountingSystem.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> LoadCashBoxTree(int? branchId = null, DateTime? fromDate = null, DateTime? toDate = null, int? currencyId = null)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userBranchIds = await _context.UserBranches
+                .Where(ub => ub.UserId == userId)
+                .Select(ub => ub.BranchId)
+                .ToListAsync();
+
+            if (branchId.HasValue && !userBranchIds.Contains(branchId.Value))
+            {
+                branchId = null;
+            }
+
+            var treeData = await ComputeDashboardTreeAsync(userBranchIds, branchId, fromDate, toDate, currencyId);
+
+            List<AccountTreeNodeViewModel> CloneNodes(IEnumerable<AccountTreeNodeViewModel> source)
+            {
+                return source
+                    .OrderBy(n => n.Code)
+                    .Select(n => new AccountTreeNodeViewModel
+                    {
+                        Id = n.Id,
+                        Code = n.Code,
+                        Name = n.Name,
+                        NameAr = n.NameAr,
+                        AccountType = n.AccountType,
+                        Nature = n.Nature,
+                        CurrencyCode = n.CurrencyCode,
+                        OpeningBalance = n.OpeningBalance,
+                        CurrentBalance = n.CurrentBalance,
+                        Balance = n.Balance,
+                        BalanceSelected = n.BalanceSelected,
+                        BalanceBase = n.BalanceBase,
+                        IsActive = n.IsActive,
+                        CanPostTransactions = n.CanPostTransactions,
+                        ParentId = n.ParentId,
+                        Level = n.Level,
+                        HasChildren = n.Children.Any(),
+                        Children = CloneNodes(n.Children)
+                    })
+                    .ToList();
+            }
+
+            var sanitizedNodes = CloneNodes(treeData.CashBoxTree);
+
+            ViewData["SelectedCurrencyCode"] = treeData.SelectedCurrency.Code;
+            ViewData["BaseCurrencyCode"] = treeData.BaseCurrency.Code;
+
+            var viewModel = new CashBoxTreeViewModel
+            {
+                Nodes = sanitizedNodes,
+                ParentConfigured = treeData.CashBoxParentAccountConfigured
+            };
+
+            return PartialView("~/Views/Dashboard/_CashBoxTreeContent.cshtml", viewModel);
+        }
+
+        [HttpGet]
         public async Task<IActionResult> GetBranches()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
