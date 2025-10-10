@@ -54,7 +54,7 @@
                                             <td>
                                                 <span class="badge bg-secondary"><i class="fas fa-users ms-1"></i>@group.UsersCount</span>
                                             </td>
-                                            <td>@group.CreatedAt.ToString("yyyy-MM-dd")</td>
+                                            <td>@group.CreatedAt.ToString("dd/MM/yyyy")</td>
                                             <td class="text-center">
                                                 <div class="btn-group" role="group">
                                                     <a class="btn btn-sm btn-warning" asp-action="Edit" asp-route-id="@group.Id" asp-require-permission="permissiongroups.edit">

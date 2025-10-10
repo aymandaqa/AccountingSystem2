@@ -1779,13 +1779,13 @@ namespace Roadfn.Controllers
                         dataRow[5] = item.AreaName;
                         dataRow[6] = item.ClientPhone;
                         dataRow[7] = item.ShipmentContains;
-                        dataRow[8] = item.EntryDateTime.ToString("yyyy-MM-dd");
+                        dataRow[8] = item.EntryDateTime.ToString("dd/MM/yyyy");
                         table.Rows.Add(dataRow);
                     }
                     StreamReader sr = new StreamReader(filepath);
                     string s = sr.ReadToEnd();
                     s = s.Replace("{details}", ConvertToHtml3(table));
-                    s = s.Replace("{Date}", DateTime.Now.ToString("yyyy-MM-dd"));
+                    s = s.Replace("{Date}", DateTime.Now.ToString("dd/MM/yyyy"));
                     s = s.Replace("{Ref}", Id);
                     s = s.Replace("{sender}", shipmentSummaries.FirstOrDefault().SenderName);
                     sr.Close();
@@ -2110,7 +2110,7 @@ namespace Roadfn.Controllers
                         dataRow[2] = item?.SenderName;
                         dataRow[3] = item?.CityName;
                         dataRow[4] = item?.AreaName;
-                        dataRow[5] = item?.EntryDate.ToString("yyyy-MM-dd");
+                        dataRow[5] = item?.EntryDate.ToString("dd/MM/yyyy");
                         dataRow[6] = item?.ShipmentPrice;
                         //dataRow[6] = item.ShipmentFees;
                         //dataRow[7] = item.ShipmentExtraFees;
@@ -2125,7 +2125,7 @@ namespace Roadfn.Controllers
                     StreamReader sr = new StreamReader(filepath);
                     string s = sr.ReadToEnd();
                     s = s.Replace("{details}", ConvertToHtml(table));
-                    s = s.Replace("{Date}", Convert.ToDateTime(header?.PaymentDate).ToString("yyyy-MM-dd"));
+                    s = s.Replace("{Date}", Convert.ToDateTime(header?.PaymentDate).ToString("dd/MM/yyyy"));
                     s = s.Replace("{Total delivery shipments}", details.Count().ToString());
                     s = s.Replace("{Total Amount}", header?.PaymentValue.ToString());
                     s = s.Replace("{Ref}", header?.Id.ToString());
@@ -2372,7 +2372,7 @@ namespace Roadfn.Controllers
                         dataRow[0] = item?.ClientName;
                         //dataRow[3] = item?.CityName;
                         dataRow[7] = item?.AreaName;
-                        dataRow[6] = Convert.ToDateTime(item.EntryDate).ToString("yyyy-MM-dd");
+                        dataRow[6] = Convert.ToDateTime(item.EntryDate).ToString("dd/MM/yyyy");
                         dataRow[3] = item?.ShipmentPrice;
                         dataRow[4] = item?.ShipmentFees;
                         dataRow[8] = item?.ShipmentExtraFees;
@@ -2390,7 +2390,7 @@ namespace Roadfn.Controllers
                     string s = sr.ReadToEnd();
                     s = s.Replace("{details}", ConvertToHtml2(table));
 
-                    s = s.Replace("{Date}", Convert.ToDateTime(header?.PaymentDate).ToString("yyyy-MM-dd"));
+                    s = s.Replace("{Date}", Convert.ToDateTime(header?.PaymentDate).ToString("dd/MM/yyyy"));
                     s = s.Replace("{Total delivery shipments}", details.Count().ToString());
                     s = s.Replace("{Total Amount}", header?.PaymentValue.ToString());
                     s = s.Replace("{Ref}", header?.Id.ToString());

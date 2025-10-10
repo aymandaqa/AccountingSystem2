@@ -77,7 +77,7 @@
                                         @foreach (var t in account.Transactions)
                                         {
                                             <tr>
-                                                <td>@t.Date.ToString("yyyy-MM-dd")</td>
+                                                <td>@t.Date.ToString("dd/MM/yyyy")</td>
                                                 <td>@t.JournalEntryNumber</td>
                                                 <td>@t.Description</td>
                                                 <td class="text-end">@t.DebitAmount.ToString("N2")</td>

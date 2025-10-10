@@ -68,7 +68,7 @@
 @functions {
     private static string FormatDate(DateTime? date)
     {
-        return date.HasValue ? date.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm") : "-";
+        return date.HasValue ? date.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "-";
     }
 
     private static string GetTriggerTypeText(AccountingSystem.Models.CompoundJournals.CompoundJournalTriggerType triggerType)

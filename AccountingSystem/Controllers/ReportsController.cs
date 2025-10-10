@@ -2078,7 +2078,7 @@ namespace AccountingSystem.Controllers
                 {
                     page.Margin(20);
                     page.Size(PageSizes.A4);
-                    page.Header().Text($"الميزانية العمومية - {model.AsOfDate:yyyy-MM-dd}").FontSize(16).Bold();
+                    page.Header().Text($"الميزانية العمومية - {model.AsOfDate:dd/MM/yyyy}").FontSize(16).Bold();
                     page.Content().Column(col =>
                     {
                         col.Item().Text("الأصول").FontSize(14).Bold();
@@ -2395,7 +2395,7 @@ namespace AccountingSystem.Controllers
                 {
                     page.Margin(20);
                     page.Size(PageSizes.A4);
-                    page.Header().Text($"قائمة الدخل - {model.FromDate:yyyy-MM-dd} إلى {model.ToDate:yyyy-MM-dd}").FontSize(16).Bold();
+                    page.Header().Text($"قائمة الدخل - {model.FromDate:dd/MM/yyyy} إلى {model.ToDate:dd/MM/yyyy}").FontSize(16).Bold();
                     page.Content().Column(col =>
                     {
                         col.Item().Text("الإيرادات").FontSize(14).Bold();

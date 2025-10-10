@@ -47,7 +47,7 @@
                         <td>@item.Amount</td>
                         <td>@item.Notes</td>
                         <td>@(item.IsApproved ? "نعم" : "لا")</td>
-                        <td>@item.CreatedAt.ToString("yyyy-MM-dd")</td>
+                        <td>@item.CreatedAt.ToString("dd/MM/yyyy")</td>
                         <td>
                             @if (!item.IsApproved)
                             {

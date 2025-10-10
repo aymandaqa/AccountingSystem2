@@ -62,7 +62,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h1 class="document-title mb-1">قيد محاسبي</h1>
-                <p class="text-muted mb-0">تاريخ الطباعة: @DateTime.Now.ToString("yyyy/MM/dd HH:mm")</p>
+                <p class="text-muted mb-0">تاريخ الطباعة: @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</p>
             </div>
             <div class="text-end">
                 <h5 class="mb-1">رقم القيد:</h5>
@@ -73,7 +73,7 @@
         <table class="table table-borderless info-table">
             <tbody>
                 <tr>
-                    <td><strong>التاريخ:</strong> @Model.Date.ToString("yyyy/MM/dd")</td>
+                    <td><strong>التاريخ:</strong> @Model.Date.ToString("dd/MM/yyyy")</td>
                     <td><strong>الفرع:</strong> @Model.BranchName</td>
                     <td><strong>المرجع:</strong> @Model.Reference</td>
                 </tr>

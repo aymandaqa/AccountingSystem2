@@ -93,7 +93,7 @@
                                     <td>@asset.AssetNumber</td>
                                     <td>@asset.OpeningBalance</td>
                                     <td>@asset.Notes</td>
-                                    <td>@asset.CreatedAt.ToString("yyyy-MM-dd")</td>
+                                    <td>@asset.CreatedAt.ToString("dd/MM/yyyy")</td>
                                     <td>
                                         <div class="btn-group btn-group-sm" role="group">
                                             <a asp-action="Edit" asp-route-id="@asset.Id" class="btn btn-warning" asp-require-permission="assets.edit">

@@ -125,10 +125,10 @@
                                         }
                                     </td>
                                     <td>
-                                        <div>@item.CreatedAt.ToString("yyyy-MM-dd HH:mm")</div>
+                                        <div>@item.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div>
                                         @if (item.ConfirmedAt.HasValue)
                                         {
-                                            <small class="text-muted">تم التأكيد: @item.ConfirmedAt.Value.ToString("yyyy-MM-dd HH:mm")</small>
+                                            <small class="text-muted">تم التأكيد: @item.ConfirmedAt.Value.ToString("dd/MM/yyyy HH:mm")</small>
                                         }
                                     </td>
                                     <td>@item.ReferenceNumber</td>
