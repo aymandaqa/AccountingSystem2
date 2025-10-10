@@ -1862,7 +1862,12 @@ namespace AccountingSystem.Controllers
                 (model.FromDate, model.ToDate) = (model.ToDate, model.FromDate);
             }
 
-            var culture = new CultureInfo("ar-SA");
+            var culture = (CultureInfo)CultureInfo.CreateSpecificCulture("ar-SA").Clone();
+            culture.DateTimeFormat.Calendar = new GregorianCalendar(GregorianCalendarTypes.USEnglish);
+            culture.DateTimeFormat.ShortDatePattern = "dd/MM/yyyy";
+            culture.DateTimeFormat.LongDatePattern = "dd/MM/yyyy";
+            culture.DateTimeFormat.MonthDayPattern = "dd/MM";
+            model.DisplayCulture = culture;
 
             var columns = BuildBranchExpensesColumns(model.FromDate, model.ToDate, model.PeriodGrouping, culture);
             model.Columns = columns;
