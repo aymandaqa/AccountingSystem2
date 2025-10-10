@@ -30,6 +30,8 @@ namespace AccountingSystem.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal ExpenseLimit { get; set; } = 0;
 
+        public string? SidebarMenuOrder { get; set; }
+
         // Navigation properties
         public virtual ICollection<UserBranch> UserBranches { get; set; } = new List<UserBranch>();
         public virtual ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
