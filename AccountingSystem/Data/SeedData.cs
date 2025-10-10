@@ -351,6 +351,11 @@ namespace AccountingSystem.Data
                 context.SystemSettings.Add(new SystemSetting { Key = "CashBoxesParentAccountId", Value = null });
             }
 
+            if (!context.SystemSettings.Any(s => s.Key == "DashboardParentAccountId"))
+            {
+                context.SystemSettings.Add(new SystemSetting { Key = "DashboardParentAccountId", Value = null });
+            }
+
             await context.SaveChangesAsync();
         }
 
