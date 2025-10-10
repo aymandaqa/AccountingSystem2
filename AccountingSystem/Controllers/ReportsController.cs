@@ -1846,12 +1846,55 @@ namespace AccountingSystem.Controllers
             var defaultFrom = new DateTime(DateTime.Today.Year, 1, 1);
             var defaultTo = DateTime.Today;
 
+            var parsedBranchIds = new List<int>();
+            if (branchIds != null)
+            {
+                parsedBranchIds.AddRange(branchIds.Where(id => id > 0));
+            }
+
+            if (!parsedBranchIds.Any() && Request.Query.TryGetValue("branchIds", out var branchIdValues))
+            {
+                foreach (var value in branchIdValues.SelectMany(v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)))
+                {
+                    if (int.TryParse(value, out var id) && id > 0)
+                    {
+                        parsedBranchIds.Add(id);
+                    }
+                }
+            }
+
+            DateTime? normalizedFromDate = fromDate;
+            if (!normalizedFromDate.HasValue && Request.Query.TryGetValue("fromDate", out var fromDateValues))
+            {
+                foreach (var value in fromDateValues)
+                {
+                    if (DateTime.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+                    {
+                        normalizedFromDate = parsed;
+                        break;
+                    }
+                }
+            }
+
+            DateTime? normalizedToDate = toDate;
+            if (!normalizedToDate.HasValue && Request.Query.TryGetValue("toDate", out var toDateValues))
+            {
+                foreach (var value in toDateValues)
+                {
+                    if (DateTime.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+                    {
+                        normalizedToDate = parsed;
+                        break;
+                    }
+                }
+            }
+
             var model = new BranchExpensesReportViewModel
             {
-                FromDate = fromDate?.Date ?? defaultFrom,
-                ToDate = toDate?.Date ?? defaultTo,
+                FromDate = (normalizedFromDate ?? defaultFrom).Date,
+                ToDate = (normalizedToDate ?? defaultTo).Date,
                 Branches = await GetBranchesSelectList(),
-                SelectedBranchIds = branchIds?.Where(id => id > 0).Distinct().ToList() ?? new List<int>(),
+                SelectedBranchIds = parsedBranchIds.Distinct().ToList(),
                 FiltersApplied = true,
                 ViewMode = viewMode,
                 PeriodGrouping = periodGrouping
