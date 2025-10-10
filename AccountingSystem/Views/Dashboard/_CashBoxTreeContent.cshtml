@@ -1,0 +1,20 @@
+@model AccountingSystem.ViewModels.CashBoxTreeViewModel
+
+@if (!Model.ParentConfigured)
+{
+    <div class="alert alert-warning text-center mb-0">
+        <span>يرجى تحديد حساب الأب لأرصدة الصناديق من إعدادات النظام.</span>
+    </div>
+}
+else if (Model.Nodes.Any())
+{
+    <div id="cashBoxTree" class="tree-container">
+        @await Html.PartialAsync("~/Views/Shared/_AccountBalanceTreeNode.cshtml", Model.Nodes)
+    </div>
+}
+else
+{
+    <div class="alert alert-info text-center mb-0">
+        <span>لا توجد أرصدة متاحة ضمن الحساب المحدد.</span>
+    </div>
+}

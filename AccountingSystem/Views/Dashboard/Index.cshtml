@@ -222,34 +222,23 @@
                                     <h5 class="card-title mb-0"><i class="fas fa-cash-register ms-2"></i> أرصدة الصناديق</h5>
                                     <span class="text-muted small">تتبع أرصدة الصناديق حسب الفروع المختلفة</span>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-outline-secondary cashbox-card-toggle" id="cashboxesToggle" aria-expanded="true" aria-controls="cashboxesCardBody" title="إظهار/إخفاء أرصدة الصناديق">
-                                    <i class="fas fa-minus"></i>
+                                <button type="button" class="btn btn-sm btn-outline-secondary cashbox-card-toggle" id="cashboxesToggle" aria-expanded="false" aria-controls="cashboxesCardBody" title="إظهار/إخفاء أرصدة الصناديق">
+                                    <i class="fas fa-plus"></i>
                                 </button>
                             </div>
-                            <div class="card-body" id="cashboxesCardBody">
-                                @if (Model.CashBoxTree.Any())
-                                {
-                                    <div id="cashBoxTree" class="tree-container">
-                                        @{
-                                            ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode;
-                                            ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
-                                        }
-                                        @await Html.PartialAsync("_AccountBalanceTreeNode", Model.CashBoxTree)
-                                    </div>
-                                }
-                                else
-                                {
-                                    <div class="alert alert-info text-center mb-0">
-                                        @if (Model.CashBoxParentAccountConfigured)
-                                        {
-                                            <span>لا توجد أرصدة متاحة ضمن الحساب المحدد.</span>
-                                        }
-                                        else
-                                        {
-                                            <span>يرجى تحديد حساب الأب لأرصدة الصناديق من إعدادات النظام.</span>
-                                        }
-                                    </div>
-                                }
+                            <div class="card-body cashbox-card-body" id="cashboxesCardBody"
+                                 data-load-url="@Url.Action("LoadCashBoxTree")"
+                                 data-branch-id="@(Model.SelectedBranchId?.ToString() ?? string.Empty)"
+                                 data-from-date="@Model.FromDate.ToString("yyyy-MM-dd")"
+                                 data-to-date="@Model.ToDate.ToString("yyyy-MM-dd")"
+                                 data-currency-id="@(Model.SelectedCurrencyId?.ToString() ?? string.Empty)"
+                                 data-loaded="false"
+                                 style="display: none;">
+                                <div class="cashbox-loading text-center text-muted small d-none">
+                                    <i class="fas fa-spinner fa-spin ms-2"></i>
+                                    <span>جاري تحميل أرصدة الصناديق...</span>
+                                </div>
+                                <div id="cashboxesContent" class="cashbox-content"></div>
                             </div>
                         </div>
                     </div>
@@ -583,6 +572,30 @@
 
         .gradient-info {
             background: linear-gradient(135deg, #14b8a6, #06b6d4);
+        }
+
+        .cashbox-card {
+            border-radius: 18px;
+            overflow: hidden;
+        }
+
+        .cashbox-card .card-body {
+            background-color: #f8fafc;
+            padding: 0;
+        }
+
+        .cashbox-loading {
+            padding: 1.5rem;
+        }
+
+        .cashbox-content {
+            padding: 1rem 1.25rem;
+            max-height: 420px;
+            overflow-y: auto;
+        }
+
+        .cashbox-content .alert {
+            margin-bottom: 0;
         }
 
         .cashbox-card .card-header,
@@ -932,15 +945,81 @@
 
             var $cashboxBody = $('#cashboxesCardBody');
             var $cashboxToggle = $('#cashboxesToggle');
+            var $cashboxContent = $('#cashboxesContent');
+            var $cashboxLoading = $cashboxBody.find('.cashbox-loading');
+            var cashboxLoadUrl = $cashboxBody.data('load-url');
             var cardStorageKey = 'dashboard.cashboxes.collapsed';
+            var isCashboxLoading = false;
+
+            function loadCashboxTree() {
+                if (!$cashboxBody.length || isCashboxLoading || $cashboxBody.data('loaded') === true) {
+                    return;
+                }
+
+                if (!cashboxLoadUrl) {
+                    $cashboxBody.data('loaded', true);
+                    return;
+                }
+
+                isCashboxLoading = true;
+                $cashboxLoading.removeClass('d-none');
+
+                var requestData = {};
+                var branchId = $cashboxBody.data('branch-id');
+                var fromDate = $cashboxBody.data('from-date');
+                var toDate = $cashboxBody.data('to-date');
+                var currencyId = $cashboxBody.data('currency-id');
+
+                if (branchId) {
+                    requestData.branchId = branchId;
+                }
+                if (fromDate) {
+                    requestData.fromDate = fromDate;
+                }
+                if (toDate) {
+                    requestData.toDate = toDate;
+                }
+                if (currencyId) {
+                    requestData.currencyId = currencyId;
+                }
+
+                $.get(cashboxLoadUrl, requestData)
+                    .done(function (html) {
+                        var trimmed = $.trim(html);
+                        if (trimmed.length) {
+                            $cashboxContent.html(trimmed);
+                        } else {
+                            $cashboxContent.html('<div class="alert alert-info text-center mb-0"><span>لا توجد بيانات لعرضها.</span></div>');
+                        }
+                        $cashboxBody.data('loaded', true);
+                    })
+                    .fail(function () {
+                        $cashboxContent.html('<div class="alert alert-danger text-center mb-0"><span>تعذر تحميل أرصدة الصناديق، يرجى المحاولة لاحقاً.</span></div>');
+                        $cashboxBody.data('loaded', false);
+                    })
+                    .always(function () {
+                        $cashboxLoading.addClass('d-none');
+                        isCashboxLoading = false;
+                    });
+            }
 
             if ($cashboxToggle.length) {
-                var isCollapsed = storage && storage.getItem(cardStorageKey) === 'true';
-                if (isCollapsed) {
+                var storedCollapseState = storage ? storage.getItem(cardStorageKey) : null;
+                var shouldCollapse = true;
+
+                if (storedCollapseState === 'false') {
+                    shouldCollapse = false;
+                } else if (storedCollapseState === 'true') {
+                    shouldCollapse = true;
+                }
+
+                if (shouldCollapse) {
                     $cashboxBody.hide();
                     $cashboxToggle.attr('aria-expanded', 'false').html('<i class="fas fa-plus"></i>');
                 } else {
+                    $cashboxBody.show();
                     $cashboxToggle.attr('aria-expanded', 'true').html('<i class="fas fa-minus"></i>');
+                    loadCashboxTree();
                 }
 
                 $cashboxToggle.on('click', function () {
@@ -952,11 +1031,14 @@
                             storage.setItem(cardStorageKey, 'true');
                         }
                     } else {
-                        $cashboxBody.slideDown(200);
+                        $cashboxBody.slideDown(200, function () {
+                            loadCashboxTree();
+                        });
                         $cashboxToggle.attr('aria-expanded', 'true').html('<i class="fas fa-minus"></i>');
                         if (storage) {
                             storage.setItem(cardStorageKey, 'false');
                         }
+                        loadCashboxTree();
                     }
                 });
             }
