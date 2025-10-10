@@ -43,13 +43,21 @@ namespace AccountingSystem.Controllers
                 .Select(e => $"ASSETEXP:{e.Id}")
                 .ToList();
 
-            var journalEntries = await _context.JournalEntries
-                .Where(j => j.Reference != null && references.Contains(j.Reference))
-                .Select(j => new { j.Reference, j.Id, j.Number })
-                .ToListAsync();
+            var journalEntries = new List<(string Reference, int Id, string Number)>();
+            const int referenceChunkSize = 1000;
+
+            foreach (var referenceChunk in references.Chunk(referenceChunkSize))
+            {
+                var chunkEntries = await _context.JournalEntries
+                    .Where(j => j.Reference != null && referenceChunk.Contains(j.Reference))
+                    .Select(j => new { j.Reference, j.Id, j.Number })
+                    .ToListAsync();
+
+                journalEntries.AddRange(chunkEntries.Select(j => (j.Reference!, j.Id, j.Number)));
+            }
 
             var journalEntryLookup = journalEntries
-                .ToDictionary(j => j.Reference!, j => (j.Id, j.Number));
+                .ToDictionary(j => j.Reference, j => (j.Id, j.Number));
 
             var model = expenses.Select(e =>
             {
