@@ -139,9 +139,13 @@
                                                 }
                                             }
 
-                                            var total = Model.ColumnTotals.TryGetValue(column.PeriodStart, out var periodTotal) ? periodTotal : 0m;
-                                            @*                                             <td class="text-end fw-bold">@total.ToString("N2")</td>
- *@                                        </tr>
+                                            @{
+                                                var total = Model.ColumnTotals.TryGetValue(column.PeriodStart, out var periodTotal)
+                                                    ? periodTotal
+                                                    : 0m;
+                                            }
+                                            <td class="text-end fw-bold">@total.ToString("N2")</td>
+                                        </tr>
                                     }
                                 </tbody>
                                 <tfoot class="table-secondary">
