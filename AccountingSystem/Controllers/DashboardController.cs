@@ -248,7 +248,9 @@ namespace AccountingSystem.Controllers
                 ? branchId
                 : null;
 
-            var allowedBranchIds = effectiveBranchId.HasValue ? new List<int> { effectiveBranchId.Value } : userBranchIds;
+            var allowedBranchIds = effectiveBranchId.HasValue
+                ? new List<int> { effectiveBranchId.Value }
+                : new List<int>(userBranchIds);
 
             var cashBoxParentSetting = await _context.SystemSettings
                 .AsNoTracking()
@@ -281,10 +283,21 @@ namespace AccountingSystem.Controllers
                 : baseCurrency;
             selectedCurrency ??= baseCurrency;
 
+            var hasBranchFilter = allowedBranchIds.Any();
+
             var accountBalances = accounts.ToDictionary(a => a.Id, a =>
-                a.OpeningBalance + a.JournalEntryLines
-                    .Where(l => l.JournalEntry.Date >= startDate && l.JournalEntry.Date <= endDate && allowedBranchIds.Contains(l.JournalEntry.BranchId))
-                    .Sum(l => l.DebitAmount - l.CreditAmount));
+            {
+                var journalLines = a.JournalEntryLines
+                    .Where(l => l.JournalEntry.Date >= startDate && l.JournalEntry.Date <= endDate);
+
+                if (hasBranchFilter)
+                {
+                    journalLines = journalLines
+                        .Where(l => allowedBranchIds.Contains(l.JournalEntry.BranchId));
+                }
+
+                return a.OpeningBalance + journalLines.Sum(l => l.DebitAmount - l.CreditAmount);
+            });
 
             var nodes = accounts.Select(a =>
             {
@@ -293,11 +306,13 @@ namespace AccountingSystem.Controllers
                 {
                     Id = a.Id,
                     Code = a.Code,
+                    Name = a.NameEn ?? a.NameAr,
                     NameAr = a.NameAr,
                     AccountType = a.AccountType,
                     Nature = a.Nature,
                     CurrencyCode = a.Currency.Code,
                     OpeningBalance = a.OpeningBalance,
+                    CurrentBalance = a.CurrentBalance,
                     Balance = balance,
                     BalanceSelected = _currencyService.Convert(balance, a.Currency, selectedCurrency),
                     BalanceBase = _currencyService.Convert(balance, a.Currency, baseCurrency),
@@ -356,11 +371,13 @@ namespace AccountingSystem.Controllers
                     {
                         Id = source.Id,
                         Code = source.Code,
+                        Name = source.Name,
                         NameAr = source.NameAr,
                         AccountType = source.AccountType,
                         Nature = source.Nature,
                         CurrencyCode = source.CurrencyCode,
                         OpeningBalance = source.OpeningBalance,
+                        CurrentBalance = source.CurrentBalance,
                         Balance = source.Balance,
                         BalanceSelected = source.BalanceSelected,
                         BalanceBase = source.BalanceBase,
@@ -382,7 +399,7 @@ namespace AccountingSystem.Controllers
                     return clone;
                 }
 
-                //cashBoxTreeNodes.Add(CloneNode(cashBoxParentNode, 0));
+                cashBoxTreeNodes.Add(CloneNode(cashBoxParentNode, 0));
             }
 
             return new DashboardTreeComputationResult
