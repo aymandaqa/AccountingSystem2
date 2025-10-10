@@ -212,14 +212,14 @@
                 </section>
             }
 
-            <section class="dashboard-panels row g-4 mb-4">
+            <section class="dashboard-panels row g-6 mb-6">
                 @{
-                    var accountTreeColumnClass = canViewCashBoxes ? "col-12 col-xl-4" : "col-12 col-xl-6";
+                    var accountTreeColumnClass = canViewCashBoxes ? "col-12 col-xl-6" : "col-12 col-xl-6";
                 }
 
                 @if (canViewCashBoxes)
                 {
-                    <div class="col-12 col-xl-4">
+                    @*  <div class="col-12 col-xl-4">
                         <div class="card account-tree-card shadow-sm border-0 h-100">
                             <div class="card-header d-flex align-items-center justify-content-between">
                                 <div>
@@ -248,6 +248,55 @@
                                     }
                                     @await Html.PartialAsync("_CashBoxTreeContent", cashBoxTreeViewModel)
                                 </div>
+                            </div>
+                        </div>
+                    </div> *@
+
+
+
+                    <div class="@accountTreeColumnClass">
+                        <div class="card account-tree-card shadow-sm border-0 h-100">
+                            <div class="card-header d-flex align-items-center justify-content-between">
+                                <div>
+                                    <h5 class="card-title mb-0"><i class="fas fa-sitemap ms-2"></i> أرصدة الحسابات حسب النوع</h5>
+                                    <span class="text-muted small">عرض هرمي لتوزيع الحسابات بالقيم المختارة</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    @if (Model.ParentAccountConfigured && !string.IsNullOrWhiteSpace(Model.SelectedParentAccountName))
+                                    {
+                                        <div class="alert alert-info py-2 px-3 mb-0">
+                                            يتم عرض الشجرة بدايةً من الحساب الأب المحدد: <strong>@Model.SelectedParentAccountName</strong>.
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="alert alert-secondary py-2 px-3 mb-0">
+                                            لم يتم تحديد حساب أب من الإعدادات، لذلك يتم عرض جميع الحسابات من الجذر.
+                                        </div>
+                                    }
+                                </div>
+                                @if (Model.ParentAccountTree.Any())
+                                {
+                                    <div id="dashboardParentAccountsTree" class="tree-container">
+                                        @{
+                                            ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode;
+                                            ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
+                                            ViewData["CollapseTreeNodes"] = true;
+                                        }
+                                        @await Html.PartialAsync("_AccountBalanceTreeNode", Model.ParentAccountTree)
+                                        @{
+                                            ViewData["CollapseTreeNodes"] = null;
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="alert alert-info text-center mb-0">
+                                        لا توجد بيانات لعرضها
+                                    </div>
+                                }
                             </div>
                         </div>
                     </div>
@@ -290,53 +339,10 @@
                         </div>
                     </div>
 
-                    <div class="@accountTreeColumnClass">
-                        <div class="card account-tree-card shadow-sm border-0 h-100">
-                            <div class="card-header d-flex align-items-center justify-content-between">
-                                <div>
-                                    <h5 class="card-title mb-0"><i class="fas fa-tree ms-2"></i> شجرة الحسابات حسب الحساب الأب</h5>
-                                    <span class="text-muted small">عرض هرمي كامل للحسابات بناءً على الحساب الأب</span>
-                                </div>
-                            </div>
-                            <div class="card-body">
-                                <div class="mb-3">
-                                    @if (Model.ParentAccountConfigured && !string.IsNullOrWhiteSpace(Model.SelectedParentAccountName))
-                                    {
-                                        <div class="alert alert-info py-2 px-3 mb-0">
-                                            يتم عرض الشجرة بدايةً من الحساب الأب المحدد: <strong>@Model.SelectedParentAccountName</strong>.
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <div class="alert alert-secondary py-2 px-3 mb-0">
-                                            لم يتم تحديد حساب أب من الإعدادات، لذلك يتم عرض جميع الحسابات من الجذر.
-                                        </div>
-                                    }
-                                </div>
-                                @if (Model.ParentAccountTree.Any())
-                                {
-                                    <div id="dashboardParentAccountsTree" class="tree-container">
-                                        @{
-                                            ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode;
-                                            ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
-                                            ViewData["CollapseTreeNodes"] = true;
-                                        }
-                                        @await Html.PartialAsync("_AccountBalanceTreeNode", Model.ParentAccountTree)
-                                        @{
-                                            ViewData["CollapseTreeNodes"] = null;
-                                        }
-                                    </div>
-                                }
-                                else
-                                {
-                                    <div class="alert alert-info text-center mb-0">
-                                        لا توجد بيانات لعرضها
-                                    </div>
-                                }
-                            </div>
-                        </div>
-                    </div>
                 }
+
+
+
             </section>
 
             @if (canViewLinks)
