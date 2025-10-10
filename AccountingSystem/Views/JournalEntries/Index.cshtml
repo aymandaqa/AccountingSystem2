@@ -161,6 +161,20 @@
 
             var grid = gridElement.ej2_instances[0];
             var trackedRequestTypes = ['paging', 'sorting', 'filtering', 'searching', 'grouping', 'ungrouping', 'refresh'];
+            var antiForgeryInput = document.querySelector('#antiForgeryForm input[name="__RequestVerificationToken"]');
+            var antiForgeryToken = antiForgeryInput ? antiForgeryInput.value : null;
+
+            if (!antiForgeryToken) {
+                console.warn('Anti-forgery token was not found. Requests may be rejected.');
+            }
+
+            function buildRequestOptions(options) {
+                var headers = Object.assign({}, options.headers);
+                if (antiForgeryToken) {
+                    headers['RequestVerificationToken'] = antiForgeryToken;
+                }
+                return Object.assign({}, options, { headers: headers });
+            }
 
             grid.pageSettings = { pageSize: 10, pageSizes: [10, 25, 50, 100, 'All'] };
             grid.groupSettings = { showDropArea: false, columns: ['Reference'] };
@@ -272,7 +286,7 @@
                     }
 
                     showLoading();
-                    $.ajax({
+                    $.ajax(buildRequestOptions({
                         url: postUrlBase + '/' + postId,
                         type: 'POST',
                         success: function () {
@@ -293,7 +307,7 @@
                                 alert(message);
                             }
                         }
-                    });
+                    }));
                     return;
                 }
 
@@ -313,7 +327,7 @@
                 }
 
                 showLoading();
-                $.ajax({
+                $.ajax(buildRequestOptions({
                     url: deleteUrlBase + '/' + deleteId,
                     type: 'POST',
                     success: function () {
@@ -333,8 +347,8 @@
                         } else {
                             alert(message);
                         }
-                    }
-                });
+                        }
+                }));
             });
         });
     </script>
