@@ -67,6 +67,7 @@
 
                     @if (Model?.AccountName != null)
                     {
+                        var showBaseCurrency = !string.Equals(Model?.CurrencyCode, Model?.BaseCurrencyCode, System.StringComparison.OrdinalIgnoreCase);
                         <!-- معلومات الحساب -->
                         <div class="card border-info mb-4">
                             <div class="card-header bg-light">
@@ -76,8 +77,22 @@
                                         <small class="text-muted">رقم الحساب: @Model.AccountCode</small>
                                     </div>
                                     <div class="col-md-6 text-end">
-                                        <h6 class="mb-0">الرصيد الافتتاحي: <span class="badge bg-secondary">@Model.OpeningBalance.ToString("N2") @Model.CurrencyCode</span> <small class="text-muted">(@Model.OpeningBalanceBase.ToString("N2") @Model.BaseCurrencyCode)</small></h6>
-                                        <h6 class="mb-0">الرصيد الختامي: <span class="badge bg-primary">@Model.ClosingBalance.ToString("N2") @Model.CurrencyCode</span> <small class="text-muted">(@Model.ClosingBalanceBase.ToString("N2") @Model.BaseCurrencyCode)</small></h6>
+                                        <h6 class="mb-0">
+                                            الرصيد الافتتاحي:
+                                            <span class="badge bg-secondary">@Model.OpeningBalance.ToString("N2") @Model.CurrencyCode</span>
+                                            @if (showBaseCurrency)
+                                            {
+                                                <small class="text-muted">(@Model.OpeningBalanceBase.ToString("N2") @Model.BaseCurrencyCode)</small>
+                                            }
+                                        </h6>
+                                        <h6 class="mb-0">
+                                            الرصيد الختامي:
+                                            <span class="badge bg-primary">@Model.ClosingBalance.ToString("N2") @Model.CurrencyCode</span>
+                                            @if (showBaseCurrency)
+                                            {
+                                                <small class="text-muted">(@Model.ClosingBalanceBase.ToString("N2") @Model.BaseCurrencyCode)</small>
+                                            }
+                                        </h6>
                                     </div>
                                 </div>
                             </div>
@@ -139,7 +154,10 @@
                                                     @if (transaction.DebitAmount > 0)
                                                     {
                                                         <span class="text-success fw-bold">@transaction.DebitAmount.ToString("N2") @Model.CurrencyCode</span>
-                                                        <small class="text-muted d-block">@transaction.DebitAmountBase.ToString("N2") @Model.BaseCurrencyCode</small>
+                                                        @if (showBaseCurrency)
+                                                        {
+                                                            <small class="text-muted d-block">@transaction.DebitAmountBase.ToString("N2") @Model.BaseCurrencyCode</small>
+                                                        }
                                                     }
                                                     else
                                                     {
@@ -150,7 +168,10 @@
                                                     @if (transaction.CreditAmount > 0)
                                                     {
                                                         <span class="text-danger fw-bold">@transaction.CreditAmount.ToString("N2") @Model.CurrencyCode</span>
-                                                        <small class="text-muted d-block">@transaction.CreditAmountBase.ToString("N2") @Model.BaseCurrencyCode</small>
+                                                        @if (showBaseCurrency)
+                                                        {
+                                                            <small class="text-muted d-block">@transaction.CreditAmountBase.ToString("N2") @Model.BaseCurrencyCode</small>
+                                                        }
                                                     }
                                                     else
                                                     {
@@ -159,7 +180,10 @@
                                                 </td>
                                                 <td class="text-end">
                                                     <span class="fw-bold">@transaction.RunningBalance.ToString("N2") @Model.CurrencyCode</span>
-                                                    <small class="text-muted d-block">@transaction.RunningBalanceBase.ToString("N2") @Model.BaseCurrencyCode</small>
+                                                    @if (showBaseCurrency)
+                                                    {
+                                                        <small class="text-muted d-block">@transaction.RunningBalanceBase.ToString("N2") @Model.BaseCurrencyCode</small>
+                                                    }
                                                 </td>
                                             </tr>
                                         }
@@ -184,7 +208,13 @@
                                 <div class="card border-success">
                                     <div class="card-body text-center">
                                         <h6 class="card-title">إجمالي المدين</h6>
-                                        <h4 class="text-success">(@Model.TotalDebit.ToString("N2") @Model.CurrencyCode) <small class="text-muted">(@Model.TotalDebitBase.ToString("N2") @Model.BaseCurrencyCode)</small></h4>
+                                        <h4 class="text-success">
+                                            (@Model.TotalDebit.ToString("N2") @Model.CurrencyCode)
+                                            @if (showBaseCurrency)
+                                            {
+                                                <small class="text-muted">(@Model.TotalDebitBase.ToString("N2") @Model.BaseCurrencyCode)</small>
+                                            }
+                                        </h4>
                                     </div>
                                 </div>
                             </div>
@@ -192,7 +222,13 @@
                                 <div class="card border-danger">
                                     <div class="card-body text-center">
                                         <h6 class="card-title">إجمالي الدائن</h6>
-                                        <h4 class="text-danger">(@Model.TotalCredit.ToString("N2") @Model.CurrencyCode) <small class="text-muted">(@Model.TotalCreditBase.ToString("N2") @Model.BaseCurrencyCode)</small></h4>
+                                        <h4 class="text-danger">
+                                            (@Model.TotalCredit.ToString("N2") @Model.CurrencyCode)
+                                            @if (showBaseCurrency)
+                                            {
+                                                <small class="text-muted">(@Model.TotalCreditBase.ToString("N2") @Model.BaseCurrencyCode)</small>
+                                            }
+                                        </h4>
                                     </div>
                                 </div>
                             </div>
@@ -200,7 +236,13 @@
                                 <div class="card border-primary">
                                     <div class="card-body text-center">
                                         <h6 class="card-title">صافي الحركة</h6>
-                                        <h4 class="text-primary">(@((Model.TotalDebit - Model.TotalCredit).ToString("N2")) @Model.CurrencyCode) <small class="text-muted">(@((Model.TotalDebitBase - Model.TotalCreditBase).ToString("N2")) @Model.BaseCurrencyCode)</small></h4>
+                                        <h4 class="text-primary">
+                                            (@((Model.TotalDebit - Model.TotalCredit).ToString("N2")) @Model.CurrencyCode)
+                                            @if (showBaseCurrency)
+                                            {
+                                                <small class="text-muted">(@((Model.TotalDebitBase - Model.TotalCreditBase).ToString("N2")) @Model.BaseCurrencyCode)</small>
+                                            }
+                                        </h4>
                                     </div>
                                 </div>
                             </div>
