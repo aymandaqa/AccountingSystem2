@@ -2585,10 +2585,13 @@ namespace AccountingSystem.Controllers
                 }
             }
 
+            var normalizedFromDate = (fromDate ?? DateTime.Now.AddMonths(-1)).Date;
+            var normalizedToDate = (toDate ?? DateTime.Now).Date.AddDays(1).AddTicks(-1);
+
             var viewModel = new AccountStatementViewModel
             {
-                FromDate = fromDate ?? DateTime.Now.AddMonths(-1),
-                ToDate = toDate ?? DateTime.Now,
+                FromDate = normalizedFromDate,
+                ToDate = normalizedToDate,
                 BranchId = branchId,
                 Accounts = accounts,
                 Branches = branches,
