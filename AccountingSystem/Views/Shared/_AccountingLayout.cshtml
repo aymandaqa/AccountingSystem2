@@ -23,6 +23,22 @@
         .container, .container-fluid, .container-lg, .container-md, .container-sm, .container-xl, .container-xxl {
             --bs-gutter-x: 0.5rem;
         }
+
+        #sidebarMenu .nav-link {
+            cursor: grab;
+        }
+
+        #sidebarMenu .nav-link:active {
+            cursor: grabbing;
+        }
+
+        #sidebarMenu .sortable-ghost {
+            opacity: 0.4;
+        }
+
+        #sidebarMenu .sortable-chosen {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
     </Style>
 </head>
 <body>
@@ -83,17 +99,17 @@
             </div>
             <div class="sidebar-menu flex-grow-1 overflow-auto px-2">
                 <ul class="nav flex-column" id="sidebarMenu">
-                    <li class="nav-item">
+                    <li class="nav-item" data-menu-key="dashboard">
                         <a class="nav-link @(currentController == "Dashboard" && currentAction == "Index" ? "active" : "")" href="@Url.Action("Index", "Dashboard")">
                             <i class="fas fa-tachometer-alt"></i> لوحة التحكم
                         </a>
                     </li>
-                    <li class="nav-item">
+                    <li class="nav-item" data-menu-key="company-performance">
                         <a class="nav-link @(currentController == "Dashboard" && currentAction == "Index" ? "active" : "")" href="@Url.Action("Index", "home")">
                             <i class="fas fa-tachometer-alt"></i> عرض اداء الشركة
                         </a>
                     </li>
-                    <li class="nav-item">
+                    <li class="nav-item" data-menu-key="accounts">
                         <a class="nav-link nav-link-toggle d-flex align-items-center justify-content-between" data-bs-toggle="collapse" href="#accountsMenu" data-bs-target="#accountsMenu" role="button" aria-expanded="@(accountsActive ? "true" : "false")" aria-controls="accountsMenu">
                             <span class="nav-link-label"><i class="fas fa-list-alt"></i> الحسابات</span>
                             <i class="fas fa-angle-down toggle-icon"></i>
@@ -107,7 +123,7 @@
                     </li>
                     @if (canSuppliers)
                     {
-                        <li class="nav-item">
+                        <li class="nav-item" data-menu-key="suppliers">
                             <a class="nav-link @(currentController == "Suppliers" ? "active" : "")" href="@Url.Action("Index", "Suppliers")">
                                 <i class="fas fa-truck"></i> الموردين
                             </a>
@@ -115,13 +131,13 @@
                     }
                     @if (canSystemSettings)
                     {
-                        <li class="nav-item">
+                        <li class="nav-item" data-menu-key="system-settings">
                             <a class="nav-link @(currentController == "SystemSettings" ? "active" : "")" href="@Url.Action("Index", "SystemSettings")">
                                 <i class="fas fa-cog"></i> إعدادات النظام
                             </a>
                         </li>
                     }
-                    <li class="nav-item">
+                    <li class="nav-item" data-menu-key="operations">
                         <a class="nav-link nav-link-toggle d-flex align-items-center justify-content-between" data-bs-toggle="collapse" href="#operationsMenu" data-bs-target="#operationsMenu" role="button" aria-expanded="@(operationsActive ? "true" : "false")" aria-controls="operationsMenu">
                             <span class="nav-link-label"><i class="fas fa-list-alt"></i> العمليات</span>
                             <i class="fas fa-angle-down toggle-icon"></i>
@@ -137,7 +153,7 @@
                     </li>
                     @if (showAssets)
                     {
-                        <li class="nav-item">
+                        <li class="nav-item" data-menu-key="assets">
                             <a class="nav-link nav-link-toggle d-flex align-items-center justify-content-between" data-bs-toggle="collapse" href="#assetsMenu" data-bs-target="#assetsMenu" role="button" aria-expanded="@(assetsActive ? "true" : "false")" aria-controls="assetsMenu">
                                 <span class="nav-link-label"><i class="fas fa-boxes"></i> الاصول الثابته</span>
                                 <i class="fas fa-angle-down toggle-icon"></i>
@@ -160,7 +176,7 @@
                     }
                     @if (showVouchers)
                     {
-                        <li class="nav-item">
+                        <li class="nav-item" data-menu-key="vouchers">
                             <a class="nav-link nav-link-toggle d-flex align-items-center justify-content-between" data-bs-toggle="collapse" href="#vouchersMenu" data-bs-target="#vouchersMenu" role="button" aria-expanded="@(vouchersActive ? "true" : "false")" aria-controls="vouchersMenu">
                                 <span class="nav-link-label"><i class="fas fa-file-invoice-dollar"></i> السندات</span>
                                 <i class="fas fa-angle-down toggle-icon"></i>
@@ -203,7 +219,7 @@
                     }
                     @if (showAccountManagement)
                     {
-                        <li class="nav-item">
+                        <li class="nav-item" data-menu-key="account-management">
                             <a class="nav-link nav-link-toggle d-flex align-items-center justify-content-between" data-bs-toggle="collapse" href="#accountMgmtMenu" data-bs-target="#accountMgmtMenu" role="button" aria-expanded="@(accountMgmtActive ? "true" : "false")" aria-controls="accountMgmtMenu">
                                 <span class="nav-link-label"><i class="fas fa-briefcase"></i> إدارة الحسابات</span>
                                 <i class="fas fa-angle-down toggle-icon"></i>
@@ -254,7 +270,7 @@
                                         }
 
 
-                                        <li class="nav-item">
+                                        <li class="nav-item" data-menu-key="journal">
                                             <a class="nav-link nav-link-toggle d-flex align-items-center justify-content-between" data-bs-toggle="collapse" href="#journalMenu" data-bs-target="#journalMenu" role="button" aria-expanded="@(journalActive ? "true" : "false")" aria-controls="journalMenu">
                                                 <span class="nav-link-label"><i class="fas fa-file-invoice"></i> القيود المالية</span>
                                                 <i class="fas fa-angle-down toggle-icon"></i>
@@ -268,7 +284,7 @@
                                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "CompoundJournalDefinitions")"><i class="fas fa-project-diagram"></i> القيود المركبة</a></li>
                                             </ul>
                                         </li>
-                                        <li class="nav-item">
+                                        <li class="nav-item" data-menu-key="hr">
                                             <a class="nav-link nav-link-toggle d-flex align-items-center justify-content-between" data-bs-toggle="collapse" href="#hrMenu" data-bs-target="#hrMenu" role="button" aria-expanded="@(hrActive ? "true" : "false")" aria-controls="hrMenu">
                                                 <span class="nav-link-label"><i class="fas fa-users-cog"></i> شؤون الموظفين</span>
                                                 <i class="fas fa-angle-down toggle-icon"></i>
@@ -280,7 +296,7 @@
                                                 <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "EmployeeAdvances")" asp-require-permission="employeeadvances.view"><i class="fas fa-hand-holding-usd"></i> سندات صرف السلف</a></li>
                                             </ul>
                                         </li>
-                                        <li class="nav-item">
+                                        <li class="nav-item" data-menu-key="reports">
                                             <a class="nav-link nav-link-toggle d-flex align-items-center justify-content-between" data-bs-toggle="collapse" href="#reportsMenu" data-bs-target="#reportsMenu" role="button" aria-expanded="@(reportsActive ? "true" : "false")" aria-controls="reportsMenu">
                                                 <span class="nav-link-label"><i class="fas fa-chart-bar"></i> التقارير</span>
                                                 <i class="fas fa-angle-down toggle-icon"></i>
@@ -298,7 +314,7 @@
                                                 <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("QueryBuilder", "Reports")"><i class="fas fa-project-diagram"></i> مصمم التقارير</a></li>
                                             </ul>
                                         </li>
-                                        <li class="nav-item">
+                                        <li class="nav-item" data-menu-key="settings">
                                             <a class="nav-link nav-link-toggle d-flex align-items-center justify-content-between" data-bs-toggle="collapse" href="#settingsMenu" data-bs-target="#settingsMenu" role="button" aria-expanded="@(settingsActive ? "true" : "false")" aria-controls="settingsMenu">
                                                 <span class="nav-link-label"><i class="fas fa-cog"></i> الإعدادات</span>
                                                 <i class="fas fa-angle-down toggle-icon"></i>
@@ -487,6 +503,7 @@
                         <!-- Scripts -->
                         <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
                         <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+                        <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
                         @*     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
  *@
 
@@ -533,6 +550,7 @@
                             document.addEventListener('DOMContentLoaded', function () {
                                 var currencySelect = document.querySelector('select[name="CurrencyId"]');
                                 var accountSelect = document.querySelector('select[name="AccountId"]');
+                                var sidebarMenu = document.getElementById('sidebarMenu');
                                 if (currencySelect && accountSelect) {
                                     function filterAccounts() {
                                         var currency = currencySelect.value;
@@ -544,6 +562,114 @@
                                     }
                                     filterAccounts();
                                     currencySelect.addEventListener('change', filterAccounts);
+                                }
+
+                                if (sidebarMenu) {
+                                    var menuOrderUrl = '@Url.Content("~/api/UserPreferences/sidebar-menu-order")';
+                                    var saveTimeoutId = null;
+
+                                    function getCurrentOrder() {
+                                        return Array.from(sidebarMenu.querySelectorAll(':scope > li[data-menu-key]'))
+                                            .map(function (item) { return item.getAttribute('data-menu-key'); });
+                                    }
+
+                                    function applyMenuOrder(order) {
+                                        if (!Array.isArray(order) || !order.length) {
+                                            return;
+                                        }
+
+                                        var items = Array.from(sidebarMenu.querySelectorAll(':scope > li[data-menu-key]'));
+                                        var remaining = {};
+
+                                        items.forEach(function (item) {
+                                            var key = item.getAttribute('data-menu-key');
+                                            if (key) {
+                                                remaining[key] = item;
+                                            }
+                                        });
+
+                                        var orderedItems = [];
+
+                                        order.forEach(function (key) {
+                                            if (remaining[key]) {
+                                                orderedItems.push(remaining[key]);
+                                                delete remaining[key];
+                                            }
+                                        });
+
+                                        Object.keys(remaining).forEach(function (key) {
+                                            orderedItems.push(remaining[key]);
+                                        });
+
+                                        orderedItems.forEach(function (item) {
+                                            sidebarMenu.appendChild(item);
+                                        });
+                                    }
+
+                                    function loadMenuOrder() {
+                                        return fetch(menuOrderUrl, { credentials: 'same-origin' })
+                                            .then(function (response) {
+                                                if (!response || !response.ok) {
+                                                    return null;
+                                                }
+                                                return response.json();
+                                            })
+                                            .then(function (data) {
+                                                if (data && Array.isArray(data.order)) {
+                                                    applyMenuOrder(data.order);
+                                                }
+                                            })
+                                            .catch(function (error) {
+                                                console.error('Failed to load sidebar menu order', error);
+                                            });
+                                    }
+
+                                    function saveMenuOrder() {
+                                        var payload = {
+                                            order: getCurrentOrder()
+                                        };
+
+                                        fetch(menuOrderUrl, {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json'
+                                            },
+                                            credentials: 'same-origin',
+                                            body: JSON.stringify(payload)
+                                        }).catch(function (error) {
+                                            console.error('Failed to save sidebar menu order', error);
+                                        });
+                                    }
+
+                                    function scheduleMenuSave() {
+                                        if (saveTimeoutId) {
+                                            clearTimeout(saveTimeoutId);
+                                        }
+
+                                        saveTimeoutId = setTimeout(function () {
+                                            saveMenuOrder();
+                                        }, 600);
+                                    }
+
+                                    function initializeSortable() {
+                                        if (!window.Sortable) {
+                                            console.warn('SortableJS is not available; sidebar menu reordering is disabled.');
+                                            return;
+                                        }
+
+                                        new Sortable(sidebarMenu, {
+                                            animation: 150,
+                                            handle: '.nav-link',
+                                            draggable: 'li[data-menu-key]',
+                                            onEnd: function () {
+                                                scheduleMenuSave();
+                                            }
+                                        });
+                                    }
+
+                                    loadMenuOrder().then(function () {
+                                        initializeSortable();
+                                    });
                                 }
 
                                 var menuSearchInput = document.getElementById('menuSearch');
