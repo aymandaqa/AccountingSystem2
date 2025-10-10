@@ -39,17 +39,44 @@ namespace AccountingSystem.Controllers
                 .OrderByDescending(e => e.Date)
                 .ToListAsync();
 
-            var model = expenses.Select(e => new AssetExpenseListViewModel
+            var references = expenses
+                .Select(e => $"ASSETEXP:{e.Id}")
+                .ToList();
+
+            var journalEntries = await _context.JournalEntries
+                .Where(j => j.Reference != null && references.Contains(j.Reference))
+                .Select(j => new { j.Reference, j.Id, j.Number })
+                .ToListAsync();
+
+            var journalEntryLookup = journalEntries
+                .ToDictionary(j => j.Reference!, j => (j.Id, j.Number));
+
+            var model = expenses.Select(e =>
             {
-                Id = e.Id,
-                AssetName = e.Asset.Name,
-                BranchName = e.Asset.Branch.NameAr,
-                ExpenseAccountName = e.ExpenseAccount.NameAr,
-                SupplierName = e.Supplier.NameAr,
-                Amount = e.Amount,
-                IsCash = e.IsCash,
-                Date = e.Date,
-                Notes = e.Notes
+                var reference = $"ASSETEXP:{e.Id}";
+                int? journalEntryId = null;
+                string? journalEntryNumber = null;
+
+                if (journalEntryLookup.TryGetValue(reference, out var entryInfo))
+                {
+                    journalEntryId = entryInfo.Id;
+                    journalEntryNumber = entryInfo.Number;
+                }
+
+                return new AssetExpenseListViewModel
+                {
+                    Id = e.Id,
+                    AssetName = e.Asset.Name,
+                    BranchName = e.Asset.Branch.NameAr,
+                    ExpenseAccountName = e.ExpenseAccount.NameAr,
+                    SupplierName = e.Supplier.NameAr,
+                    Amount = e.Amount,
+                    IsCash = e.IsCash,
+                    Date = e.Date,
+                    Notes = e.Notes,
+                    JournalEntryId = journalEntryId,
+                    JournalEntryNumber = journalEntryNumber
+                };
             }).ToList();
 
             return View(model);

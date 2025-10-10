@@ -27,6 +27,7 @@
                                 <th>نوع الدفع</th>
                                 <th>التاريخ</th>
                                 <th>ملاحظات</th>
+                                <th class="text-center">القيد المحاسبي</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -41,6 +42,23 @@
                                     <td>@(item.IsCash ? "نقدي" : "غير نقدي")</td>
                                     <td>@item.Date.ToString("yyyy-MM-dd")</td>
                                     <td>@item.Notes</td>
+                                    <td class="text-center">
+                                        @if (item.JournalEntryId.HasValue)
+                                        {
+                                            <a asp-controller="JournalEntries"
+                                               asp-action="Details"
+                                               asp-route-id="@item.JournalEntryId.Value"
+                                               asp-require-permission="journal.view"
+                                               class="btn btn-sm btn-outline-primary"
+                                               title="عرض القيد @item.JournalEntryNumber">
+                                                <i class="fas fa-book-open"></i>
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
                                 </tr>
                             }
                         </tbody>
