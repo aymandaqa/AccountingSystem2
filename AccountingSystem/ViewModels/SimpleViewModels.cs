@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc.Rendering;
 using AccountingSystem.Models;
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Linq;
 
 namespace AccountingSystem.ViewModels
@@ -260,6 +261,7 @@ namespace AccountingSystem.ViewModels
         public Dictionary<DateTime, decimal> ColumnTotals { get; set; } = new Dictionary<DateTime, decimal>();
         public decimal GrandTotal { get; set; }
         public bool FiltersApplied { get; set; }
+        public CultureInfo DisplayCulture { get; set; } = CultureInfo.CurrentCulture;
         public bool HasResults => Rows.Any();
     }
 

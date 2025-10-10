@@ -1,8 +1,10 @@
 @model AccountingSystem.ViewModels.BranchExpensesReportViewModel
 @using AccountingSystem.ViewModels
 @using System.Linq
+@using System.Globalization
 @{
     ViewData["Title"] = "تقرير مصروفات الفروع";
+    var displayCulture = Model.DisplayCulture ?? CultureInfo.CurrentCulture;
 }
 
 <div class="container-fluid">
@@ -88,7 +90,7 @@
                         <div class="alert alert-info d-flex align-items-center gap-3">
                             <i class="fas fa-info-circle fa-lg"></i>
                             <div>
-                                <div>من <strong>@Model.FromDate:dd/MM/yyyy</strong> إلى <strong>@Model.ToDate:dd/MM/yyyy</strong> - تجميع <strong>@periodDescription</strong></div>
+                                <div>من <strong>@Model.FromDate.ToString("dd/MM/yyyy", displayCulture)</strong> إلى <strong>@Model.ToDate.ToString("dd/MM/yyyy", displayCulture)</strong> - تجميع <strong>@periodDescription</strong></div>
                                 <div>@branchSummary</div>
                                 @if (!string.IsNullOrWhiteSpace(selectedBranchNames))
                                 {
@@ -121,7 +123,7 @@
                                 <tbody>
                                     @foreach (var column in Model.Columns)
                                     {
-                                        var periodRange = $"{column.PeriodStart:dd/MM/yyyy} - {column.PeriodEnd:dd/MM/yyyy}";
+                                        var periodRange = string.Format(displayCulture, "{0:dd/MM/yyyy} - {1:dd/MM/yyyy}", column.PeriodStart, column.PeriodEnd);
                                         <tr>
                                             <td title="@periodRange">@column.Label</td>
                                             @if (Model.ViewMode == BranchExpensesViewMode.Combined)
