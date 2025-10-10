@@ -582,6 +582,7 @@
         .cashbox-card .card-body {
             background-color: #f8fafc;
             padding: 0;
+            border-top: 1px solid #e2e8f0;
         }
 
         .cashbox-loading {
@@ -589,9 +590,11 @@
         }
 
         .cashbox-content {
-            padding: 1rem 1.25rem;
+            padding: 1.25rem 1.5rem;
             max-height: 420px;
             overflow-y: auto;
+            overflow-x: hidden;
+            background-color: #ffffff;
         }
 
         .cashbox-content .alert {
@@ -743,28 +746,43 @@
                 color: #495057;
             }
 
+        .cashbox-card-toggle {
+            min-width: 32px;
+        }
+
         .cashbox-tree {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
         }
 
-        .cashbox-node {
-            border: 1px solid #e9ecef;
+        .cashbox-tree .tree-node {
+            margin: 0;
+            padding: 0;
             border-radius: 12px;
-            margin-bottom: 12px;
+            border: 1px solid #e2e8f0;
             background-color: #ffffff;
             box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+            overflow: hidden;
         }
 
-        .cashbox-node-content {
+        .cashbox-tree .tree-node-content {
             display: flex;
             align-items: center;
             gap: 0.75rem;
             padding: 0.75rem 1rem;
             background-color: #f8fafc;
-            border-radius: 12px 12px 0 0;
         }
 
-        .cashbox-toggle {
+        .cashbox-tree .tree-node-info {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+            gap: 0.5rem;
+        }
+
+        .cashbox-tree .toggle-btn {
             background: none;
             border: none;
             color: #6c757d;
@@ -778,73 +796,35 @@
             transition: all 0.2s ease;
         }
 
-            .cashbox-toggle:hover {
+            .cashbox-tree .toggle-btn:hover {
                 color: #0d6efd;
                 background-color: rgba(13, 110, 253, 0.1);
             }
 
-        .cashbox-card-toggle {
-            min-width: 32px;
+        .cashbox-tree .tree-children {
+            margin: 0 1.25rem 1.25rem 0;
+            border-right: 2px solid #e2e8f0;
+            padding: 0.75rem 1rem 0.75rem 0;
+            background-color: #ffffff;
         }
 
-        .cashbox-node-info {
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1;
-            gap: 0.35rem;
+        .cashbox-tree .tree-children .tree-node {
+            box-shadow: none;
+            border-radius: 10px;
         }
 
-        .cashbox-branch-title {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+        .cashbox-tree .tree-children .tree-node-content {
+            background-color: transparent;
         }
 
-        .cashbox-branch-values {
-            display: flex;
-            align-items: baseline;
-            gap: 0.75rem;
-            flex-wrap: wrap;
+        .cashbox-tree .account-code {
+            font-weight: 600;
+            color: #475569;
         }
 
-        .cashbox-children {
-            padding: 0.75rem 1rem;
-            border-top: 1px solid #e9ecef;
-            background-color: #fff;
-            border-radius: 0 0 12px 12px;
-        }
-
-        .cashbox-leaf {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0.5rem 0;
-            border-bottom: 1px dashed #e9ecef;
-            gap: 0.75rem;
-        }
-
-            .cashbox-leaf:last-child {
-                border-bottom: none;
-            }
-
-        .cashbox-leaf-info {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+        .cashbox-tree .account-name {
+            color: #1f2937;
             font-weight: 500;
-            color: #212529;
-        }
-
-        .cashbox-leaf-values {
-            display: flex;
-            align-items: baseline;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-        }
-
-        .cashbox-value {
-            white-space: nowrap;
-            font-size: 0.95rem;
         }
 
         @@media (max-width: 1200px) {
@@ -873,22 +853,21 @@
         }
 
         @@media (max-width: 576px) {
-            .cashbox-node-content {
+            .cashbox-tree .tree-node-content {
                 flex-direction: column;
                 align-items: flex-start;
+                gap: 0.5rem;
             }
 
-            .cashbox-branch-title {
+            .cashbox-tree .tree-node-info {
                 flex-wrap: wrap;
+                gap: 0.5rem;
             }
 
-            .cashbox-leaf {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .cashbox-leaf-values {
+            .cashbox-tree .tree-node-content > .ms-auto {
+                margin-inline-start: 0 !important;
                 width: 100%;
+                text-align: start;
             }
         }
     </style>
@@ -934,21 +913,11 @@
                 applyFilters();
             });
 
-            var storage = null;
-            if (typeof window !== 'undefined') {
-                try {
-                    storage = window.localStorage;
-                } catch (err) {
-                    storage = null;
-                }
-            }
-
             var $cashboxBody = $('#cashboxesCardBody');
             var $cashboxToggle = $('#cashboxesToggle');
             var $cashboxContent = $('#cashboxesContent');
             var $cashboxLoading = $cashboxBody.find('.cashbox-loading');
             var cashboxLoadUrl = $cashboxBody.data('load-url');
-            var cardStorageKey = 'dashboard.cashboxes.collapsed';
             var isCashboxLoading = false;
 
             function loadCashboxTree() {
@@ -1004,41 +973,19 @@
             }
 
             if ($cashboxToggle.length) {
-                var storedCollapseState = storage ? storage.getItem(cardStorageKey) : null;
-                var shouldCollapse = true;
-
-                if (storedCollapseState === 'false') {
-                    shouldCollapse = false;
-                } else if (storedCollapseState === 'true') {
-                    shouldCollapse = true;
-                }
-
-                if (shouldCollapse) {
-                    $cashboxBody.hide();
-                    $cashboxToggle.attr('aria-expanded', 'false').html('<i class="fas fa-plus"></i>');
-                } else {
-                    $cashboxBody.show();
-                    $cashboxToggle.attr('aria-expanded', 'true').html('<i class="fas fa-minus"></i>');
-                    loadCashboxTree();
-                }
+                $cashboxBody.hide();
+                $cashboxToggle.attr('aria-expanded', 'false').html('<i class="fas fa-plus"></i>');
 
                 $cashboxToggle.on('click', function () {
                     var visible = $cashboxBody.is(':visible');
                     if (visible) {
                         $cashboxBody.slideUp(200);
                         $cashboxToggle.attr('aria-expanded', 'false').html('<i class="fas fa-plus"></i>');
-                        if (storage) {
-                            storage.setItem(cardStorageKey, 'true');
-                        }
                     } else {
                         $cashboxBody.slideDown(200, function () {
                             loadCashboxTree();
                         });
                         $cashboxToggle.attr('aria-expanded', 'true').html('<i class="fas fa-minus"></i>');
-                        if (storage) {
-                            storage.setItem(cardStorageKey, 'false');
-                        }
-                        loadCashboxTree();
                     }
                 });
             }
