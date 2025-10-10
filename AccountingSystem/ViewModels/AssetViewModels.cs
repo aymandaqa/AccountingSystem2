@@ -74,6 +74,8 @@ namespace AccountingSystem.ViewModels
         public bool IsCash { get; set; }
         public DateTime Date { get; set; }
         public string? Notes { get; set; }
+        public int? JournalEntryId { get; set; }
+        public string? JournalEntryNumber { get; set; }
     }
 
     public class CreateAssetExpenseViewModel
