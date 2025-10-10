@@ -1437,7 +1437,7 @@ namespace Roadfn.Controllers
                         tottxn.CreditAmount = Convert.ToDecimal(sh.ShipmentPrice);
                     }
                     tottxn.Reference = bisnessUserPaymentHeader.Id.ToString();
-                    tottxn.Description = sh.ShipmentTrackingNo;
+                    tottxn.Description = sh.ShipmentTrackingNo + "دفع ذمة مورد ";
                     lines.Add(tottxn);
                     #endregion
 
@@ -1456,7 +1456,7 @@ namespace Roadfn.Controllers
                         CustomerAccounttxn.DebitAmount = Convert.ToDecimal(sh.ShipmentPrice);
                     }
                     CustomerAccounttxn.Reference = bisnessUserPaymentHeader.Id.ToString();
-                    CustomerAccounttxn.Description = sh.ShipmentTrackingNo;
+                    CustomerAccounttxn.Description = sh.ShipmentTrackingNo + "دفع ذمة مورد "; ;
                     lines.Add(CustomerAccounttxn);
                     #endregion
                     await _journalEntryService.CreateJournalEntryAsync(
