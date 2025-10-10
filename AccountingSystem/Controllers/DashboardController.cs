@@ -82,7 +82,8 @@ namespace AccountingSystem.Controllers
                 TotalRevenuesBase = GetTotal(AccountType.Revenue, true),
                 TotalExpensesBase = GetTotal(AccountType.Expenses, true),
                 AccountTypeTrees = accountTypeTrees,
-                CashBoxes = treeData.CashBoxes
+                CashBoxTree = treeData.CashBoxTree,
+                CashBoxParentAccountConfigured = treeData.CashBoxParentAccountConfigured
             };
 
             viewModel.NetIncome = viewModel.TotalRevenues - viewModel.TotalExpenses;
@@ -191,6 +192,18 @@ namespace AccountingSystem.Controllers
 
             var allowedBranchIds = effectiveBranchId.HasValue ? new List<int> { effectiveBranchId.Value } : userBranchIds;
 
+            var cashBoxParentSetting = await _context.SystemSettings
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Key == "CashBoxesParentAccountId");
+
+            int? cashBoxParentAccountId = null;
+            if (cashBoxParentSetting != null && int.TryParse(cashBoxParentSetting.Value, out var parsedParentId))
+            {
+                cashBoxParentAccountId = parsedParentId;
+            }
+
+            var cashBoxParentConfigured = cashBoxParentAccountId.HasValue;
+
             var startDate = fromDate?.Date ?? DateTime.Today;
             var toDateValue = toDate?.Date ?? DateTime.Today;
             var endDate = toDateValue.Date.AddDays(1).AddTicks(-1);
@@ -214,22 +227,6 @@ namespace AccountingSystem.Controllers
                 a.OpeningBalance + a.JournalEntryLines
                     .Where(l => l.JournalEntry.Date >= startDate && l.JournalEntry.Date <= endDate && allowedBranchIds.Contains(l.JournalEntry.BranchId))
                     .Sum(l => l.DebitAmount - l.CreditAmount));
-
-            var cashBoxes = accounts
-                .Where(a => a.Code.StartsWith("1101"))
-                .Select(a =>
-                {
-                    var balance = accountBalances[a.Id];
-                    return new CashBoxBalanceViewModel
-                    {
-                        AccountName = a.NameAr,
-                        BranchName = a.Branch?.NameAr ?? string.Empty,
-                        Balance = balance,
-                        BalanceSelected = _currencyService.Convert(balance, a.Currency, selectedCurrency),
-                        BalanceBase = _currencyService.Convert(balance, a.Currency, baseCurrency)
-                    };
-                })
-                .ToList();
 
             var nodes = accounts.Select(a =>
             {
@@ -291,6 +288,45 @@ namespace AccountingSystem.Controllers
                     Selected: g.Sum(n => n.BalanceSelected),
                     Base: g.Sum(n => n.BalanceBase)));
 
+            List<AccountTreeNodeViewModel> cashBoxTreeNodes = new();
+
+            if (cashBoxParentAccountId.HasValue && nodes.TryGetValue(cashBoxParentAccountId.Value, out var cashBoxParentNode))
+            {
+                AccountTreeNodeViewModel CloneNode(AccountTreeNodeViewModel source, int relativeLevel)
+                {
+                    var clone = new AccountTreeNodeViewModel
+                    {
+                        Id = source.Id,
+                        Code = source.Code,
+                        NameAr = source.NameAr,
+                        AccountType = source.AccountType,
+                        Nature = source.Nature,
+                        CurrencyCode = source.CurrencyCode,
+                        OpeningBalance = source.OpeningBalance,
+                        Balance = source.Balance,
+                        BalanceSelected = source.BalanceSelected,
+                        BalanceBase = source.BalanceBase,
+                        IsActive = source.IsActive,
+                        CanPostTransactions = source.CanPostTransactions,
+                        ParentId = relativeLevel == 0 ? null : source.ParentId,
+                        Level = relativeLevel,
+                        Children = new List<AccountTreeNodeViewModel>(),
+                        HasChildren = source.Children.Any()
+                    };
+
+                    foreach (var child in source.Children.OrderBy(c => c.Code))
+                    {
+                        var childClone = CloneNode(child, relativeLevel + 1);
+                        clone.Children.Add(childClone);
+                    }
+
+                    clone.HasChildren = clone.Children.Any();
+                    return clone;
+                }
+
+                cashBoxTreeNodes.Add(CloneNode(cashBoxParentNode, 0));
+            }
+
             return new DashboardTreeComputationResult
             {
                 RootNodes = rootNodes,
@@ -298,7 +334,8 @@ namespace AccountingSystem.Controllers
                 TotalsByType = totals,
                 BaseCurrency = baseCurrency,
                 SelectedCurrency = selectedCurrency,
-                CashBoxes = cashBoxes,
+                CashBoxTree = cashBoxTreeNodes,
+                CashBoxParentAccountConfigured = cashBoxParentConfigured,
                 StartDate = startDate,
                 EndDate = endDate
             };
@@ -311,7 +348,8 @@ namespace AccountingSystem.Controllers
             public Dictionary<AccountType, (decimal Selected, decimal Base)> TotalsByType { get; set; } = new Dictionary<AccountType, (decimal Selected, decimal Base)>();
             public Currency BaseCurrency { get; set; } = null!;
             public Currency SelectedCurrency { get; set; } = null!;
-            public List<CashBoxBalanceViewModel> CashBoxes { get; set; } = new List<CashBoxBalanceViewModel>();
+            public List<AccountTreeNodeViewModel> CashBoxTree { get; set; } = new List<AccountTreeNodeViewModel>();
+            public bool CashBoxParentAccountConfigured { get; set; }
             public DateTime StartDate { get; set; }
             public DateTime EndDate { get; set; }
         }

@@ -346,6 +346,11 @@ namespace AccountingSystem.Data
                 context.SystemSettings.Add(new SystemSetting { Key = "PayrollExpenseAccountId", Value = null });
             }
 
+            if (!context.SystemSettings.Any(s => s.Key == "CashBoxesParentAccountId"))
+            {
+                context.SystemSettings.Add(new SystemSetting { Key = "CashBoxesParentAccountId", Value = null });
+            }
+
             await context.SaveChangesAsync();
         }
 
