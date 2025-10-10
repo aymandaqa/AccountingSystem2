@@ -361,16 +361,6 @@ namespace AccountingSystem.ViewModels
     }
 
 
-    // Dashboard ViewModels
-    public class CashBoxBalanceViewModel
-    {
-        public string BranchName { get; set; } = string.Empty;
-        public string AccountName { get; set; } = string.Empty;
-        public decimal Balance { get; set; }
-        public decimal BalanceSelected { get; set; }
-        public decimal BalanceBase { get; set; }
-    }
-
     public class DashboardViewModel
     {
         public int TotalAccounts { get; set; }
@@ -397,7 +387,8 @@ namespace AccountingSystem.ViewModels
         public DateTime ToDate { get; set; } = DateTime.Today;
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
         public List<AccountTreeNodeViewModel> AccountTypeTrees { get; set; } = new List<AccountTreeNodeViewModel>();
-        public List<CashBoxBalanceViewModel> CashBoxes { get; set; } = new List<CashBoxBalanceViewModel>();
+        public List<AccountTreeNodeViewModel> CashBoxTree { get; set; } = new List<AccountTreeNodeViewModel>();
+        public bool CashBoxParentAccountConfigured { get; set; }
     }
 
     // Additional ViewModels
