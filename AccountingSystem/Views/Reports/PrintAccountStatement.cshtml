@@ -167,6 +167,16 @@
                 </tr>
             </thead>
             <tbody>
+                <tr class="table-light">
+                    <td>@Model.FromDate.ToString("yyyy/MM/dd")</td>
+                    <td colspan="4" class="fw-bold text-center">الرصيد الافتتاحي</td>
+                    <td class="text-end">-</td>
+                    <td class="text-end">-</td>
+                    <td class="text-end">
+                        @Model.OpeningBalance.ToString("N2")
+                        <div class="text-muted">@Model.OpeningBalanceBase.ToString("N2") @Model.BaseCurrencyCode</div>
+                    </td>
+                </tr>
                 @if (Model.Transactions != null && Model.Transactions.Any())
                 {
                     foreach (var transaction in Model.Transactions)
