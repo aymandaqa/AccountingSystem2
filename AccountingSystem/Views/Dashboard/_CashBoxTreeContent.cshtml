@@ -8,7 +8,7 @@
 }
 else if (Model.Nodes.Any())
 {
-    <div id="cashBoxTree" class="tree-container">
+    <div id="cashBoxTree" class="tree-container cashbox-tree">
         @await Html.PartialAsync("~/Views/Shared/_AccountBalanceTreeNode.cshtml", Model.Nodes)
     </div>
 }
