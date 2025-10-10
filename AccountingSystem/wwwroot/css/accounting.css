@@ -15,15 +15,15 @@ body {
 .page-content {
     background: rgba(255, 255, 255, 0.92);
     border-radius: 20px;
-    padding: 2rem;
+    padding: 0.5rem;
     box-shadow: 0 20px 45px rgba(17, 38, 79, 0.25);
     backdrop-filter: blur(6px);
     min-height: calc(100vh - 160px);
 }
 
-.page-content .breadcrumb {
-    background: rgba(255, 255, 255, 0.8);
-}
+    .page-content .breadcrumb {
+        background: rgba(255, 255, 255, 0.8);
+    }
 
 /* تحسين الشكل العام */
 .container-fluid {
@@ -39,10 +39,10 @@ body {
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-}
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
 
 .card-header {
     background: linear-gradient(135deg, #355C93 0%, #5E88CA 100%);
@@ -52,12 +52,12 @@ body {
     padding: 1rem 1.5rem;
 }
 
-.card-header h3,
-.card-header h4,
-.card-header h5 {
-    margin: 0;
-    font-weight: 600;
-}
+    .card-header h3,
+    .card-header h4,
+    .card-header h5 {
+        margin: 0;
+        font-weight: 600;
+    }
 
 /* تحسين الأزرار */
 .btn {
@@ -72,10 +72,10 @@ body {
     border: none;
 }
 
-.btn-primary:hover {
-    background: linear-gradient(135deg, #2B4A7C 0%, #547BB5 100%);
-    transform: translateY(-1px);
-}
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #2B4A7C 0%, #547BB5 100%);
+        transform: translateY(-1px);
+    }
 
 .btn-success {
     background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
@@ -105,26 +105,26 @@ body {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-.table thead th {
-    background: linear-gradient(135deg, #355C93 0%, #5E88CA 100%);
-    color: white;
-    border: none;
-    font-weight: 600;
-    padding: 1rem;
-}
+    .table thead th {
+        background: linear-gradient(135deg, #355C93 0%, #5E88CA 100%);
+        color: white;
+        border: none;
+        font-weight: 600;
+        padding: 1rem;
+    }
 
-.table tbody tr {
-    transition: background-color 0.2s;
-}
+    .table tbody tr {
+        transition: background-color 0.2s;
+    }
 
-.table tbody tr:hover {
-    background-color: #f8f9fa;
-}
+        .table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
 
-.table td {
-    padding: 0.75rem 1rem;
-    vertical-align: middle;
-}
+    .table td {
+        padding: 0.75rem 1rem;
+        vertical-align: middle;
+    }
 
 /* تحسين النماذج */
 .form-control {
@@ -134,10 +134,10 @@ body {
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.form-control:focus {
-    border-color: #355C93;
-    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-}
+    .form-control:focus {
+        border-color: #355C93;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
 
 .form-label {
     font-weight: 600;
@@ -197,9 +197,9 @@ body {
     transition: color 0.2s;
 }
 
-.nav-link:hover {
-    color: #f8f9fa !important;
-}
+    .nav-link:hover {
+        color: #f8f9fa !important;
+    }
 
 /* تحسين القوائم المنسدلة */
 .dropdown-menu {
@@ -214,10 +214,10 @@ body {
     transition: background-color 0.2s;
 }
 
-.dropdown-item:hover {
-    background: linear-gradient(135deg, #355C93 0%, #5E88CA 100%);
-    color: white;
-}
+    .dropdown-item:hover {
+        background: linear-gradient(135deg, #355C93 0%, #5E88CA 100%);
+        color: white;
+    }
 
 /* تحسين مؤشر التحميل */
 .loading-overlay {
@@ -253,10 +253,10 @@ body {
     border-left: 4px solid transparent;
 }
 
-.tree-node:hover {
-    background: #f8f9fa;
-    border-left-color: #355C93;
-}
+    .tree-node:hover {
+        background: #f8f9fa;
+        border-left-color: #355C93;
+    }
 
 .tree-node-content {
     display: flex;
@@ -314,10 +314,10 @@ body {
     transition: all 0.2s;
 }
 
-.toggle-btn:hover {
-    background: #e9ecef;
-    color: #495057;
-}
+    .toggle-btn:hover {
+        background: #e9ecef;
+        color: #495057;
+    }
 
 /* تحسين لوحة التحكم */
 .dashboard-card {
@@ -328,16 +328,16 @@ body {
     margin-bottom: 1.5rem;
 }
 
-.dashboard-card h2 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin: 0;
-}
+    .dashboard-card h2 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+    }
 
-.dashboard-card h4 {
-    font-weight: 500;
-    opacity: 0.9;
-}
+    .dashboard-card h4 {
+        font-weight: 500;
+        opacity: 0.9;
+    }
 
 /* تحسين الإحصائيات */
 .stat-card {
@@ -349,21 +349,21 @@ body {
     transition: transform 0.2s;
 }
 
-.stat-card:hover {
-    transform: translateY(-2px);
-}
+    .stat-card:hover {
+        transform: translateY(-2px);
+    }
 
-.stat-card h3 {
-    font-size: 2rem;
-    font-weight: 700;
-    margin: 0.5rem 0;
-}
+    .stat-card h3 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+    }
 
-.stat-card h5 {
-    color: #6c757d;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-}
+    .stat-card h5 {
+        color: #6c757d;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
 
 /* تحسين التقارير */
 .report-filters {
@@ -395,9 +395,9 @@ body {
     font-weight: 500;
 }
 
-.breadcrumb-item a:hover {
-    color: #5a6fd8;
-}
+    .breadcrumb-item a:hover {
+        color: #5a6fd8;
+    }
 
 /* تحسين القوائم */
 .list-group-item {
@@ -410,10 +410,10 @@ body {
     transition: all 0.2s;
 }
 
-.list-group-item:hover {
-    transform: translateX(5px);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-}
+    .list-group-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    }
 
 /* تحسين الأيقونات */
 .fas, .far {
@@ -437,7 +437,7 @@ body {
     }
 
     .page-content {
-        padding: 1.25rem;
+        padding: 0.5rem;
         border-radius: 16px;
         min-height: calc(100vh - 140px);
     }
@@ -445,16 +445,16 @@ body {
     .card-header {
         padding: 1rem;
     }
-    
+
     .tree-children {
         margin-right: 1rem;
         padding-right: 0.5rem;
     }
-    
+
     .table-responsive {
         border-radius: 10px;
     }
-    
+
     .btn-group .btn {
         margin-bottom: 0.25rem;
     }
@@ -469,14 +469,13 @@ body {
     .btn-group {
         display: none !important;
     }
-    
+
     .card {
         box-shadow: none;
         border: 1px solid #dee2e6;
     }
-    
+
     .table {
         box-shadow: none;
     }
 }
-

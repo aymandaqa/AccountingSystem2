@@ -19,6 +19,11 @@
     <script src="https://cdn.syncfusion.com/ej2/dist/ej2.min.js"></script>
 
     @await RenderSectionAsync("Styles", required: false)
+    <Style>
+        .container, .container-fluid, .container-lg, .container-md, .container-sm, .container-xl, .container-xxl {
+            --bs-gutter-x: 0.5rem;
+        }
+    </Style>
 </head>
 <body>
     @{
