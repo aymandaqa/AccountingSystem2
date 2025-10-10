@@ -389,11 +389,11 @@ namespace AccountingSystem.Controllers
                         HasChildren = source.Children.Any()
                     };
 
-                    //foreach (var child in source.Children.OrderBy(c => c.Code))
-                    //{
-                    //    var childClone = CloneNode(child, relativeLevel + 1);
-                    //    clone.Children.Add(childClone);
-                    //}
+                    foreach (var child in source.Children.OrderBy(c => c.Code))
+                    {
+                        var childClone = CloneNode(child, relativeLevel + 1);
+                        clone.Children.Add(childClone);
+                    }
 
                     clone.HasChildren = clone.Children.Any();
                     return clone;
