@@ -253,27 +253,26 @@
                                 </div>
                             </div>
                             <div class="card-body">
-                                @if (Model.CashBoxTree.Any())
-                                {
-                                    <div id="dashboardAccountsTree" class="tree-container"
-                                         data-branch-id="@(Model.SelectedBranchId?.ToString() ?? string.Empty)"
-                                         data-from-date="@Model.FromDate.ToString("yyyy-MM-dd")"
-                                         data-to-date="@Model.ToDate.ToString("yyyy-MM-dd")"
-                                         data-currency-id="@(Model.SelectedCurrencyId?.ToString() ?? string.Empty)"
-                                         data-selected-currency="@Model.SelectedCurrencyCode"
-                                         data-base-currency="@Model.BaseCurrencyCode">
-                                        @{
-                                            ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode; ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
-                                        }
-                                        @await Html.PartialAsync("_CashBoxTreeContent", Model.CashBoxTree)
-                                    </div>
+                                @{
+                                    var cashBoxTreeViewModel = new CashBoxTreeViewModel
+                                    {
+                                        Nodes = Model.CashBoxTree ?? new System.Collections.Generic.List<AccountTreeNodeViewModel>(),
+                                        ParentConfigured = Model.CashBoxParentAccountConfigured
+                                    };
                                 }
-                                else
-                                {
-                                    <div class="alert alert-info text-center mb-0">
-                                        لا توجد بيانات لعرضها
-                                    </div>
-                                }
+
+                                <div id="dashboardAccountsTree" class="tree-container"
+                                     data-branch-id="@(Model.SelectedBranchId?.ToString() ?? string.Empty)"
+                                     data-from-date="@Model.FromDate.ToString("yyyy-MM-dd")"
+                                     data-to-date="@Model.ToDate.ToString("yyyy-MM-dd")"
+                                     data-currency-id="@(Model.SelectedCurrencyId?.ToString() ?? string.Empty)"
+                                     data-selected-currency="@Model.SelectedCurrencyCode"
+                                     data-base-currency="@Model.BaseCurrencyCode">
+                                    @{
+                                        ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode; ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
+                                    }
+                                    @await Html.PartialAsync("_CashBoxTreeContent", cashBoxTreeViewModel)
+                                </div>
                             </div>
                         </div>
                     </div>
