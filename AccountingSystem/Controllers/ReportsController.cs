@@ -1863,7 +1863,19 @@ namespace AccountingSystem.Controllers
             }
 
             var culture = (CultureInfo)CultureInfo.CreateSpecificCulture("ar-SA").Clone();
-            culture.DateTimeFormat.Calendar = new GregorianCalendar(GregorianCalendarTypes.USEnglish);
+            var gregorianCalendar = culture.OptionalCalendars
+                .OfType<GregorianCalendar>()
+                .FirstOrDefault();
+
+            if (gregorianCalendar == null)
+            {
+                culture = (CultureInfo)CultureInfo.CreateSpecificCulture("ar-EG").Clone();
+                gregorianCalendar = culture.OptionalCalendars
+                    .OfType<GregorianCalendar>()
+                    .FirstOrDefault() ?? new GregorianCalendar(GregorianCalendarTypes.USEnglish);
+            }
+
+            culture.DateTimeFormat.Calendar = gregorianCalendar;
             culture.DateTimeFormat.ShortDatePattern = "dd/MM/yyyy";
             culture.DateTimeFormat.LongDatePattern = "dd/MM/yyyy";
             culture.DateTimeFormat.MonthDayPattern = "dd/MM";
