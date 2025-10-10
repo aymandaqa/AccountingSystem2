@@ -382,7 +382,7 @@ namespace AccountingSystem.Controllers
                     return clone;
                 }
 
-                cashBoxTreeNodes.Add(CloneNode(cashBoxParentNode, 0));
+                //cashBoxTreeNodes.Add(CloneNode(cashBoxParentNode, 0));
             }
 
             return new DashboardTreeComputationResult

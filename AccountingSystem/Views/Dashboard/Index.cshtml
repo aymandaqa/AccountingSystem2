@@ -215,7 +215,7 @@
             <section class="dashboard-panels row g-4 mb-4">
                 @if (canViewCashBoxes)
                 {
-                    <div class="col-12 col-xl-5">
+                    @*      <div class="col-12 col-xl-5">
                         <div class="card cashbox-card shadow-sm border-0 h-100">
                             <div class="card-header d-flex align-items-center justify-content-between">
                                 <div>
@@ -241,12 +241,47 @@
                                 <div id="cashboxesContent" class="cashbox-content"></div>
                             </div>
                         </div>
+                    </div> *@
+
+
+                    <div class="col-12 @(canViewCashBoxes ? "col-xl-6" : "col-xl-12")">
+                        <div class="card account-tree-card shadow-sm border-0 h-100">
+                            <div class="card-header d-flex align-items-center justify-content-between">
+                                <div>
+                                    <h5 class="card-title mb-0"><i class="fas fa-sitemap ms-2"></i> أرصدة الصناديق</h5>
+                                    <span class="text-muted small">تتبع أرصدة الصناديق حسب الفروع المختلفة</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                @if (Model.CashBoxTree.Any())
+                                {
+                                    <div id="dashboardAccountsTree" class="tree-container"
+                                         data-branch-id="@(Model.SelectedBranchId?.ToString() ?? string.Empty)"
+                                         data-from-date="@Model.FromDate.ToString("yyyy-MM-dd")"
+                                         data-to-date="@Model.ToDate.ToString("yyyy-MM-dd")"
+                                         data-currency-id="@(Model.SelectedCurrencyId?.ToString() ?? string.Empty)"
+                                         data-selected-currency="@Model.SelectedCurrencyCode"
+                                         data-base-currency="@Model.BaseCurrencyCode">
+                                        @{
+                                            ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode; ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
+                                        }
+                                        @await Html.PartialAsync("_AccountBalanceTreeNode", Model.CashBoxTree)
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="alert alert-info text-center mb-0">
+                                        لا توجد بيانات لعرضها
+                                    </div>
+                                }
+                            </div>
+                        </div>
                     </div>
                 }
 
                 @if (canViewAccounts)
                 {
-                    <div class="col-12 @(canViewCashBoxes ? "col-xl-7" : "col-xl-12")">
+                    <div class="col-12 @(canViewCashBoxes ? "col-xl-6" : "col-xl-12")">
                         <div class="card account-tree-card shadow-sm border-0 h-100">
                             <div class="card-header d-flex align-items-center justify-content-between">
                                 <div>
@@ -579,11 +614,11 @@
             overflow: hidden;
         }
 
-        .cashbox-card .card-body {
-            background-color: #f8fafc;
-            padding: 0;
-            border-top: 1px solid #e2e8f0;
-        }
+            .cashbox-card .card-body {
+                background-color: #f8fafc;
+                padding: 0;
+                border-top: 1px solid #e2e8f0;
+            }
 
         .cashbox-loading {
             padding: 1.5rem;
@@ -597,9 +632,9 @@
             background-color: #ffffff;
         }
 
-        .cashbox-content .alert {
-            margin-bottom: 0;
-        }
+            .cashbox-content .alert {
+                margin-bottom: 0;
+            }
 
         .cashbox-card .card-header,
         .account-tree-card .card-header,
@@ -757,75 +792,75 @@
             gap: 1rem;
         }
 
-        .cashbox-tree .tree-node {
-            margin: 0;
-            padding: 0;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-            background-color: #ffffff;
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
-            overflow: hidden;
-        }
-
-        .cashbox-tree .tree-node-content {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
-            background-color: #f8fafc;
-        }
-
-        .cashbox-tree .tree-node-info {
-            display: flex;
-            align-items: center;
-            flex-grow: 1;
-            gap: 0.5rem;
-        }
-
-        .cashbox-tree .toggle-btn {
-            background: none;
-            border: none;
-            color: #6c757d;
-            cursor: pointer;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-        }
-
-            .cashbox-tree .toggle-btn:hover {
-                color: #0d6efd;
-                background-color: rgba(13, 110, 253, 0.1);
+            .cashbox-tree .tree-node {
+                margin: 0;
+                padding: 0;
+                border-radius: 12px;
+                border: 1px solid #e2e8f0;
+                background-color: #ffffff;
+                box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+                overflow: hidden;
             }
 
-        .cashbox-tree .tree-children {
-            margin: 0 1.25rem 1.25rem 0;
-            border-right: 2px solid #e2e8f0;
-            padding: 0.75rem 1rem 0.75rem 0;
-            background-color: #ffffff;
-        }
+            .cashbox-tree .tree-node-content {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                padding: 0.75rem 1rem;
+                background-color: #f8fafc;
+            }
 
-        .cashbox-tree .tree-children .tree-node {
-            box-shadow: none;
-            border-radius: 10px;
-        }
+            .cashbox-tree .tree-node-info {
+                display: flex;
+                align-items: center;
+                flex-grow: 1;
+                gap: 0.5rem;
+            }
 
-        .cashbox-tree .tree-children .tree-node-content {
-            background-color: transparent;
-        }
+            .cashbox-tree .toggle-btn {
+                background: none;
+                border: none;
+                color: #6c757d;
+                cursor: pointer;
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s ease;
+            }
 
-        .cashbox-tree .account-code {
-            font-weight: 600;
-            color: #475569;
-        }
+                .cashbox-tree .toggle-btn:hover {
+                    color: #0d6efd;
+                    background-color: rgba(13, 110, 253, 0.1);
+                }
 
-        .cashbox-tree .account-name {
-            color: #1f2937;
-            font-weight: 500;
-        }
+            .cashbox-tree .tree-children {
+                margin: 0 1.25rem 1.25rem 0;
+                border-right: 2px solid #e2e8f0;
+                padding: 0.75rem 1rem 0.75rem 0;
+                background-color: #ffffff;
+            }
+
+                .cashbox-tree .tree-children .tree-node {
+                    box-shadow: none;
+                    border-radius: 10px;
+                }
+
+                .cashbox-tree .tree-children .tree-node-content {
+                    background-color: transparent;
+                }
+
+            .cashbox-tree .account-code {
+                font-weight: 600;
+                color: #475569;
+            }
+
+            .cashbox-tree .account-name {
+                color: #1f2937;
+                font-weight: 500;
+            }
 
         @@media (max-width: 1200px) {
             .dashboard-layout {
