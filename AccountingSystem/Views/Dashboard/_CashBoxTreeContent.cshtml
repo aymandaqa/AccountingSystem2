@@ -9,7 +9,7 @@
 else if (Model.Nodes.Any())
 {
     <div id="cashBoxTree" class="tree-container cashbox-tree">
-        @{ ViewData["CollapseTreeNodes"] = true; }
+        @{ ViewData["CollapseTreeNodes"] = false; }
         @await Html.PartialAsync("~/Views/Shared/_AccountBalanceTreeNode.cshtml", Model.Nodes)
         @{ ViewData["CollapseTreeNodes"] = null; }
     </div>
