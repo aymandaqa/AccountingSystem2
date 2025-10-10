@@ -1336,7 +1336,8 @@ namespace Roadfn.Controllers
             if (statusinv == null)
                 return Ok();
 
-            var (actionResult, header) = await ProcessBusinessPaymentAsync(PayToBus, statusinv, dariverID, user, 0);
+            var loginUserId = int.TryParse(user.Id, out var parsedUserId) ? parsedUserId : 0;
+            var (actionResult, header) = await ProcessBusinessPaymentAsync(PayToBus, statusinv, dariverID, user, loginUserId);
             if (actionResult != null)
             {
                 return actionResult;
@@ -1349,7 +1350,7 @@ namespace Roadfn.Controllers
             List<PayToBus> payToBus,
             InvoiceStatus statusinv,
             int driverId,
-            ApplicationUser user,
+            User user,
             int loginUserId)
         {
             if (payToBus == null || payToBus.Count == 0)
@@ -1896,7 +1897,8 @@ namespace Roadfn.Controllers
                     .Select(item => new PayToBus { Id = item.Id, ShipmentTrackingNo = item.ShipmentTrackingNo })
                     .ToList();
 
-                var (actionResult, header) = await ProcessBusinessPaymentAsync(payToBus, statusinv, dariverID, user, user.Id);
+                var loginUserId = int.TryParse(user.Id, out var parsedUserId) ? parsedUserId : 0;
+                var (actionResult, header) = await ProcessBusinessPaymentAsync(payToBus, statusinv, dariverID, user, loginUserId);
                 if (actionResult != null)
                 {
                     return actionResult;
