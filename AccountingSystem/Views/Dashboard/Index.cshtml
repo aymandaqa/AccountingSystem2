@@ -213,42 +213,17 @@
             }
 
             <section class="dashboard-panels row g-4 mb-4">
+                @{
+                    var accountTreeColumnClass = canViewCashBoxes ? "col-12 col-xl-4" : "col-12 col-xl-6";
+                }
+
                 @if (canViewCashBoxes)
                 {
-                    @*      <div class="col-12 col-xl-5">
-                        <div class="card cashbox-card shadow-sm border-0 h-100">
-                            <div class="card-header d-flex align-items-center justify-content-between">
-                                <div>
-                                    <h5 class="card-title mb-0"><i class="fas fa-cash-register ms-2"></i> أرصدة الصناديق</h5>
-                                    <span class="text-muted small">تتبع أرصدة الصناديق حسب الفروع المختلفة</span>
-                                </div>
-                                <button type="button" class="btn btn-sm btn-outline-secondary cashbox-card-toggle" id="cashboxesToggle" aria-expanded="false" aria-controls="cashboxesCardBody" title="إظهار/إخفاء أرصدة الصناديق">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                            </div>
-                            <div class="card-body cashbox-card-body" id="cashboxesCardBody"
-                                 data-load-url="@Url.Action("LoadCashBoxTree")"
-                                 data-branch-id="@(Model.SelectedBranchId?.ToString() ?? string.Empty)"
-                                 data-from-date="@Model.FromDate.ToString("yyyy-MM-dd")"
-                                 data-to-date="@Model.ToDate.ToString("yyyy-MM-dd")"
-                                 data-currency-id="@(Model.SelectedCurrencyId?.ToString() ?? string.Empty)"
-                                 data-loaded="false"
-                                 style="display: none;">
-                                <div class="cashbox-loading text-center text-muted small d-none">
-                                    <i class="fas fa-spinner fa-spin ms-2"></i>
-                                    <span>جاري تحميل أرصدة الصناديق...</span>
-                                </div>
-                                <div id="cashboxesContent" class="cashbox-content"></div>
-                            </div>
-                        </div>
-                    </div> *@
-
-
-                    <div class="col-12 @(canViewCashBoxes ? "col-xl-6" : "col-xl-12")">
+                    <div class="col-12 col-xl-4">
                         <div class="card account-tree-card shadow-sm border-0 h-100">
                             <div class="card-header d-flex align-items-center justify-content-between">
                                 <div>
-                                    <h5 class="card-title mb-0"><i class="fas fa-sitemap ms-2"></i> أرصدة الصناديق</h5>
+                                    <h5 class="card-title mb-0"><i class="fas fa-cash-register ms-2"></i> أرصدة الصناديق</h5>
                                     <span class="text-muted small">تتبع أرصدة الصناديق حسب الفروع المختلفة</span>
                                 </div>
                             </div>
@@ -261,7 +236,7 @@
                                     };
                                 }
 
-                                <div id="dashboardAccountsTree" class="tree-container"
+                                <div class="tree-container"
                                      data-branch-id="@(Model.SelectedBranchId?.ToString() ?? string.Empty)"
                                      data-from-date="@Model.FromDate.ToString("yyyy-MM-dd")"
                                      data-to-date="@Model.ToDate.ToString("yyyy-MM-dd")"
@@ -280,7 +255,7 @@
 
                 @if (canViewAccounts)
                 {
-                    <div class="col-12 @(canViewCashBoxes ? "col-xl-6" : "col-xl-12")">
+                    <div class="@accountTreeColumnClass">
                         <div class="card account-tree-card shadow-sm border-0 h-100">
                             <div class="card-header d-flex align-items-center justify-content-between">
                                 <div>
@@ -291,7 +266,7 @@
                             <div class="card-body">
                                 @if (Model.AccountTypeTrees.Any())
                                 {
-                                    <div id="dashboardAccountsTree" class="tree-container"
+                                    <div id="dashboardAccountTypeTree" class="tree-container"
                                          data-branch-id="@(Model.SelectedBranchId?.ToString() ?? string.Empty)"
                                          data-from-date="@Model.FromDate.ToString("yyyy-MM-dd")"
                                          data-to-date="@Model.ToDate.ToString("yyyy-MM-dd")"
@@ -299,9 +274,43 @@
                                          data-selected-currency="@Model.SelectedCurrencyCode"
                                          data-base-currency="@Model.BaseCurrencyCode">
                                         @{
-                                            ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode; ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
+                                            ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode;
+                                            ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
                                         }
                                         @await Html.PartialAsync("_AccountBalanceTreeNode", Model.AccountTypeTrees)
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="alert alert-info text-center mb-0">
+                                        لا توجد بيانات لعرضها
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="@accountTreeColumnClass">
+                        <div class="card account-tree-card shadow-sm border-0 h-100">
+                            <div class="card-header d-flex align-items-center justify-content-between">
+                                <div>
+                                    <h5 class="card-title mb-0"><i class="fas fa-tree ms-2"></i> شجرة الحسابات حسب الحساب الأب</h5>
+                                    <span class="text-muted small">عرض هرمي كامل للحسابات بناءً على الحساب الأب</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                @if (Model.ParentAccountTree.Any())
+                                {
+                                    <div id="dashboardParentAccountsTree" class="tree-container">
+                                        @{
+                                            ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode;
+                                            ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
+                                            ViewData["CollapseTreeNodes"] = true;
+                                        }
+                                        @await Html.PartialAsync("_AccountBalanceTreeNode", Model.ParentAccountTree)
+                                        @{
+                                            ViewData["CollapseTreeNodes"] = null;
+                                        }
                                     </div>
                                 }
                                 else
@@ -947,83 +956,6 @@
                 applyFilters();
             });
 
-            var $cashboxBody = $('#cashboxesCardBody');
-            var $cashboxToggle = $('#cashboxesToggle');
-            var $cashboxContent = $('#cashboxesContent');
-            var $cashboxLoading = $cashboxBody.find('.cashbox-loading');
-            var cashboxLoadUrl = $cashboxBody.data('load-url');
-            var isCashboxLoading = false;
-
-            function loadCashboxTree() {
-                if (!$cashboxBody.length || isCashboxLoading || $cashboxBody.data('loaded') === true) {
-                    return;
-                }
-
-                if (!cashboxLoadUrl) {
-                    $cashboxBody.data('loaded', true);
-                    return;
-                }
-
-                isCashboxLoading = true;
-                $cashboxLoading.removeClass('d-none');
-
-                var requestData = {};
-                var branchId = $cashboxBody.data('branch-id');
-                var fromDate = $cashboxBody.data('from-date');
-                var toDate = $cashboxBody.data('to-date');
-                var currencyId = $cashboxBody.data('currency-id');
-
-                if (branchId) {
-                    requestData.branchId = branchId;
-                }
-                if (fromDate) {
-                    requestData.fromDate = fromDate;
-                }
-                if (toDate) {
-                    requestData.toDate = toDate;
-                }
-                if (currencyId) {
-                    requestData.currencyId = currencyId;
-                }
-
-                $.get(cashboxLoadUrl, requestData)
-                    .done(function (html) {
-                        var trimmed = $.trim(html);
-                        if (trimmed.length) {
-                            $cashboxContent.html(trimmed);
-                        } else {
-                            $cashboxContent.html('<div class="alert alert-info text-center mb-0"><span>لا توجد بيانات لعرضها.</span></div>');
-                        }
-                        $cashboxBody.data('loaded', true);
-                    })
-                    .fail(function () {
-                        $cashboxContent.html('<div class="alert alert-danger text-center mb-0"><span>تعذر تحميل أرصدة الصناديق، يرجى المحاولة لاحقاً.</span></div>');
-                        $cashboxBody.data('loaded', false);
-                    })
-                    .always(function () {
-                        $cashboxLoading.addClass('d-none');
-                        isCashboxLoading = false;
-                    });
-            }
-
-            if ($cashboxToggle.length) {
-                $cashboxBody.hide();
-                $cashboxToggle.attr('aria-expanded', 'false').html('<i class="fas fa-plus"></i>');
-
-                $cashboxToggle.on('click', function () {
-                    var visible = $cashboxBody.is(':visible');
-                    if (visible) {
-                        $cashboxBody.slideUp(200);
-                        $cashboxToggle.attr('aria-expanded', 'false').html('<i class="fas fa-plus"></i>');
-                    } else {
-                        $cashboxBody.slideDown(200, function () {
-                            loadCashboxTree();
-                        });
-                        $cashboxToggle.attr('aria-expanded', 'true').html('<i class="fas fa-minus"></i>');
-                    }
-                });
-            }
-
             $(document).on('click', '#cashBoxTree .toggle-btn', function () {
                 var $button = $(this);
                 var $node = $button.closest('.tree-node');
@@ -1043,10 +975,10 @@
                 }
             });
 
-            var $accountsTree = $('#dashboardAccountsTree');
+            var $accountTypeTree = $('#dashboardAccountTypeTree');
             var loadTreeUrl = '@Url.Action("LoadAccountTreeNodes")';
 
-            $(document).on('click', '#dashboardAccountsTree .toggle-btn', function () {
+            $(document).on('click', '#dashboardAccountTypeTree .toggle-btn', function () {
                 var $button = $(this);
                 var $node = $button.closest('.tree-node');
                 var hasChildren = $node.data('has-children');
@@ -1082,10 +1014,10 @@
                     requestData.accountType = accountType;
                 }
 
-                var branchId = $accountsTree.data('branch-id');
-                var fromDate = $accountsTree.data('from-date');
-                var toDate = $accountsTree.data('to-date');
-                var currencyId = $accountsTree.data('currency-id');
+                var branchId = $accountTypeTree.data('branch-id');
+                var fromDate = $accountTypeTree.data('from-date');
+                var toDate = $accountTypeTree.data('to-date');
+                var currencyId = $accountTypeTree.data('currency-id');
 
                 if (branchId) {
                     requestData.branchId = branchId;
@@ -1123,6 +1055,25 @@
                     .always(function () {
                         $button.prop('disabled', false);
                     });
+            });
+
+            $(document).on('click', '#dashboardParentAccountsTree .toggle-btn', function () {
+                var $button = $(this);
+                var $node = $button.closest('.tree-node');
+                var $children = $node.find('> .tree-children');
+
+                if (!$children.length) {
+                    return;
+                }
+
+                var isVisible = $children.is(':visible');
+                if (isVisible) {
+                    $children.slideUp(200);
+                    $button.html('<i class="fas fa-plus"></i>');
+                } else {
+                    $children.slideDown(200);
+                    $button.html('<i class="fas fa-minus"></i>');
+                }
             });
         });
     </script>
