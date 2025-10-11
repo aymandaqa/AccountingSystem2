@@ -3399,8 +3399,6 @@ namespace AccountingSystem.Migrations
                     b.Navigation("Account");
 
                     b.Navigation("Branch");
-
-                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.User", b =>
