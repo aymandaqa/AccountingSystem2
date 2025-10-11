@@ -24,7 +24,7 @@ namespace AccountingSystem.Controllers
             _logger = logger;
             _currencyService = currencyService;
         }
-
+        [Authorize]
         public async Task<IActionResult> Index(int? branchId = null, DateTime? fromDate = null, DateTime? toDate = null, int? currencyId = null)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);

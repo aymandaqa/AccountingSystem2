@@ -18,6 +18,7 @@ using User = AccountingSystem.Models.User;
 
 namespace Roadfn.Controllers
 {
+    [Authorize]
     public class AccountManagementController : Controller
     {
         private RoadFnDbContext _context;
@@ -1500,7 +1501,7 @@ namespace Roadfn.Controllers
                     user.Id,
                     lines,
                     JournalEntryStatus.Posted,
-                    reference: $"BusinessInvoice:{bisnessUserPaymentHeader.Id}");
+                    reference: $"PaymenToBusiness:{bisnessUserPaymentHeader.Id}");
 
             }
 
