@@ -25,14 +25,9 @@
 <body class="minible-rtl">
     @{
         var canBusinessStatementBulk = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.businessstatementbulk")).Succeeded;
-        var canBusinessRetStatementBulk = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.businessretstatementbulk")).Succeeded;
-        var canBusnissShipmentsReturn = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.busnissshipmentsreturn")).Succeeded;
         var canBusnissStatment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.busnissstatment")).Succeeded;
         var canDriverPayment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.driverpayment")).Succeeded;
         var canDriverStatment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.driverstatment")).Succeeded;
-        var canPrintSlip = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.printslip")).Succeeded;
-        var canReceivePayments = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.receivepayments")).Succeeded;
-        var canReceiveRetPayments = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.receiveretpayments")).Succeeded;
         var canUserPayment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.userpayment")).Succeeded;
         var canCurrencies = (await AuthorizationService.AuthorizeAsync(User, "currencies.view")).Succeeded;
         var canSuppliers = (await AuthorizationService.AuthorizeAsync(User, "suppliers.view")).Succeeded;
@@ -48,11 +43,46 @@
         var canDisbursementVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.create")).Succeeded;
         var canPaymentVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "paymentvouchers.create")).Succeeded;
         var showVouchers = canReceiptVouchers || canDisbursementVouchers || canPaymentVouchers || canWorkflowApprovalsView || canWorkflowDefinitionsManage || canReceiptVouchersCreate || canDisbursementVouchersCreate || canPaymentVouchersCreate;
-        var showAccountManagement = canBusinessStatementBulk || canBusinessRetStatementBulk || canBusnissShipmentsReturn || canBusnissStatment || canDriverPayment || canDriverStatment || canPrintSlip || canReceivePayments || canReceiveRetPayments || canUserPayment;
+        var showAccountManagement = canBusinessStatementBulk || canBusnissStatment || canDriverPayment || canDriverStatment || canUserPayment;
         var canAssets = (await AuthorizationService.AuthorizeAsync(User, "assets.view")).Succeeded;
         var canAssetTypes = (await AuthorizationService.AuthorizeAsync(User, "assettypes.view")).Succeeded;
         var canAssetExpenses = (await AuthorizationService.AuthorizeAsync(User, "assetexpenses.view")).Succeeded;
         var showAssets = canAssets || canAssetExpenses || canAssetTypes;
+
+        var canDashboardView = (await AuthorizationService.AuthorizeAsync(User, "dashboard.view")).Succeeded;
+
+        var canAccountsView = (await AuthorizationService.AuthorizeAsync(User, "accounts.view")).Succeeded;
+        var canAccountsCreate = (await AuthorizationService.AuthorizeAsync(User, "accounts.create")).Succeeded;
+        var canAccountsEdit = (await AuthorizationService.AuthorizeAsync(User, "accounts.edit")).Succeeded;
+        var showAccounts = canAccountsView || canAccountsCreate || canAccountsEdit;
+
+        var canCashClosuresView = (await AuthorizationService.AuthorizeAsync(User, "cashclosures.view")).Succeeded;
+        var canCashClosuresCreate = (await AuthorizationService.AuthorizeAsync(User, "cashclosures.create")).Succeeded;
+        var canCashClosuresApprove = (await AuthorizationService.AuthorizeAsync(User, "cashclosures.approve")).Succeeded;
+        var canCashClosuresReport = (await AuthorizationService.AuthorizeAsync(User, "cashclosures.report")).Succeeded;
+        var canTransfersView = (await AuthorizationService.AuthorizeAsync(User, "transfers.view")).Succeeded;
+        var showOperations = canCashClosuresView || canCashClosuresCreate || canCashClosuresApprove || canCashClosuresReport || canTransfersView;
+
+        var canJournalView = (await AuthorizationService.AuthorizeAsync(User, "journal.view")).Succeeded;
+        var canJournalCreate = (await AuthorizationService.AuthorizeAsync(User, "journal.create")).Succeeded;
+        var canJournalApprove = (await AuthorizationService.AuthorizeAsync(User, "journal.approve")).Succeeded;
+        var showJournal = canJournalView || canJournalCreate || canJournalApprove;
+
+        var canReportsView = (await AuthorizationService.AuthorizeAsync(User, "reports.view")).Succeeded;
+        var canReportsPending = (await AuthorizationService.AuthorizeAsync(User, "reports.pending")).Succeeded;
+        var canReportsDynamic = (await AuthorizationService.AuthorizeAsync(User, "reports.dynamic")).Succeeded;
+        var showReports = canReportsView || canReportsPending || canReportsDynamic;
+
+        var canBranches = (await AuthorizationService.AuthorizeAsync(User, "branches.view")).Succeeded;
+        var canCostCenters = (await AuthorizationService.AuthorizeAsync(User, "costcenters.view")).Succeeded;
+        var canUsers = (await AuthorizationService.AuthorizeAsync(User, "users.view")).Succeeded;
+        var showSettings = canBranches || canCostCenters || canCurrencies || canPermissionGroups || canUsers;
+
+        var canEmployeesView = (await AuthorizationService.AuthorizeAsync(User, "employees.view")).Succeeded;
+        var canPayrollView = (await AuthorizationService.AuthorizeAsync(User, "payroll.view")).Succeeded;
+        var canSalaryPaymentsView = (await AuthorizationService.AuthorizeAsync(User, "salarypayments.view")).Succeeded;
+        var canEmployeeAdvancesView = (await AuthorizationService.AuthorizeAsync(User, "employeeadvances.view")).Succeeded;
+        var showHr = canEmployeesView || canPayrollView || canSalaryPaymentsView || canEmployeeAdvancesView;
 
         var currentController = ViewContext.RouteData.Values["controller"]?.ToString()?.ToLower();
         var currentAction = ViewContext.RouteData.Values["action"]?.ToString()?.ToLower();
@@ -137,20 +167,38 @@
                             </a>
                         </li>
                     }
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center @(operationsActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#operationsMenu" role="button" aria-expanded="@(operationsActive ? "true" : "false")" title="العمليات">
-                            <i class="fa-solid fa-arrows-spin"></i>
-                            <span class="menu-title">العمليات</span>
-                            <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
-                        </a>
-                        <ul class="collapse menu-dropdown @(operationsActive ? "show" : "")" id="operationsMenu">
-                            <li><a class="dropdown-item" href="@Url.Action("MyClosures", "CashBoxClosures")"><i class="fa-solid fa-box-archive"></i><span>جرد الصندوق قائمة</span></a></li>
-                            <li><a class="dropdown-item" href="@Url.Action("Pending", "CashBoxClosures")"><i class="fa-solid fa-hourglass-half"></i><span>جرد الصندوق موقعة</span></a></li>
-                            <li><a class="dropdown-item" href="@Url.Action("Create", "CashBoxClosures")"><i class="fa-solid fa-plus"></i><span>جرد الصندوق</span></a></li>
-                            <li><a class="dropdown-item" href="@Url.Action("Report", "CashBoxClosures")"><i class="fa-solid fa-file-lines"></i><span>تقرير إغلاقات الصندوق</span></a></li>
-                            <li><a class="dropdown-item" href="@Url.Action("Index", "Transfers")"><i class="fa-solid fa-right-left"></i><span>الحوالات</span></a></li>
-                        </ul>
-                    </li>
+                    @if (showOperations)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center @(operationsActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#operationsMenu" role="button" aria-expanded="@(operationsActive ? "true" : "false")" title="العمليات">
+                                <i class="fa-solid fa-arrows-spin"></i>
+                                <span class="menu-title">العمليات</span>
+                                <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
+                            </a>
+                            <ul class="collapse menu-dropdown @(operationsActive ? "show" : "")" id="operationsMenu">
+                                @if (canCashClosuresView)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("MyClosures", "CashBoxClosures")"><i class="fa-solid fa-box-archive"></i><span>جرد الصندوق قائمة</span></a></li>
+                                }
+                                @if (canCashClosuresApprove)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Pending", "CashBoxClosures")"><i class="fa-solid fa-hourglass-half"></i><span>جرد الصندوق موقعة</span></a></li>
+                                }
+                                @if (canCashClosuresCreate)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Create", "CashBoxClosures")"><i class="fa-solid fa-plus"></i><span>جرد الصندوق</span></a></li>
+                                }
+                                @if (canCashClosuresReport || canCashClosuresView)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Report", "CashBoxClosures")"><i class="fa-solid fa-file-lines"></i><span>تقرير إغلاقات الصندوق</span></a></li>
+                                }
+                                @if (canTransfersView)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "Transfers")"><i class="fa-solid fa-right-left"></i><span>الحوالات</span></a></li>
+                                }
+                            </ul>
+                        </li>
+                    }
                     @if (showAssets)
                     {
                         <li class="nav-item">
@@ -243,80 +291,133 @@
                             </ul>
                         </li>
                     }
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center @(journalActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#journalMenu" role="button" aria-expanded="@(journalActive ? "true" : "false")" title="القيود المالية">
-                            <i class="fa-solid fa-file-pen"></i>
-                            <span class="menu-title">القيود المالية</span>
-                            <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
-                        </a>
-                        <ul class="collapse menu-dropdown @(journalActive ? "show" : "")" id="journalMenu">
-                            <li><a class="dropdown-item" href="@Url.Action("Index", "JournalEntries")"><i class="fa-solid fa-list"></i><span>قائمة القيود</span></a></li>
-                            <li><a class="dropdown-item" href="@Url.Action("Create", "JournalEntries")"><i class="fa-solid fa-plus"></i><span>إضافة قيد جديد</span></a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="@Url.Action("Draft", "JournalEntries")"><i class="fa-solid fa-pen-to-square"></i><span>المسودات</span></a></li>
-                            <li><a class="dropdown-item" href="@Url.Action("Posted", "JournalEntries")"><i class="fa-solid fa-circle-check"></i><span>المرحلة</span></a></li>
-                            <li><a class="dropdown-item" href="@Url.Action("Index", "CompoundJournalDefinitions")"><i class="fa-solid fa-diagram-project"></i><span>القيود المركبة</span></a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center @(hrActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#hrMenu" role="button" aria-expanded="@(hrActive ? "true" : "false")" title="شؤون الموظفين">
-                            <i class="fa-solid fa-users-gear"></i>
-                            <span class="menu-title">شؤون الموظفين</span>
-                            <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
-                        </a>
-                        <ul class="collapse menu-dropdown @(hrActive ? "show" : "")" id="hrMenu">
-                            <li><a class="dropdown-item" href="@Url.Action("Index", "Employees")" asp-require-permission="employees.view"><i class="fa-solid fa-user"></i><span>إدارة الموظفين</span></a></li>
-                            <li><a class="dropdown-item" href="@Url.Action("Index", "Payrolls")" asp-require-permission="payroll.view"><i class="fa-solid fa-money-check-alt"></i><span>إدارة الرواتب</span></a></li>
-                            <li><a class="dropdown-item" href="@Url.Action("Index", "SalaryPayments")" asp-require-permission="salarypayments.view"><i class="fa-solid fa-file-invoice-dollar"></i><span>سندات صرف الرواتب</span></a></li>
-                            <li><a class="dropdown-item" href="@Url.Action("Index", "EmployeeAdvances")" asp-require-permission="employeeadvances.view"><i class="fa-solid fa-hand-holding-dollar"></i><span>سندات صرف السلف</span></a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center @(reportsActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#reportsMenu" role="button" aria-expanded="@(reportsActive ? "true" : "false")" title="التقارير">
-                            <i class="fa-solid fa-chart-column"></i>
-                            <span class="menu-title">التقارير</span>
-                            <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
-                        </a>
-                        <div class="collapse menu-dropdown @(reportsActive ? "show" : "")" id="reportsMenu">
-                            <div class="px-3 pb-2">
-                                <input type="text" class="form-control form-control-sm" id="reportSearch" placeholder="ابحث عن تقرير...">
-                            </div>
-                            <ul class="list-unstyled mb-0" id="reportsList">
-                                <li class="report-item"><a class="dropdown-item" href="@Url.Action("TrialBalance", "Reports")"><i class="fa-solid fa-scale-balanced"></i><span>ميزان المراجعة</span></a></li>
-                                <li class="report-item"><a class="dropdown-item" href="@Url.Action("BalanceSheet", "Reports")"><i class="fa-solid fa-chart-pie"></i><span>الميزانية العمومية</span></a></li>
-                                <li class="report-item"><a class="dropdown-item" href="@Url.Action("IncomeStatement", "Reports")"><i class="fa-solid fa-chart-line"></i><span>قائمة الدخل</span></a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li class="report-item"><a class="dropdown-item" href="@Url.Action("GeneralLedger", "Reports")"><i class="fa-solid fa-book"></i><span>دفتر الأستاذ العام</span></a></li>
-                                <li class="report-item"><a class="dropdown-item" href="@Url.Action("AccountStatement", "Reports")"><i class="fa-solid fa-file-lines"></i><span>كشف حساب</span></a></li>
-                                <li class="report-item"><a class="dropdown-item" href="@Url.Action("PendingTransactions", "Reports")"><i class="fa-solid fa-clock"></i><span>الحركات غير المرحلة</span></a></li>
-                                <li class="report-item"><a class="dropdown-item" href="@Url.Action("BranchExpenses", "Reports")"><i class="fa-solid fa-code-branch"></i><span>تقرير مصروفات الفروع</span></a></li>
-                                <li class="report-item"><a class="dropdown-item" href="@Url.Action("BranchIncomeStatement", "Reports")"><i class="fa-solid fa-sitemap"></i><span>قائمة الدخل للفروع</span></a></li>
-                                <li class="report-item"><a class="dropdown-item" href="@Url.Action("DynamicPivot", "Reports")"><i class="fa-solid fa-table"></i><span>إنشاء تقرير Pivot</span></a></li>
-                                <li class="report-item"><a class="dropdown-item" href="@Url.Action("QueryBuilder", "Reports")"><i class="fa-solid fa-diagram-project"></i><span>مصمم التقارير</span></a></li>
+                    @if (showJournal)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center @(journalActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#journalMenu" role="button" aria-expanded="@(journalActive ? "true" : "false")" title="القيود المالية">
+                                <i class="fa-solid fa-file-pen"></i>
+                                <span class="menu-title">القيود المالية</span>
+                                <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
+                            </a>
+                            <ul class="collapse menu-dropdown @(journalActive ? "show" : "")" id="journalMenu">
+                                @if (canJournalView)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "JournalEntries")"><i class="fa-solid fa-list"></i><span>قائمة القيود</span></a></li>
+                                    <li><a class="dropdown-item" href="@Url.Action("Draft", "JournalEntries")"><i class="fa-solid fa-pen-to-square"></i><span>المسودات</span></a></li>
+                                }
+                                @if (canJournalApprove)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Posted", "JournalEntries")"><i class="fa-solid fa-circle-check"></i><span>المرحلة</span></a></li>
+                                }
+                                @if (canJournalCreate)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Create", "JournalEntries")"><i class="fa-solid fa-plus"></i><span>إضافة قيد جديد</span></a></li>
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "CompoundJournalDefinitions")"><i class="fa-solid fa-diagram-project"></i><span>القيود المركبة</span></a></li>
+                                }
                             </ul>
-                        </div>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center @(settingsActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#settingsMenu" role="button" aria-expanded="@(settingsActive ? "true" : "false")" title="الإعدادات">
-                            <i class="fa-solid fa-gear"></i>
-                            <span class="menu-title">الإعدادات</span>
-                            <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
-                        </a>
-                        <ul class="collapse menu-dropdown @(settingsActive ? "show" : "")" id="settingsMenu">
-                            <li><a class="dropdown-item" href="@Url.Action("Index", "Branches")"><i class="fa-solid fa-building"></i><span>الفروع</span></a></li>
-                            <li><a class="dropdown-item" href="@Url.Action("Index", "CostCenters")"><i class="fa-solid fa-bullseye"></i><span>مراكز التكلفة</span></a></li>
-                            @if (canCurrencies)
-                            {
-                                <li><a class="dropdown-item" href="@Url.Action("Index", "Currencies")"><i class="fa-solid fa-coins"></i><span>العملات</span></a></li>
-                            }
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="@Url.Action("Index", "Users")"><i class="fa-solid fa-users"></i><span>المستخدمون</span></a></li>
-                            @if (canPermissionGroups)
-                            {
-                                <li><a class="dropdown-item" href="@Url.Action("Index", "PermissionGroups")"><i class="fa-solid fa-key"></i><span>مجموعات الصلاحيات</span></a></li>
-                            }
-                        </ul>
-                    </li>
+                        </li>
+                    }
+                    @if (showHr)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center @(hrActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#hrMenu" role="button" aria-expanded="@(hrActive ? "true" : "false")" title="شؤون الموظفين">
+                                <i class="fa-solid fa-users-gear"></i>
+                                <span class="menu-title">شؤون الموظفين</span>
+                                <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
+                            </a>
+                            <ul class="collapse menu-dropdown @(hrActive ? "show" : "")" id="hrMenu">
+                                @if (canEmployeesView)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "Employees")"><i class="fa-solid fa-user"></i><span>إدارة الموظفين</span></a></li>
+                                }
+                                @if (canPayrollView)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "Payrolls")"><i class="fa-solid fa-money-check-alt"></i><span>إدارة الرواتب</span></a></li>
+                                }
+                                @if (canSalaryPaymentsView)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "SalaryPayments")"><i class="fa-solid fa-file-invoice-dollar"></i><span>سندات صرف الرواتب</span></a></li>
+                                }
+                                @if (canEmployeeAdvancesView)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "EmployeeAdvances")"><i class="fa-solid fa-hand-holding-dollar"></i><span>سندات صرف السلف</span></a></li>
+                                }
+                            </ul>
+                        </li>
+                    }
+                    @if (showReports)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center @(reportsActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#reportsMenu" role="button" aria-expanded="@(reportsActive ? "true" : "false")" title="التقارير">
+                                <i class="fa-solid fa-chart-column"></i>
+                                <span class="menu-title">التقارير</span>
+                                <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
+                            </a>
+                            <div class="collapse menu-dropdown @(reportsActive ? "show" : "")" id="reportsMenu">
+                                <div class="px-3 pb-2">
+                                    <input type="text" class="form-control form-control-sm" id="reportSearch" placeholder="ابحث عن تقرير...">
+                                </div>
+                                <ul class="list-unstyled mb-0" id="reportsList">
+                                    @if (canReportsView)
+                                    {
+                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("TrialBalance", "Reports")"><i class="fa-solid fa-scale-balanced"></i><span>ميزان المراجعة</span></a></li>
+                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("BalanceSheet", "Reports")"><i class="fa-solid fa-chart-pie"></i><span>الميزانية العمومية</span></a></li>
+                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("IncomeStatement", "Reports")"><i class="fa-solid fa-chart-line"></i><span>قائمة الدخل</span></a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("GeneralLedger", "Reports")"><i class="fa-solid fa-book"></i><span>دفتر الأستاذ العام</span></a></li>
+                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("AccountStatement", "Reports")"><i class="fa-solid fa-file-lines"></i><span>كشف حساب</span></a></li>
+                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("BranchExpenses", "Reports")"><i class="fa-solid fa-code-branch"></i><span>تقرير مصروفات الفروع</span></a></li>
+                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("BranchIncomeStatement", "Reports")"><i class="fa-solid fa-sitemap"></i><span>قائمة الدخل للفروع</span></a></li>
+                                    }
+                                    @if (canReportsPending)
+                                    {
+                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("PendingTransactions", "Reports")"><i class="fa-solid fa-clock"></i><span>الحركات غير المرحلة</span></a></li>
+                                    }
+                                    @if (canReportsDynamic)
+                                    {
+                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("DynamicPivot", "Reports")"><i class="fa-solid fa-table"></i><span>إنشاء تقرير Pivot</span></a></li>
+                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("QueryBuilder", "Reports")"><i class="fa-solid fa-diagram-project"></i><span>مصمم التقارير</span></a></li>
+                                    }
+                                </ul>
+                            </div>
+                        </li>
+                    }
+                    @if (showSettings)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center @(settingsActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#settingsMenu" role="button" aria-expanded="@(settingsActive ? "true" : "false")" title="الإعدادات">
+                                <i class="fa-solid fa-gear"></i>
+                                <span class="menu-title">الإعدادات</span>
+                                <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
+                            </a>
+                            <ul class="collapse menu-dropdown @(settingsActive ? "show" : "")" id="settingsMenu">
+                                @if (canBranches)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "Branches")"><i class="fa-solid fa-building"></i><span>الفروع</span></a></li>
+                                }
+                                @if (canCostCenters)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "CostCenters")"><i class="fa-solid fa-bullseye"></i><span>مراكز التكلفة</span></a></li>
+                                }
+                                @if (canCurrencies)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "Currencies")"><i class="fa-solid fa-coins"></i><span>العملات</span></a></li>
+                                }
+                                @if (canPermissionGroups)
+                                {
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "PermissionGroups")"><i class="fa-solid fa-key"></i><span>مجموعات الصلاحيات</span></a></li>
+                                }
+                                @if (canUsers)
+                                {
+                                    @if (canBranches || canCostCenters || canCurrencies || canPermissionGroups)
+                                    {
+                                        <li><hr class="dropdown-divider"></li>
+                                    }
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "Users")"><i class="fa-solid fa-users"></i><span>المستخدمون</span></a></li>
+                                }
+                            </ul>
+                        </li>
+                    }
                 </ul>
             </div>
             <div class="sidebar-footer text-center py-3">
