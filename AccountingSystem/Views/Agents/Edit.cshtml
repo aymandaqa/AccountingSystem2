@@ -1,0 +1,33 @@
+@using Microsoft.AspNetCore.Mvc.Rendering
+@model AccountingSystem.Models.Agent
+@{
+    ViewData["Title"] = "تعديل وكيل";
+}
+
+<h1 class="mb-3">تعديل وكيل</h1>
+
+<form asp-action="Edit" method="post" class="needs-validation" novalidate>
+    <input type="hidden" asp-for="Id" />
+    <div class="mb-3">
+        <label asp-for="BranchId" class="form-label"></label>
+        <select asp-for="BranchId" class="form-select" asp-items="(IEnumerable<SelectListItem>)ViewBag.Branches">
+            <option value="">-- اختر الفرع --</option>
+        </select>
+        <span asp-validation-for="BranchId" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Address" class="form-label"></label>
+        <textarea asp-for="Address" class="form-control" rows="3"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">حفظ</button>
+    <a href="@Url.Action("Index")" class="btn btn-secondary">إلغاء</a>
+</form>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

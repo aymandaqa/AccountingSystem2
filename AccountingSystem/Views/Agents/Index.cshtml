@@ -1,0 +1,59 @@
+@model IEnumerable<AccountingSystem.Models.Agent>
+@{
+    ViewData["Title"] = "الوكلاء";
+}
+
+<h1 class="mb-3">الوكلاء</h1>
+
+@if (TempData["Success"] is string successMessage)
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+
+@if (TempData["Error"] is string errorMessage)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<p>
+    <a class="btn btn-primary" href="@Url.Action("Create")" asp-require-permission="agents.create">إضافة وكيل</a>
+</p>
+
+<table class="table table-bordered table-striped align-middle">
+    <thead class="table-light">
+        <tr>
+            <th>اسم الوكيل</th>
+            <th>الفرع</th>
+            <th>العنوان</th>
+            <th>الحساب</th>
+            <th class="text-center">الإجراءات</th>
+        </tr>
+    </thead>
+    <tbody>
+    @if (!Model.Any())
+    {
+        <tr>
+            <td colspan="5" class="text-center text-muted">لا توجد بيانات لعرضها.</td>
+        </tr>
+    }
+    else
+    {
+        foreach (var agent in Model)
+        {
+            <tr>
+                <td>@agent.Name</td>
+                <td>@agent.Branch?.NameAr</td>
+                <td>@(string.IsNullOrWhiteSpace(agent.Address) ? "-" : agent.Address)</td>
+                <td>@(agent.Account != null ? $"{agent.Account.Code} - {agent.Account.NameAr}" : "-")</td>
+                <td class="text-center">
+                    <a class="btn btn-sm btn-warning" href="@Url.Action("Edit", new { id = agent.Id })" asp-require-permission="agents.edit">تعديل</a>
+                    <form asp-action="Delete" asp-route-id="@agent.Id" method="post" class="d-inline" asp-require-permission="agents.delete" onsubmit="return confirm('هل أنت متأكد من حذف الوكيل؟');">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-danger">حذف</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    }
+    </tbody>
+</table>

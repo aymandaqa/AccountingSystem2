@@ -69,7 +69,8 @@ namespace AccountingSystem.Controllers
                     Email = u.Email ?? string.Empty,
                     FullName = (u.FirstName ?? string.Empty) + " " + (u.LastName ?? string.Empty),
                     IsActive = u.IsActive,
-                    LastLoginAt = u.LastLoginAt
+                    LastLoginAt = u.LastLoginAt,
+                    AgentName = u.Agent != null ? u.Agent.Name : string.Empty
                 })
                 .ToListAsync();
 
@@ -119,6 +120,7 @@ namespace AccountingSystem.Controllers
                             Text = $"{a.Code} - {a.NameAr}"
                         }).ToList()
                 }).ToListAsync();
+            model.Agents = await BuildAgentsSelectListAsync(null);
             return View(model);
         }
 
@@ -130,6 +132,15 @@ namespace AccountingSystem.Controllers
             model.BranchIds ??= new List<int>();
             model.DriverAccountBranchIds ??= new List<int>();
             model.BusinessAccountBranchIds ??= new List<int>();
+
+            if (model.AgentId.HasValue)
+            {
+                var agentExists = await _context.Agents.AnyAsync(a => a.Id == model.AgentId.Value);
+                if (!agentExists)
+                {
+                    ModelState.AddModelError(nameof(CreateUserViewModel.AgentId), "الوكيل المحدد غير موجود.");
+                }
+            }
 
             if (ModelState.IsValid)
             {
@@ -143,7 +154,8 @@ namespace AccountingSystem.Controllers
                     PaymentBranchId = model.PaymentBranchId,
                     ExpenseLimit = model.ExpenseLimit,
                     DriverAccountBranchIds = ConvertIdsToString(model.DriverAccountBranchIds),
-                    BusinessAccountBranchIds = ConvertIdsToString(model.BusinessAccountBranchIds)
+                    BusinessAccountBranchIds = ConvertIdsToString(model.BusinessAccountBranchIds),
+                    AgentId = model.AgentId
                 };
 
                 var baseCurrencyId = await _context.Currencies
@@ -216,6 +228,7 @@ namespace AccountingSystem.Controllers
                             Text = $"{a.Code} - {a.NameAr}"
                         }).ToList()
                 }).ToListAsync();
+            model.Agents = await BuildAgentsSelectListAsync(model.AgentId);
             return View(model);
         }
 
@@ -241,7 +254,8 @@ namespace AccountingSystem.Controllers
                 PaymentBranchId = user.PaymentBranchId,
                 ExpenseLimit = user.ExpenseLimit,
                 DriverAccountBranchIds = ParseIds(user.DriverAccountBranchIds),
-                BusinessAccountBranchIds = ParseIds(user.BusinessAccountBranchIds)
+                BusinessAccountBranchIds = ParseIds(user.BusinessAccountBranchIds),
+                AgentId = user.AgentId
             };
 
             model.Branches = await _context.Branches
@@ -260,6 +274,7 @@ namespace AccountingSystem.Controllers
                 }).ToListAsync();
             model.DriverBranches = await BuildCompanyBranchSelectListAsync(model.DriverAccountBranchIds);
             model.BusinessBranches = await BuildCompanyBranchSelectListAsync(model.BusinessAccountBranchIds);
+            model.Agents = await BuildAgentsSelectListAsync(model.AgentId);
             var userAccounts = await _context.UserPaymentAccounts
                 .Where(upa => upa.UserId == id)
                 .ToListAsync();
@@ -298,6 +313,15 @@ namespace AccountingSystem.Controllers
             model.DriverAccountBranchIds ??= new List<int>();
             model.BusinessAccountBranchIds ??= new List<int>();
 
+            if (model.AgentId.HasValue)
+            {
+                var agentExists = await _context.Agents.AnyAsync(a => a.Id == model.AgentId.Value);
+                if (!agentExists)
+                {
+                    ModelState.AddModelError(nameof(EditUserViewModel.AgentId), "الوكيل المحدد غير موجود.");
+                }
+            }
+
             if (!ModelState.IsValid)
             {
                 await PopulateEditSelectionsAsync(model);
@@ -316,6 +340,7 @@ namespace AccountingSystem.Controllers
             user.ExpenseLimit = model.ExpenseLimit;
             user.DriverAccountBranchIds = ConvertIdsToString(model.DriverAccountBranchIds);
             user.BusinessAccountBranchIds = ConvertIdsToString(model.BusinessAccountBranchIds);
+            user.AgentId = model.AgentId;
 
             var baseCurrencyIdEdit = await _context.Currencies
                 .Where(c => c.IsBase)
@@ -425,6 +450,7 @@ namespace AccountingSystem.Controllers
 
             model.DriverBranches = await BuildCompanyBranchSelectListAsync(model.DriverAccountBranchIds ?? new List<int>());
             model.BusinessBranches = await BuildCompanyBranchSelectListAsync(model.BusinessAccountBranchIds ?? new List<int>());
+            model.Agents = await BuildAgentsSelectListAsync(model.AgentId);
 
             var userAccounts = await _context.UserPaymentAccounts
                 .Where(upa => upa.UserId == model.Id)
@@ -469,6 +495,28 @@ namespace AccountingSystem.Controllers
                     Selected = selectedSet.Contains(b.Id)
                 })
                 .ToListAsync();
+        }
+
+        private async Task<List<SelectListItem>> BuildAgentsSelectListAsync(int? selectedId)
+        {
+            var agents = await _context.Agents
+                .OrderBy(a => a.Name)
+                .Select(a => new
+                {
+                    a.Id,
+                    a.Name,
+                    BranchName = a.Branch != null ? a.Branch.NameAr : string.Empty
+                })
+                .ToListAsync();
+
+            return agents
+                .Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = string.IsNullOrEmpty(a.BranchName) ? a.Name : $"{a.Name} - {a.BranchName}",
+                    Selected = selectedId.HasValue && selectedId.Value == a.Id
+                })
+                .ToList();
         }
 
         [Authorize(Policy = "users.edit")]

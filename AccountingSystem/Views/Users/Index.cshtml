@@ -77,6 +77,7 @@
                     <tr>
                         <th scope="col">البريد الإلكتروني</th>
                         <th scope="col">الاسم</th>
+                        <th scope="col">الوكيل</th>
                         <th scope="col" class="text-center">نشط</th>
                         <th scope="col">آخر تسجيل دخول</th>
                         <th scope="col" class="text-center">الإجراءات</th>
@@ -90,6 +91,7 @@
                             <tr>
                                 <td>@user.Email</td>
                                 <td>@user.FullName</td>
+                                <td>@(string.IsNullOrWhiteSpace(user.AgentName) ? "-" : user.AgentName)</td>
                                 <td class="text-center">
                                     <span class="badge @(user.IsActive ? "bg-success" : "bg-secondary") js-user-status">@(user.IsActive ? "نعم" : "لا")</span>
                                 </td>
@@ -112,7 +114,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-5">لا توجد بيانات لعرضها.</td>
+                            <td colspan="6" class="text-center text-muted py-5">لا توجد بيانات لعرضها.</td>
                         </tr>
                     }
                 </tbody>

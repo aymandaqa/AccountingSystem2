@@ -124,6 +124,10 @@ namespace AccountingSystem.Data
                 new Permission { Name = "suppliers.create", DisplayName = "إنشاء الموردين", Category = "الموردين" },
                 new Permission { Name = "suppliers.edit", DisplayName = "تعديل الموردين", Category = "الموردين" },
                 new Permission { Name = "suppliers.delete", DisplayName = "حذف الموردين", Category = "الموردين" },
+                new Permission { Name = "agents.view", DisplayName = "عرض الوكلاء", Category = "الوكلاء" },
+                new Permission { Name = "agents.create", DisplayName = "إنشاء وكيل", Category = "الوكلاء" },
+                new Permission { Name = "agents.edit", DisplayName = "تعديل وكيل", Category = "الوكلاء" },
+                new Permission { Name = "agents.delete", DisplayName = "حذف وكيل", Category = "الوكلاء" },
                 new Permission { Name = "assets.view", DisplayName = "عرض الأصول", Category = "الأصول" },
                 new Permission { Name = "assets.create", DisplayName = "إنشاء الأصول", Category = "الأصول" },
                 new Permission { Name = "assets.edit", DisplayName = "تعديل الأصول", Category = "الأصول" },
@@ -319,6 +323,11 @@ namespace AccountingSystem.Data
             if (!context.SystemSettings.Any(s => s.Key == "SupplierPaymentsParentAccountId"))
             {
                 context.SystemSettings.Add(new SystemSetting { Key = "SupplierPaymentsParentAccountId", Value = null });
+            }
+
+            if (!context.SystemSettings.Any(s => s.Key == "AgentsParentAccountId"))
+            {
+                context.SystemSettings.Add(new SystemSetting { Key = "AgentsParentAccountId", Value = null });
             }
 
             if (!context.SystemSettings.Any(s => s.Key == "AssetExpensesParentAccountId"))

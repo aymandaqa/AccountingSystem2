@@ -55,6 +55,7 @@
         var canUserPayment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.userpayment")).Succeeded;
         var canCurrencies = (await AuthorizationService.AuthorizeAsync(User, "currencies.view")).Succeeded;
         var canSuppliers = (await AuthorizationService.AuthorizeAsync(User, "suppliers.view")).Succeeded;
+        var canAgents = (await AuthorizationService.AuthorizeAsync(User, "agents.view")).Succeeded;
         var canSystemSettings = (await AuthorizationService.AuthorizeAsync(User, "systemsettings.view")).Succeeded;
         var canPermissionGroups = (await AuthorizationService.AuthorizeAsync(User, "permissiongroups.view")).Succeeded;
         var canReceiptVouchers = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.view")).Succeeded;
@@ -121,10 +122,18 @@
                             <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "Accounts")"><i class="fas fa-plus"></i> إضافة حساب جديد</a></li>
                         </ul>
                     </li>
+                    @if (canAgents)
+                    {
+                        <li class="nav-item" data-menu-key="agents">
+                            <a class="nav-link @(currentController == "agents" ? "active" : "")" href="@Url.Action("Index", "Agents")">
+                                <i class="fas fa-user-tie"></i> الوكلاء
+                            </a>
+                        </li>
+                    }
                     @if (canSuppliers)
                     {
                         <li class="nav-item" data-menu-key="suppliers">
-                            <a class="nav-link @(currentController == "Suppliers" ? "active" : "")" href="@Url.Action("Index", "Suppliers")">
+                            <a class="nav-link @(currentController == "suppliers" ? "active" : "")" href="@Url.Action("Index", "Suppliers")">
                                 <i class="fas fa-truck"></i> الموردين
                             </a>
                         </li>

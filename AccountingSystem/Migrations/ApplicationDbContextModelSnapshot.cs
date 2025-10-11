@@ -1834,6 +1834,42 @@ namespace AccountingSystem.Migrations
                             DisplayName = "عرض الإشعارات",
                             IsActive = true,
                             Name = "notifications.view"
+                        },
+                        new
+                        {
+                            Id = 65,
+                            Category = "الوكلاء",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض الوكلاء",
+                            IsActive = true,
+                            Name = "agents.view"
+                        },
+                        new
+                        {
+                            Id = 66,
+                            Category = "الوكلاء",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "إنشاء وكيل",
+                            IsActive = true,
+                            Name = "agents.create"
+                        },
+                        new
+                        {
+                            Id = 67,
+                            Category = "الوكلاء",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "تعديل وكيل",
+                            IsActive = true,
+                            Name = "agents.edit"
+                        },
+                        new
+                        {
+                            Id = 68,
+                            Category = "الوكلاء",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "حذف وكيل",
+                            IsActive = true,
+                            Name = "agents.delete"
                         });
                 });
 
@@ -2131,12 +2167,50 @@ namespace AccountingSystem.Migrations
                     b.ToTable("SystemSettings");
                 });
 
+            modelBuilder.Entity("AccountingSystem.Models.Agent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AccountId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("BranchId");
+
+                    b.ToTable("Agents");
+                });
+
             modelBuilder.Entity("AccountingSystem.Models.User", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("AccessFailedCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("AgentId")
                         .HasColumnType("int");
 
                     b.Property<string>("BusinessAccountBranchIds")
@@ -2229,6 +2303,8 @@ namespace AccountingSystem.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
+
+                    b.HasIndex("AgentId");
 
                     b.HasIndex("PaymentAccountId");
 
@@ -3307,8 +3383,33 @@ namespace AccountingSystem.Migrations
                     b.Navigation("Account");
                 });
 
+            modelBuilder.Entity("AccountingSystem.Models.Agent", b =>
+                {
+                    b.HasOne("AccountingSystem.Models.Account", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("AccountingSystem.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("Users");
+                });
+
             modelBuilder.Entity("AccountingSystem.Models.User", b =>
                 {
+                    b.HasOne("AccountingSystem.Models.Agent", "Agent")
+                        .WithMany("Users")
+                        .HasForeignKey("AgentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("AccountingSystem.Models.Account", "PaymentAccount")
                         .WithMany()
                         .HasForeignKey("PaymentAccountId")
@@ -3318,6 +3419,8 @@ namespace AccountingSystem.Migrations
                         .WithMany()
                         .HasForeignKey("PaymentBranchId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Agent");
 
                     b.Navigation("PaymentAccount");
 
@@ -3616,6 +3719,8 @@ namespace AccountingSystem.Migrations
 
             modelBuilder.Entity("AccountingSystem.Models.User", b =>
                 {
+                    b.Navigation("Agent");
+
                     b.Navigation("CashBoxClosures");
 
                     b.Navigation("CreatedJournalEntries");

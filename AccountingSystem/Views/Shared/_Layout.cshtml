@@ -36,6 +36,7 @@
         var canUserPayment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.userpayment")).Succeeded;
         var canCurrencies = (await AuthorizationService.AuthorizeAsync(User, "currencies.view")).Succeeded;
         var canSuppliers = (await AuthorizationService.AuthorizeAsync(User, "suppliers.view")).Succeeded;
+        var canAgents = (await AuthorizationService.AuthorizeAsync(User, "agents.view")).Succeeded;
         var canSystemSettings = (await AuthorizationService.AuthorizeAsync(User, "systemsettings.view")).Succeeded;
         var canPermissionGroups = (await AuthorizationService.AuthorizeAsync(User, "permissiongroups.view")).Succeeded;
         var canReceiptVouchers = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.view")).Succeeded;
@@ -109,6 +110,15 @@
                             <li><a class="dropdown-item" href="@Url.Action("Create", "Accounts")"><i class="fa-solid fa-plus"></i><span>إضافة حساب جديد</span></a></li>
                         </ul>
                     </li>
+                    @if (canAgents)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(currentController == "agents" ? "active" : "")" href="@Url.Action("Index", "Agents")" data-bs-toggle="tooltip" data-bs-placement="left" title="الوكلاء">
+                                <i class="fa-solid fa-user-tie"></i>
+                                <span class="menu-title">الوكلاء</span>
+                            </a>
+                        </li>
+                    }
                     @if (canSuppliers)
                     {
                         <li class="nav-item">
