@@ -12,6 +12,7 @@ namespace AccountingSystem.ViewModels
         public string FullName { get; set; } = string.Empty;
         public bool IsActive { get; set; }
         public DateTime? LastLoginAt { get; set; }
+        public string AgentName { get; set; } = string.Empty;
     }
 
     public class UsersIndexViewModel
@@ -77,10 +78,13 @@ namespace AccountingSystem.ViewModels
         public decimal ExpenseLimit { get; set; }
         public List<int> DriverAccountBranchIds { get; set; } = new List<int>();
         public List<int> BusinessAccountBranchIds { get; set; } = new List<int>();
+        [Display(Name = "الوكيل")]
+        public int? AgentId { get; set; }
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> PaymentBranches { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> DriverBranches { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> BusinessBranches { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Agents { get; set; } = new List<SelectListItem>();
         public List<UserCurrencyAccountViewModel> CurrencyAccounts { get; set; } = new List<UserCurrencyAccountViewModel>();
     }
 
@@ -108,10 +112,13 @@ namespace AccountingSystem.ViewModels
         public decimal ExpenseLimit { get; set; }
         public List<int> DriverAccountBranchIds { get; set; } = new List<int>();
         public List<int> BusinessAccountBranchIds { get; set; } = new List<int>();
+        [Display(Name = "الوكيل")]
+        public int? AgentId { get; set; }
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> PaymentBranches { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> DriverBranches { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> BusinessBranches { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Agents { get; set; } = new List<SelectListItem>();
         public List<UserCurrencyAccountViewModel> CurrencyAccounts { get; set; } = new List<UserCurrencyAccountViewModel>();
     }
 

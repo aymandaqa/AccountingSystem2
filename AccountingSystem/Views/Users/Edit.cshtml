@@ -43,6 +43,13 @@
             <span asp-validation-for="BranchIds" class="text-danger"></span>
         </div>
         <div class="mb-3">
+            <label asp-for="AgentId" class="form-label"></label>
+            <select asp-for="AgentId" class="form-select" asp-items="Model.Agents">
+                <option value="">-- اختر الوكيل --</option>
+            </select>
+            <span asp-validation-for="AgentId" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
             <label class="form-label">فروع حساب السائق</label>
             <div class="row g-2">
                 @foreach (var branch in Model.DriverBranches)

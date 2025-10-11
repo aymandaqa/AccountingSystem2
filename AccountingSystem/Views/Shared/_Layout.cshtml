@@ -31,6 +31,7 @@
         var canUserPayment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.userpayment")).Succeeded;
         var canCurrencies = (await AuthorizationService.AuthorizeAsync(User, "currencies.view")).Succeeded;
         var canSuppliers = (await AuthorizationService.AuthorizeAsync(User, "suppliers.view")).Succeeded;
+        var canAgents = (await AuthorizationService.AuthorizeAsync(User, "agents.view")).Succeeded;
         var canSystemSettings = (await AuthorizationService.AuthorizeAsync(User, "systemsettings.view")).Succeeded;
         var canPermissionGroups = (await AuthorizationService.AuthorizeAsync(User, "permissiongroups.view")).Succeeded;
         var canReceiptVouchers = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.view")).Succeeded;
@@ -115,44 +116,37 @@
                     </div>
                 </div>
                 <ul class="nav flex-column gap-1" id="sidebarNav">
-                    @if (canDashboardView)
+                    <li class="nav-item">
+                        <a class="nav-link @(currentController == "dashboard" && currentAction == "index" ? "active" : "")" href="@Url.Action("Index", "Dashboard")" data-bs-toggle="tooltip" data-bs-placement="left" title="لوحة التحكم">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span class="menu-title">لوحة التحكم</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(currentController == "home" && currentAction == "index" ? "active" : "")" href="@Url.Action("Index", "Home")" data-bs-toggle="tooltip" data-bs-placement="left" title="عرض أداء الشركة">
+                            <i class="fa-solid fa-gauge-high"></i>
+                            <span class="menu-title">عرض أداء الشركة</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center @(accountsActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#accountsMenu" role="button" aria-expanded="@(accountsActive ? "true" : "false")" title="الحسابات">
+                            <i class="fa-solid fa-layer-group"></i>
+                            <span class="menu-title">الحسابات</span>
+                            <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
+                        </a>
+                        <ul class="collapse menu-dropdown @(accountsActive ? "show" : "")" id="accountsMenu">
+                            <li><a class="dropdown-item" href="@Url.Action("Tree", "Accounts")"><i class="fa-solid fa-sitemap"></i><span>شجرة الحسابات</span></a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Index", "Accounts")"><i class="fa-solid fa-list"></i><span>قائمة الحسابات</span></a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Create", "Accounts")"><i class="fa-solid fa-plus"></i><span>إضافة حساب جديد</span></a></li>
+                        </ul>
+                    </li>
+                    @if (canAgents)
                     {
                         <li class="nav-item">
-                            <a class="nav-link @(currentController == "dashboard" && currentAction == "index" ? "active" : "")" href="@Url.Action("Index", "Dashboard")" data-bs-toggle="tooltip" data-bs-placement="left" title="لوحة التحكم">
-                                <i class="fa-solid fa-chart-line"></i>
-                                <span class="menu-title">لوحة التحكم</span>
+                            <a class="nav-link @(currentController == "agents" ? "active" : "")" href="@Url.Action("Index", "Agents")" data-bs-toggle="tooltip" data-bs-placement="left" title="الوكلاء">
+                                <i class="fa-solid fa-user-tie"></i>
+                                <span class="menu-title">الوكلاء</span>
                             </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link @(currentController == "home" && currentAction == "index" ? "active" : "")" href="@Url.Action("Index", "Home")" data-bs-toggle="tooltip" data-bs-placement="left" title="عرض أداء الشركة">
-                                <i class="fa-solid fa-gauge-high"></i>
-                                <span class="menu-title">عرض أداء الشركة</span>
-                            </a>
-                        </li>
-                    }
-                    @if (showAccounts)
-                    {
-                        <li class="nav-item">
-                            <a class="nav-link d-flex align-items-center @(accountsActive ? "active" : "collapsed")" data-bs-toggle="collapse" href="#accountsMenu" role="button" aria-expanded="@(accountsActive ? "true" : "false")" title="الحسابات">
-                                <i class="fa-solid fa-layer-group"></i>
-                                <span class="menu-title">الحسابات</span>
-                                <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
-                            </a>
-                            <ul class="collapse menu-dropdown @(accountsActive ? "show" : "")" id="accountsMenu">
-                                @if (canAccountsView)
-                                {
-                                    <li><a class="dropdown-item" href="@Url.Action("Tree", "Accounts")"><i class="fa-solid fa-sitemap"></i><span>شجرة الحسابات</span></a></li>
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "Accounts")"><i class="fa-solid fa-list"></i><span>قائمة الحسابات</span></a></li>
-                                }
-                                @if (canAccountsEdit)
-                                {
-                                    <li><a class="dropdown-item" href="@Url.Action("ManageTree", "Accounts")"><i class="fa-solid fa-diagram-project"></i><span>إدارة شجرة الحسابات</span></a></li>
-                                }
-                                @if (canAccountsCreate)
-                                {
-                                    <li><a class="dropdown-item" href="@Url.Action("Create", "Accounts")"><i class="fa-solid fa-plus"></i><span>إضافة حساب جديد</span></a></li>
-                                }
-                            </ul>
                         </li>
                     }
                     @if (canSuppliers)

@@ -64,6 +64,7 @@ namespace AccountingSystem.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<CompoundJournalDefinition> CompoundJournalDefinitions { get; set; }
         public DbSet<CompoundJournalExecutionLog> CompoundJournalExecutionLogs { get; set; }
+        public DbSet<Agent> Agents { get; set; }
 
         public override int SaveChanges()
         {
@@ -181,6 +182,31 @@ namespace AccountingSystem.Data
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(50);
                 entity.Property(e => e.Code).IsRequired().HasMaxLength(3);
                 entity.Property(e => e.ExchangeRate).HasColumnType("decimal(18,6)");
+            });
+
+            builder.Entity<Agent>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Address).HasMaxLength(500);
+
+                entity.HasOne(e => e.Branch)
+                    .WithMany()
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Account)
+                    .WithMany()
+                    .HasForeignKey(e => e.AccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<User>(entity =>
+            {
+                entity.HasOne(e => e.Agent)
+                    .WithMany(e => e.Users)
+                    .HasForeignKey(e => e.AgentId)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
 
             // Account configuration
@@ -968,7 +994,12 @@ namespace AccountingSystem.Data
                 new Permission { Id = 61, Name = "workflowapprovals.view", DisplayName = "عرض موافقات سندات الدفع", Category = "سير العمل", CreatedAt = createdAt },
                 new Permission { Id = 62, Name = "workflowapprovals.process", DisplayName = "معالجة موافقات سندات الدفع", Category = "سير العمل", CreatedAt = createdAt },
                 new Permission { Id = 63, Name = "workflowdefinitions.manage", DisplayName = "إدارة سير عمل السندات", Category = "سير العمل", CreatedAt = createdAt },
-                new Permission { Id = 64, Name = "notifications.view", DisplayName = "عرض الإشعارات", Category = "سير العمل", CreatedAt = createdAt }
+                new Permission { Id = 64, Name = "notifications.view", DisplayName = "عرض الإشعارات", Category = "سير العمل", CreatedAt = createdAt },
+
+                new Permission { Id = 65, Name = "agents.view", DisplayName = "عرض الوكلاء", Category = "الوكلاء", CreatedAt = createdAt },
+                new Permission { Id = 66, Name = "agents.create", DisplayName = "إنشاء وكيل", Category = "الوكلاء", CreatedAt = createdAt },
+                new Permission { Id = 67, Name = "agents.edit", DisplayName = "تعديل وكيل", Category = "الوكلاء", CreatedAt = createdAt },
+                new Permission { Id = 68, Name = "agents.delete", DisplayName = "حذف وكيل", Category = "الوكلاء", CreatedAt = createdAt }
             );
         }
     }

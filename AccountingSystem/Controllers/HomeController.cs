@@ -386,6 +386,14 @@ public class HomeController : Controller
             permission: "suppliers.view",
             url: "/Suppliers/Index"),
         new SystemAppDefinition(
+            name: "الوكلاء",
+            description: "متابعة بيانات الوكلاء وربطهم بالحسابات",
+            category: "المبيعات",
+            icon: "🤝",
+            accentColor: "#0d6efd",
+            permission: "agents.view",
+            url: "/Agents/Index"),
+        new SystemAppDefinition(
             name: "المستخدمون",
             description: "إدارة مستخدمي النظام وتعيين الصلاحيات",
             category: "الإعدادات",

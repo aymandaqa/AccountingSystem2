@@ -32,6 +32,8 @@ namespace AccountingSystem.Models
 
         public string? SidebarMenuOrder { get; set; }
 
+        public int? AgentId { get; set; }
+
         // Navigation properties
         public virtual ICollection<UserBranch> UserBranches { get; set; } = new List<UserBranch>();
         public virtual ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
@@ -40,6 +42,7 @@ namespace AccountingSystem.Models
         public virtual ICollection<UserPaymentAccount> UserPaymentAccounts { get; set; } = new List<UserPaymentAccount>();
         public virtual Account? PaymentAccount { get; set; }
         public virtual Branch? PaymentBranch { get; set; }
+        public virtual Agent? Agent { get; set; }
         public virtual ICollection<Expense> Expenses { get; set; } = new List<Expense>();
         public virtual ICollection<CashBoxClosure> CashBoxClosures { get; set; } = new List<CashBoxClosure>();
     }
