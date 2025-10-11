@@ -1157,6 +1157,24 @@ namespace Roadfn.Controllers
                     var id1 = item.ShipmentId;
 
                     var sh = await _context.Shipments.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(id1));
+
+                    var area = await _context.Areas.FirstOrDefaultAsync(t => t.Id == sh.ClientAreaId);
+
+                    var agent = await _accontext.Agents.FirstOrDefaultAsync(s => s.Id == user.AgentId);
+
+
+                    if (area.CommissionBranch > 0)
+                    {
+                        if (agent == null)
+                        {
+                            return BadRequest("تعذر تحديد حساب الوكيل");
+
+                        }
+
+                    }
+
+                    var agentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Id == agent.AccountId);
+
                     var customerUser = await _context.Users.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(sh.BusinessUserId));
                     if (customerUser == null)
                     {
@@ -1177,6 +1195,8 @@ namespace Roadfn.Controllers
 
                     var Paytxn = item;
                     var lines = new List<JournalEntryLine>();
+
+
 
                     #region CashAccounts txn
                     var tottxn = new JournalEntryLine();
@@ -1225,24 +1245,78 @@ namespace Roadfn.Controllers
                     lines.Add(CustomerAccounttxn);
                     #endregion
 
-                    #region RevenueAccounttxn txn
-                    var RevenueAccounttxn = new JournalEntryLine();
-                    RevenueAccounttxn.AccountId = revenueAccount.Id;
-                    RevenueAccounttxn.DebitAmount = 0;
-                    RevenueAccounttxn.CreditAmount = 0;
-                    if (Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice) <= 0)
+
+
+                    if (area.CommissionBranch > 0)
                     {
-                        RevenueAccounttxn.DebitAmount = Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice) * -1;
+                        var rev = Convert.ToDecimal((Paytxn.ShipmentTotal - Paytxn.ShipmentPrice) - area.CommissionBranch);
+
+                        var AgenAmt = Convert.ToDecimal(area.CommissionBranch) - Convert.ToDecimal(Paytxn.CommissionPerItem);
+
+                        #region RevenueAccounttxn txn
+
+                        var RevenueAccounttxn = new JournalEntryLine();
+                        RevenueAccounttxn.AccountId = revenueAccount.Id;
+                        RevenueAccounttxn.DebitAmount = 0;
+                        RevenueAccounttxn.CreditAmount = 0;
+                        if (rev <= 0)
+                        {
+                            RevenueAccounttxn.DebitAmount = rev * -1;
+                        }
+                        else
+                        {
+                            RevenueAccounttxn.CreditAmount = rev;
+                        }
+                        RevenueAccounttxn.Reference = driverPaymentHeader.Id.ToString();
+                        RevenueAccounttxn.Description = $"ايراد خدمة  {sh.ShipmentTrackingNo}";
+                        lines.Add(RevenueAccounttxn);
+
+                        #endregion
+
+
+                        #region agent Accounttxn txn
+
+                        var agentAccounttxn = new JournalEntryLine();
+                        agentAccounttxn.AccountId = agentAccount.Id;
+                        agentAccounttxn.DebitAmount = 0;
+                        agentAccounttxn.CreditAmount = 0;
+                        if (AgenAmt <= 0)
+                        {
+                            agentAccounttxn.DebitAmount = AgenAmt * -1;
+                        }
+                        else
+                        {
+                            agentAccounttxn.CreditAmount = AgenAmt;
+                        }
+                        agentAccounttxn.Reference = driverPaymentHeader.Id.ToString();
+                        agentAccounttxn.Description = $"عمولة وكيل  {sh.ShipmentTrackingNo}";
+                        lines.Add(agentAccounttxn);
+
+                        #endregion
+
                     }
+
+
                     else
                     {
-                        RevenueAccounttxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice);
+                        #region RevenueAccounttxn txn
+                        var RevenueAccounttxn = new JournalEntryLine();
+                        RevenueAccounttxn.AccountId = revenueAccount.Id;
+                        RevenueAccounttxn.DebitAmount = 0;
+                        RevenueAccounttxn.CreditAmount = 0;
+                        if (Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice) <= 0)
+                        {
+                            RevenueAccounttxn.DebitAmount = Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice) * -1;
+                        }
+                        else
+                        {
+                            RevenueAccounttxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice);
+                        }
+                        RevenueAccounttxn.Reference = driverPaymentHeader.Id.ToString();
+                        RevenueAccounttxn.Description = $"ايراد خدمة  {sh.ShipmentTrackingNo}";
+                        lines.Add(RevenueAccounttxn);
+                        #endregion
                     }
-                    RevenueAccounttxn.Reference = driverPaymentHeader.Id.ToString();
-                    RevenueAccounttxn.Description = $"ايراد خدمة  {sh.ShipmentTrackingNo}";
-                    lines.Add(RevenueAccounttxn);
-                    #endregion
-
                     #region pay DriverAttxn txn
                     var PayDriverAttxn = new JournalEntryLine();
                     PayDriverAttxn.AccountId = driverAccount.Id;

@@ -16,6 +16,7 @@ namespace Roadfn.Models
         [Display(Name = "الوصف")]
 
         public string? Description { get; set; }
+        public decimal? CommissionBranch { get; set; }
 
         public DateTime? idate { get; set; } = DateTime.Now;
     }
