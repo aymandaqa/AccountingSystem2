@@ -3,6 +3,8 @@
     Layout = null;
     var currencyCode = Model.Currency.Code;
     var createdBy = string.IsNullOrWhiteSpace(Model.CreatedBy.FullName) ? Model.CreatedBy.UserName : Model.CreatedBy.FullName;
+    var branchName = string.IsNullOrWhiteSpace(Model.Branch.NameAr) ? Model.Branch.NameEn : Model.Branch.NameAr;
+    var jobTitle = string.IsNullOrWhiteSpace(Model.Employee.JobTitle) ? "" : Model.Employee.JobTitle;
 }
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -10,114 +12,312 @@
     <meta charset="utf-8" />
     <title>سند صرف راتب</title>
     <style>
+        :root {
+            color-scheme: only light;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8f9fa;
+            font-family: 'Segoe UI', 'Tajawal', 'Cairo', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
             margin: 0;
-            padding: 20px;
+            padding: 24px;
+            color: #1f2933;
         }
 
-        .slip-container {
-            background: #fff;
-            max-width: 700px;
+        .print-wrapper {
+            max-width: 900px;
             margin: 0 auto;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 48px 56px;
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+            border: 1px solid rgba(15, 23, 42, 0.08);
         }
 
-        h1 {
-            text-align: center;
-            margin-bottom: 25px;
+        .document-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 32px;
+            border-bottom: 3px solid #0d6efd;
+            padding-bottom: 24px;
+            margin-bottom: 32px;
         }
 
-        table {
-            width: 100%;
+        .document-header h1 {
+            margin: 0;
+            font-size: 28px;
+            letter-spacing: 1px;
+        }
+
+        .company-block {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .company-block span {
+            font-size: 15px;
+            color: #4a5568;
+        }
+
+        .meta-table {
             border-collapse: collapse;
-            margin-bottom: 20px;
+            width: 100%;
         }
 
-        th, td {
+        .meta-table th,
+        .meta-table td {
             text-align: right;
-            padding: 8px;
+            padding: 6px 10px;
+            font-size: 14px;
         }
 
-        th {
-            background-color: #f1f3f5;
+        .meta-table th {
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .info-section {
+            margin-bottom: 32px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px 32px;
+        }
+
+        .info-card {
+            background: #f8fafc;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            border-radius: 10px;
+            padding: 16px 18px;
+        }
+
+        .info-card h3 {
+            margin: 0 0 8px;
+            font-size: 15px;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .info-card p {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .amount-display {
+            background: linear-gradient(135deg, rgba(13, 110, 253, 0.07), rgba(59, 130, 246, 0.05));
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            border-radius: 14px;
+            padding: 24px 28px;
+            margin: 32px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .amount-display strong {
+            font-size: 32px;
+            color: #0f172a;
+        }
+
+        .amount-display span {
+            font-size: 18px;
+            color: #1d4ed8;
+        }
+
+        .notes-block {
+            border: 1px solid rgba(148, 163, 184, 0.5);
+            border-radius: 12px;
+            padding: 18px 20px;
+            background: #fdfdfd;
+            margin-bottom: 32px;
+        }
+
+        .notes-block strong {
+            display: block;
+            margin-bottom: 8px;
+            color: #475569;
+        }
+
+        .signatures {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 24px;
+            margin-top: 40px;
+        }
+
+        .signature-box {
+            border-top: 2px solid rgba(15, 23, 42, 0.45);
+            padding-top: 12px;
+            text-align: center;
+            font-size: 15px;
+        }
+
+        .document-footer {
+            margin-top: 40px;
+            padding-top: 18px;
+            border-top: 1px dashed rgba(100, 116, 139, 0.5);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #64748b;
         }
 
         .print-actions {
-            text-align: center;
-            margin-top: 20px;
+            margin-top: 32px;
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .print-actions a,
+        .print-actions button {
+            padding: 12px 36px;
+            font-size: 16px;
+            border-radius: 999px;
+            border: 1px solid #0d6efd;
+            background: #0d6efd;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .print-actions a {
+            background: transparent;
+            color: #0d6efd;
+        }
+
+        .print-actions button:hover {
+            background: #0b5ed7;
+        }
+
+        .print-actions a:hover {
+            background: rgba(13, 110, 253, 0.08);
         }
 
         @@media print {
             body {
                 background-color: #fff;
+                padding: 0;
+            }
+
+            .print-wrapper {
+                box-shadow: none;
+                border: none;
+                border-radius: 0;
+                padding: 32px;
             }
 
             .print-actions {
                 display: none;
             }
 
-            .slip-container {
-                box-shadow: none;
-                border: none;
+            .document-footer {
+                color: #1e293b;
             }
         }
     </style>
 </head>
 <body>
-    <div class="slip-container">
-        <h1>سند صرف راتب</h1>
+    <div class="print-wrapper">
+        <div class="document-header">
+            <div class="company-block">
+                <h1>سند صرف راتب</h1>
+                <span>@branchName</span>
+                @if (!string.IsNullOrWhiteSpace(jobTitle))
+                {
+                    <span>المسمى الوظيفي: @jobTitle</span>
+                }
+            </div>
+            <div style="min-width: 220px;">
+                <table class="meta-table">
+                    <tr>
+                        <th>التاريخ:</th>
+                        <td>@Model.Date.ToString("yyyy/MM/dd")</td>
+                    </tr>
+                    <tr>
+                        <th>رقم القيد:</th>
+                        <td>@Model.ReferenceNumber</td>
+                    </tr>
+                    <tr>
+                        <th>أنشئ بواسطة:</th>
+                        <td>@createdBy</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
 
-        <table>
-            <tr>
-                <th>رقم القيد</th>
-                <td>@Model.ReferenceNumber</td>
-            </tr>
-            <tr>
-                <th>الموظف</th>
-                <td>@Model.Employee.Name</td>
-            </tr>
-            <tr>
-                <th>الفرع</th>
-                <td>@Model.Branch.NameAr</td>
-            </tr>
-            <tr>
-                <th>المبلغ</th>
-                <td>@Model.Amount.ToString("N2") @currencyCode</td>
-            </tr>
-            <tr>
-                <th>حساب الدفع</th>
-                <td>@Model.PaymentAccount.Code - @Model.PaymentAccount.NameAr</td>
-            </tr>
-            <tr>
-                <th>أنشئ بواسطة</th>
-                <td>@createdBy</td>
-            </tr>
-        </table>
+        <section class="info-section">
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>الموظف</h3>
+                    <p>@Model.Employee.Name</p>
+                </div>
+                <div class="info-card">
+                    <h3>رقم الهوية</h3>
+                    <p>@(string.IsNullOrWhiteSpace(Model.Employee.NationalId) ? "—" : Model.Employee.NationalId)</p>
+                </div>
+                <div class="info-card">
+                    <h3>حساب الدفع</h3>
+                    <p>@Model.PaymentAccount.Code - @Model.PaymentAccount.NameAr</p>
+                </div>
+                <div class="info-card">
+                    <h3>الراتب الشهري</h3>
+                    <p>@Model.Employee.Salary.ToString("N2") @currencyCode</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="amount-display">
+            <div>
+                <span>المبلغ المصروف</span>
+                <strong>@Model.Amount.ToString("N2") @currencyCode</strong>
+            </div>
+            <div style="text-align: left;">
+                <span>Branch: @(string.IsNullOrWhiteSpace(Model.Branch.NameEn) ? branchName : Model.Branch.NameEn)</span>
+            </div>
+        </div>
 
         @if (!string.IsNullOrWhiteSpace(Model.Notes))
         {
-            <div>
-                <strong>ملاحظات:</strong>
-                <p>@Model.Notes</p>
+            <div class="notes-block">
+                <strong>ملاحظات</strong>
+                <div>@Model.Notes</div>
             </div>
         }
 
-        <div class="print-actions" style="display: flex; justify-content: center; gap: 10px;">
+        <div class="signatures">
+            <div class="signature-box">المحاسب</div>
+            <div class="signature-box">المدير المباشر</div>
+            <div class="signature-box">الموظف المستلم</div>
+        </div>
+
+        <div class="document-footer">
+            <div>تم إنشاء السند عبر نظام المحاسبة.</div>
+            <div>وقت الإنشاء: @Model.Date.ToString("yyyy/MM/dd HH:mm")</div>
+        </div>
+
+        <div class="print-actions">
             @if (Model.JournalEntryId.HasValue)
             {
                 <a asp-controller="JournalEntries"
                    asp-action="Details"
                    asp-route-id="@Model.JournalEntryId.Value"
-                   asp-require-permission="journal.view"
-                   style="padding: 10px 30px; font-size: 16px; text-decoration: none; border: 1px solid #0d6efd; color: #0d6efd; border-radius: 4px; display: inline-block;">
-                    عرض القيد
+                   asp-require-permission="journal.view">
+                    عرض القيد المحاسبي
                 </a>
             }
-            <button onclick="window.print()" style="padding: 10px 30px; font-size: 16px;">طباعة</button>
+            <button type="button" onclick="window.print()">طباعة</button>
         </div>
     </div>
 

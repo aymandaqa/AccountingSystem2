@@ -4,6 +4,7 @@ using AccountingSystem.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AccountingSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251205090000_AddAgentToPaymentVouchers")]
+    partial class AddAgentToPaymentVouchers : ModelSnapshot
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1877,15 +1879,6 @@ namespace AccountingSystem.Migrations
                             DisplayName = "حذف وكيل",
                             IsActive = true,
                             Name = "agents.delete"
-                        },
-                        new
-                        {
-                            Id = 69,
-                            Category = "المستخدمين",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DisplayName = "عرض أرصدة حسابات المستخدم",
-                            IsActive = true,
-                            Name = "userbalances.view"
                         });
                 });
 
@@ -2002,9 +1995,6 @@ namespace AccountingSystem.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<int?>("SupplierId")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
                     b.HasIndex("AccountId");
@@ -2012,8 +2002,6 @@ namespace AccountingSystem.Migrations
                     b.HasIndex("CreatedById");
 
                     b.HasIndex("CurrencyId");
-
-                    b.HasIndex("SupplierId");
 
                     b.ToTable("ReceiptVouchers");
                 });
@@ -3333,18 +3321,11 @@ namespace AccountingSystem.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("AccountingSystem.Models.Supplier", "Supplier")
-                        .WithMany()
-                        .HasForeignKey("SupplierId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.Navigation("Account");
 
                     b.Navigation("CreatedBy");
 
                     b.Navigation("Currency");
-
-                    b.Navigation("Supplier");
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.ReportQuery", b =>

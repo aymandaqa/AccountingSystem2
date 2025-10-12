@@ -6,6 +6,7 @@ using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.Services;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AccountingSystem.Controllers
 {
@@ -58,9 +59,23 @@ namespace AccountingSystem.Controllers
         {
             var user = await _userManager.GetUserAsync(User);
             ViewBag.Accounts = await _context.UserPaymentAccounts
+                .AsNoTracking()
                 .Where(u => u.UserId == user!.Id)
                 .Include(u => u.Account).ThenInclude(a => a.Currency)
                 .Select(u => new { u.Account.Id, u.Account.Code, u.Account.NameAr, u.Account.CurrencyId, CurrencyCode = u.Account.Currency.Code })
+                .ToListAsync();
+            ViewBag.Suppliers = await _context.Suppliers
+                .AsNoTracking()
+                .Include(s => s.Account).ThenInclude(a => a.Currency)
+                .Where(s => s.AccountId != null)
+                .Select(s => new
+                {
+                    s.Id,
+                    s.NameAr,
+                    AccountId = s.AccountId!.Value,
+                    s.Account!.CurrencyId,
+                    CurrencyCode = s.Account.Currency.Code
+                })
                 .ToListAsync();
             return View(new ReceiptVoucher { Date = DateTime.Now });
         }
@@ -74,23 +89,83 @@ namespace AccountingSystem.Controllers
             if (user == null || user.PaymentAccountId == null || user.PaymentBranchId == null)
                 return Challenge();
 
-            var allowed = await _context.UserPaymentAccounts.AnyAsync(u => u.UserId == user.Id && u.AccountId == model.AccountId);
-            var account = await _context.Accounts.FindAsync(model.AccountId);
-            if (account == null || !allowed)
-                ModelState.AddModelError("AccountId", "الحساب غير موجود");
+            if (!model.SupplierId.HasValue && model.AccountId == 0)
+            {
+                var accountSelectionValue = Request.Form["AccountIdSelection"].FirstOrDefault();
+                if (int.TryParse(accountSelectionValue, out var selectedAccountId))
+                {
+                    model.AccountId = selectedAccountId;
+                    ModelState.Remove(nameof(ReceiptVoucher.AccountId));
+                }
+            }
+
+            ModelState.Remove(nameof(ReceiptVoucher.Account));
+            ModelState.Remove(nameof(ReceiptVoucher.Currency));
+            ModelState.Remove(nameof(ReceiptVoucher.CreatedBy));
+            ModelState.Remove(nameof(ReceiptVoucher.Supplier));
+
+            Account? account = null;
+
+            if (model.SupplierId.HasValue)
+            {
+                var supplier = await _context.Suppliers
+                    .Include(s => s.Account)
+                    .ThenInclude(a => a.Currency)
+                    .FirstOrDefaultAsync(s => s.Id == model.SupplierId.Value);
+
+                if (supplier?.Account == null)
+                {
+                    ModelState.AddModelError(nameof(ReceiptVoucher.SupplierId), "المورد غير موجود أو لا يملك حساباً");
+                }
+                else
+                {
+                    account = supplier.Account;
+                    model.AccountId = supplier.AccountId!.Value;
+                    model.CurrencyId = supplier.Account.CurrencyId;
+                    ModelState.Remove(nameof(ReceiptVoucher.AccountId));
+                    ModelState.Remove(nameof(ReceiptVoucher.CurrencyId));
+                }
+            }
             else
-                model.CurrencyId = account.CurrencyId;
+            {
+                var allowed = await _context.UserPaymentAccounts.AnyAsync(u => u.UserId == user.Id && u.AccountId == model.AccountId);
+                account = await _context.Accounts.FindAsync(model.AccountId);
+                if (account == null || !allowed)
+                    ModelState.AddModelError(nameof(ReceiptVoucher.AccountId), "الحساب غير موجود");
+                else
+                {
+                    model.CurrencyId = account.CurrencyId;
+                    ModelState.Remove(nameof(ReceiptVoucher.CurrencyId));
+                }
+            }
 
             var paymentAccount = await _context.Accounts.FindAsync(user.PaymentAccountId);
             if (account != null && paymentAccount != null && paymentAccount.CurrencyId != account.CurrencyId)
-                ModelState.AddModelError("AccountId", "يجب أن تكون الحسابات بنفس العملة");
+            {
+                var propertyName = model.SupplierId.HasValue ? nameof(ReceiptVoucher.SupplierId) : nameof(ReceiptVoucher.AccountId);
+                ModelState.AddModelError(propertyName, "يجب أن تكون الحسابات بنفس العملة");
+            }
 
             if (!ModelState.IsValid)
             {
                 ViewBag.Accounts = await _context.UserPaymentAccounts
+                    .AsNoTracking()
                     .Where(u => u.UserId == user.Id)
                     .Include(u => u.Account).ThenInclude(a => a.Currency)
                     .Select(u => new { u.Account.Id, u.Account.Code, u.Account.NameAr, u.Account.CurrencyId, CurrencyCode = u.Account.Currency.Code })
+                    .ToListAsync();
+                ViewBag.Suppliers = await _context.Suppliers
+                    .AsNoTracking()
+                    .Include(s => s.Account).ThenInclude(a => a.Currency)
+                    .Where(s => s.AccountId != null)
+                    .Select(s => new
+                    {
+                        s.Id,
+                        s.NameAr,
+                        AccountId = s.AccountId!.Value,
+                        s.Account!.CurrencyId,
+                        CurrencyCode = s.Account.Currency.Code
+                    })
                     .ToListAsync();
                 return View(model);
             }

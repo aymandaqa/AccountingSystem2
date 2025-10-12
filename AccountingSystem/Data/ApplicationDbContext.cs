@@ -643,6 +643,10 @@ namespace AccountingSystem.Data
                     .WithMany()
                     .HasForeignKey(e => e.AccountId)
                     .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Supplier)
+                    .WithMany()
+                    .HasForeignKey(e => e.SupplierId)
+                    .OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(e => e.Currency)
                     .WithMany()
                     .HasForeignKey(e => e.CurrencyId)
@@ -999,7 +1003,8 @@ namespace AccountingSystem.Data
                 new Permission { Id = 65, Name = "agents.view", DisplayName = "عرض الوكلاء", Category = "الوكلاء", CreatedAt = createdAt },
                 new Permission { Id = 66, Name = "agents.create", DisplayName = "إنشاء وكيل", Category = "الوكلاء", CreatedAt = createdAt },
                 new Permission { Id = 67, Name = "agents.edit", DisplayName = "تعديل وكيل", Category = "الوكلاء", CreatedAt = createdAt },
-                new Permission { Id = 68, Name = "agents.delete", DisplayName = "حذف وكيل", Category = "الوكلاء", CreatedAt = createdAt }
+                new Permission { Id = 68, Name = "agents.delete", DisplayName = "حذف وكيل", Category = "الوكلاء", CreatedAt = createdAt },
+                new Permission { Id = 69, Name = "userbalances.view", DisplayName = "عرض أرصدة حسابات المستخدم", Category = "المستخدمين", CreatedAt = createdAt }
             );
         }
     }

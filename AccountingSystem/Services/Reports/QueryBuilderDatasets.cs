@@ -65,6 +65,7 @@ public static class QueryBuilderDatasets
                 new("Date", "تاريخ السند", QueryFieldType.Date, "السند"),
                 new("Year", "السنة", QueryFieldType.Number, "السند"),
                 new("Month", "الشهر", QueryFieldType.Number, "السند"),
+                new("Supplier", "المورد", QueryFieldType.String, "المورد"),
                 new("AccountCode", "كود الحساب", QueryFieldType.String, "الحساب"),
                 new("AccountName", "اسم الحساب", QueryFieldType.String, "الحساب"),
                 new("BranchCode", "كود الفرع", QueryFieldType.String, "الفرع"),
@@ -81,12 +82,14 @@ public static class QueryBuilderDatasets
                 .Include(r => r.Account).ThenInclude(a => a.Branch)
                 .Include(r => r.Currency)
                 .Include(r => r.CreatedBy)
+                .Include(r => r.Supplier)
                 .Select(r => new VoucherQueryRow
                 {
                     Id = r.Id,
                     Date = r.Date,
                     Year = r.Date.Year,
                     Month = r.Date.Month,
+                    Supplier = r.Supplier != null ? r.Supplier.NameAr : null,
                     AccountCode = r.Account.Code,
                     AccountName = r.Account.NameAr,
                     BranchCode = r.Account.Branch != null ? r.Account.Branch.Code : null,
@@ -202,6 +205,7 @@ public class VoucherQueryRow
     public DateTime Date { get; set; }
     public int Year { get; set; }
     public int Month { get; set; }
+    public string? Supplier { get; set; }
     public string AccountCode { get; set; } = string.Empty;
     public string AccountName { get; set; } = string.Empty;
     public string? BranchCode { get; set; }
@@ -216,6 +220,11 @@ public class VoucherQueryRow
 
 public class PaymentVoucherQueryRow : VoucherQueryRow
 {
-    public string? Supplier { get; set; }
     public bool IsCash { get; set; }
+
+    public new string? Supplier
+    {
+        get => base.Supplier;
+        set => base.Supplier = value;
+    }
 }

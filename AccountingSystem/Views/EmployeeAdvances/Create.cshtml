@@ -1,6 +1,8 @@
+@using System.Globalization
 @model AccountingSystem.ViewModels.EmployeeAdvanceCreateViewModel
 @{
     ViewData["Title"] = "سند صرف سلفة";
+    var referenceDate = Model.Date == default(DateTime) ? DateTime.Today : Model.Date;
 }
 
 <div class="container-fluid">
@@ -18,7 +20,12 @@
                 <option value="">اختر الموظف</option>
                 @foreach (var employee in Model.Employees)
                 {
-                    <option value="@employee.Id" data-salary="@employee.Salary" data-balance="@employee.AccountBalance">
+                    <option value="@employee.Id"
+                            data-salary="@employee.Salary.ToString(CultureInfo.InvariantCulture)"
+                            data-balance="@employee.AccountBalance.ToString(CultureInfo.InvariantCulture)"
+                            data-daily-rate="@employee.DailySalaryRate.ToString(CultureInfo.InvariantCulture)"
+                            data-salary-balance="@employee.AccruedSalaryBalance.ToString(CultureInfo.InvariantCulture)"
+                            data-max-advance="@employee.MaxAdvanceAmount.ToString(CultureInfo.InvariantCulture)">
                         @employee.Name
                     </option>
                 }
@@ -26,13 +33,26 @@
             <span asp-validation-for="EmployeeId" class="text-danger"></span>
         </div>
 
-        <div class="col-md-6">
+        <div class="col-md-4">
             <label class="form-label">راتب الموظف</label>
             <input type="text" class="form-control" id="employeeSalary" readonly />
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
             <label class="form-label">رصيد حساب الموظف</label>
             <input type="text" class="form-control" id="employeeBalance" readonly />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">سعر اليوم للموظف</label>
+            <input type="text" class="form-control" id="employeeDailyRate" readonly />
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">رصيد الراتب المتاح حتى @referenceDate.ToString("yyyy/MM/dd")</label>
+            <input type="text" class="form-control" id="employeeSalaryBalance" readonly />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">الحد الأقصى للسلفة الحالية</label>
+            <input type="text" class="form-control" id="employeeMaxAdvance" readonly />
         </div>
 
         <div class="col-md-6">
@@ -61,6 +81,9 @@
             const select = document.getElementById('employeeSelect');
             const salaryInput = document.getElementById('employeeSalary');
             const balanceInput = document.getElementById('employeeBalance');
+            const dailyRateInput = document.getElementById('employeeDailyRate');
+            const salaryBalanceInput = document.getElementById('employeeSalaryBalance');
+            const maxAdvanceInput = document.getElementById('employeeMaxAdvance');
 
             function formatValue(value) {
                 if (value === null || value === undefined || value === '') {
@@ -78,11 +101,17 @@
                 if (!option || !option.dataset) {
                     salaryInput.value = '';
                     balanceInput.value = '';
+                    dailyRateInput.value = '';
+                    salaryBalanceInput.value = '';
+                    maxAdvanceInput.value = '';
                     return;
                 }
 
                 salaryInput.value = formatValue(option.dataset.salary) + ' @Model.CurrencyCode';
                 balanceInput.value = formatValue(option.dataset.balance) + ' @Model.CurrencyCode';
+                dailyRateInput.value = formatValue(option.dataset.dailyRate) + ' @Model.CurrencyCode';
+                salaryBalanceInput.value = formatValue(option.dataset.salaryBalance) + ' @Model.CurrencyCode';
+                maxAdvanceInput.value = formatValue(option.dataset.maxAdvance) + ' @Model.CurrencyCode';
             }
 
             select.addEventListener('change', updateEmployeeInfo);

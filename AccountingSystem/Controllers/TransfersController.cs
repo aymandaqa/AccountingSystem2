@@ -122,6 +122,13 @@ namespace AccountingSystem.Controllers
                 return View(model);
             }
 
+            if (senderAccount.Account != null && senderAccount.Account.Nature == AccountNature.Debit && model.Amount > senderAccount.Account.CurrentBalance)
+            {
+                ModelState.AddModelError(nameof(model.Amount), "الرصيد المتاح في حساب الإرسال لا يكفي لإتمام العملية.");
+                await PopulateCreateViewModelAsync(model, sender.Id);
+                return View(model);
+            }
+
             var transfer = new PaymentTransfer
             {
                 SenderId = sender.Id,
@@ -153,6 +160,13 @@ namespace AccountingSystem.Controllers
 
             if (accept)
             {
+                var fromAccount = await _context.Accounts.FindAsync(transfer.FromPaymentAccountId);
+                if (fromAccount != null && fromAccount.Nature == AccountNature.Debit && transfer.Amount > fromAccount.CurrentBalance)
+                {
+                    TempData["ErrorMessage"] = "الرصيد المتاح في حساب المرسل لا يكفي لإتمام التحويل.";
+                    return RedirectToAction(nameof(Index));
+                }
+
                 var number = await GenerateJournalEntryNumber();
                 var entry = new JournalEntry
                 {

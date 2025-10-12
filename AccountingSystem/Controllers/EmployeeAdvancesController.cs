@@ -130,6 +130,21 @@ namespace AccountingSystem.Controllers
 
             if (employee?.Account != null)
             {
+                var referenceDate = model.Date == default ? DateTime.Today : model.Date;
+                var dailyRate = CalculateEmployeeDailyRate(employee.Salary, referenceDate);
+                var salaryBalance = CalculateAccruedSalaryBalance(employee, referenceDate, dailyRate);
+                var accountAvailable = decimal.Round(CalculateEmployeeAccountAvailableBalance(employee.Account), 2, MidpointRounding.AwayFromZero);
+                var maxAdvance = decimal.Round(Math.Min(accountAvailable, salaryBalance), 2, MidpointRounding.AwayFromZero);
+
+                if (maxAdvance <= 0)
+                {
+                    ModelState.AddModelError(nameof(model.Amount), "لا يوجد رصيد متاح لمنح السلفة حالياً.");
+                }
+                else if (model.Amount > maxAdvance)
+                {
+                    ModelState.AddModelError(nameof(model.Amount), $"المبلغ يتجاوز الحد الأقصى المسموح به ({maxAdvance.ToString("N2")} {account.Currency.Code}) بناءً على رصيد الحساب ورصيد الراتب المتاح.");
+                }
+
                 var predictedBalance = CalculatePredictedEmployeeBalance(employee.Account, model.Amount);
                 if (predictedBalance < -employee.Salary)
                 {
@@ -214,25 +229,106 @@ namespace AccountingSystem.Controllers
             User user,
             Account account)
         {
+            var referenceDate = model.Date == default ? DateTime.Today : model.Date;
+
             var employees = await _context.Employees
                 .Where(e => e.IsActive && e.BranchId == user.PaymentBranchId)
                 .Include(e => e.Account)
                 .OrderBy(e => e.Name)
-                .Select(e => new EmployeeOptionViewModel
-                {
-                    Id = e.Id,
-                    Name = e.Name,
-                    Salary = e.Salary,
-                    AccountBalance = e.Account.CurrentBalance
-                })
                 .ToListAsync();
 
-            model.Employees = employees;
+            model.Employees = employees
+                .Select(e =>
+                {
+                    var dailyRate = CalculateEmployeeDailyRate(e.Salary, referenceDate);
+                    var salaryBalance = CalculateAccruedSalaryBalance(e, referenceDate, dailyRate);
+                    var accountAvailable = decimal.Round(CalculateEmployeeAccountAvailableBalance(e.Account), 2, MidpointRounding.AwayFromZero);
+                    var maxAdvance = decimal.Round(Math.Min(accountAvailable, salaryBalance), 2, MidpointRounding.AwayFromZero);
+
+                    return new EmployeeOptionViewModel
+                    {
+                        Id = e.Id,
+                        Name = e.Name,
+                        Salary = e.Salary,
+                        AccountBalance = e.Account.CurrentBalance,
+                        AccountAvailableBalance = accountAvailable,
+                        DailySalaryRate = dailyRate,
+                        AccruedSalaryBalance = salaryBalance,
+                        MaxAdvanceAmount = maxAdvance
+                    };
+                })
+                .ToList();
+
             model.PaymentAccountName = $"{account.Code} - {account.NameAr}";
             model.PaymentAccountBalance = account.CurrentBalance;
             model.CurrencyCode = account.Currency.Code;
 
             return model;
+        }
+
+        private static decimal CalculateEmployeeDailyRate(decimal salary, DateTime referenceDate)
+        {
+            var daysInMonth = DateTime.DaysInMonth(referenceDate.Year, referenceDate.Month);
+            if (daysInMonth <= 0 || salary <= 0)
+            {
+                return 0m;
+            }
+
+            return decimal.Round(salary / daysInMonth, 2, MidpointRounding.AwayFromZero);
+        }
+
+        private static decimal CalculateAccruedSalaryBalance(Employee employee, DateTime referenceDate, decimal dailyRate)
+        {
+            if (dailyRate <= 0)
+            {
+                return 0m;
+            }
+
+            var effectiveDate = referenceDate.Date;
+            var hireDate = employee.HireDate.Date;
+
+            if (effectiveDate < hireDate)
+            {
+                return 0m;
+            }
+
+            var monthStart = new DateTime(effectiveDate.Year, effectiveDate.Month, 1);
+            if (hireDate > monthStart)
+            {
+                monthStart = hireDate;
+            }
+
+            var elapsedDays = (effectiveDate - monthStart).Days + 1;
+            if (elapsedDays <= 0)
+            {
+                return 0m;
+            }
+
+            var daysInMonth = DateTime.DaysInMonth(effectiveDate.Year, effectiveDate.Month);
+            if (elapsedDays > daysInMonth)
+            {
+                elapsedDays = daysInMonth;
+            }
+
+            var accrued = dailyRate * elapsedDays;
+            if (accrued > employee.Salary)
+            {
+                accrued = employee.Salary;
+            }
+
+            return decimal.Round(accrued, 2, MidpointRounding.AwayFromZero);
+        }
+
+        private static decimal CalculateEmployeeAccountAvailableBalance(Account account)
+        {
+            var balance = account.CurrentBalance;
+
+            if (balance <= 0)
+            {
+                return 0m;
+            }
+
+            return balance;
         }
 
         private static decimal CalculatePredictedEmployeeBalance(Account account, decimal amount)

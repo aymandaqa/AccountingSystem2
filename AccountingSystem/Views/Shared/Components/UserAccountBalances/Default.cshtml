@@ -1,0 +1,46 @@
+@model IReadOnlyList<AccountingSystem.ViewModels.UserAccountBalanceViewModel>
+
+@if (Model == null || Model.Count == 0)
+{
+    <li class="nav-item dropdown user-balance-dropdown">
+        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="أرصدة حساباتي">
+            <i class="fa-solid fa-wallet"></i>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end p-3 user-balance-menu text-center text-muted">
+            لا توجد حسابات معرفة.
+        </div>
+    </li>
+}
+else
+{
+    <li class="nav-item dropdown user-balance-dropdown">
+        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="أرصدة حساباتي">
+            <i class="fa-solid fa-wallet"></i>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end p-3 user-balance-menu">
+            <h6 class="dropdown-header px-0">حساباتي</h6>
+            <div class="user-balance-list">
+                @foreach (var account in Model)
+                {
+                    <div class="user-balance-item">
+                        <div class="d-flex justify-content-between align-items-center gap-3">
+                            <div class="flex-grow-1">
+                                <div class="fw-semibold text-truncate" title="@($"{account.AccountCode} - {account.AccountName}")">
+                                    @account.AccountCode - @account.AccountName
+                                </div>
+                                @if (account.IsAgentAccount)
+                                {
+                                    <span class="badge bg-warning text-dark mt-1">حساب الوكيل</span>
+                                }
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold text-primary">@account.CurrentBalance.ToString("N2")</div>
+                                <div class="text-muted small">@account.CurrencyCode</div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </li>
+}
