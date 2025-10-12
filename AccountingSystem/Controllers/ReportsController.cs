@@ -138,6 +138,104 @@ namespace AccountingSystem.Controllers
             return View();
         }
 
+        public async Task<IActionResult> BranchPerformanceSummary(DateTime? fromDate = null, DateTime? toDate = null)
+        {
+            var model = await BuildBranchPerformanceSummaryViewModel(fromDate, toDate);
+            return View(model);
+        }
+
+        public async Task<IActionResult> BranchPerformanceSummaryExcel(DateTime? fromDate = null, DateTime? toDate = null)
+        {
+            var model = await BuildBranchPerformanceSummaryViewModel(fromDate, toDate);
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.AddWorksheet("BranchSummary");
+
+            if (!model.HasResults)
+            {
+                worksheet.Cell(1, 1).Value = "لا توجد بيانات للفترة المحددة.";
+            }
+            else
+            {
+                var headerRow = 1;
+                worksheet.Cell(headerRow, 1).Value = "البند";
+                var columnIndex = 2;
+                foreach (var branch in model.Branches)
+                {
+                    worksheet.Cell(headerRow, columnIndex).Value = branch.BranchName;
+                    columnIndex++;
+                }
+                worksheet.Cell(headerRow, columnIndex).Value = $"الإجمالي ({model.BaseCurrencyCode})";
+                headerRow++;
+
+                var currentRow = headerRow;
+                foreach (var section in model.Sections)
+                {
+                    worksheet.Cell(currentRow, 1).Value = section.Title;
+                    worksheet.Range(currentRow, 1, currentRow, model.Branches.Count + 2).Merge();
+                    worksheet.Row(currentRow).Style.Font.Bold = true;
+                    currentRow++;
+
+                    foreach (var row in section.Rows)
+                    {
+                        worksheet.Cell(currentRow, 1).Value = row.Label;
+                        columnIndex = 2;
+                        foreach (var branch in model.Branches)
+                        {
+                            var value = row.Values.TryGetValue(branch.BranchId, out var amount) ? amount : 0m;
+                            worksheet.Cell(currentRow, columnIndex).Value = Math.Round(value, 2, MidpointRounding.AwayFromZero);
+                            columnIndex++;
+                        }
+
+                        worksheet.Cell(currentRow, columnIndex).Value = Math.Round(row.Total, 2, MidpointRounding.AwayFromZero);
+                        currentRow++;
+                    }
+
+                    worksheet.Cell(currentRow, 1).Value = $"إجمالي {section.Title}";
+                    worksheet.Row(currentRow).Style.Font.Bold = true;
+                    columnIndex = 2;
+                    foreach (var branch in model.Branches)
+                    {
+                        var value = section.TotalsByBranch.TryGetValue(branch.BranchId, out var amount) ? amount : 0m;
+                        worksheet.Cell(currentRow, columnIndex).Value = Math.Round(value, 2, MidpointRounding.AwayFromZero);
+                        columnIndex++;
+                    }
+                    worksheet.Cell(currentRow, columnIndex).Value = Math.Round(section.OverallTotal, 2, MidpointRounding.AwayFromZero);
+                    currentRow++;
+                }
+
+                if (model.SummaryRows.Any())
+                {
+                    worksheet.Cell(currentRow, 1).Value = "مؤشرات الأداء";
+                    worksheet.Range(currentRow, 1, currentRow, model.Branches.Count + 2).Merge();
+                    worksheet.Row(currentRow).Style.Font.Bold = true;
+                    currentRow++;
+
+                    foreach (var row in model.SummaryRows)
+                    {
+                        worksheet.Cell(currentRow, 1).Value = row.Label;
+                        columnIndex = 2;
+                        foreach (var branch in model.Branches)
+                        {
+                            var value = row.Values.TryGetValue(branch.BranchId, out var amount) ? amount : 0m;
+                            worksheet.Cell(currentRow, columnIndex).Value = Math.Round(value, 2, MidpointRounding.AwayFromZero);
+                            columnIndex++;
+                        }
+                        worksheet.Cell(currentRow, columnIndex).Value = Math.Round(row.Total, 2, MidpointRounding.AwayFromZero);
+                        currentRow++;
+                    }
+                }
+
+                worksheet.Columns().AdjustToContents();
+            }
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            var content = stream.ToArray();
+            var fileName = $"BranchPerformanceSummary_{model.FromDate:yyyyMMdd}_{model.ToDate:yyyyMMdd}.xlsx";
+            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
         [Authorize(Policy = "reports.view")]
         public async Task<IActionResult> ExecutiveDashboard(int? year, int? month)
         {
@@ -2277,6 +2375,215 @@ namespace AccountingSystem.Controllers
             model.NetIncome = model.TotalRevenue - model.TotalExpenses;
 
             return View(model);
+        }
+
+        private async Task<BranchPerformanceSummaryViewModel> BuildBranchPerformanceSummaryViewModel(DateTime? fromDate, DateTime? toDate)
+        {
+            var today = DateTime.Today;
+            var defaultFrom = new DateTime(today.Year, 1, 1);
+            var actualFrom = (fromDate ?? defaultFrom).Date;
+            var actualTo = (toDate ?? today).Date;
+
+            if (actualFrom > actualTo)
+            {
+                (actualFrom, actualTo) = (actualTo, actualFrom);
+            }
+
+            var baseCurrency = await _context.Currencies.AsNoTracking().FirstAsync(c => c.IsBase);
+
+            var lines = await _context.JournalEntryLines
+                .AsNoTracking()
+                .Include(l => l.JournalEntry)
+                    .ThenInclude(j => j.Branch)
+                .Include(l => l.Account)
+                    .ThenInclude(a => a.Currency)
+                .Include(l => l.Account)
+                    .ThenInclude(a => a.Parent)
+                .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
+                .Where(l => l.JournalEntry.Date >= actualFrom && l.JournalEntry.Date <= actualTo)
+                .ToListAsync();
+
+            var branchNames = new Dictionary<int?, string?>();
+            var sectionsRaw = new Dictionary<AccountType, Dictionary<string, BranchPerformanceSummaryRow>>();
+
+            foreach (var line in lines)
+            {
+                var amount = line.Account.Nature == AccountNature.Debit
+                    ? line.DebitAmount - line.CreditAmount
+                    : line.CreditAmount - line.DebitAmount;
+
+                if (amount == 0)
+                {
+                    continue;
+                }
+
+                var accountCurrency = line.Account.Currency ?? baseCurrency;
+                var amountInBase = _currencyService.Convert(amount, accountCurrency, baseCurrency);
+
+                if (amountInBase == 0)
+                {
+                    continue;
+                }
+
+                var branchId = line.JournalEntry.BranchId;
+                var branchName = line.JournalEntry.Branch?.NameAr;
+
+                if (!branchNames.ContainsKey(branchId))
+                {
+                    branchNames[branchId] = string.IsNullOrWhiteSpace(branchName) ? "بدون فرع" : branchName;
+                }
+
+                if (!sectionsRaw.TryGetValue(line.Account.AccountType, out var rowsDictionary))
+                {
+                    rowsDictionary = new Dictionary<string, BranchPerformanceSummaryRow>(StringComparer.OrdinalIgnoreCase);
+                    sectionsRaw[line.Account.AccountType] = rowsDictionary;
+                }
+
+                var label = line.Account.Parent?.NameAr ?? line.Account.NameAr;
+                var labelKey = string.IsNullOrWhiteSpace(label) ? line.Account.Code : label;
+
+                if (!rowsDictionary.TryGetValue(labelKey, out var row))
+                {
+                    row = new BranchPerformanceSummaryRow
+                    {
+                        Label = labelKey
+                    };
+                    rowsDictionary[labelKey] = row;
+                }
+
+                if (row.Values.ContainsKey(branchId))
+                {
+                    row.Values[branchId] += amountInBase;
+                }
+                else
+                {
+                    row.Values[branchId] = amountInBase;
+                }
+            }
+
+            var branches = branchNames
+                .Select(kvp => new BranchPerformanceSummaryBranch
+                {
+                    BranchId = kvp.Key,
+                    BranchName = kvp.Value ?? "بدون فرع"
+                })
+                .OrderBy(b => b.BranchName)
+                .ToList();
+
+            var sectionOrder = new[]
+            {
+                AccountType.Revenue,
+                AccountType.Expenses,
+                AccountType.Assets,
+                AccountType.Liabilities,
+                AccountType.Equity
+            };
+
+            var sections = new List<BranchPerformanceSummarySection>();
+
+            foreach (var accountType in sectionOrder)
+            {
+                if (!sectionsRaw.TryGetValue(accountType, out var rowsDictionary))
+                {
+                    continue;
+                }
+
+                var rows = rowsDictionary.Values
+                    .Where(r => r.Values.Values.Any(v => v != 0))
+                    .OrderBy(r => r.Label)
+                    .ToList();
+
+                if (!rows.Any())
+                {
+                    continue;
+                }
+
+                var section = new BranchPerformanceSummarySection
+                {
+                    AccountType = accountType,
+                    Title = accountType switch
+                    {
+                        AccountType.Assets => "الأصول",
+                        AccountType.Liabilities => "الخصوم",
+                        AccountType.Equity => "حقوق الملكية",
+                        AccountType.Revenue => "الإيرادات",
+                        AccountType.Expenses => "المصروفات",
+                        _ => accountType.ToString()
+                    },
+                    Rows = rows
+                };
+
+                var totals = new Dictionary<int?, decimal>();
+                foreach (var branch in branches)
+                {
+                    var total = rows.Sum(r => r.Values.TryGetValue(branch.BranchId, out var value) ? value : 0m);
+                    if (total != 0)
+                    {
+                        totals[branch.BranchId] = total;
+                    }
+                }
+
+                section.TotalsByBranch = totals;
+                sections.Add(section);
+            }
+
+            var summaryRows = new List<BranchPerformanceSummaryRow>();
+
+            if (branches.Any())
+            {
+                BranchPerformanceSummarySection? GetSection(AccountType type) =>
+                    sections.FirstOrDefault(s => s.AccountType == type);
+
+                var revenueSection = GetSection(AccountType.Revenue);
+                var expensesSection = GetSection(AccountType.Expenses);
+                var assetsSection = GetSection(AccountType.Assets);
+                var liabilitiesSection = GetSection(AccountType.Liabilities);
+
+                if (revenueSection != null || expensesSection != null)
+                {
+                    var netIncomeRow = new BranchPerformanceSummaryRow
+                    {
+                        Label = "صافي الدخل"
+                    };
+
+                    foreach (var branch in branches)
+                    {
+                        var revenue = revenueSection?.TotalsByBranch.TryGetValue(branch.BranchId, out var value) == true ? value : 0m;
+                        var expenses = expensesSection?.TotalsByBranch.TryGetValue(branch.BranchId, out var value) == true ? value : 0m;
+                        netIncomeRow.Values[branch.BranchId] = revenue - expenses;
+                    }
+
+                    summaryRows.Add(netIncomeRow);
+                }
+
+                if (assetsSection != null || liabilitiesSection != null)
+                {
+                    var netAssetsRow = new BranchPerformanceSummaryRow
+                    {
+                        Label = "صافي الأصول"
+                    };
+
+                    foreach (var branch in branches)
+                    {
+                        var assets = assetsSection?.TotalsByBranch.TryGetValue(branch.BranchId, out var value) == true ? value : 0m;
+                        var liabilities = liabilitiesSection?.TotalsByBranch.TryGetValue(branch.BranchId, out var value) == true ? value : 0m;
+                        netAssetsRow.Values[branch.BranchId] = assets - liabilities;
+                    }
+
+                    summaryRows.Add(netAssetsRow);
+                }
+            }
+
+            return new BranchPerformanceSummaryViewModel
+            {
+                FromDate = actualFrom,
+                ToDate = actualTo,
+                BaseCurrencyCode = baseCurrency.Code,
+                Branches = branches,
+                Sections = sections,
+                SummaryRows = summaryRows,
+                FiltersApplied = true
+            };
         }
 
         private static List<BranchExpensesReportColumn> BuildBranchExpensesColumns(DateTime fromDate, DateTime toDate, BranchExpensesPeriodGrouping grouping, CultureInfo culture)
