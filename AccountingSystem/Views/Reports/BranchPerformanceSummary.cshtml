@@ -14,7 +14,7 @@
                         <h4 class="mb-0"><i class="fas fa-network-wired me-2"></i>ملخص أداء الفروع</h4>
                         <small class="text-white-50">تابع أصول وخصوم وإيرادات كل فرع مع إمكانية التصدير إلى Excel</small>
                     </div>
-                    <a class="btn btn-outline-light" asp-action="BranchPerformanceSummaryExcel" asp-route-fromDate="@Model.FromDate.ToString(\"yyyy-MM-dd\")" asp-route-toDate="@Model.ToDate.ToString(\"yyyy-MM-dd\")">
+                    <a class="btn btn-outline-light" asp-action="BranchPerformanceSummaryExcel" asp-route-fromDate="@Model.FromDate.ToString("yyyy-MM-dd")" asp-route-toDate="@Model.ToDate.ToString("yyyy-MM-dd")">
                         <i class="fas fa-file-excel me-1"></i>تصدير Excel
                     </a>
                 </div>
@@ -22,11 +22,11 @@
                     <form method="get" class="row g-3 mb-4">
                         <div class="col-md-3 col-sm-6">
                             <label class="form-label">من تاريخ</label>
-                            <input type="date" class="form-control" name="fromDate" value="@Model.FromDate.ToString(\"yyyy-MM-dd\")" />
+                            <input type="date" class="form-control" name="fromDate" value="@Model.FromDate.ToString("yyyy-MM-dd")" />
                         </div>
                         <div class="col-md-3 col-sm-6">
                             <label class="form-label">إلى تاريخ</label>
-                            <input type="date" class="form-control" name="toDate" value="@Model.ToDate.ToString(\"yyyy-MM-dd\")" />
+                            <input type="date" class="form-control" name="toDate" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
                         </div>
                         <div class="col-md-6 col-sm-12 align-self-end">
                             <div class="d-flex gap-2 justify-content-end">
