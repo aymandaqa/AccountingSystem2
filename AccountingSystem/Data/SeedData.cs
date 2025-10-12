@@ -66,6 +66,7 @@ namespace AccountingSystem.Data
                 new Permission { Name = "users.create", DisplayName = "إنشاء المستخدمين", Category = "المستخدمين" },
                 new Permission { Name = "users.edit", DisplayName = "تعديل المستخدمين", Category = "المستخدمين" },
                 new Permission { Name = "users.delete", DisplayName = "حذف المستخدمين", Category = "المستخدمين" },
+                new Permission { Name = "userbalances.view", DisplayName = "عرض أرصدة حسابات المستخدم", Category = "المستخدمين" },
                 new Permission { Name = "branches.view", DisplayName = "عرض الفروع", Category = "الفروع" },
                 new Permission { Name = "branches.create", DisplayName = "إنشاء الفروع", Category = "الفروع" },
                 new Permission { Name = "branches.edit", DisplayName = "تعديل الفروع", Category = "الفروع" },

@@ -1870,6 +1870,15 @@ namespace AccountingSystem.Migrations
                             DisplayName = "حذف وكيل",
                             IsActive = true,
                             Name = "agents.delete"
+                        },
+                        new
+                        {
+                            Id = 69,
+                            Category = "المستخدمين",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض أرصدة حسابات المستخدم",
+                            IsActive = true,
+                            Name = "userbalances.view"
                         });
                 });
 

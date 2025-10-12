@@ -479,3 +479,35 @@ body {
         box-shadow: none;
     }
 }
+
+.user-balance-dropdown .dropdown-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.user-balance-menu {
+    min-width: 18rem;
+    max-width: 22rem;
+}
+
+.user-balance-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 18rem;
+    overflow-y: auto;
+}
+
+.user-balance-item .fw-semibold {
+    font-size: 0.95rem;
+}
+
+.user-balance-item .fw-bold {
+    font-size: 1rem;
+}
+
+.user-balance-item .badge {
+    font-size: 0.65rem;
+}

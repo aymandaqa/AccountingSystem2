@@ -446,6 +446,7 @@
                                         </div>
 
                                         <ul class="navbar-nav ms-auto align-items-center flex-row flex-wrap gap-2 top-navbar-actions order-2 order-lg-3">
+                                            @await Component.InvokeAsync("UserAccountBalances")
                                             <li class="nav-item">
                                                 @await Component.InvokeAsync("Notifications")
                                             </li>
