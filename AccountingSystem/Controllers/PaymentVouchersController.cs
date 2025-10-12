@@ -122,6 +122,8 @@ namespace AccountingSystem.Controllers
             if (model.IsCash)
             {
                 cashAccount = await _context.Accounts.FindAsync(user.PaymentAccountId.Value);
+                if (cashAccount != null && cashAccount.Nature == AccountNature.Debit && model.Amount > cashAccount.CurrentBalance)
+                    ModelState.AddModelError(nameof(model.Amount), "الرصيد المتاح في حساب الدفع لا يكفي لإتمام العملية.");
             }
 
             if (supplier?.Account != null && selectedAccount != null)

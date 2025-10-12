@@ -154,9 +154,17 @@ namespace AccountingSystem.Controllers
                 if (model.IsCash && user.PaymentAccountId.HasValue)
                 {
                     var paymentAccount = await _context.Accounts.FindAsync(user.PaymentAccountId.Value);
-                    if (paymentAccount != null && paymentAccount.CurrencyId != expenseAccount.CurrencyId)
+                    if (paymentAccount != null)
                     {
-                        ModelState.AddModelError(string.Empty, "يجب أن تكون الحسابات بنفس العملة");
+                        if (paymentAccount.CurrencyId != expenseAccount.CurrencyId)
+                        {
+                            ModelState.AddModelError(string.Empty, "يجب أن تكون الحسابات بنفس العملة");
+                        }
+
+                        if (paymentAccount.Nature == AccountNature.Debit && model.Amount > paymentAccount.CurrentBalance)
+                        {
+                            ModelState.AddModelError(nameof(model.Amount), "الرصيد المتاح في حساب الدفع لا يكفي لإتمام العملية.");
+                        }
                     }
                 }
             }

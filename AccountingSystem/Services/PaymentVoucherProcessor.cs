@@ -69,6 +69,11 @@ namespace AccountingSystem.Services
                 {
                     throw new InvalidOperationException("Cash account not found for creator");
                 }
+
+                if (cashAccount.Nature == AccountNature.Debit && loadedVoucher.Amount > cashAccount.CurrentBalance)
+                {
+                    throw new InvalidOperationException("الرصيد المتاح في حساب الدفع لا يكفي لإتمام العملية.");
+                }
             }
 
             var lines = new List<JournalEntryLine>

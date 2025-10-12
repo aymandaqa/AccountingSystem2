@@ -67,8 +67,14 @@ namespace AccountingSystem.Controllers
             }
 
             var paymentAccount = await _context.Accounts.FindAsync(user.PaymentAccountId);
-            if (supplier?.Account != null && paymentAccount != null && paymentAccount.CurrencyId != supplier.Account.CurrencyId)
-                ModelState.AddModelError("SupplierId", "يجب أن تكون الحسابات بنفس العملة");
+            if (supplier?.Account != null && paymentAccount != null)
+            {
+                if (paymentAccount.CurrencyId != supplier.Account.CurrencyId)
+                    ModelState.AddModelError("SupplierId", "يجب أن تكون الحسابات بنفس العملة");
+
+                if (paymentAccount.Nature == AccountNature.Debit && model.Amount > paymentAccount.CurrentBalance)
+                    ModelState.AddModelError(nameof(model.Amount), "الرصيد المتاح في حساب الدفع لا يكفي لإتمام العملية.");
+            }
 
             ModelState.Remove(nameof(DisbursementVoucher.Account));
             ModelState.Remove(nameof(DisbursementVoucher.CreatedBy));

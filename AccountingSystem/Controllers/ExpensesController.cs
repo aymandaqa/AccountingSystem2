@@ -161,6 +161,15 @@ namespace AccountingSystem.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Challenge();
 
+            var paymentAccount = user.PaymentAccountId.HasValue
+                ? await _context.Accounts.FindAsync(user.PaymentAccountId.Value)
+                : null;
+
+            if (paymentAccount != null && paymentAccount.Nature == AccountNature.Debit && model.Amount > paymentAccount.CurrentBalance)
+            {
+                ModelState.AddModelError(nameof(model.Amount), "الرصيد المتاح في حساب الدفع لا يكفي لإتمام العملية.");
+            }
+
             if (!ModelState.IsValid)
             {
                 model.PaymentAccountName = (await _context.Accounts.FindAsync(user.PaymentAccountId))?.NameAr ?? string.Empty;
@@ -365,10 +374,33 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "expenses.approve")]
         public async Task<IActionResult> ApproveConfirmed(int id)
         {
-            var expense = await _context.Expenses.FindAsync(id);
+            var expense = await _context.Expenses
+                .Include(e => e.User)
+                .Include(e => e.PaymentAccount)
+                .Include(e => e.ExpenseAccount)
+                .FirstOrDefaultAsync(e => e.Id == id);
             var user = await _userManager.GetUserAsync(User);
             if (expense == null || expense.IsApproved || user == null)
                 return NotFound();
+
+            if (expense.PaymentAccount != null && expense.PaymentAccount.Nature == AccountNature.Debit && expense.Amount > expense.PaymentAccount.CurrentBalance)
+            {
+                ModelState.AddModelError(nameof(expense.Amount), "الرصيد المتاح في حساب الدفع لا يكفي لإتمام العملية.");
+
+                var model = new ExpenseViewModel
+                {
+                    Id = expense.Id,
+                    UserName = expense.User.FullName ?? expense.User.Email ?? string.Empty,
+                    PaymentAccountName = expense.PaymentAccount.NameAr,
+                    ExpenseAccountName = expense.ExpenseAccount.NameAr,
+                    Amount = expense.Amount,
+                    Notes = expense.Notes,
+                    IsApproved = expense.IsApproved,
+                    CreatedAt = expense.CreatedAt
+                };
+
+                return View(model);
+            }
 
             var number = await GenerateJournalEntryNumber();
             var entry = new JournalEntry
