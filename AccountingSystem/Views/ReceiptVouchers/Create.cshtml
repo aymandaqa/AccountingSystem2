@@ -9,11 +9,6 @@
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
         </div>
         <div class="col-md-6">
-            <label class="form-label">العملة</label>
-            <input type="text" class="form-control" id="currencyDisplay" readonly />
-            <input type="hidden" asp-for="CurrencyId" id="currencyId" />
-        </div>
-        <div class="col-md-6">
             <label class="form-label">المورد</label>
             <select asp-for="SupplierId" class="form-select" id="supplierSelect">
                 <option value="">-- اختر المورد --</option>
@@ -28,17 +23,24 @@
             <div class="form-text">سيتم استخدام حساب المورد المرتبط تلقائياً عند اختيار المورد.</div>
         </div>
         <div class="col-md-6">
-            <label class="form-label">الحساب</label>
+            <label class="form-label">حساب الدفع</label>
             <input type="hidden" asp-for="AccountId" id="accountId" />
-            <select class="form-select" id="accountSelect" name="AccountIdSelection">
-                @foreach (var a in ViewBag.Accounts)
+            <input type="hidden" asp-for="CurrencyId" id="currencyId" />
+            <select asp-for="PaymentAccountId" class="form-select" id="paymentAccountSelect">
+                <option value="">-- اختر حساب الدفع --</option>
+                @foreach (var a in ViewBag.PaymentAccounts)
                 {
-                    <option value="@a.Id" data-currency-id="@a.CurrencyId" data-currency-code="@a.CurrencyCode" selected="@(Model?.AccountId == (int?)a.Id ? "selected" : null)">
+                    <option value="@a.Id" data-currency-id="@a.CurrencyId" data-currency-code="@a.CurrencyCode" selected="@(Model?.PaymentAccountId == (int?)a.Id ? "selected" : null)">
                         @a.Code - @a.NameAr (@a.CurrencyCode)
                     </option>
                 }
             </select>
-            <span asp-validation-for="AccountId" class="text-danger"></span>
+            <span asp-validation-for="PaymentAccountId" class="text-danger"></span>
+            <div class="form-text" id="paymentAccountCurrencyInfo">سيتم تسجيل حركة القبض على حساب الدفع المختار.</div>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">عملة السند</label>
+            <input type="text" class="form-control" id="currencyDisplay" readonly />
         </div>
         <div class="col-md-6">
             <label class="form-label">سعر الصرف</label>
@@ -69,24 +71,24 @@
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const accountSelect = document.getElementById('accountSelect');
             const currencyDisplay = document.getElementById('currencyDisplay');
             const currencyId = document.getElementById('currencyId');
             const supplierSelect = document.getElementById('supplierSelect');
             const accountIdInput = document.getElementById('accountId');
+            const paymentAccountSelect = document.getElementById('paymentAccountSelect');
+            const paymentAccountCurrencyInfo = document.getElementById('paymentAccountCurrencyInfo');
 
-            function updateFromAccount() {
-                const option = accountSelect.options[accountSelect.selectedIndex];
-                if (!option) {
-                    currencyDisplay.value = '';
-                    currencyId.value = '';
-                    accountIdInput.value = '';
+            function updatePaymentAccountInfo() {
+                const option = paymentAccountSelect.options[paymentAccountSelect.selectedIndex];
+                if (!option || !option.value) {
+                    paymentAccountCurrencyInfo.textContent = 'سيتم تسجيل حركة القبض على حساب الدفع المختار.';
                     return;
                 }
 
-                accountIdInput.value = option.value;
-                currencyDisplay.value = option.getAttribute('data-currency-code') || '';
-                currencyId.value = option.getAttribute('data-currency-id') || '';
+                const currencyCode = option.getAttribute('data-currency-code');
+                paymentAccountCurrencyInfo.textContent = currencyCode
+                    ? `سيتم تسجيل حركة القبض على حساب الدفع المختار (${currencyCode}).`
+                    : 'سيتم تسجيل حركة القبض على حساب الدفع المختار.';
             }
 
             function updateFromSupplier() {
@@ -95,26 +97,25 @@
                     accountIdInput.value = option.getAttribute('data-account-id') || '';
                     currencyDisplay.value = option.getAttribute('data-currency-code') || '';
                     currencyId.value = option.getAttribute('data-currency-id') || '';
-                    accountSelect.disabled = true;
                 } else {
-                    accountSelect.disabled = false;
-                    updateFromAccount();
+                    accountIdInput.value = '';
+                    currencyDisplay.value = '';
+                    currencyId.value = '';
                 }
             }
 
-            accountSelect.addEventListener('change', function () {
-                if (!supplierSelect.value) {
-                    updateFromAccount();
-                }
-            });
-
             supplierSelect.addEventListener('change', updateFromSupplier);
+            paymentAccountSelect.addEventListener('change', updatePaymentAccountInfo);
 
             if (supplierSelect.value) {
                 updateFromSupplier();
             } else {
-                updateFromAccount();
+                accountIdInput.value = '';
+                currencyDisplay.value = '';
+                currencyId.value = '';
             }
+
+            updatePaymentAccountInfo();
         });
     </script>
 }

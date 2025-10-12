@@ -573,6 +573,7 @@ namespace AccountingSystem.Controllers
                 .Where(v => v.CreatedById == userId)
                 .Include(v => v.Currency)
                 .Include(v => v.Account)
+                .Include(v => v.PaymentAccount)
                 .ToListAsync();
 
             var references = new List<string>();
@@ -590,7 +591,7 @@ namespace AccountingSystem.Controllers
                 .Select(v => v.IsCash ? v.CreatedBy.PaymentAccountId : v.AccountId)
                 .Where(id => id.HasValue)
                 .Select(id => id!.Value)
-                .Concat(receiptVouchers.Select(v => v.AccountId))
+                .Concat(receiptVouchers.Select(v => v.PaymentAccountId))
                 .Distinct()
                 .ToList();
 
@@ -607,7 +608,7 @@ namespace AccountingSystem.Controllers
             {
                 foreach (var receipt in receiptVouchers)
                 {
-                    if (accountId.HasValue && receipt.AccountId != accountId.Value)
+                    if (accountId.HasValue && receipt.PaymentAccountId != accountId.Value)
                     {
                         continue;
                     }
@@ -619,10 +620,10 @@ namespace AccountingSystem.Controllers
                     {
                         Date = receipt.Date,
                         Type = CashTransactionType.Receipt,
-                        AccountId = receipt.AccountId,
-                        AccountName = accounts.TryGetValue(receipt.AccountId, out var account)
+                        AccountId = receipt.PaymentAccountId,
+                        AccountName = accounts.TryGetValue(receipt.PaymentAccountId, out var account)
                             ? account.NameAr
-                            : receipt.Account?.NameAr ?? "-",
+                            : receipt.PaymentAccount?.NameAr ?? "-",
                         Amount = receipt.Amount,
                         Currency = receipt.Currency.Code,
                         Reference = reference,
@@ -1159,6 +1160,7 @@ namespace AccountingSystem.Controllers
                     var receiptData = await _context.ReceiptVouchers
                         .AsNoTracking()
                         .Include(r => r.Account).ThenInclude(a => a.Branch)
+                        .Include(r => r.PaymentAccount).ThenInclude(a => a.Branch)
                         .Include(r => r.Currency)
                         .Include(r => r.CreatedBy)
                         .Include(r => r.Supplier)
@@ -1170,10 +1172,14 @@ namespace AccountingSystem.Controllers
                             Year = r.Date.Year,
                             Month = r.Date.Month,
                             Supplier = r.Supplier != null ? r.Supplier.NameAr : null,
-                            AccountCode = r.Account.Code,
-                            AccountName = r.Account.NameAr,
-                            BranchCode = r.Account.Branch != null ? r.Account.Branch.Code : null,
-                            BranchName = r.Account.Branch != null ? r.Account.Branch.NameAr : null,
+                            SupplierAccountCode = r.Account.Code,
+                            SupplierAccountName = r.Account.NameAr,
+                            SupplierBranchCode = r.Account.Branch != null ? r.Account.Branch.Code : null,
+                            SupplierBranchName = r.Account.Branch != null ? r.Account.Branch.NameAr : null,
+                            PaymentAccountCode = r.PaymentAccount.Code,
+                            PaymentAccountName = r.PaymentAccount.NameAr,
+                            PaymentBranchCode = r.PaymentAccount.Branch != null ? r.PaymentAccount.Branch.Code : null,
+                            PaymentBranchName = r.PaymentAccount.Branch != null ? r.PaymentAccount.Branch.NameAr : null,
                             Currency = r.Currency.Code,
                             r.Amount,
                             r.ExchangeRate,

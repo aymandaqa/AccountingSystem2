@@ -10,7 +10,8 @@
             <tr>
                 <th>التاريخ</th>
                 <th>المورد</th>
-                <th>الحساب</th>
+                <th>حساب الدفع</th>
+                <th>حساب المورد</th>
                 <th>العملة</th>
                 <th>سعر الصرف</th>
                 <th>المبلغ</th>
@@ -22,6 +23,7 @@
                 <tr>
                     <td>@v.Date.ToString("dd/MM/yyyy")</td>
                     <td>@(v.Supplier?.NameAr ?? "-")</td>
+                    <td>@(v.PaymentAccount?.NameAr ?? "-")</td>
                     <td>@v.Account.NameAr</td>
                     <td>@v.Currency.Code</td>
                     <td>@v.ExchangeRate.ToString("N6")</td>

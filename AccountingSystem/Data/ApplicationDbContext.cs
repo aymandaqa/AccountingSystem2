@@ -643,6 +643,10 @@ namespace AccountingSystem.Data
                     .WithMany()
                     .HasForeignKey(e => e.AccountId)
                     .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.PaymentAccount)
+                    .WithMany()
+                    .HasForeignKey(e => e.PaymentAccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(e => e.Supplier)
                     .WithMany()
                     .HasForeignKey(e => e.SupplierId)
