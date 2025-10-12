@@ -1076,6 +1076,7 @@ namespace AccountingSystem.Controllers
                         .Include(r => r.Account).ThenInclude(a => a.Branch)
                         .Include(r => r.Currency)
                         .Include(r => r.CreatedBy)
+                        .Include(r => r.Supplier)
                         .Where(r => r.Date >= from && r.Date <= to)
                         .Select(r => new
                         {
@@ -1083,6 +1084,7 @@ namespace AccountingSystem.Controllers
                             r.Date,
                             Year = r.Date.Year,
                             Month = r.Date.Month,
+                            Supplier = r.Supplier != null ? r.Supplier.NameAr : null,
                             AccountCode = r.Account.Code,
                             AccountName = r.Account.NameAr,
                             BranchCode = r.Account.Branch != null ? r.Account.Branch.Code : null,

@@ -5,37 +5,60 @@
 
 <div class="container-fluid">
     <form asp-action="Create" method="post" class="row g-3">
+        <div class="col-12">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        </div>
         <div class="col-md-6">
             <label class="form-label">العملة</label>
             <input type="text" class="form-control" id="currencyDisplay" readonly />
             <input type="hidden" asp-for="CurrencyId" id="currencyId" />
         </div>
         <div class="col-md-6">
+            <label class="form-label">المورد</label>
+            <select asp-for="SupplierId" class="form-select" id="supplierSelect">
+                <option value="">-- اختر المورد --</option>
+                @foreach (var s in ViewBag.Suppliers)
+                {
+                    <option value="@s.Id" data-account-id="@s.AccountId" data-currency-id="@s.CurrencyId" data-currency-code="@s.CurrencyCode" @(Model.SupplierId == (int?)s.Id ? "selected" : "")>
+                        @s.NameAr
+                    </option>
+                }
+            </select>
+            <span asp-validation-for="SupplierId" class="text-danger"></span>
+            <div class="form-text">سيتم استخدام حساب المورد المرتبط تلقائياً عند اختيار المورد.</div>
+        </div>
+        <div class="col-md-6">
             <label class="form-label">الحساب</label>
-            <select asp-for="AccountId" class="form-select" id="accountSelect">
+            <input type="hidden" asp-for="AccountId" id="accountId" />
+            <select class="form-select" id="accountSelect" name="AccountIdSelection">
                 @foreach (var a in ViewBag.Accounts)
                 {
-                    <option value="@a.Id" data-currency-id="@a.CurrencyId" data-currency-code="@a.CurrencyCode">
+                    <option value="@a.Id" data-currency-id="@a.CurrencyId" data-currency-code="@a.CurrencyCode" @(Model.AccountId == (int)a.Id ? "selected" : "")>
                         @a.Code - @a.NameAr (@a.CurrencyCode)
                     </option>
                 }
             </select>
+            <span asp-validation-for="AccountId" class="text-danger"></span>
         </div>
         <div class="col-md-6">
             <label class="form-label">سعر الصرف</label>
             <input asp-for="ExchangeRate" class="form-control" />
+            <span asp-validation-for="ExchangeRate" class="text-danger"></span>
         </div>
         <div class="col-md-6">
             <label class="form-label">المبلغ</label>
             <input asp-for="Amount" class="form-control" />
+            <span asp-validation-for="Amount" class="text-danger"></span>
         </div>
         <div class="col-md-6">
             <label class="form-label">التاريخ</label>
             <input asp-for="Date" type="date" class="form-control" />
+            <span asp-validation-for="Date" class="text-danger"></span>
         </div>
         <div class="col-md-6">
             <label class="form-label">ملاحظات</label>
             <textarea asp-for="Notes" class="form-control"></textarea>
+            <span asp-validation-for="Notes" class="text-danger"></span>
         </div>
         <div class="col-12">
             <button type="submit" class="btn btn-primary">حفظ</button>
@@ -49,15 +72,49 @@
             const accountSelect = document.getElementById('accountSelect');
             const currencyDisplay = document.getElementById('currencyDisplay');
             const currencyId = document.getElementById('currencyId');
+            const supplierSelect = document.getElementById('supplierSelect');
+            const accountIdInput = document.getElementById('accountId');
 
-            function updateCurrency() {
+            function updateFromAccount() {
                 const option = accountSelect.options[accountSelect.selectedIndex];
+                if (!option) {
+                    currencyDisplay.value = '';
+                    currencyId.value = '';
+                    accountIdInput.value = '';
+                    return;
+                }
+
+                accountIdInput.value = option.value;
                 currencyDisplay.value = option.getAttribute('data-currency-code') || '';
                 currencyId.value = option.getAttribute('data-currency-id') || '';
             }
 
-            accountSelect.addEventListener('change', updateCurrency);
-            updateCurrency();
+            function updateFromSupplier() {
+                const option = supplierSelect.options[supplierSelect.selectedIndex];
+                if (option && option.value) {
+                    accountIdInput.value = option.getAttribute('data-account-id') || '';
+                    currencyDisplay.value = option.getAttribute('data-currency-code') || '';
+                    currencyId.value = option.getAttribute('data-currency-id') || '';
+                    accountSelect.disabled = true;
+                } else {
+                    accountSelect.disabled = false;
+                    updateFromAccount();
+                }
+            }
+
+            accountSelect.addEventListener('change', function () {
+                if (!supplierSelect.value) {
+                    updateFromAccount();
+                }
+            });
+
+            supplierSelect.addEventListener('change', updateFromSupplier);
+
+            if (supplierSelect.value) {
+                updateFromSupplier();
+            } else {
+                updateFromAccount();
+            }
         });
     </script>
 }
