@@ -2548,9 +2548,19 @@ namespace AccountingSystem.Controllers
 
                     foreach (var branch in branches)
                     {
-                        var revenue = revenueSection?.TotalsByBranch.TryGetValue(branch.BranchId, out var value) == true ? value : 0m;
-                        var expenses = expensesSection?.TotalsByBranch.TryGetValue(branch.BranchId, out var value) == true ? value : 0m;
-                        netIncomeRow.Values[branch.BranchId] = revenue - expenses;
+                        decimal revenueAmount = 0m;
+                        if (revenueSection?.TotalsByBranch != null && revenueSection.TotalsByBranch.TryGetValue(branch.BranchId, out var revenueValue))
+                        {
+                            revenueAmount = revenueValue;
+                        }
+
+                        decimal expensesAmount = 0m;
+                        if (expensesSection?.TotalsByBranch != null && expensesSection.TotalsByBranch.TryGetValue(branch.BranchId, out var expensesValue))
+                        {
+                            expensesAmount = expensesValue;
+                        }
+
+                        netIncomeRow.Values[branch.BranchId] = revenueAmount - expensesAmount;
                     }
 
                     summaryRows.Add(netIncomeRow);
@@ -2565,9 +2575,19 @@ namespace AccountingSystem.Controllers
 
                     foreach (var branch in branches)
                     {
-                        var assets = assetsSection?.TotalsByBranch.TryGetValue(branch.BranchId, out var value) == true ? value : 0m;
-                        var liabilities = liabilitiesSection?.TotalsByBranch.TryGetValue(branch.BranchId, out var value) == true ? value : 0m;
-                        netAssetsRow.Values[branch.BranchId] = assets - liabilities;
+                        decimal assetsAmount = 0m;
+                        if (assetsSection?.TotalsByBranch != null && assetsSection.TotalsByBranch.TryGetValue(branch.BranchId, out var assetsValue))
+                        {
+                            assetsAmount = assetsValue;
+                        }
+
+                        decimal liabilitiesAmount = 0m;
+                        if (liabilitiesSection?.TotalsByBranch != null && liabilitiesSection.TotalsByBranch.TryGetValue(branch.BranchId, out var liabilitiesValue))
+                        {
+                            liabilitiesAmount = liabilitiesValue;
+                        }
+
+                        netAssetsRow.Values[branch.BranchId] = assetsAmount - liabilitiesAmount;
                     }
 
                     summaryRows.Add(netAssetsRow);
