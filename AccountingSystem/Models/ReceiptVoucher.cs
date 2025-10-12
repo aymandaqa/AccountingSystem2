@@ -10,6 +10,9 @@ namespace AccountingSystem.Models
         [Required]
         public int AccountId { get; set; }
 
+        [Required]
+        public int PaymentAccountId { get; set; }
+
         public int? SupplierId { get; set; }
 
         [Required]
@@ -30,6 +33,7 @@ namespace AccountingSystem.Models
         public string CreatedById { get; set; } = string.Empty;
 
         public virtual Account Account { get; set; } = null!;
+        public virtual Account PaymentAccount { get; set; } = null!;
         public virtual Currency Currency { get; set; } = null!;
         public virtual Supplier? Supplier { get; set; }
         public virtual User CreatedBy { get; set; } = null!;

@@ -66,10 +66,14 @@ public static class QueryBuilderDatasets
                 new("Year", "السنة", QueryFieldType.Number, "السند"),
                 new("Month", "الشهر", QueryFieldType.Number, "السند"),
                 new("Supplier", "المورد", QueryFieldType.String, "المورد"),
-                new("AccountCode", "كود الحساب", QueryFieldType.String, "الحساب"),
-                new("AccountName", "اسم الحساب", QueryFieldType.String, "الحساب"),
-                new("BranchCode", "كود الفرع", QueryFieldType.String, "الفرع"),
-                new("BranchName", "اسم الفرع", QueryFieldType.String, "الفرع"),
+                new("SupplierAccountCode", "كود حساب المورد", QueryFieldType.String, "الحساب"),
+                new("SupplierAccountName", "اسم حساب المورد", QueryFieldType.String, "الحساب"),
+                new("SupplierBranchCode", "كود فرع المورد", QueryFieldType.String, "الفرع"),
+                new("SupplierBranchName", "اسم فرع المورد", QueryFieldType.String, "الفرع"),
+                new("PaymentAccountCode", "كود حساب الدفع", QueryFieldType.String, "الحساب"),
+                new("PaymentAccountName", "اسم حساب الدفع", QueryFieldType.String, "الحساب"),
+                new("PaymentBranchCode", "كود فرع حساب الدفع", QueryFieldType.String, "الفرع"),
+                new("PaymentBranchName", "اسم فرع حساب الدفع", QueryFieldType.String, "الفرع"),
                 new("Currency", "العملة", QueryFieldType.String, "العملة"),
                 new("Amount", "المبلغ", QueryFieldType.Decimal, "القيم"),
                 new("ExchangeRate", "سعر الصرف", QueryFieldType.Decimal, "القيم"),
@@ -80,6 +84,7 @@ public static class QueryBuilderDatasets
             context => context.ReceiptVouchers
                 .AsNoTracking()
                 .Include(r => r.Account).ThenInclude(a => a.Branch)
+                .Include(r => r.PaymentAccount).ThenInclude(a => a.Branch)
                 .Include(r => r.Currency)
                 .Include(r => r.CreatedBy)
                 .Include(r => r.Supplier)
@@ -90,10 +95,18 @@ public static class QueryBuilderDatasets
                     Year = r.Date.Year,
                     Month = r.Date.Month,
                     Supplier = r.Supplier != null ? r.Supplier.NameAr : null,
-                    AccountCode = r.Account.Code,
-                    AccountName = r.Account.NameAr,
-                    BranchCode = r.Account.Branch != null ? r.Account.Branch.Code : null,
-                    BranchName = r.Account.Branch != null ? r.Account.Branch.NameAr : null,
+                    SupplierAccountCode = r.Account.Code,
+                    SupplierAccountName = r.Account.NameAr,
+                    SupplierBranchCode = r.Account.Branch != null ? r.Account.Branch.Code : null,
+                    SupplierBranchName = r.Account.Branch != null ? r.Account.Branch.NameAr : null,
+                    PaymentAccountCode = r.PaymentAccount.Code,
+                    PaymentAccountName = r.PaymentAccount.NameAr,
+                    PaymentBranchCode = r.PaymentAccount.Branch != null ? r.PaymentAccount.Branch.Code : null,
+                    PaymentBranchName = r.PaymentAccount.Branch != null ? r.PaymentAccount.Branch.NameAr : null,
+                    AccountCode = r.PaymentAccount.Code,
+                    AccountName = r.PaymentAccount.NameAr,
+                    BranchCode = r.PaymentAccount.Branch != null ? r.PaymentAccount.Branch.Code : null,
+                    BranchName = r.PaymentAccount.Branch != null ? r.PaymentAccount.Branch.NameAr : null,
                     Currency = r.Currency.Code,
                     Amount = r.Amount,
                     ExchangeRate = r.ExchangeRate,
@@ -142,6 +155,14 @@ public static class QueryBuilderDatasets
                     AccountName = v.Account != null ? v.Account.NameAr : null,
                     BranchCode = v.Account != null && v.Account.Branch != null ? v.Account.Branch.Code : null,
                     BranchName = v.Account != null && v.Account.Branch != null ? v.Account.Branch.NameAr : null,
+                    SupplierAccountCode = v.Account != null ? v.Account.Code ?? string.Empty : string.Empty,
+                    SupplierAccountName = v.Account != null ? v.Account.NameAr ?? string.Empty : string.Empty,
+                    SupplierBranchCode = v.Account != null && v.Account.Branch != null ? v.Account.Branch.Code : null,
+                    SupplierBranchName = v.Account != null && v.Account.Branch != null ? v.Account.Branch.NameAr : null,
+                    PaymentAccountCode = v.Account != null ? v.Account.Code ?? string.Empty : string.Empty,
+                    PaymentAccountName = v.Account != null ? v.Account.NameAr ?? string.Empty : string.Empty,
+                    PaymentBranchCode = v.Account != null && v.Account.Branch != null ? v.Account.Branch.Code : null,
+                    PaymentBranchName = v.Account != null && v.Account.Branch != null ? v.Account.Branch.NameAr : null,
                     Currency = v.Currency.Code,
                     Amount = v.Amount,
                     ExchangeRate = v.ExchangeRate,
@@ -210,6 +231,14 @@ public class VoucherQueryRow
     public string AccountName { get; set; } = string.Empty;
     public string? BranchCode { get; set; }
     public string? BranchName { get; set; }
+    public string SupplierAccountCode { get; set; } = string.Empty;
+    public string SupplierAccountName { get; set; } = string.Empty;
+    public string? SupplierBranchCode { get; set; }
+    public string? SupplierBranchName { get; set; }
+    public string PaymentAccountCode { get; set; } = string.Empty;
+    public string PaymentAccountName { get; set; } = string.Empty;
+    public string? PaymentBranchCode { get; set; }
+    public string? PaymentBranchName { get; set; }
     public string Currency { get; set; } = string.Empty;
     public decimal Amount { get; set; }
     public decimal ExchangeRate { get; set; }

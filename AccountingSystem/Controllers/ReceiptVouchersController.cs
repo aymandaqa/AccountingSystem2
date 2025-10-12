@@ -32,7 +32,9 @@ namespace AccountingSystem.Controllers
 
             var vouchersQuery = _context.ReceiptVouchers
                 .Include(v => v.Account)
+                .Include(v => v.PaymentAccount)
                 .Include(v => v.Currency)
+                .Include(v => v.Supplier)
                 .Include(v => v.CreatedBy)
                 .AsQueryable();
 
@@ -58,12 +60,13 @@ namespace AccountingSystem.Controllers
         public async Task<IActionResult> Create()
         {
             var user = await _userManager.GetUserAsync(User);
-            ViewBag.Accounts = await _context.UserPaymentAccounts
+            var paymentAccounts = await _context.UserPaymentAccounts
                 .AsNoTracking()
                 .Where(u => u.UserId == user!.Id)
                 .Include(u => u.Account).ThenInclude(a => a.Currency)
                 .Select(u => new { u.Account.Id, u.Account.Code, u.Account.NameAr, u.Account.CurrencyId, CurrencyCode = u.Account.Currency.Code })
                 .ToListAsync();
+            ViewBag.PaymentAccounts = paymentAccounts;
             ViewBag.Suppliers = await _context.Suppliers
                 .AsNoTracking()
                 .Include(s => s.Account).ThenInclude(a => a.Currency)
@@ -77,7 +80,14 @@ namespace AccountingSystem.Controllers
                     CurrencyCode = s.Account.Currency.Code
                 })
                 .ToListAsync();
-            return View(new ReceiptVoucher { Date = DateTime.Now });
+            var model = new ReceiptVoucher { Date = DateTime.Now };
+            var defaultPaymentAccount = user?.PaymentAccountId;
+            if (defaultPaymentAccount.HasValue && paymentAccounts.Any(a => a.Id == defaultPaymentAccount.Value))
+            {
+                model.PaymentAccountId = defaultPaymentAccount.Value;
+            }
+
+            return View(model);
         }
 
         [HttpPost]
@@ -86,25 +96,22 @@ namespace AccountingSystem.Controllers
         public async Task<IActionResult> Create(ReceiptVoucher model)
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null || user.PaymentAccountId == null || user.PaymentBranchId == null)
+            if (user == null || user.PaymentBranchId == null)
                 return Challenge();
-
-            if (!model.SupplierId.HasValue && model.AccountId == 0)
-            {
-                var accountSelectionValue = Request.Form["AccountIdSelection"].FirstOrDefault();
-                if (int.TryParse(accountSelectionValue, out var selectedAccountId))
-                {
-                    model.AccountId = selectedAccountId;
-                    ModelState.Remove(nameof(ReceiptVoucher.AccountId));
-                }
-            }
 
             ModelState.Remove(nameof(ReceiptVoucher.Account));
             ModelState.Remove(nameof(ReceiptVoucher.Currency));
             ModelState.Remove(nameof(ReceiptVoucher.CreatedBy));
             ModelState.Remove(nameof(ReceiptVoucher.Supplier));
+            ModelState.Remove(nameof(ReceiptVoucher.PaymentAccount));
 
             Account? account = null;
+            Account? paymentAccount = null;
+
+            if (!model.SupplierId.HasValue)
+            {
+                ModelState.AddModelError(nameof(ReceiptVoucher.SupplierId), "الرجاء اختيار المورد");
+            }
 
             if (model.SupplierId.HasValue)
             {
@@ -126,29 +133,39 @@ namespace AccountingSystem.Controllers
                     ModelState.Remove(nameof(ReceiptVoucher.CurrencyId));
                 }
             }
-            else
+
+            if (model.PaymentAccountId != 0)
             {
-                var allowed = await _context.UserPaymentAccounts.AnyAsync(u => u.UserId == user.Id && u.AccountId == model.AccountId);
-                account = await _context.Accounts.FindAsync(model.AccountId);
-                if (account == null || !allowed)
-                    ModelState.AddModelError(nameof(ReceiptVoucher.AccountId), "الحساب غير موجود");
+                var allowedPaymentAccount = await _context.UserPaymentAccounts
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.UserId == user.Id && u.AccountId == model.PaymentAccountId);
+
+                if (allowedPaymentAccount == null)
+                {
+                    ModelState.AddModelError(nameof(ReceiptVoucher.PaymentAccountId), "حساب الدفع المحدد غير متاح للمستخدم");
+                }
                 else
                 {
-                    model.CurrencyId = account.CurrencyId;
-                    ModelState.Remove(nameof(ReceiptVoucher.CurrencyId));
+                    paymentAccount = await _context.Accounts.FindAsync(model.PaymentAccountId);
+                    if (paymentAccount == null)
+                    {
+                        ModelState.AddModelError(nameof(ReceiptVoucher.PaymentAccountId), "حساب الدفع غير موجود");
+                    }
                 }
             }
+            else
+            {
+                ModelState.AddModelError(nameof(ReceiptVoucher.PaymentAccountId), "الرجاء اختيار حساب الدفع");
+            }
 
-            var paymentAccount = await _context.Accounts.FindAsync(user.PaymentAccountId);
             if (account != null && paymentAccount != null && paymentAccount.CurrencyId != account.CurrencyId)
             {
-                var propertyName = model.SupplierId.HasValue ? nameof(ReceiptVoucher.SupplierId) : nameof(ReceiptVoucher.AccountId);
-                ModelState.AddModelError(propertyName, "يجب أن تكون الحسابات بنفس العملة");
+                ModelState.AddModelError(nameof(ReceiptVoucher.PaymentAccountId), "يجب أن تكون الحسابات بنفس العملة");
             }
 
             if (!ModelState.IsValid)
             {
-                ViewBag.Accounts = await _context.UserPaymentAccounts
+                ViewBag.PaymentAccounts = await _context.UserPaymentAccounts
                     .AsNoTracking()
                     .Where(u => u.UserId == user.Id)
                     .Include(u => u.Account).ThenInclude(a => a.Currency)
@@ -180,7 +197,7 @@ namespace AccountingSystem.Controllers
 
             var lines = new List<JournalEntryLine>
             {
-                new JournalEntryLine { AccountId = user.PaymentAccountId.Value, DebitAmount = model.Amount },
+                new JournalEntryLine { AccountId = model.PaymentAccountId, DebitAmount = model.Amount },
                 new JournalEntryLine { AccountId = model.AccountId, CreditAmount = model.Amount }
             };
 

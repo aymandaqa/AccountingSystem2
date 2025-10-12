@@ -1998,6 +1998,9 @@ namespace AccountingSystem.Migrations
                     b.Property<decimal>("ExchangeRate")
                         .HasColumnType("decimal(18,6)");
 
+                    b.Property<int>("PaymentAccountId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -2012,6 +2015,8 @@ namespace AccountingSystem.Migrations
                     b.HasIndex("CreatedById");
 
                     b.HasIndex("CurrencyId");
+
+                    b.HasIndex("PaymentAccountId");
 
                     b.HasIndex("SupplierId");
 
@@ -3333,6 +3338,12 @@ namespace AccountingSystem.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("AccountingSystem.Models.Account", "PaymentAccount")
+                        .WithMany()
+                        .HasForeignKey("PaymentAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("AccountingSystem.Models.Supplier", "Supplier")
                         .WithMany()
                         .HasForeignKey("SupplierId")
@@ -3343,6 +3354,8 @@ namespace AccountingSystem.Migrations
                     b.Navigation("CreatedBy");
 
                     b.Navigation("Currency");
+
+                    b.Navigation("PaymentAccount");
 
                     b.Navigation("Supplier");
                 });
