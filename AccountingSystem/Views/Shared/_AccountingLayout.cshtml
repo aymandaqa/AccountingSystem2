@@ -28,9 +28,9 @@
             cursor: grab;
         }
 
-        #sidebarMenu .nav-link:active {
-            cursor: grabbing;
-        }
+            #sidebarMenu .nav-link:active {
+                cursor: grabbing;
+            }
 
         #sidebarMenu .sortable-ghost {
             opacity: 0.4;
@@ -238,14 +238,14 @@
                                 <i class="fas fa-angle-down toggle-icon"></i>
                             </a>
                             <ul class="submenu collapse nav flex-column @(vouchersActive ? "show" : "")" id="vouchersMenu">
-                                @*   @if (canReceiptVouchers)
-                            {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "ReceiptVouchers")"><i class="fas fa-list"></i> سندات القبض</a></li>
-                            }
-                            @if (canReceiptVouchersCreate)
-                            {
-                                <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "ReceiptVouchers")"><i class="fas fa-plus"></i> إضافة سند قبض</a></li>
-                            }*@
+                                @if (canReceiptVouchers)
+                                {
+                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "ReceiptVouchers")"><i class="fas fa-list"></i> سندات القبض</a></li>
+                                }
+                                @if (canReceiptVouchersCreate)
+                                {
+                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "ReceiptVouchers")"><i class="fas fa-plus"></i> إضافة سند قبض</a></li>
+                                }
                                 @if (canDisbursementVouchers)
                                 {
                                     <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "DisbursementVouchers")"><i class="fas fa-list"></i> سندات دفع</a></li>
@@ -425,477 +425,477 @@
                             </ul>
                         </li>
                     }
-                                    </ul>
-                                </div>
-                            </nav>
-                            <div id="content" class="flex-fill">
-                                <header class="top-navbar shadow-lg">
-                                    <div class="container-fluid d-flex align-items-center flex-wrap gap-3">
-                                        <div class="d-flex align-items-center gap-3 flex-grow-1 flex-lg-grow-0">
-                                            <button id="sidebarToggle" class="btn btn-outline-light btn-icon" type="button" aria-label="تبديل القائمة الجانبية">
-                                                <i class="fas fa-bars"></i>
-                                            </button>
-                                            <a class="navbar-brand d-flex align-items-center text-white" href="@Url.Action("Index", "Dashboard")">
-                                                <span class="brand-icon">
-                                                    <i class="fa-solid fa-chart-line"></i>
-                                                </span>
-                                                <span class="brand-text">
-                                                    <span class="brand-title">RoadFinity</span>
-                                                    <span class="brand-subtitle">نظام المحاسبة</span>
-                                                </span>
-                                            </a>
-                                        </div>
+                </ul>
+            </div>
+        </nav>
+        <div id="content" class="flex-fill">
+            <header class="top-navbar shadow-lg">
+                <div class="container-fluid d-flex align-items-center flex-wrap gap-3">
+                    <div class="d-flex align-items-center gap-3 flex-grow-1 flex-lg-grow-0">
+                        <button id="sidebarToggle" class="btn btn-outline-light btn-icon" type="button" aria-label="تبديل القائمة الجانبية">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <a class="navbar-brand d-flex align-items-center text-white" href="@Url.Action("Index", "Dashboard")">
+                            <span class="brand-icon">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </span>
+                            <span class="brand-text">
+                                <span class="brand-title">RoadFinity</span>
+                                <span class="brand-subtitle">نظام المحاسبة</span>
+                            </span>
+                        </a>
+                    </div>
 
-                                        <ul class="navbar-nav ms-auto align-items-center flex-row flex-wrap gap-2 top-navbar-actions order-2 order-lg-3">
-                                            @await Component.InvokeAsync("UserAccountBalances")
-                                            <li class="nav-item">
-                                                @await Component.InvokeAsync("Notifications")
-                                            </li>
-                                            @if (User.Identity.IsAuthenticated)
-                                            {
-                                                <li class="nav-item dropdown">
-                                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                        <span class="user-avatar"><i class="fas fa-user"></i></span>
-                                                        <span class="user-name">@User.Identity.Name</span>
-                                                    </a>
-                                                    <ul class="dropdown-menu dropdown-menu-end">
-                                                        <li>
-                                                            <a class="dropdown-item" href="@Url.Action("Profile", "Account")"><i class="fas fa-user-edit"></i> الملف الشخصي</a>
-                                                        </li>
-                                                        <li><hr class="dropdown-divider"></li>
-                                                        <li>
-                                                            <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
-                                                                <button type="submit" class="dropdown-item"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
-                                                            </form>
-                                                        </li>
-                                                    </ul>
-                                                </li>
-                                            }
-                                            else
-                                            {
-                                                <li class="nav-item">
-                                                    <a class="nav-link" href="@Url.Action("Login", "Account")"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</a>
-                                                </li>
-                                            }
-                                        </ul>
-                                    </div>
-                                </header>
+                    <ul class="navbar-nav ms-auto align-items-center flex-row flex-wrap gap-2 top-navbar-actions order-2 order-lg-3">
+                        @await Component.InvokeAsync("UserAccountBalances")
+                        <li class="nav-item">
+                            @await Component.InvokeAsync("Notifications")
+                        </li>
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span class="user-avatar"><i class="fas fa-user"></i></span>
+                                    <span class="user-name">@User.Identity.Name</span>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item" href="@Url.Action("Profile", "Account")"><i class="fas fa-user-edit"></i> الملف الشخصي</a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                                            <button type="submit" class="dropdown-item"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" href="@Url.Action("Login", "Account")"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </header>
 
-                                <!-- Main Content -->
-                                <main class="page-content">
-                                    <!-- Breadcrumb -->
-                                    <nav aria-label="breadcrumb" class="mb-3">
-                                        <ol class="breadcrumb">
-                                            <li class="breadcrumb-item">
-                                                <a href="@Url.Action("Index", "Dashboard")">الرئيسية</a>
-                                            </li>
-                                            @if (ViewData["Breadcrumb"] != null)
-                                            {
-                                                @Html.Raw(ViewData["Breadcrumb"])
-                                            }
-                                            else
-                                            {
-                                                <li class="breadcrumb-item active">@ViewData["Title"]</li>
-                                            }
-                                        </ol>
-                                    </nav>
+            <!-- Main Content -->
+            <main class="page-content">
+                <!-- Breadcrumb -->
+                <nav aria-label="breadcrumb" class="mb-3">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="@Url.Action("Index", "Dashboard")">الرئيسية</a>
+                        </li>
+                        @if (ViewData["Breadcrumb"] != null)
+                        {
+                            @Html.Raw(ViewData["Breadcrumb"])
+                        }
+                        else
+                        {
+                            <li class="breadcrumb-item active">@ViewData["Title"]</li>
+                        }
+                    </ol>
+                </nav>
 
-                                    <!-- Alerts -->
-                                    @if (TempData["SuccessMessage"] != null)
-                                    {
-                                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                                            <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
-                                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                        </div>
-                                    }
+                <!-- Alerts -->
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
 
-                                    @if (TempData["ErrorMessage"] != null)
-                                    {
-                                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                            <i class="fas fa-exclamation-circle"></i> @TempData["ErrorMessage"]
-                                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                        </div>
-                                    }
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-circle"></i> @TempData["ErrorMessage"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
 
-                                    @if (TempData["InfoMessage"] != null)
-                                    {
-                                        <div class="alert alert-info alert-dismissible fade show" role="alert">
-                                            <i class="fas fa-info-circle"></i> @TempData["InfoMessage"]
-                                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                        </div>
-                                    }
+                @if (TempData["InfoMessage"] != null)
+                {
+                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        <i class="fas fa-info-circle"></i> @TempData["InfoMessage"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
 
-                                    @RenderBody()
-                                </main>
+                @RenderBody()
+            </main>
 
-                                <!-- Footer -->
-                                <footer class="app-footer text-center py-3 mt-5">
-                                    <div class="container">
-                                        <p class="text-muted mb-0">
-                                            &copy; @DateTime.Now.Year - RoadFinity  - جميع الحقوق محفوظة
-                                        </p>
-                                    </div>
-                                </footer>
-                            </div>
-                        </div>
-                        <div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog modal-lg modal-dialog-centered">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">تفاصيل الدفعة</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-body" id="detailsContent"></div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+            <!-- Footer -->
+            <footer class="app-footer text-center py-3 mt-5">
+                <div class="container">
+                    <p class="text-muted mb-0">
+                        &copy; @DateTime.Now.Year - RoadFinity  - جميع الحقوق محفوظة
+                    </p>
+                </div>
+            </footer>
+        </div>
+    </div>
+    <div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">تفاصيل الدفعة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="detailsContent"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                        <div class="payroll-overlay d-none" id="loadingOverlay">
-                            <div class="overlay-content text-center">
-                                <div class="spinner-border text-primary mb-3" role="status"></div>
-                                <div class="progress" style="height: 6px;">
-                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
-                                </div>
-                                <p class="mt-2">جاري معالجة الطلب...</p>
-                            </div>
-                        </div>
-                        <div class="modal fade" id="summaryModal" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog modal-lg modal-dialog-centered">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">مراجعة تفاصيل التنزيل</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <div id="summaryContent"></div>
-                                        <div class="alert alert-secondary mt-3" id="historyNotice">
-                                            <i class="fas fa-history"></i> تم حفظ هذه الدفعة في سجل الرواتب ويمكن الرجوع إليها قبل التأكيد.
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">رجوع</button>
-                                        <button type="button" class="btn btn-success" id="confirmPayrollBtn" asp-require-permission="payroll.process">
-                                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                                            تأكيد التنزيل
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+    <div class="payroll-overlay d-none" id="loadingOverlay">
+        <div class="overlay-content text-center">
+            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <div class="progress" style="height: 6px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+            </div>
+            <p class="mt-2">جاري معالجة الطلب...</p>
+        </div>
+    </div>
+    <div class="modal fade" id="summaryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">مراجعة تفاصيل التنزيل</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="summaryContent"></div>
+                    <div class="alert alert-secondary mt-3" id="historyNotice">
+                        <i class="fas fa-history"></i> تم حفظ هذه الدفعة في سجل الرواتب ويمكن الرجوع إليها قبل التأكيد.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">رجوع</button>
+                    <button type="button" class="btn btn-success" id="confirmPayrollBtn" asp-require-permission="payroll.process">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        تأكيد التنزيل
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
 
-                        <div class="modal fade" id="accountModal" tabindex="-1">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content"></div>
-                            </div>
-                        </div>
-                        <!-- Scripts -->
-                        <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-                        <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-                        <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-                        @*     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <div class="modal fade" id="accountModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content"></div>
+        </div>
+    </div>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    @*     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
  *@
 
-                        <script src="~/js/sweetalert.min.js"></script>
+    <script src="~/js/sweetalert.min.js"></script>
 
-                        <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
 
-                        <!-- Loading Overlay -->
-                        <div id="loadingOverlay" class="loading-overlay" style="display: none;">
-                            <div class="loading-spinner">
-                                <i class="fas fa-spinner fa-spin fa-3x"></i>
-                                <p class="mt-3">جاري التحميل...</p>
-                            </div>
-                        </div>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin fa-3x"></i>
+            <p class="mt-3">جاري التحميل...</p>
+        </div>
+    </div>
 
-                        @await RenderSectionAsync("Scripts", required: false)
+    @await RenderSectionAsync("Scripts", required: false)
 
-                        <script>
-                            // Global functions
-                            function showLoading() {
-                                $('#loadingOverlay').show();
+    <script>
+        // Global functions
+        function showLoading() {
+            $('#loadingOverlay').show();
+        }
+
+        function hideLoading() {
+            $('#loadingOverlay').hide();
+        }
+
+        // Auto-hide alerts after 5 seconds
+        setTimeout(function() {
+            $('.alert').fadeOut();
+        }, 5000);
+
+        // AJAX setup for CSRF token
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (settings.type === 'POST' || settings.type === 'PUT' || settings.type === 'DELETE') {
+                    xhr.setRequestHeader("RequestVerificationToken",
+                        $('input[name="__RequestVerificationToken"]').val());
+                }
+            }
+        });
+
+        // Filter account options based on selected currency in voucher forms
+        document.addEventListener('DOMContentLoaded', function () {
+            var currencySelect = document.querySelector('select[name="CurrencyId"]');
+            var accountSelect = document.querySelector('select[name="AccountId"]');
+            var sidebarMenu = document.getElementById('sidebarMenu');
+            if (currencySelect && accountSelect) {
+                function filterAccounts() {
+                    var currency = currencySelect.value;
+                    Array.from(accountSelect.options).forEach(function (opt) {
+                        opt.hidden = opt.getAttribute('data-currency') !== currency;
+                    });
+                    var firstVisible = Array.from(accountSelect.options).find(function (opt) { return !opt.hidden; });
+                    if (firstVisible) accountSelect.value = firstVisible.value;
+                }
+                filterAccounts();
+                currencySelect.addEventListener('change', filterAccounts);
+            }
+
+            if (sidebarMenu) {
+                var menuOrderUrl = '@Url.Content("~/api/UserPreferences/sidebar-menu-order")';
+                var saveTimeoutId = null;
+
+                function getCurrentOrder() {
+                    return Array.from(sidebarMenu.querySelectorAll(':scope > li[data-menu-key]'))
+                        .map(function (item) { return item.getAttribute('data-menu-key'); });
+                }
+
+                function applyMenuOrder(order) {
+                    if (!Array.isArray(order) || !order.length) {
+                        return;
+                    }
+
+                    var items = Array.from(sidebarMenu.querySelectorAll(':scope > li[data-menu-key]'));
+                    var remaining = {};
+
+                    items.forEach(function (item) {
+                        var key = item.getAttribute('data-menu-key');
+                        if (key) {
+                            remaining[key] = item;
+                        }
+                    });
+
+                    var orderedItems = [];
+
+                    order.forEach(function (key) {
+                        if (remaining[key]) {
+                            orderedItems.push(remaining[key]);
+                            delete remaining[key];
+                        }
+                    });
+
+                    Object.keys(remaining).forEach(function (key) {
+                        orderedItems.push(remaining[key]);
+                    });
+
+                    orderedItems.forEach(function (item) {
+                        sidebarMenu.appendChild(item);
+                    });
+                }
+
+                function loadMenuOrder() {
+                    return fetch(menuOrderUrl, { credentials: 'same-origin' })
+                        .then(function (response) {
+                            if (!response || !response.ok) {
+                                return null;
+                            }
+                            return response.json();
+                        })
+                        .then(function (data) {
+                            if (data && Array.isArray(data.order)) {
+                                applyMenuOrder(data.order);
+                            }
+                        })
+                        .catch(function (error) {
+                            console.error('Failed to load sidebar menu order', error);
+                        });
+                }
+
+                function saveMenuOrder() {
+                    var payload = {
+                        order: getCurrentOrder()
+                    };
+
+                    fetch(menuOrderUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify(payload)
+                    }).catch(function (error) {
+                        console.error('Failed to save sidebar menu order', error);
+                    });
+                }
+
+                function scheduleMenuSave() {
+                    if (saveTimeoutId) {
+                        clearTimeout(saveTimeoutId);
+                    }
+
+                    saveTimeoutId = setTimeout(function () {
+                        saveMenuOrder();
+                    }, 600);
+                }
+
+                function initializeSortable() {
+                    if (!window.Sortable) {
+                        console.warn('SortableJS is not available; sidebar menu reordering is disabled.');
+                        return;
+                    }
+
+                    new Sortable(sidebarMenu, {
+                        animation: 150,
+                        handle: '.nav-link',
+                        draggable: 'li[data-menu-key]',
+                        onEnd: function () {
+                            scheduleMenuSave();
+                        }
+                    });
+                }
+
+                loadMenuOrder().then(function () {
+                    initializeSortable();
+                });
+            }
+
+            var menuSearchInput = document.getElementById('menuSearch');
+            if (!menuSearchInput) {
+                return;
+            }
+
+            var topLevelItems = Array.from(document.querySelectorAll('#sidebarMenu > li.nav-item'));
+            var collapseElements = Array.from(document.querySelectorAll('#sidebarMenu .collapse'));
+            var hasBootstrap = window.bootstrap && window.bootstrap.Collapse;
+            var collapseInstances = new Map();
+            var initialStates = new Map();
+
+            function findToggle(id) {
+                return document.querySelector('[data-bs-toggle="collapse"][href="#' + id + '"]') ||
+                    document.querySelector('[data-bs-toggle="collapse"][data-bs-target="#' + id + '"]');
+            }
+
+            collapseElements.forEach(function (collapseEl) {
+                initialStates.set(collapseEl.id, collapseEl.classList.contains('show'));
+                if (hasBootstrap) {
+                    var instance = window.bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false });
+                    collapseInstances.set(collapseEl.id, instance);
+
+                    collapseEl.addEventListener('shown.bs.collapse', function () {
+                        var toggle = findToggle(collapseEl.id);
+                        if (toggle) {
+                            toggle.classList.add('open');
+                        }
+                    });
+
+                    collapseEl.addEventListener('hidden.bs.collapse', function () {
+                        var toggle = findToggle(collapseEl.id);
+                        if (toggle) {
+                            toggle.classList.remove('open');
+                        }
+                    });
+                }
+
+                if (collapseEl.classList.contains('show')) {
+                    var initialToggle = findToggle(collapseEl.id);
+                    if (initialToggle) {
+                        initialToggle.classList.add('open');
+                    }
+                }
+            });
+
+            menuSearchInput.addEventListener('input', function () {
+                var query = this.value.trim().toLowerCase();
+
+                if (!query) {
+                    topLevelItems.forEach(function (item) {
+                        item.style.display = '';
+                        var collapseEl = item.querySelector(':scope > .collapse');
+                        if (!collapseEl) {
+                            return;
+                        }
+
+                        Array.from(collapseEl.querySelectorAll(':scope > li')).forEach(function (child) {
+                            child.style.display = '';
+                        });
+
+                        var shouldShow = initialStates.get(collapseEl.id);
+                        if (hasBootstrap && collapseInstances.get(collapseEl.id)) {
+                            if (shouldShow) {
+                                collapseInstances.get(collapseEl.id).show();
+                            } else {
+                                collapseInstances.get(collapseEl.id).hide();
+                            }
+                        } else {
+                            collapseEl.classList.toggle('show', !!shouldShow);
+                            var toggle = findToggle(collapseEl.id);
+                            if (toggle) {
+                                toggle.classList.toggle('open', !!shouldShow);
+                                toggle.setAttribute('aria-expanded', shouldShow ? 'true' : 'false');
+                            }
+                        }
+                    });
+                    return;
+                }
+
+                topLevelItems.forEach(function (item) {
+                    var collapseEl = item.querySelector(':scope > .collapse');
+                    var toggle = item.querySelector(':scope > a.nav-link');
+                    var directText = toggle ? toggle.textContent.trim().toLowerCase() : '';
+                    var directMatch = directText.indexOf(query) > -1;
+                    var itemMatch = directMatch;
+
+                    if (collapseEl) {
+                        var collapseId = collapseEl.id;
+                        var collapseInstance = collapseInstances.get(collapseId);
+                        var childMatch = false;
+
+                        Array.from(collapseEl.querySelectorAll(':scope > li')).forEach(function (child) {
+                            var childLink = child.querySelector('a.nav-link');
+                            if (!childLink) {
+                                child.style.display = directMatch ? '' : 'none';
+                                return;
                             }
 
-                            function hideLoading() {
-                                $('#loadingOverlay').hide();
+                            var childText = childLink.textContent.trim().toLowerCase();
+                            var isMatch = childText.indexOf(query) > -1;
+                            child.style.display = directMatch || isMatch ? '' : 'none';
+                            if (isMatch) {
+                                childMatch = true;
                             }
+                        });
 
-                            // Auto-hide alerts after 5 seconds
-                            setTimeout(function() {
-                                $('.alert').fadeOut();
-                            }, 5000);
+                        itemMatch = itemMatch || childMatch;
 
-                            // AJAX setup for CSRF token
-                            $.ajaxSetup({
-                                beforeSend: function(xhr, settings) {
-                                    if (settings.type === 'POST' || settings.type === 'PUT' || settings.type === 'DELETE') {
-                                        xhr.setRequestHeader("RequestVerificationToken",
-                                            $('input[name="__RequestVerificationToken"]').val());
-                                    }
-                                }
-                            });
+                        if (hasBootstrap && collapseInstance) {
+                            if (itemMatch) {
+                                collapseInstance.show();
+                            } else {
+                                collapseInstance.hide();
+                            }
+                        } else {
+                            collapseEl.classList.toggle('show', itemMatch);
+                            var collapseToggle = findToggle(collapseId);
+                            if (collapseToggle) {
+                                collapseToggle.classList.toggle('open', itemMatch);
+                                collapseToggle.setAttribute('aria-expanded', itemMatch ? 'true' : 'false');
+                            }
+                        }
+                    }
 
-                            // Filter account options based on selected currency in voucher forms
-                            document.addEventListener('DOMContentLoaded', function () {
-                                var currencySelect = document.querySelector('select[name="CurrencyId"]');
-                                var accountSelect = document.querySelector('select[name="AccountId"]');
-                                var sidebarMenu = document.getElementById('sidebarMenu');
-                                if (currencySelect && accountSelect) {
-                                    function filterAccounts() {
-                                        var currency = currencySelect.value;
-                                        Array.from(accountSelect.options).forEach(function (opt) {
-                                            opt.hidden = opt.getAttribute('data-currency') !== currency;
-                                        });
-                                        var firstVisible = Array.from(accountSelect.options).find(function (opt) { return !opt.hidden; });
-                                        if (firstVisible) accountSelect.value = firstVisible.value;
-                                    }
-                                    filterAccounts();
-                                    currencySelect.addEventListener('change', filterAccounts);
-                                }
+                    item.style.display = itemMatch ? '' : 'none';
+                });
+            });
+        });
+    </script>
 
-                                if (sidebarMenu) {
-                                    var menuOrderUrl = '@Url.Content("~/api/UserPreferences/sidebar-menu-order")';
-                                    var saveTimeoutId = null;
+    <ejs-scripts></ejs-scripts>
 
-                                    function getCurrentOrder() {
-                                        return Array.from(sidebarMenu.querySelectorAll(':scope > li[data-menu-key]'))
-                                            .map(function (item) { return item.getAttribute('data-menu-key'); });
-                                    }
-
-                                    function applyMenuOrder(order) {
-                                        if (!Array.isArray(order) || !order.length) {
-                                            return;
-                                        }
-
-                                        var items = Array.from(sidebarMenu.querySelectorAll(':scope > li[data-menu-key]'));
-                                        var remaining = {};
-
-                                        items.forEach(function (item) {
-                                            var key = item.getAttribute('data-menu-key');
-                                            if (key) {
-                                                remaining[key] = item;
-                                            }
-                                        });
-
-                                        var orderedItems = [];
-
-                                        order.forEach(function (key) {
-                                            if (remaining[key]) {
-                                                orderedItems.push(remaining[key]);
-                                                delete remaining[key];
-                                            }
-                                        });
-
-                                        Object.keys(remaining).forEach(function (key) {
-                                            orderedItems.push(remaining[key]);
-                                        });
-
-                                        orderedItems.forEach(function (item) {
-                                            sidebarMenu.appendChild(item);
-                                        });
-                                    }
-
-                                    function loadMenuOrder() {
-                                        return fetch(menuOrderUrl, { credentials: 'same-origin' })
-                                            .then(function (response) {
-                                                if (!response || !response.ok) {
-                                                    return null;
-                                                }
-                                                return response.json();
-                                            })
-                                            .then(function (data) {
-                                                if (data && Array.isArray(data.order)) {
-                                                    applyMenuOrder(data.order);
-                                                }
-                                            })
-                                            .catch(function (error) {
-                                                console.error('Failed to load sidebar menu order', error);
-                                            });
-                                    }
-
-                                    function saveMenuOrder() {
-                                        var payload = {
-                                            order: getCurrentOrder()
-                                        };
-
-                                        fetch(menuOrderUrl, {
-                                            method: 'POST',
-                                            headers: {
-                                                'Content-Type': 'application/json'
-                                            },
-                                            credentials: 'same-origin',
-                                            body: JSON.stringify(payload)
-                                        }).catch(function (error) {
-                                            console.error('Failed to save sidebar menu order', error);
-                                        });
-                                    }
-
-                                    function scheduleMenuSave() {
-                                        if (saveTimeoutId) {
-                                            clearTimeout(saveTimeoutId);
-                                        }
-
-                                        saveTimeoutId = setTimeout(function () {
-                                            saveMenuOrder();
-                                        }, 600);
-                                    }
-
-                                    function initializeSortable() {
-                                        if (!window.Sortable) {
-                                            console.warn('SortableJS is not available; sidebar menu reordering is disabled.');
-                                            return;
-                                        }
-
-                                        new Sortable(sidebarMenu, {
-                                            animation: 150,
-                                            handle: '.nav-link',
-                                            draggable: 'li[data-menu-key]',
-                                            onEnd: function () {
-                                                scheduleMenuSave();
-                                            }
-                                        });
-                                    }
-
-                                    loadMenuOrder().then(function () {
-                                        initializeSortable();
-                                    });
-                                }
-
-                                var menuSearchInput = document.getElementById('menuSearch');
-                                if (!menuSearchInput) {
-                                    return;
-                                }
-
-                                var topLevelItems = Array.from(document.querySelectorAll('#sidebarMenu > li.nav-item'));
-                                var collapseElements = Array.from(document.querySelectorAll('#sidebarMenu .collapse'));
-                                var hasBootstrap = window.bootstrap && window.bootstrap.Collapse;
-                                var collapseInstances = new Map();
-                                var initialStates = new Map();
-
-                                function findToggle(id) {
-                                    return document.querySelector('[data-bs-toggle="collapse"][href="#' + id + '"]') ||
-                                        document.querySelector('[data-bs-toggle="collapse"][data-bs-target="#' + id + '"]');
-                                }
-
-                                collapseElements.forEach(function (collapseEl) {
-                                    initialStates.set(collapseEl.id, collapseEl.classList.contains('show'));
-                                    if (hasBootstrap) {
-                                        var instance = window.bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false });
-                                        collapseInstances.set(collapseEl.id, instance);
-
-                                        collapseEl.addEventListener('shown.bs.collapse', function () {
-                                            var toggle = findToggle(collapseEl.id);
-                                            if (toggle) {
-                                                toggle.classList.add('open');
-                                            }
-                                        });
-
-                                        collapseEl.addEventListener('hidden.bs.collapse', function () {
-                                            var toggle = findToggle(collapseEl.id);
-                                            if (toggle) {
-                                                toggle.classList.remove('open');
-                                            }
-                                        });
-                                    }
-
-                                    if (collapseEl.classList.contains('show')) {
-                                        var initialToggle = findToggle(collapseEl.id);
-                                        if (initialToggle) {
-                                            initialToggle.classList.add('open');
-                                        }
-                                    }
-                                });
-
-                                menuSearchInput.addEventListener('input', function () {
-                                    var query = this.value.trim().toLowerCase();
-
-                                    if (!query) {
-                                        topLevelItems.forEach(function (item) {
-                                            item.style.display = '';
-                                            var collapseEl = item.querySelector(':scope > .collapse');
-                                            if (!collapseEl) {
-                                                return;
-                                            }
-
-                                            Array.from(collapseEl.querySelectorAll(':scope > li')).forEach(function (child) {
-                                                child.style.display = '';
-                                            });
-
-                                            var shouldShow = initialStates.get(collapseEl.id);
-                                            if (hasBootstrap && collapseInstances.get(collapseEl.id)) {
-                                                if (shouldShow) {
-                                                    collapseInstances.get(collapseEl.id).show();
-                                                } else {
-                                                    collapseInstances.get(collapseEl.id).hide();
-                                                }
-                                            } else {
-                                                collapseEl.classList.toggle('show', !!shouldShow);
-                                                var toggle = findToggle(collapseEl.id);
-                                                if (toggle) {
-                                                    toggle.classList.toggle('open', !!shouldShow);
-                                                    toggle.setAttribute('aria-expanded', shouldShow ? 'true' : 'false');
-                                                }
-                                            }
-                                        });
-                                        return;
-                                    }
-
-                                    topLevelItems.forEach(function (item) {
-                                        var collapseEl = item.querySelector(':scope > .collapse');
-                                        var toggle = item.querySelector(':scope > a.nav-link');
-                                        var directText = toggle ? toggle.textContent.trim().toLowerCase() : '';
-                                        var directMatch = directText.indexOf(query) > -1;
-                                        var itemMatch = directMatch;
-
-                                        if (collapseEl) {
-                                            var collapseId = collapseEl.id;
-                                            var collapseInstance = collapseInstances.get(collapseId);
-                                            var childMatch = false;
-
-                                            Array.from(collapseEl.querySelectorAll(':scope > li')).forEach(function (child) {
-                                                var childLink = child.querySelector('a.nav-link');
-                                                if (!childLink) {
-                                                    child.style.display = directMatch ? '' : 'none';
-                                                    return;
-                                                }
-
-                                                var childText = childLink.textContent.trim().toLowerCase();
-                                                var isMatch = childText.indexOf(query) > -1;
-                                                child.style.display = directMatch || isMatch ? '' : 'none';
-                                                if (isMatch) {
-                                                    childMatch = true;
-                                                }
-                                            });
-
-                                            itemMatch = itemMatch || childMatch;
-
-                                            if (hasBootstrap && collapseInstance) {
-                                                if (itemMatch) {
-                                                    collapseInstance.show();
-                                                } else {
-                                                    collapseInstance.hide();
-                                                }
-                                            } else {
-                                                collapseEl.classList.toggle('show', itemMatch);
-                                                var collapseToggle = findToggle(collapseId);
-                                                if (collapseToggle) {
-                                                    collapseToggle.classList.toggle('open', itemMatch);
-                                                    collapseToggle.setAttribute('aria-expanded', itemMatch ? 'true' : 'false');
-                                                }
-                                            }
-                                        }
-
-                                        item.style.display = itemMatch ? '' : 'none';
-                                    });
-                                });
-                            });
-                        </script>
-
-                        <ejs-scripts></ejs-scripts>
-
-                    </body>
-                    </html>
+</body>
+</html>
 
