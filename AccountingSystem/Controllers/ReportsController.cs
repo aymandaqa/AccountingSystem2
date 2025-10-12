@@ -705,6 +705,91 @@ namespace AccountingSystem.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = "reports.view")]
+        public async Task<IActionResult> UserDailyJournalEntries(DateTime? fromDate, DateTime? toDate, string? reference)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Challenge();
+            }
+
+            var today = DateTime.Today;
+            var startDate = (fromDate ?? today).Date;
+            var endDate = (toDate ?? today).Date;
+
+            if (endDate < startDate)
+            {
+                endDate = startDate;
+            }
+
+            var referenceFilter = string.IsNullOrWhiteSpace(reference)
+                ? null
+                : reference!.Trim();
+
+            var query = _context.JournalEntries
+                .AsNoTracking()
+                .Where(e => e.CreatedById == userId)
+                .Where(e => e.Date >= startDate && e.Date <= endDate);
+
+            if (!string.IsNullOrEmpty(referenceFilter))
+            {
+                query = query.Where(e => e.Reference != null && EF.Functions.Like(e.Reference, $"%{referenceFilter}%"));
+            }
+
+            var entries = await query
+                .Select(e => new
+                {
+                    e.Id,
+                    e.Number,
+                    e.Date,
+                    e.Description,
+                    e.Reference,
+                    e.TotalDebit,
+                    e.TotalCredit
+                })
+                .ToListAsync();
+
+            var grouped = entries
+                .GroupBy(e => new
+                {
+                    Date = e.Date.Date,
+                    Reference = string.IsNullOrWhiteSpace(e.Reference) ? "بدون مرجع" : e.Reference!.Trim()
+                })
+                .OrderByDescending(g => g.Key.Date)
+                .ThenBy(g => g.Key.Reference, StringComparer.OrdinalIgnoreCase)
+                .Select(g => new UserJournalEntryDailyReportItem
+                {
+                    Date = g.Key.Date,
+                    Reference = g.Key.Reference,
+                    TotalDebit = g.Sum(x => x.TotalDebit),
+                    TotalCredit = g.Sum(x => x.TotalCredit),
+                    Entries = g
+                        .OrderByDescending(x => x.Date)
+                        .ThenBy(x => x.Number, StringComparer.OrdinalIgnoreCase)
+                        .Select(x => new UserJournalEntrySummary
+                        {
+                            JournalEntryId = x.Id,
+                            Number = x.Number,
+                            Description = x.Description,
+                            TotalDebit = x.TotalDebit,
+                            TotalCredit = x.TotalCredit
+                        })
+                        .ToList()
+                })
+                .ToList();
+
+            var viewModel = new UserJournalEntryDailyReportViewModel
+            {
+                FromDate = startDate,
+                ToDate = endDate,
+                ReferenceFilter = referenceFilter,
+                Items = grouped
+            };
+
+            return View(viewModel);
+        }
+
         [Authorize(Policy = "reports.dynamic")]
         public IActionResult DynamicPivot()
         {
