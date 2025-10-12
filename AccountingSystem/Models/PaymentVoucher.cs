@@ -15,6 +15,8 @@ namespace AccountingSystem.Models
         // Account used when voucher is non-cash (credit account)
         public int? AccountId { get; set; }
 
+        public int? AgentId { get; set; }
+
         [Required]
         public int CurrencyId { get; set; }
 
@@ -46,6 +48,9 @@ namespace AccountingSystem.Models
 
         [ValidateNever]
         public virtual Account? Account { get; set; }
+
+        [ValidateNever]
+        public virtual Agent? Agent { get; set; }
 
         [ValidateNever]
         public virtual Currency Currency { get; set; } = null!;
