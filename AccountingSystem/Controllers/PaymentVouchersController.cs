@@ -6,6 +6,8 @@ using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.Services;
 using AccountingSystem.Models.Workflows;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace AccountingSystem.Controllers
@@ -24,53 +26,6 @@ namespace AccountingSystem.Controllers
             _userManager = userManager;
             _workflowService = workflowService;
             _paymentVoucherProcessor = paymentVoucherProcessor;
-        }
-
-        public async Task<IActionResult> Index()
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-                return Challenge();
-
-            var vouchersQuery = _context.PaymentVouchers
-                .Include(v => v.Supplier).ThenInclude(s => s.Account)
-                .Include(v => v.Currency)
-                .Include(v => v.CreatedBy)
-                .AsQueryable();
-
-            if (user.PaymentBranchId.HasValue)
-            {
-                vouchersQuery = vouchersQuery
-                    .Where(v => v.CreatedBy.PaymentBranchId == user.PaymentBranchId);
-            }
-            else
-            {
-                vouchersQuery = vouchersQuery
-                    .Where(v => v.CreatedById == user.Id);
-            }
-
-            var vouchers = await vouchersQuery
-                .OrderByDescending(v => v.Date)
-                .ToListAsync();
-
-            return View(vouchers);
-        }
-
-        [Authorize(Policy = "paymentvouchers.create")]
-        public async Task<IActionResult> Create()
-        {
-            ViewBag.Suppliers = await _context.Suppliers
-                .Include(s => s.Account).ThenInclude(a => a.Currency)
-                .Where(s => s.AccountId != null)
-                .Select(s => new
-                {
-                    s.Id,
-                    s.NameAr,
-                    s.AccountId,
-                    CurrencyId = s.Account!.CurrencyId,
-                    CurrencyCode = s.Account.Currency.Code
-                })
-                .ToListAsync();
         }
 
         private async Task PopulatePaymentAccountSelectListAsync()
@@ -107,16 +62,51 @@ namespace AccountingSystem.Controllers
                 .ToListAsync();
         }
 
+        private async Task PopulateSupplierSelectListAsync()
+        {
+            ViewBag.Suppliers = await _context.Suppliers
+                .Include(s => s.Account).ThenInclude(a => a.Currency)
+                .Where(s => s.AccountId != null)
+                .OrderBy(s => s.NameAr)
+                .Select(s => new
+                {
+                    s.Id,
+                    s.NameAr,
+                    s.AccountId,
+                    CurrencyId = s.Account!.CurrencyId,
+                    CurrencyCode = s.Account.Currency.Code
+                })
+                .ToListAsync();
+        }
+
         public async Task<IActionResult> Index()
         {
             var user = await _userManager.GetUserAsync(User);
-            var vouchers = await _context.PaymentVouchers
-                .Where(v => v.CreatedById == user!.Id)
+            if (user == null)
+                return Challenge();
+
+            var vouchersQuery = _context.PaymentVouchers
                 .Include(v => v.Supplier).ThenInclude(s => s.Account)
                 .Include(v => v.Agent).ThenInclude(a => a.Account)
                 .Include(v => v.Currency)
+                .Include(v => v.CreatedBy)
+                .AsQueryable();
+
+            if (user.PaymentBranchId.HasValue)
+            {
+                vouchersQuery = vouchersQuery
+                    .Where(v => v.CreatedBy.PaymentBranchId == user.PaymentBranchId);
+            }
+            else
+            {
+                vouchersQuery = vouchersQuery
+                    .Where(v => v.CreatedById == user.Id);
+            }
+
+            var vouchers = await vouchersQuery
                 .OrderByDescending(v => v.Date)
                 .ToListAsync();
+
             return View(vouchers);
         }
 

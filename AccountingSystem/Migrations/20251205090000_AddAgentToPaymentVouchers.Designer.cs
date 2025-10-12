@@ -13,7 +13,7 @@ namespace AccountingSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     [Migration("20251205090000_AddAgentToPaymentVouchers")]
-    partial class AddAgentToPaymentVouchers : ModelSnapshot
+    partial class AddAgentToPaymentVouchers
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {

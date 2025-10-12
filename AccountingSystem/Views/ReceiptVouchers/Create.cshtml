@@ -19,7 +19,7 @@
                 <option value="">-- اختر المورد --</option>
                 @foreach (var s in ViewBag.Suppliers)
                 {
-                    <option value="@s.Id" data-account-id="@s.AccountId" data-currency-id="@s.CurrencyId" data-currency-code="@s.CurrencyCode" @(Model.SupplierId == (int?)s.Id ? "selected" : "")>
+                    <option value="@s.Id" data-account-id="@s.AccountId" data-currency-id="@s.CurrencyId" data-currency-code="@s.CurrencyCode" @if (Model?.SupplierId == (int?)s.Id) { <text>selected="selected"</text>; }>
                         @s.NameAr
                     </option>
                 }
@@ -33,7 +33,7 @@
             <select class="form-select" id="accountSelect" name="AccountIdSelection">
                 @foreach (var a in ViewBag.Accounts)
                 {
-                    <option value="@a.Id" data-currency-id="@a.CurrencyId" data-currency-code="@a.CurrencyCode" @(Model.AccountId == (int)a.Id ? "selected" : "")>
+                    <option value="@a.Id" data-currency-id="@a.CurrencyId" data-currency-code="@a.CurrencyCode" @if (Model?.AccountId == (int?)a.Id) { <text>selected="selected"</text>; }>
                         @a.Code - @a.NameAr (@a.CurrencyCode)
                     </option>
                 }
