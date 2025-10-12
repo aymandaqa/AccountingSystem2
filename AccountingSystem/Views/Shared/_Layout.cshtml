@@ -440,6 +440,7 @@
                             <i class="fa-solid fa-magnifying-glass"></i>
                         </div>
                     </form>
+                    @await Component.InvokeAsync("UserAccountBalances")
                     @await Component.InvokeAsync("Notifications")
                     <div class="dropdown">
                         <a class="d-flex align-items-center dropdown-toggle" href="#" data-bs-toggle="dropdown">
