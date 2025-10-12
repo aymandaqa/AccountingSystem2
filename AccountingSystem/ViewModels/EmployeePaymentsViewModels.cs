@@ -9,6 +9,10 @@ namespace AccountingSystem.ViewModels
         public string Name { get; set; } = string.Empty;
         public decimal Salary { get; set; }
         public decimal AccountBalance { get; set; }
+        public decimal AccountAvailableBalance { get; set; }
+        public decimal DailySalaryRate { get; set; }
+        public decimal AccruedSalaryBalance { get; set; }
+        public decimal MaxAdvanceAmount { get; set; }
     }
 
     public class SalaryPaymentCreateViewModel
