@@ -27,16 +27,34 @@ namespace AccountingSystem.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var userId = _userManager.GetUserId(User);
-            var transfers = await _context.PaymentTransfers
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Challenge();
+
+            var transfersQuery = _context.PaymentTransfers
                 .Include(t => t.Sender)
                 .Include(t => t.Receiver)
                 .Include(t => t.FromBranch)
                 .Include(t => t.ToBranch)
-                .Where(t => t.SenderId == userId || t.ReceiverId == userId)
+                .AsQueryable();
+
+            if (user.PaymentBranchId.HasValue)
+            {
+                var branchId = user.PaymentBranchId.Value;
+                transfersQuery = transfersQuery.Where(t =>
+                    (t.FromBranchId.HasValue && t.FromBranchId.Value == branchId) ||
+                    (t.ToBranchId.HasValue && t.ToBranchId.Value == branchId));
+            }
+            else
+            {
+                transfersQuery = transfersQuery.Where(t => t.SenderId == user.Id || t.ReceiverId == user.Id);
+            }
+
+            var transfers = await transfersQuery
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
-            ViewBag.CurrentUserId = userId;
+
+            ViewBag.CurrentUserId = user.Id;
             return View(transfers);
         }
 

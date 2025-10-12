@@ -26,7 +26,38 @@ namespace AccountingSystem.Controllers
             _paymentVoucherProcessor = paymentVoucherProcessor;
         }
 
-        private async Task PopulateSupplierSelectListAsync()
+        public async Task<IActionResult> Index()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Challenge();
+
+            var vouchersQuery = _context.PaymentVouchers
+                .Include(v => v.Supplier).ThenInclude(s => s.Account)
+                .Include(v => v.Currency)
+                .Include(v => v.CreatedBy)
+                .AsQueryable();
+
+            if (user.PaymentBranchId.HasValue)
+            {
+                vouchersQuery = vouchersQuery
+                    .Where(v => v.CreatedBy.PaymentBranchId == user.PaymentBranchId);
+            }
+            else
+            {
+                vouchersQuery = vouchersQuery
+                    .Where(v => v.CreatedById == user.Id);
+            }
+
+            var vouchers = await vouchersQuery
+                .OrderByDescending(v => v.Date)
+                .ToListAsync();
+
+            return View(vouchers);
+        }
+
+        [Authorize(Policy = "paymentvouchers.create")]
+        public async Task<IActionResult> Create()
         {
             ViewBag.Suppliers = await _context.Suppliers
                 .Include(s => s.Account).ThenInclude(a => a.Currency)

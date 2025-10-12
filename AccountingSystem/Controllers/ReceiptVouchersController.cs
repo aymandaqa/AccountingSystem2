@@ -27,13 +27,30 @@ namespace AccountingSystem.Controllers
         public async Task<IActionResult> Index()
         {
             var user = await _userManager.GetUserAsync(User);
-            var vouchers = await _context.ReceiptVouchers
-                .Where(v => v.CreatedById == user!.Id)
+            if (user == null)
+                return Challenge();
+
+            var vouchersQuery = _context.ReceiptVouchers
                 .Include(v => v.Account)
                 .Include(v => v.Currency)
-                .Include(v => v.Supplier)
+                .Include(v => v.CreatedBy)
+                .AsQueryable();
+
+            if (user.PaymentBranchId.HasValue)
+            {
+                vouchersQuery = vouchersQuery
+                    .Where(v => v.CreatedBy.PaymentBranchId == user.PaymentBranchId);
+            }
+            else
+            {
+                vouchersQuery = vouchersQuery
+                    .Where(v => v.CreatedById == user.Id);
+            }
+
+            var vouchers = await vouchersQuery
                 .OrderByDescending(v => v.Date)
                 .ToListAsync();
+
             return View(vouchers);
         }
 
