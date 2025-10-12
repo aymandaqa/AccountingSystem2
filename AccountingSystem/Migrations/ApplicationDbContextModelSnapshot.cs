@@ -1986,6 +1986,9 @@ namespace AccountingSystem.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<int?>("SupplierId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AccountId");
@@ -1993,6 +1996,8 @@ namespace AccountingSystem.Migrations
                     b.HasIndex("CreatedById");
 
                     b.HasIndex("CurrencyId");
+
+                    b.HasIndex("SupplierId");
 
                     b.ToTable("ReceiptVouchers");
                 });
@@ -3306,11 +3311,18 @@ namespace AccountingSystem.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("AccountingSystem.Models.Supplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Account");
 
                     b.Navigation("CreatedBy");
 
                     b.Navigation("Currency");
+
+                    b.Navigation("Supplier");
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.ReportQuery", b =>
