@@ -6,6 +6,7 @@ using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.Services;
 using AccountingSystem.Models.Workflows;
+using System.Linq;
 
 namespace AccountingSystem.Controllers
 {
@@ -25,27 +26,24 @@ namespace AccountingSystem.Controllers
             _paymentVoucherProcessor = paymentVoucherProcessor;
         }
 
-        public async Task<IActionResult> Index()
+        private async Task PopulateSupplierSelectListAsync()
         {
-            var user = await _userManager.GetUserAsync(User);
-            var vouchers = await _context.PaymentVouchers
-                .Where(v => v.CreatedById == user!.Id)
-                .Include(v => v.Supplier).ThenInclude(s => s.Account)
-                .Include(v => v.Currency)
-                .OrderByDescending(v => v.Date)
-                .ToListAsync();
-            return View(vouchers);
-        }
-
-        [Authorize(Policy = "paymentvouchers.create")]
-        public async Task<IActionResult> Create()
-        {
-            var user = await _userManager.GetUserAsync(User);
             ViewBag.Suppliers = await _context.Suppliers
                 .Include(s => s.Account).ThenInclude(a => a.Currency)
-                .Select(s => new { s.Id, s.NameAr, s.AccountId, CurrencyId = s.Account!.CurrencyId, CurrencyCode = s.Account.Currency.Code })
+                .Where(s => s.AccountId != null)
+                .Select(s => new
+                {
+                    s.Id,
+                    s.NameAr,
+                    s.AccountId,
+                    CurrencyId = s.Account!.CurrencyId,
+                    CurrencyCode = s.Account.Currency.Code
+                })
                 .ToListAsync();
+        }
 
+        private async Task PopulatePaymentAccountSelectListAsync()
+        {
             var setting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "SupplierPaymentsParentAccountId");
             if (setting != null && int.TryParse(setting.Value, out var parentAccountId))
             {
@@ -59,6 +57,43 @@ namespace AccountingSystem.Controllers
             {
                 ViewBag.Accounts = new List<object>();
             }
+        }
+
+        private async Task PopulateAgentSelectListAsync()
+        {
+            ViewBag.Agents = await _context.Agents
+                .Include(a => a.Account).ThenInclude(a => a.Currency)
+                .Where(a => a.AccountId != null)
+                .OrderBy(a => a.Name)
+                .Select(a => new
+                {
+                    a.Id,
+                    a.Name,
+                    a.AccountId,
+                    CurrencyId = a.Account!.CurrencyId,
+                    CurrencyCode = a.Account.Currency.Code
+                })
+                .ToListAsync();
+        }
+
+        public async Task<IActionResult> Index()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var vouchers = await _context.PaymentVouchers
+                .Where(v => v.CreatedById == user!.Id)
+                .Include(v => v.Supplier).ThenInclude(s => s.Account)
+                .Include(v => v.Agent).ThenInclude(a => a.Account)
+                .Include(v => v.Currency)
+                .OrderByDescending(v => v.Date)
+                .ToListAsync();
+            return View(vouchers);
+        }
+
+        [Authorize(Policy = "paymentvouchers.create")]
+        public async Task<IActionResult> Create()
+        {
+            await PopulateSupplierSelectListAsync();
+            await PopulatePaymentAccountSelectListAsync();
 
             return View(new PaymentVoucher { Date = DateTime.Now, IsCash = true });
         }
@@ -107,28 +142,71 @@ namespace AccountingSystem.Controllers
 
             if (!ModelState.IsValid)
             {
-                ViewBag.Suppliers = await _context.Suppliers
-                    .Include(s => s.Account).ThenInclude(a => a.Currency)
-                    .Select(s => new { s.Id, s.NameAr, s.AccountId, CurrencyId = s.Account!.CurrencyId, CurrencyCode = s.Account.Currency.Code })
-                    .ToListAsync();
-
-                var setting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "SupplierPaymentsParentAccountId");
-                if (setting != null && int.TryParse(setting.Value, out var parentAccountId))
-                {
-                    ViewBag.Accounts = await _context.Accounts
-                        .Where(a => a.ParentId == parentAccountId)
-                        .Include(a => a.Currency)
-                        .Select(a => new { a.Id, a.Code, a.NameAr, a.CurrencyId, CurrencyCode = a.Currency.Code })
-                        .ToListAsync();
-                }
-                else
-                {
-                    ViewBag.Accounts = new List<object>();
-                }
-
+                await PopulateSupplierSelectListAsync();
+                await PopulatePaymentAccountSelectListAsync();
                 return View(model);
             }
 
+            return await FinalizeCreationAsync(model, user);
+        }
+        [Authorize(Policy = "paymentvouchers.create")]
+        public async Task<IActionResult> CreateFromAgent()
+        {
+            await PopulateSupplierSelectListAsync();
+            await PopulateAgentSelectListAsync();
+
+            return View(new PaymentVoucher { Date = DateTime.Now, IsCash = false });
+        }
+
+        [HttpPost]
+        [Authorize(Policy = "paymentvouchers.create")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateFromAgent(PaymentVoucher model)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null || user.PaymentAccountId == null || user.PaymentBranchId == null)
+                return Challenge();
+
+            ModelState.Remove(nameof(PaymentVoucher.AccountId));
+
+            var supplier = await _context.Suppliers
+                .Include(s => s.Account)
+                .FirstOrDefaultAsync(s => s.Id == model.SupplierId);
+            if (supplier?.Account == null)
+                ModelState.AddModelError(nameof(PaymentVoucher.SupplierId), "المورد غير موجود");
+
+            var agent = await _context.Agents
+                .Include(a => a.Account)
+                .FirstOrDefaultAsync(a => a.Id == model.AgentId);
+            if (agent?.Account == null)
+                ModelState.AddModelError(nameof(PaymentVoucher.AgentId), "الوكيل غير موجود");
+
+            if (supplier?.Account != null && agent?.Account != null)
+            {
+                if (supplier.Account.CurrencyId != agent.Account.CurrencyId)
+                    ModelState.AddModelError(nameof(PaymentVoucher.AgentId), "يجب أن تكون الحسابات بنفس العملة");
+
+                model.CurrencyId = supplier.Account.CurrencyId;
+                model.AccountId = agent.Account.Id;
+                model.AgentId = agent.Id;
+                model.IsCash = false;
+            }
+
+            ModelState.Remove(nameof(PaymentVoucher.CurrencyId));
+            ModelState.Remove(nameof(PaymentVoucher.ExchangeRate));
+
+            if (!ModelState.IsValid)
+            {
+                await PopulateSupplierSelectListAsync();
+                await PopulateAgentSelectListAsync();
+                return View(model);
+            }
+
+            return await FinalizeCreationAsync(model, user);
+        }
+
+        private async Task<IActionResult> FinalizeCreationAsync(PaymentVoucher model, User user)
+        {
             var currency = await _context.Currencies.FindAsync(model.CurrencyId);
             model.ExchangeRate = currency?.ExchangeRate ?? 1m;
 

@@ -247,6 +247,7 @@
                                 @if (canPaymentVouchersCreate)
                                 {
                                     <li><a class="dropdown-item" href="@Url.Action("Create", "PaymentVouchers")"><i class="fa-solid fa-plus"></i><span>إضافة سند صرف</span></a></li>
+                                    <li><a class="dropdown-item" href="@Url.Action("CreateFromAgent", "PaymentVouchers")"><i class="fa-solid fa-user-tie"></i><span>سند صرف من حساب وكيل</span></a></li>
                                 }
                                 @if (canWorkflowApprovalsView)
                                 {
