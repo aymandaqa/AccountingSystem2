@@ -1,0 +1,140 @@
+@model AccountingSystem.ViewModels.BranchPerformanceSummaryViewModel
+@{
+    ViewData["Title"] = "ملخص أداء الفروع";
+    var branchCount = Model.Branches.Count;
+    var headerColspan = Math.Max(2, branchCount + 2);
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-0"><i class="fas fa-network-wired me-2"></i>ملخص أداء الفروع</h4>
+                        <small class="text-white-50">تابع أصول وخصوم وإيرادات كل فرع مع إمكانية التصدير إلى Excel</small>
+                    </div>
+                    <a class="btn btn-outline-light" asp-action="BranchPerformanceSummaryExcel" asp-route-fromDate="@Model.FromDate.ToString(\"yyyy-MM-dd\")" asp-route-toDate="@Model.ToDate.ToString(\"yyyy-MM-dd\")">
+                        <i class="fas fa-file-excel me-1"></i>تصدير Excel
+                    </a>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3 mb-4">
+                        <div class="col-md-3 col-sm-6">
+                            <label class="form-label">من تاريخ</label>
+                            <input type="date" class="form-control" name="fromDate" value="@Model.FromDate.ToString(\"yyyy-MM-dd\")" />
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <label class="form-label">إلى تاريخ</label>
+                            <input type="date" class="form-control" name="toDate" value="@Model.ToDate.ToString(\"yyyy-MM-dd\")" />
+                        </div>
+                        <div class="col-md-6 col-sm-12 align-self-end">
+                            <div class="d-flex gap-2 justify-content-end">
+                                <button type="submit" class="btn btn-primary flex-grow-1 flex-md-grow-0">
+                                    <i class="fas fa-search me-1"></i>عرض التقرير
+                                </button>
+                                <a asp-action="BranchPerformanceSummary" class="btn btn-outline-secondary">
+                                    <i class="fas fa-undo me-1"></i>إعادة تعيين
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+
+                    @if (Model.HasResults)
+                    {
+                        <div class="alert alert-info d-flex align-items-center gap-3">
+                            <i class="fas fa-info-circle fa-lg"></i>
+                            <div>
+                                <div>الفترة: من <strong>@Model.FromDate.ToString("dd/MM/yyyy")</strong> إلى <strong>@Model.ToDate.ToString("dd/MM/yyyy")</strong></div>
+                                <div>العملة الأساسية: <strong>@Model.BaseCurrencyCode</strong></div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="min-width: 220px;">البند</th>
+                                        @foreach (var branch in Model.Branches)
+                                        {
+                                            <th class="text-end">@branch.BranchName</th>
+                                        }
+                                        <th class="text-end">الإجمالي</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var section in Model.Sections)
+                                    {
+                                        <tr class="table-primary fw-bold">
+                                            <td colspan="@headerColspan">@section.Title</td>
+                                        </tr>
+                                        @foreach (var row in section.Rows)
+                                        {
+                                            <tr>
+                                                <td>@row.Label</td>
+                                                @foreach (var branch in Model.Branches)
+                                                {
+                                                    var value = row.Values.TryGetValue(branch.BranchId, out var amount) ? amount : 0m;
+                                                    var cellClass = value < 0 ? "text-end text-danger" : "text-end";
+                                                    <td class="@cellClass">@value.ToString("N2")</td>
+                                                }
+                                                var rowTotal = row.Total;
+                                                var totalClass = rowTotal < 0 ? "text-end text-danger fw-bold" : "text-end fw-bold";
+                                                <td class="@totalClass">@rowTotal.ToString("N2")</td>
+                                            </tr>
+                                        }
+                                        <tr class="table-secondary fw-bold">
+                                            <td>إجمالي @section.Title</td>
+                                            @foreach (var branch in Model.Branches)
+                                            {
+                                                var total = section.TotalsByBranch.TryGetValue(branch.BranchId, out var amount) ? amount : 0m;
+                                                var cellClass = total < 0 ? "text-end text-danger" : "text-end";
+                                                <td class="@cellClass">@total.ToString("N2")</td>
+                                            }
+                                            var sectionTotal = section.OverallTotal;
+                                            var sectionClass = sectionTotal < 0 ? "text-end text-danger" : "text-end";
+                                            <td class="@sectionClass">@sectionTotal.ToString("N2")</td>
+                                        </tr>
+                                    }
+
+                                    @if (Model.SummaryRows.Any())
+                                    {
+                                        <tr class="table-dark text-white fw-bold">
+                                            <td colspan="@headerColspan">مؤشرات الأداء</td>
+                                        </tr>
+                                        @foreach (var row in Model.SummaryRows)
+                                        {
+                                            <tr>
+                                                <td>@row.Label</td>
+                                                @foreach (var branch in Model.Branches)
+                                                {
+                                                    var value = row.Values.TryGetValue(branch.BranchId, out var amount) ? amount : 0m;
+                                                    var cellClass = value < 0 ? "text-end text-danger" : "text-end";
+                                                    <td class="@cellClass">@value.ToString("N2")</td>
+                                                }
+                                                var rowTotal = row.Total;
+                                                var totalClass = rowTotal < 0 ? "text-end text-danger fw-bold" : "text-end fw-bold";
+                                                <td class="@totalClass">@rowTotal.ToString("N2")</td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else if (Model.FiltersApplied)
+                    {
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-chart-bar fa-2x mb-3"></i>
+                            <p class="mb-0">لا توجد بيانات ضمن الفترة المحددة. حاول تغيير نطاق التاريخ.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-secondary">استخدم المرشحات أعلاه لتحديد الفترة الزمنية لعرض ملخص الأداء.</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

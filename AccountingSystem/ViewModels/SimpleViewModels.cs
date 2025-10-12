@@ -325,6 +325,40 @@ namespace AccountingSystem.ViewModels
         Quarter = 1
     }
 
+    public class BranchPerformanceSummaryViewModel
+    {
+        public DateTime FromDate { get; set; } = new DateTime(DateTime.Today.Year, 1, 1);
+        public DateTime ToDate { get; set; } = DateTime.Today;
+        public string BaseCurrencyCode { get; set; } = string.Empty;
+        public List<BranchPerformanceSummaryBranch> Branches { get; set; } = new();
+        public List<BranchPerformanceSummarySection> Sections { get; set; } = new();
+        public List<BranchPerformanceSummaryRow> SummaryRows { get; set; } = new();
+        public bool FiltersApplied { get; set; }
+        public bool HasResults => Sections.Any();
+    }
+
+    public class BranchPerformanceSummaryBranch
+    {
+        public int? BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+    }
+
+    public class BranchPerformanceSummarySection
+    {
+        public AccountType AccountType { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public List<BranchPerformanceSummaryRow> Rows { get; set; } = new();
+        public Dictionary<int?, decimal> TotalsByBranch { get; set; } = new();
+        public decimal OverallTotal => TotalsByBranch.Values.Sum();
+    }
+
+    public class BranchPerformanceSummaryRow
+    {
+        public string Label { get; set; } = string.Empty;
+        public Dictionary<int?, decimal> Values { get; set; } = new();
+        public decimal Total => Values.Values.Sum();
+    }
+
     public class AccountStatementViewModel
     {
         public int? AccountId { get; set; }
