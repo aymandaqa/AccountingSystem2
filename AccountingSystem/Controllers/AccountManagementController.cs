@@ -1198,8 +1198,7 @@ namespace Roadfn.Controllers
                     tottxn.CreditAmount = 0;
                     if (Convert.ToDecimal(Paytxn.ShipmentTotal) <= 0)
                     {
-                        tottxn.DebitAmount = 0;
-                        tottxn.CreditAmount = 0;
+                        tottxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentPrice) * -1;
                     }
                     else
                     {
