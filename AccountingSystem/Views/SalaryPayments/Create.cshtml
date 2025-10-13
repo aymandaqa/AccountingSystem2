@@ -1,3 +1,4 @@
+@using System.Globalization
 @model AccountingSystem.ViewModels.SalaryPaymentCreateViewModel
 @{
     ViewData["Title"] = "سند صرف راتب";
@@ -18,7 +19,7 @@
                 <option value="">اختر الموظف</option>
                 @foreach (var employee in Model.Employees)
                 {
-                    <option value="@employee.Id" data-salary="@employee.Salary" data-balance="@employee.AccountBalance">
+                    <option value="@employee.Id" data-balance="@employee.AccountBalance.ToString(CultureInfo.InvariantCulture)">
                         @employee.Name
                     </option>
                 }
@@ -27,17 +28,13 @@
         </div>
 
         <div class="col-md-6">
-            <label class="form-label">راتب الموظف</label>
-            <input type="text" class="form-control" id="employeeSalary" readonly />
-        </div>
-        <div class="col-md-6">
             <label class="form-label">رصيد حساب الموظف</label>
             <input type="text" class="form-control" id="employeeBalance" readonly />
         </div>
 
         <div class="col-md-6">
             <label asp-for="Amount" class="form-label"></label>
-            <input asp-for="Amount" class="form-control" />
+            <input asp-for="Amount" class="form-control" type="number" min="0" step="0.01" />
             <span asp-validation-for="Amount" class="text-danger"></span>
         </div>
 
@@ -59,8 +56,11 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const select = document.getElementById('employeeSelect');
-            const salaryInput = document.getElementById('employeeSalary');
             const balanceInput = document.getElementById('employeeBalance');
+            const amountInput = document.querySelector('input[name="Amount"]');
+            const form = document.querySelector('form');
+
+            const balanceValidationMessage = 'المبلغ يتجاوز رصيد حساب الموظف المتاح.';
 
             function formatValue(value) {
                 if (value === null || value === undefined || value === '') {
@@ -75,17 +75,90 @@
 
             function updateEmployeeInfo() {
                 const option = select.options[select.selectedIndex];
-                if (!option || !option.dataset) {
-                    salaryInput.value = '';
+                const balanceValue = option?.dataset?.balance;
+                if (!option || !balanceValue) {
                     balanceInput.value = '';
+                    if (amountInput) {
+                        amountInput.value = '';
+                        amountInput.setCustomValidity('');
+                        amountInput.removeAttribute('max');
+                    }
                     return;
                 }
 
-                salaryInput.value = formatValue(option.dataset.salary) + ' @Model.CurrencyCode';
-                balanceInput.value = formatValue(option.dataset.balance) + ' @Model.CurrencyCode';
+                const balance = Number(balanceValue);
+
+                if (Number.isNaN(balance)) {
+                    balanceInput.value = '';
+                    if (amountInput) {
+                        amountInput.setCustomValidity('');
+                        amountInput.removeAttribute('max');
+                    }
+                    return;
+                }
+
+                balanceInput.value = formatValue(balance) + ' @Model.CurrencyCode';
+
+                if (amountInput) {
+                    if (!Number.isNaN(balance) && balance >= 0) {
+                        amountInput.setAttribute('max', balance);
+                    } else {
+                        amountInput.removeAttribute('max');
+                    }
+                    validateAmount();
+                }
+            }
+
+            function parseNumber(value) {
+                if (value === null || value === undefined) {
+                    return NaN;
+                }
+
+                if (typeof value === 'number') {
+                    return value;
+                }
+
+                return Number(String(value).replace(/,/g, ''));
+            }
+
+            function validateAmount() {
+                if (!amountInput) {
+                    return true;
+                }
+
+                const option = select.options[select.selectedIndex];
+                const balanceValue = option?.dataset?.balance;
+                if (!option || !balanceValue) {
+                    amountInput.setCustomValidity('');
+                    return true;
+                }
+
+                const balance = parseNumber(balanceValue);
+                const amount = parseNumber(amountInput.value);
+
+                if (!Number.isNaN(balance) && !Number.isNaN(amount) && amount > balance) {
+                    amountInput.setCustomValidity(balanceValidationMessage);
+                    return false;
+                }
+
+                amountInput.setCustomValidity('');
+                return true;
             }
 
             select.addEventListener('change', updateEmployeeInfo);
+            if (amountInput) {
+                amountInput.addEventListener('input', validateAmount);
+            }
+            if (form) {
+                form.addEventListener('submit', function (event) {
+                    if (!validateAmount()) {
+                        if (amountInput) {
+                            amountInput.reportValidity();
+                        }
+                        event.preventDefault();
+                    }
+                });
+            }
             updateEmployeeInfo();
         });
     </script>

@@ -21,7 +21,6 @@
                 @foreach (var employee in Model.Employees)
                 {
                     <option value="@employee.Id"
-                            data-salary="@employee.Salary.ToString(CultureInfo.InvariantCulture)"
                             data-balance="@employee.AccountBalance.ToString(CultureInfo.InvariantCulture)"
                             data-daily-rate="@employee.DailySalaryRate.ToString(CultureInfo.InvariantCulture)"
                             data-salary-balance="@employee.AccruedSalaryBalance.ToString(CultureInfo.InvariantCulture)"
@@ -33,10 +32,6 @@
             <span asp-validation-for="EmployeeId" class="text-danger"></span>
         </div>
 
-        <div class="col-md-4">
-            <label class="form-label">راتب الموظف</label>
-            <input type="text" class="form-control" id="employeeSalary" readonly />
-        </div>
         <div class="col-md-4">
             <label class="form-label">رصيد حساب الموظف</label>
             <input type="text" class="form-control" id="employeeBalance" readonly />
@@ -79,7 +74,6 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const select = document.getElementById('employeeSelect');
-            const salaryInput = document.getElementById('employeeSalary');
             const balanceInput = document.getElementById('employeeBalance');
             const dailyRateInput = document.getElementById('employeeDailyRate');
             const salaryBalanceInput = document.getElementById('employeeSalaryBalance');
@@ -99,7 +93,6 @@
             function updateEmployeeInfo() {
                 const option = select.options[select.selectedIndex];
                 if (!option || !option.dataset) {
-                    salaryInput.value = '';
                     balanceInput.value = '';
                     dailyRateInput.value = '';
                     salaryBalanceInput.value = '';
@@ -107,7 +100,6 @@
                     return;
                 }
 
-                salaryInput.value = formatValue(option.dataset.salary) + ' @Model.CurrencyCode';
                 balanceInput.value = formatValue(option.dataset.balance) + ' @Model.CurrencyCode';
                 dailyRateInput.value = formatValue(option.dataset.dailyRate) + ' @Model.CurrencyCode';
                 salaryBalanceInput.value = formatValue(option.dataset.salaryBalance) + ' @Model.CurrencyCode';

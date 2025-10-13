@@ -119,14 +119,24 @@ namespace AccountingSystem.Controllers
                 ModelState.AddModelError(nameof(model.Amount), "المبلغ يجب أن يكون أكبر من صفر");
             }
 
-            if (employee != null && model.Amount > employee.Salary)
-            {
-                ModelState.AddModelError(nameof(model.Amount), "لا يمكن أن يتجاوز المبلغ راتب الموظف");
-            }
-
             if (account.Nature == AccountNature.Debit && model.Amount > account.CurrentBalance)
             {
                 ModelState.AddModelError(nameof(model.Amount), "المبلغ يتجاوز رصيد حساب الدفع");
+            }
+
+            if (employee?.Account != null)
+            {
+                var employeeAccountBalance = decimal.Round(employee.Account.CurrentBalance, 2, MidpointRounding.AwayFromZero);
+
+                if (employeeAccountBalance <= 0)
+                {
+                    ModelState.AddModelError(nameof(model.Amount), "لا يوجد رصيد متاح في حساب الموظف.");
+                }
+                else if (model.Amount > employeeAccountBalance)
+                {
+                    ModelState.AddModelError(nameof(model.Amount),
+                        $"المبلغ يتجاوز رصيد حساب الموظف المتاح ({employeeAccountBalance.ToString("N2")} {account.Currency.Code}).");
+                }
             }
 
             if (!ModelState.IsValid)
