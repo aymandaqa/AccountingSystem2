@@ -78,8 +78,10 @@
                                                     var cellClass = value < 0 ? "text-end text-danger" : "text-end";
                                                     <td class="@cellClass">@value.ToString("N2")</td>
                                                 }
-                                                var rowTotal = row.Total;
-                                                var totalClass = rowTotal < 0 ? "text-end text-danger fw-bold" : "text-end fw-bold";
+                                                @{
+                                                    var rowTotal = row.Total;
+                                                    var totalClass = rowTotal < 0 ? "text-end text-danger fw-bold" : "text-end fw-bold";
+                                                }
                                                 <td class="@totalClass">@rowTotal.ToString("N2")</td>
                                             </tr>
                                         }
@@ -91,8 +93,10 @@
                                                 var cellClass = total < 0 ? "text-end text-danger" : "text-end";
                                                 <td class="@cellClass">@total.ToString("N2")</td>
                                             }
-                                            var sectionTotal = reportSection.OverallTotal;
-                                            var sectionClass = sectionTotal < 0 ? "text-end text-danger" : "text-end";
+                                            @{
+                                                var sectionTotal = reportSection.OverallTotal;
+                                                var sectionClass = sectionTotal < 0 ? "text-end text-danger" : "text-end";
+                                            }
                                             <td class="@sectionClass">@sectionTotal.ToString("N2")</td>
                                         </tr>
                                     }
@@ -112,8 +116,10 @@
                                                     var cellClass = value < 0 ? "text-end text-danger" : "text-end";
                                                     <td class="@cellClass">@value.ToString("N2")</td>
                                                 }
-                                                var rowTotal = row.Total;
-                                                var totalClass = rowTotal < 0 ? "text-end text-danger fw-bold" : "text-end fw-bold";
+                                                @{
+                                                    var rowTotal = row.Total;
+                                                    var totalClass = rowTotal < 0 ? "text-end text-danger fw-bold" : "text-end fw-bold";
+                                                }
                                                 <td class="@totalClass">@rowTotal.ToString("N2")</td>
                                             </tr>
                                         }
