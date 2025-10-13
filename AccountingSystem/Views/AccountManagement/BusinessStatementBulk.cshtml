@@ -3,6 +3,54 @@
     ViewData["Title"] = "حساب العميل كلي";
 }
 
+<style>
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.55);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+        backdrop-filter: blur(3px);
+    }
+
+        .loading-overlay.hidden {
+            display: none;
+        }
+
+        .loading-overlay .spinner {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 5px solid rgba(255, 255, 255, 0.35);
+            border-top-color: #1dbfc1;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-overlay .loading-text {
+            margin-top: 1rem;
+            font-size: 1.2rem;
+            color: #fff;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+    .no-scroll {
+        overflow: hidden !important;
+    }
+
+    @@keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
 <div class="container-full">
 
 
@@ -154,7 +202,32 @@
     <!-- /.content -->
 
 </div>
+
+<div id="pageOverlay" class="loading-overlay hidden">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingMessage">جاري المعالجة...</div>
+</div>
 <script>
+    function showLoadingOverlay(message) {
+        var overlay = document.getElementById('pageOverlay');
+        var loadingMessage = document.getElementById('loadingMessage');
+        if (overlay) {
+            if (message && loadingMessage) {
+                loadingMessage.textContent = message;
+            }
+            overlay.classList.remove('hidden');
+            document.body.classList.add('no-scroll');
+        }
+    }
+
+    function hideLoadingOverlay() {
+        var overlay = document.getElementById('pageOverlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+            document.body.classList.remove('no-scroll');
+        }
+    }
+
     function actionBegin(args) {
         if (args.requestType == "filtering") {
             var len = this.filterSettings.columns.length;
@@ -182,8 +255,7 @@
 <script>
 
 
-       function RequestDone(Id) {
-
+    function RequestDone(Id) {
         swal({
             title: "هل انت متأكد ؟",
             icon: "info",
@@ -192,23 +264,28 @@
         })
             .then((willDelete) => {
                 if (willDelete) {
-                     document.getElementById('spinner-div').style.display = 'block';
-                    //alert(myJSON);
-                    var ajax1 = new ej.base.Ajax({ url: '/CustomerInvoiceRequest/ChangeStatus?Id=' + Id, data:'', type: 'POST', contentType: 'application/json' });
+                    showLoadingOverlay('جاري تحديث الحالة...');
+                    var ajax1 = new ej.base.Ajax({ url: '/CustomerInvoiceRequest/ChangeStatus?Id=' + Id, data: '', type: 'POST', contentType: 'application/json' });
                     ajax1.send();
                     ajax1.onSuccess = function (data) {
                         swal(data, {
                             icon: "success",
                         });
-                         document.getElementById('spinner-div').style.display = 'none';
+                        hideLoadingOverlay();
                         var grid = document.getElementById("Grid2").ej2_instances[0];
-                        grid.refresh(); //tabObj.select(0);
-                     };
+                        grid.refresh();
+                    };
                     ajax1.onFailure = function (data) {
                         swal(data);
+                        hideLoadingOverlay();
+                    };
+                    ajax1.onError = function (error) {
+                        swal(error);
+                        hideLoadingOverlay();
                     };
                 } else {
-                 }
+                    hideLoadingOverlay();
+                }
             });
     }
 
@@ -293,8 +370,7 @@
             .then((willDelete) => {
                 if (willDelete) {
                     document.getElementById("pay").disabled = true;
-                    document.getElementById('spinner-div').style.display = 'block';
-                    //alert(myJSON);
+                    showLoadingOverlay('جاري معالجة الدفع...');
                     var ajax1 = new ej.base.Ajax({ url: '/AccountManagement/PayToBusnissBullk?dariverID=' + InvoiceStatus.value, data: JSON.stringify(selectedRecords), type: 'POST', contentType: 'application/json' });
                     ajax1.send(JSON.stringify(selectedRecords));
                     ajax1.onSuccess = function (data) {
@@ -302,9 +378,9 @@
                             icon: "success",
                         });
                         var grid = document.getElementById("Grid").ej2_instances[0];
-                        grid.refresh(); //tabObj.select(0);
+                        grid.refresh();
                         document.getElementById("pay").disabled = false;
-                        document.getElementById('spinner-div').style.display = 'none';
+                        hideLoadingOverlay();
                         var ids = "";
 
                         for (var k in JSON.parse(data)) {
@@ -317,15 +393,23 @@
                     };
                     ajax1.onFailure = function (data) {
                         swal(data);
+                        document.getElementById("pay").disabled = false;
+                        hideLoadingOverlay();
+                    };
+                    ajax1.onError = function (error) {
+                        swal(error);
+                        document.getElementById("pay").disabled = false;
+                        hideLoadingOverlay();
                     };
                 } else {
-                    //swal("Your imaginary file is safe!");
                     document.getElementById("pay").disabled = false;
+                    hideLoadingOverlay();
                 }
             });
 
         document.getElementById("pay").disabled = false;
     }
+
     function rowSelected(args) {
 
         var shipRetCount = 0;
