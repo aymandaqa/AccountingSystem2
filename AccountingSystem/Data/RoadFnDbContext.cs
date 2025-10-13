@@ -114,6 +114,7 @@ namespace AccountingSystem.Data
             Console.WriteLine($"Save Chagnes Failed at {DateTime.Now}");
 
         }
+        public virtual DbSet<CustomerInvoiceRequest> CustomerInvoiceRequest { get; set; }
         public virtual DbSet<PayBusinessSlipView> PayBusinessSlipView { get; set; }
 
         public virtual DbSet<ShipmentLogGrid2> ShipmentLogGrid2s { get; set; }

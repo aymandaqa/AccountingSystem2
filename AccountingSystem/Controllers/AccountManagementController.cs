@@ -1163,15 +1163,8 @@ namespace Roadfn.Controllers
                     var agent = await _accontext.Agents.FirstOrDefaultAsync(s => s.Id == user.AgentId);
 
 
-                    if (area.CommissionBranch > 0)
-                    {
-                        if (agent == null)
-                        {
-                            return BadRequest("تعذر تحديد حساب الوكيل");
 
-                        }
 
-                    }
 
                     var agentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Id == agent.AccountId);
 
@@ -1247,7 +1240,7 @@ namespace Roadfn.Controllers
 
 
 
-                    if (area.CommissionBranch > 0)
+                    if (area?.CommissionBranch > 0 && agent != null)
                     {
                         var rev = Convert.ToDecimal((Paytxn.ShipmentTotal - Paytxn.ShipmentPrice) - area.CommissionBranch);
 
@@ -1295,7 +1288,6 @@ namespace Roadfn.Controllers
                         #endregion
 
                     }
-
 
                     else
                     {
