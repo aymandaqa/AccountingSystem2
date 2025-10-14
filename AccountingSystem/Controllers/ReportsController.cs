@@ -1960,14 +1960,52 @@ namespace AccountingSystem.Controllers
                     var balance = a.CurrentBalance + pendingBalance;
                     var balanceSelected = _currencyService.Convert(balance, a.Currency, selectedCurrency);
                     var balanceBase = _currencyService.Convert(balance, a.Currency, baseCurrency);
+
+                    decimal debitSelected;
+                    decimal creditSelected;
+                    decimal debitBase;
+                    decimal creditBase;
+
+                    if (a.AccountType == AccountType.Liabilities)
+                    {
+                        if (balanceSelected < 0)
+                        {
+                            debitSelected = Math.Abs(balanceSelected);
+                            creditSelected = 0;
+                        }
+                        else
+                        {
+                            debitSelected = 0;
+                            creditSelected = balanceSelected;
+                        }
+
+                        if (balanceBase < 0)
+                        {
+                            debitBase = Math.Abs(balanceBase);
+                            creditBase = 0;
+                        }
+                        else
+                        {
+                            debitBase = 0;
+                            creditBase = balanceBase;
+                        }
+                    }
+                    else
+                    {
+                        debitSelected = a.Nature == AccountNature.Debit ? balanceSelected : 0;
+                        creditSelected = a.Nature == AccountNature.Credit ? balanceSelected : 0;
+                        debitBase = a.Nature == AccountNature.Debit ? balanceBase : 0;
+                        creditBase = a.Nature == AccountNature.Credit ? balanceBase : 0;
+                    }
+
                     return new TrialBalanceAccountViewModel
                     {
                         AccountCode = a.Code,
                         AccountName = a.NameAr,
-                        DebitBalance = a.Nature == AccountNature.Debit ? balanceSelected : 0,
-                        CreditBalance = a.Nature == AccountNature.Credit ? balanceSelected : 0,
-                        DebitBalanceBase = a.Nature == AccountNature.Debit ? balanceBase : 0,
-                        CreditBalanceBase = a.Nature == AccountNature.Credit ? balanceBase : 0
+                        DebitBalance = debitSelected,
+                        CreditBalance = creditSelected,
+                        DebitBalanceBase = debitBase,
+                        CreditBalanceBase = creditBase
                     };
                 }).ToList(),
                 Branches = await GetBranchesSelectList(),
