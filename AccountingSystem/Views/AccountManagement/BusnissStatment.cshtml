@@ -9,13 +9,29 @@
 <style>
     .action-toolbar {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         align-items: center;
         gap: 0.75rem;
         padding: 0.5rem 0;
+        overflow-x: auto;
+        scrollbar-width: thin;
     }
 
+        .action-toolbar::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .action-toolbar::-webkit-scrollbar-thumb {
+            background-color: rgba(13, 27, 42, 0.25);
+            border-radius: 999px;
+        }
+
+        .action-toolbar::-webkit-scrollbar-track {
+            background-color: transparent;
+        }
+
         .action-toolbar .btn {
+            flex: 0 0 auto;
             min-width: 110px;
             box-shadow: 0 4px 10px rgba(29, 191, 193, 0.2);
             border-radius: 6px;
