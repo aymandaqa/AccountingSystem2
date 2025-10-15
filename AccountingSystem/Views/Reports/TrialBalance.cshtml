@@ -47,6 +47,15 @@
                                 }
                             </select>
                         </div>
+                        <div class="col-md-3">
+                            <label class="form-label">المستوى:</label>
+                            <select name="level" class="form-select">
+                                @foreach (var level in Model.Levels)
+                                {
+                                    <option value="@level.Value" @(level.Selected ? "selected" : string.Empty)>@level.Text</option>
+                                }
+                            </select>
+                        </div>
                         <div class="col-md-3 d-flex align-items-end">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="includePending" value="true" @(Model.IncludePending ? "checked" : "") />
@@ -68,6 +77,7 @@
                                 <tr>
                                     <th>رمز الحساب</th>
                                     <th>اسم الحساب</th>
+                                    <th>المستوى</th>
                                     <th>الرصيد المدين (@Model.SelectedCurrencyCode)</th>
                                     <th>الرصيد الدائن (@Model.SelectedCurrencyCode)</th>
                                     <th>الرصيد المدين (@Model.BaseCurrencyCode)</th>
@@ -80,7 +90,11 @@
                                     var isMismatch = account.DebitBalance != 0 && account.CreditBalance != 0;
                                     <tr class="@(isMismatch ? "table-danger" : string.Empty)">
                                         <td>@account.AccountCode</td>
-                                        <td>@account.AccountName</td>
+                                        <td class="text-nowrap">
+                                            <span style="display:inline-block; padding-right:@((account.Level - 1) * 1.5)rem"></span>
+                                            @account.AccountName
+                                        </td>
+                                        <td>@account.Level</td>
                                         <td>@account.DebitBalance.ToString("N2")</td>
                                         <td>@account.CreditBalance.ToString("N2")</td>
                                         <td>@account.DebitBalanceBase.ToString("N2")</td>
@@ -90,7 +104,7 @@
                             </tbody>
                             <tfoot class="@(Model.TotalDebits == Model.TotalCredits ? "table-secondary" : "table-danger")">
                                 <tr>
-                                    <th colspan="2">الإجمالي</th>
+                                    <th colspan="3">الإجمالي</th>
                                     <th>@Model.TotalDebits.ToString("N2")</th>
                                     <th>@Model.TotalCredits.ToString("N2")</th>
                                     <th>@Model.TotalDebitsBase.ToString("N2")</th>
@@ -111,7 +125,7 @@
                     <div class="row mt-3">
                         <div class="col-md-6">
                             <div class="alert alert-info">
-                                <strong>الفترة:</strong> من @Model.FromDate.ToString("dd/MM/yyyy") إلى @Model.ToDate.ToString("dd/MM/yyyy")
+                                <strong>الفترة:</strong> من @Model.FromDate.ToString("dd-MM-yyyy") إلى @Model.ToDate.ToString("dd-MM-yyyy")
                             </div>
                         </div>
                         <div class="col-md-6">
