@@ -173,6 +173,7 @@ namespace AccountingSystem.ViewModels
 
     public class TrialBalanceAccountViewModel
     {
+        public int AccountId { get; set; }
         public string AccountCode { get; set; } = "";
         public string AccountName { get; set; } = "";
         public decimal DebitBalance { get; set; }
