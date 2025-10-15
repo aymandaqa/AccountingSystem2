@@ -19,6 +19,14 @@
         .filters-card .form-label {
             font-weight: 600;
         }
+
+        .unbalanced-entry {
+            background-color: #fdeaea;
+        }
+
+            .unbalanced-entry .e-rowcell {
+                color: #b71c1c;
+            }
     </style>
 }
 
@@ -178,6 +186,18 @@
 
             grid.pageSettings = { pageSize: 10, pageSizes: [10, 25, 50, 100, 'All'] };
             grid.groupSettings = { showDropArea: false, columns: ['Reference'] };
+
+            grid.rowDataBound = function (args) {
+                if (!args || !args.row) {
+                    return;
+                }
+
+                args.row.classList.remove('unbalanced-entry');
+
+                if (args.data && args.data.IsBalanced === false) {
+                    args.row.classList.add('unbalanced-entry');
+                }
+            };
 
             grid.actionBegin = function (args) {
                 if (trackedRequestTypes.indexOf(args.requestType) > -1) {
