@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using AccountingSystem.Models.Workflows;
+using AccountingSystem.Models.DynamicScreens;
 
 namespace AccountingSystem.Data
 {
@@ -61,6 +62,9 @@ namespace AccountingSystem.Data
         public DbSet<WorkflowStep> WorkflowSteps { get; set; }
         public DbSet<WorkflowInstance> WorkflowInstances { get; set; }
         public DbSet<WorkflowAction> WorkflowActions { get; set; }
+        public DbSet<DynamicScreenDefinition> DynamicScreenDefinitions { get; set; }
+        public DbSet<DynamicScreenField> DynamicScreenFields { get; set; }
+        public DbSet<DynamicScreenEntry> DynamicScreenEntries { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<CompoundJournalDefinition> CompoundJournalDefinitions { get; set; }
         public DbSet<CompoundJournalExecutionLog> CompoundJournalExecutionLogs { get; set; }
@@ -876,6 +880,98 @@ namespace AccountingSystem.Data
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
+            builder.Entity<DynamicScreenDefinition>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.Name).IsUnique();
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(150);
+                entity.Property(e => e.DisplayName).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.PermissionName).IsRequired().HasMaxLength(150);
+                entity.Property(e => e.ManagePermissionName).HasMaxLength(150);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.LayoutDefinition).HasColumnType("nvarchar(max)");
+
+                entity.HasOne(e => e.WorkflowDefinition)
+                    .WithMany()
+                    .HasForeignKey(e => e.WorkflowDefinitionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.CreatedBy)
+                    .WithMany()
+                    .HasForeignKey(e => e.CreatedById)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.UpdatedBy)
+                    .WithMany()
+                    .HasForeignKey(e => e.UpdatedById)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<DynamicScreenField>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => new { e.ScreenId, e.FieldKey }).IsUnique();
+                entity.Property(e => e.FieldKey).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Label).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Placeholder).HasMaxLength(200);
+                entity.Property(e => e.HelpText).HasMaxLength(200);
+                entity.Property(e => e.AllowedEntityIds).HasColumnType("nvarchar(max)");
+                entity.Property(e => e.MetadataJson).HasColumnType("nvarchar(max)");
+
+                entity.HasOne(e => e.Screen)
+                    .WithMany(e => e.Fields)
+                    .HasForeignKey(e => e.ScreenId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<DynamicScreenEntry>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.DataJson).HasColumnType("nvarchar(max)");
+
+                entity.HasOne(e => e.Screen)
+                    .WithMany(e => e.Entries)
+                    .HasForeignKey(e => e.ScreenId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.ExpenseAccount)
+                    .WithMany()
+                    .HasForeignKey(e => e.ExpenseAccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Supplier)
+                    .WithMany()
+                    .HasForeignKey(e => e.SupplierId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Branch)
+                    .WithMany()
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.CreatedBy)
+                    .WithMany()
+                    .HasForeignKey(e => e.CreatedById)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.ApprovedBy)
+                    .WithMany()
+                    .HasForeignKey(e => e.ApprovedById)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.RejectedBy)
+                    .WithMany()
+                    .HasForeignKey(e => e.RejectedById)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.WorkflowInstance)
+                    .WithMany()
+                    .HasForeignKey(e => e.WorkflowInstanceId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
             builder.Entity<Notification>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -1009,7 +1105,8 @@ namespace AccountingSystem.Data
                 new Permission { Id = 66, Name = "agents.create", DisplayName = "إنشاء وكيل", Category = "الوكلاء", CreatedAt = createdAt },
                 new Permission { Id = 67, Name = "agents.edit", DisplayName = "تعديل وكيل", Category = "الوكلاء", CreatedAt = createdAt },
                 new Permission { Id = 68, Name = "agents.delete", DisplayName = "حذف وكيل", Category = "الوكلاء", CreatedAt = createdAt },
-                new Permission { Id = 69, Name = "userbalances.view", DisplayName = "عرض أرصدة حسابات المستخدم", Category = "المستخدمين", CreatedAt = createdAt }
+                new Permission { Id = 69, Name = "userbalances.view", DisplayName = "عرض أرصدة حسابات المستخدم", Category = "المستخدمين", CreatedAt = createdAt },
+                new Permission { Id = 71, Name = "dynamicscreens.manage", DisplayName = "إدارة الشاشات الديناميكية", Category = "الشاشات الديناميكية", CreatedAt = createdAt }
             );
         }
     }

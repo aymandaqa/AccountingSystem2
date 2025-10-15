@@ -1,0 +1,90 @@
+@using AccountingSystem.ViewModels.DynamicScreens
+@{
+    var fieldModel = (DynamicScreenFieldInputModel)ViewData.Model!;
+    var indexToken = ViewData["Index"]?.ToString() ?? "0";
+    var displayIndex = int.TryParse(indexToken, out var parsedIndex) ? parsedIndex : 0;
+    var fieldPrefix = $"Fields[{indexToken}]";
+    var fieldTypes = Html.GetEnumSelectList<AccountingSystem.Models.DynamicScreens.DynamicScreenFieldType>();
+    var dataSources = Html.GetEnumSelectList<AccountingSystem.Models.DynamicScreens.DynamicScreenFieldDataSource>();
+    var roles = Html.GetEnumSelectList<AccountingSystem.Models.DynamicScreens.DynamicScreenFieldRole>();
+}
+
+<div class="card mb-3 field-editor" data-index="@indexToken">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>الحقل @(displayIndex + 1)</span>
+        <button type="button" class="btn btn-sm btn-outline-danger remove-field"><i class="fa fa-trash ms-1"></i> حذف</button>
+    </div>
+    <div class="card-body">
+        <input type="hidden" name="@(fieldPrefix + ".Id")" value="@fieldModel.Id" />
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">المعرف الداخلي</label>
+                <input class="form-control" name="@(fieldPrefix + ".FieldKey")" value="@fieldModel.FieldKey" required />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">العنوان</label>
+                <input class="form-control" name="@(fieldPrefix + ".Label")" value="@fieldModel.Label" required />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">الترتيب</label>
+                <input type="number" class="form-control" name="@(fieldPrefix + ".DisplayOrder")" value="@fieldModel.DisplayOrder" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">عرض العمود</label>
+                <input type="number" class="form-control" name="@(fieldPrefix + ".ColumnSpan")" value="@fieldModel.ColumnSpan" min="1" max="12" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">نوع الحقل</label>
+                  <select class="form-select" name="@(fieldPrefix + ".FieldType")" data-field="type">
+                    @foreach (var option in fieldTypes)
+                    {
+                        <option value="@option.Value" selected="@(option.Value == ((int)fieldModel.FieldType).ToString() ? "selected" : null)">@option.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">مصدر البيانات</label>
+                  <select class="form-select" name="@(fieldPrefix + ".DataSource")" data-field="datasource">
+                    @foreach (var option in dataSources)
+                    {
+                        <option value="@option.Value" selected="@(option.Value == ((int)fieldModel.DataSource).ToString() ? "selected" : null)">@option.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">الدور</label>
+                  <select class="form-select" name="@(fieldPrefix + ".Role")">
+                    @foreach (var option in roles)
+                    {
+                        <option value="@option.Value" selected="@(option.Value == ((int)fieldModel.Role).ToString() ? "selected" : null)">@option.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">نص مساعد</label>
+                <input class="form-control" name="@(fieldPrefix + ".HelpText")" value="@fieldModel.HelpText" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">نص توضيحي</label>
+                <input class="form-control" name="@(fieldPrefix + ".Placeholder")" value="@fieldModel.Placeholder" />
+            </div>
+            <div class="col-md-4 d-flex align-items-center">
+                <div class="form-check mt-4">
+                    <input class="form-check-input" type="checkbox" name="@(fieldPrefix + ".IsRequired")" value="true" @(fieldModel.IsRequired ? "checked" : null) />
+                    <input type="hidden" name="@(fieldPrefix + ".IsRequired")" value="false" />
+                    <label class="form-check-label">إجباري</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">القيم المسموح بها (أرقام مفصولة بفاصلة)</label>
+                <input class="form-control" name="@(fieldPrefix + ".AllowedEntityIds")" value="@fieldModel.AllowedEntityIds" />
+                <div class="form-text">اتركه فارغاً للسماح بجميع القيم</div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">خيارات مخصصة</label>
+                <textarea class="form-control" name="@(fieldPrefix + ".MetadataJson")" rows="2">@fieldModel.MetadataJson</textarea>
+                <div class="form-text">استخدم الشكل: قيمة|عرض في كل سطر للخيارات المخصصة</div>
+            </div>
+        </div>
+    </div>
+</div>

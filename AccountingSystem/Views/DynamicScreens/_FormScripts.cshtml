@@ -1,0 +1,56 @@
+<script>
+    (function () {
+        const container = document.getElementById('fieldsContainer');
+        const addBtn = document.getElementById('addFieldBtn');
+        const template = document.getElementById('fieldTemplate');
+        const noFields = document.getElementById('noFieldsMessage');
+
+        function refreshIndexes() {
+            const editors = container.querySelectorAll('.field-editor');
+            editors.forEach((editor, idx) => {
+                editor.dataset.index = idx;
+                const header = editor.querySelector('.card-header span');
+                if (header) {
+                    header.textContent = `الحقل ${idx + 1}`;
+                }
+                editor.querySelectorAll('[name]').forEach(input => {
+                    const name = input.getAttribute('name');
+                    if (!name) return;
+                    const updated = name.replace(/Fields\[[^\]]+\]/g, `Fields[${idx}]`);
+                    input.setAttribute('name', updated);
+                });
+            });
+            if (noFields) {
+                noFields.style.display = editors.length ? 'none' : 'block';
+            }
+        }
+
+        function addField() {
+            if (!template) return;
+            const index = container.querySelectorAll('.field-editor').length;
+            const html = template.innerHTML.replace(/__index__/g, index);
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = html.trim();
+            const element = wrapper.firstElementChild;
+            if (element) {
+                container.appendChild(element);
+                refreshIndexes();
+            }
+        }
+
+        container?.addEventListener('click', function (event) {
+            const target = event.target;
+            if (target && target.closest('.remove-field')) {
+                const editor = target.closest('.field-editor');
+                if (editor) {
+                    editor.remove();
+                    refreshIndexes();
+                }
+            }
+        });
+
+        addBtn?.addEventListener('click', addField);
+
+        refreshIndexes();
+    })();
+</script>

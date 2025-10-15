@@ -1,0 +1,26 @@
+@using System
+@model IEnumerable<AccountingSystem.Models.DynamicScreens.DynamicScreenDefinition>
+@{
+    var screens = Model?.ToList() ?? new List<AccountingSystem.Models.DynamicScreens.DynamicScreenDefinition>();
+    if (!screens.Any())
+    {
+        return;
+    }
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var isActive = string.Equals(currentController, "DynamicScreenEntries", StringComparison.OrdinalIgnoreCase);
+}
+
+<li class="nav-item" data-menu-key="dynamic-screens">
+    <a class="nav-link nav-link-toggle d-flex align-items-center justify-content-between" data-bs-toggle="collapse" href="#dynamicScreensMenu" data-bs-target="#dynamicScreensMenu" role="button" aria-expanded="@(isActive ? "true" : "false")" aria-controls="dynamicScreensMenu">
+        <span class="nav-link-label"><i class="fas fa-layer-group"></i> الشاشات الديناميكية</span>
+        <i class="fas fa-angle-down toggle-icon"></i>
+    </a>
+    <ul class="submenu collapse nav flex-column @(isActive ? "show" : "")" id="dynamicScreensMenu">
+        @foreach (var screen in screens)
+        {
+            <li class="nav-item">
+                <a class="nav-link" href="@Url.Action("Index", "DynamicScreenEntries", new { id = screen.Id })"><i class="fas fa-window-restore"></i> @screen.DisplayName</a>
+            </li>
+        }
+    </ul>
+</li>
