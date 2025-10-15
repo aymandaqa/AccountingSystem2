@@ -21,6 +21,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.IO;
 
 namespace AccountingSystem.Controllers
 {
@@ -1921,6 +1922,68 @@ namespace AccountingSystem.Controllers
         // GET: Reports/TrialBalance
         public async Task<IActionResult> TrialBalance(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 5)
         {
+            var viewModel = await BuildTrialBalanceViewModel(branchId, fromDate, toDate, includePending, currencyId);
+
+            return View(viewModel);
+        }
+
+        public async Task<IActionResult> TrialBalanceExcel(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null)
+        {
+            var viewModel = await BuildTrialBalanceViewModel(branchId, fromDate, toDate, includePending, currencyId);
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.AddWorksheet("TrialBalance");
+
+            worksheet.Cell(1, 1).Value = "ميزان المراجعة";
+            worksheet.Cell(2, 1).Value = $"الفترة: من {viewModel.FromDate:dd/MM/yyyy} إلى {viewModel.ToDate:dd/MM/yyyy}";
+            worksheet.Cell(3, 1).Value = viewModel.BranchId.HasValue ? $"الفرع: {viewModel.Branches.FirstOrDefault(b => b.Value == viewModel.BranchId.Value.ToString())?.Text ?? "غير محدد"}" : "الفرع: جميع الفروع";
+            worksheet.Cell(4, 1).Value = $"العملة المختارة: {viewModel.SelectedCurrencyCode}";
+            worksheet.Cell(5, 1).Value = $"العملة الأساسية: {viewModel.BaseCurrencyCode}";
+
+            var headerRow = 7;
+            worksheet.Cell(headerRow, 1).Value = "رمز الحساب";
+            worksheet.Cell(headerRow, 2).Value = "اسم الحساب";
+            worksheet.Cell(headerRow, 3).Value = $"الرصيد المدين ({viewModel.SelectedCurrencyCode})";
+            worksheet.Cell(headerRow, 4).Value = $"الرصيد الدائن ({viewModel.SelectedCurrencyCode})";
+            worksheet.Cell(headerRow, 5).Value = $"الرصيد المدين ({viewModel.BaseCurrencyCode})";
+            worksheet.Cell(headerRow, 6).Value = $"الرصيد الدائن ({viewModel.BaseCurrencyCode})";
+
+            worksheet.Range(headerRow, 1, headerRow, 6).Style.Font.Bold = true;
+            worksheet.Range(headerRow, 1, headerRow, 6).Style.Fill.BackgroundColor = XLColor.FromHtml("#1F487C");
+            worksheet.Range(headerRow, 1, headerRow, 6).Style.Font.FontColor = XLColor.White;
+
+            var currentRow = headerRow + 1;
+            foreach (var account in viewModel.Accounts)
+            {
+                worksheet.Cell(currentRow, 1).Value = account.AccountCode;
+                worksheet.Cell(currentRow, 2).Value = account.AccountName;
+                worksheet.Cell(currentRow, 3).Value = Math.Round(account.DebitBalance, 2, MidpointRounding.AwayFromZero);
+                worksheet.Cell(currentRow, 4).Value = Math.Round(account.CreditBalance, 2, MidpointRounding.AwayFromZero);
+                worksheet.Cell(currentRow, 5).Value = Math.Round(account.DebitBalanceBase, 2, MidpointRounding.AwayFromZero);
+                worksheet.Cell(currentRow, 6).Value = Math.Round(account.CreditBalanceBase, 2, MidpointRounding.AwayFromZero);
+                currentRow++;
+            }
+
+            worksheet.Cell(currentRow, 1).Value = "الإجمالي";
+            worksheet.Cell(currentRow, 1).Style.Font.Bold = true;
+            worksheet.Cell(currentRow, 3).Value = Math.Round(viewModel.TotalDebits, 2, MidpointRounding.AwayFromZero);
+            worksheet.Cell(currentRow, 4).Value = Math.Round(viewModel.TotalCredits, 2, MidpointRounding.AwayFromZero);
+            worksheet.Cell(currentRow, 5).Value = Math.Round(viewModel.TotalDebitsBase, 2, MidpointRounding.AwayFromZero);
+            worksheet.Cell(currentRow, 6).Value = Math.Round(viewModel.TotalCreditsBase, 2, MidpointRounding.AwayFromZero);
+            worksheet.Range(currentRow, 1, currentRow, 6).Style.Font.Bold = true;
+
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            var fileName = $"TrialBalance_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+            return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
+        private async Task<TrialBalanceViewModel> BuildTrialBalanceViewModel(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending, int? currencyId)
+        {
             var accounts = await _context.Accounts
                 .Include(a => a.Branch)
                 .Include(a => a.Currency)
@@ -2043,8 +2106,9 @@ namespace AccountingSystem.Controllers
             viewModel.TotalCredits = viewModel.Accounts.Sum(a => a.CreditBalance);
             viewModel.TotalDebitsBase = viewModel.Accounts.Sum(a => a.DebitBalanceBase);
             viewModel.TotalCreditsBase = viewModel.Accounts.Sum(a => a.CreditBalanceBase);
+            viewModel.IsBalanced = viewModel.TotalDebits == viewModel.TotalCredits;
 
-            return View(viewModel);
+            return viewModel;
         }
 
         // GET: Reports/PendingTransactions
