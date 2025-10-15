@@ -1922,14 +1922,14 @@ namespace AccountingSystem.Controllers
         // GET: Reports/TrialBalance
         public async Task<IActionResult> TrialBalance(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 5)
         {
-            var viewModel = await BuildTrialBalanceViewModel(branchId, fromDate, toDate, includePending, currencyId);
+            var viewModel = await BuildTrialBalanceViewModel(branchId, fromDate, toDate, includePending, currencyId, level);
 
             return View(viewModel);
         }
 
-        public async Task<IActionResult> TrialBalanceExcel(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null)
+        public async Task<IActionResult> TrialBalanceExcel(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 5)
         {
-            var viewModel = await BuildTrialBalanceViewModel(branchId, fromDate, toDate, includePending, currencyId);
+            var viewModel = await BuildTrialBalanceViewModel(branchId, fromDate, toDate, includePending, currencyId, level);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.AddWorksheet("TrialBalance");
@@ -1982,7 +1982,7 @@ namespace AccountingSystem.Controllers
             return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
-        private async Task<TrialBalanceViewModel> BuildTrialBalanceViewModel(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending, int? currencyId)
+        private async Task<TrialBalanceViewModel> BuildTrialBalanceViewModel(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending, int? currencyId, int level = 5)
         {
             var accounts = await _context.Accounts
                 .Include(a => a.Branch)
