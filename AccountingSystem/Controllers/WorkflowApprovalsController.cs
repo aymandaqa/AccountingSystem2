@@ -44,12 +44,25 @@ namespace AccountingSystem.Controllers
                 .Distinct()
                 .ToList();
 
+            var dynamicEntryIds = actions
+                .Where(a => a.WorkflowInstance.DocumentType == WorkflowDocumentType.DynamicScreenEntry)
+                .Select(a => a.WorkflowInstance.DocumentId)
+                .Distinct()
+                .ToList();
+
             var vouchers = await _context.PaymentVouchers
                 .Include(v => v.Supplier)
                 .Include(v => v.Currency)
                 .Include(v => v.CreatedBy)
                 .Where(v => paymentVoucherIds.Contains(v.Id))
                 .ToDictionaryAsync(v => v.Id);
+
+            var dynamicEntries = await _context.DynamicScreenEntries
+                .Include(e => e.Screen)
+                .Include(e => e.Supplier)
+                .Include(e => e.CreatedBy)
+                .Where(e => dynamicEntryIds.Contains(e.Id))
+                .ToDictionaryAsync(e => e.Id);
 
             foreach (var action in actions)
             {
@@ -66,6 +79,10 @@ namespace AccountingSystem.Controllers
                 if (action.WorkflowInstance.DocumentType == WorkflowDocumentType.PaymentVoucher && vouchers.TryGetValue(action.WorkflowInstance.DocumentId, out var voucher))
                 {
                     model.PaymentVoucher = voucher;
+                }
+                else if (action.WorkflowInstance.DocumentType == WorkflowDocumentType.DynamicScreenEntry && dynamicEntries.TryGetValue(action.WorkflowInstance.DocumentId, out var entry))
+                {
+                    model.DynamicEntry = entry;
                 }
 
                 viewModels.Add(model);
@@ -107,6 +124,7 @@ namespace AccountingSystem.Controllers
             return instance.DocumentType switch
             {
                 WorkflowDocumentType.PaymentVoucher => $"سند دفع رقم {instance.DocumentId}",
+                WorkflowDocumentType.DynamicScreenEntry => $"حركة شاشة ديناميكية رقم {instance.DocumentId}",
                 _ => $"مستند رقم {instance.DocumentId}"
             };
         }
@@ -116,6 +134,7 @@ namespace AccountingSystem.Controllers
             return instance.DocumentType switch
             {
                 WorkflowDocumentType.PaymentVoucher => "يرجى مراجعة بيانات سند الدفع واعتمادها",
+                WorkflowDocumentType.DynamicScreenEntry => "يرجى مراجعة بيانات الحركة الديناميكية واتخاذ القرار",
                 _ => "يرجى مراجعة المستند واعتماد القرار"
             };
         }

@@ -1,0 +1,88 @@
+@using System.Linq
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@model AccountingSystem.ViewModels.DynamicScreens.DynamicScreenEditViewModel
+@{
+    var workflowDefinitions = ViewBag.WorkflowDefinitions as SelectList ?? new SelectList(Enumerable.Empty<SelectListItem>());
+}
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <label asp-for="DisplayName" class="form-label"></label>
+        <input asp-for="DisplayName" class="form-control" />
+        <span asp-validation-for="DisplayName" class="text-danger"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" />
+        <div class="form-text">سيتم استخدام هذا الاسم لإنشاء صلاحيات الشاشة</div>
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="col-12">
+        <label asp-for="Description" class="form-label"></label>
+        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="ScreenType" class="form-label"></label>
+        <select asp-for="ScreenType" class="form-select" asp-items="Html.GetEnumSelectList<AccountingSystem.Models.DynamicScreens.DynamicScreenType>()"></select>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="PaymentMode" class="form-label"></label>
+        <select asp-for="PaymentMode" class="form-select" asp-items="Html.GetEnumSelectList<AccountingSystem.Models.DynamicScreens.DynamicScreenPaymentMode>()"></select>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="WorkflowDefinitionId" class="form-label"></label>
+        <select asp-for="WorkflowDefinitionId" class="form-select" asp-items="workflowDefinitions">
+            <option value="">بدون سير عمل</option>
+        </select>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="MenuOrder" class="form-label"></label>
+        <input asp-for="MenuOrder" class="form-control" />
+    </div>
+    <div class="col-md-4">
+        <label asp-for="PermissionName" class="form-label"></label>
+        <input asp-for="PermissionName" class="form-control" />
+        <div class="form-text">يتم إنشاء الصلاحية تلقائياً إذا ترك الحقل فارغاً</div>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="ManagePermissionName" class="form-label"></label>
+        <input asp-for="ManagePermissionName" class="form-control" />
+        <div class="form-text">صلاحية عرض جميع الحركات وإدارتها</div>
+    </div>
+</div>
+
+<hr />
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h5 class="mb-0">حقول الشاشة</h5>
+    <button type="button" class="btn btn-outline-primary" id="addFieldBtn"><i class="fa fa-plus ms-1"></i> إضافة حقل</button>
+</div>
+<div id="fieldsContainer">
+    @if (Model.Fields != null && Model.Fields.Count > 0)
+    {
+        for (var i = 0; i < Model.Fields.Count; i++)
+        {
+            var fieldViewData = new ViewDataDictionary(ViewData)
+            {
+                ["Index"] = i.ToString()
+            };
+            <partial name="~/Views/DynamicScreens/_FieldEditor.cshtml" model="@(Model.Fields[i])" view-data="@(fieldViewData)" />
+        }
+    }
+</div>
+<div class="text-muted" id="noFieldsMessage" @(Model.Fields != null && Model.Fields.Count > 0 ? "style=\"display:none\"" : string.Empty)>لم يتم إضافة أي حقل بعد</div>
+
+<template id="fieldTemplate">
+@{
+    var templateModel = new AccountingSystem.ViewModels.DynamicScreens.DynamicScreenFieldInputModel
+    {
+        ColumnSpan = 12,
+        DisplayOrder = Model.Fields?.Count ?? 0
+    };
+    var templateViewData = new ViewDataDictionary(ViewData)
+    {
+        ["Index"] = "__index__"
+    };
+}
+    <partial name="~/Views/DynamicScreens/_FieldEditor.cshtml" model="@(templateModel)" view-data="@(templateViewData)" />
+</template>

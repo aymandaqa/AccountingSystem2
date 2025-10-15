@@ -1,10 +1,31 @@
+@using AccountingSystem.Models.Workflows
 @model IEnumerable<AccountingSystem.Models.Workflows.WorkflowDefinition>
 @{
-    ViewData["Title"] = "سير عمل سندات الدفع";
+    ViewData["Title"] = "مخططات سير العمل";
+    var selectedType = ViewBag.SelectedDocumentType as WorkflowDocumentType?;
+    var types = Enum.GetValues(typeof(WorkflowDocumentType)).Cast<WorkflowDocumentType>();
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">سير عمل سندات الدفع</h2>
+    <div>
+        <h2 class="mb-0">مخططات سير العمل</h2>
+        <form method="get" class="mt-2">
+            <div class="row g-2 align-items-center">
+                <div class="col-auto">
+                    <label class="form-label mb-0">نوع المستند</label>
+                </div>
+                <div class="col-auto">
+                    <select name="documentType" class="form-select" onchange="this.form.submit()">
+                        <option value="">جميع الأنواع</option>
+                        @foreach (var type in types)
+                        {
+                            <option value="@type" selected="@(selectedType.HasValue && selectedType.Value == type ? "selected" : null)">@type</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </form>
+    </div>
     <a class="btn btn-primary" asp-action="Create"><i class="fa fa-plus ms-1"></i> مخطط جديد</a>
 </div>
 
@@ -14,6 +35,7 @@
             <table class="table table-striped">
                 <thead>
                     <tr>
+                        <th>نوع المستند</th>
                         <th>الاسم</th>
                         <th>الفرع</th>
                         <th>الحالة</th>
@@ -34,6 +56,7 @@
                         foreach (var definition in Model)
                         {
                             <tr>
+                                <td>@definition.DocumentType</td>
                                 <td>@definition.Name</td>
                                 <td>@(definition.Branch?.NameAr ?? "كافة الفروع")</td>
                                 <td>

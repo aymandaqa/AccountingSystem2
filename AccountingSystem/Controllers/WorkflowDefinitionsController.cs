@@ -26,15 +26,23 @@ namespace AccountingSystem.Controllers
             _userManager = userManager;
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(WorkflowDocumentType? documentType)
         {
-            var definitions = await _context.WorkflowDefinitions
+            var query = _context.WorkflowDefinitions
                 .Include(d => d.Branch)
                 .Include(d => d.Steps)
-                .Where(d => d.DocumentType == WorkflowDocumentType.PaymentVoucher)
+                .AsQueryable();
+
+            if (documentType.HasValue)
+            {
+                query = query.Where(d => d.DocumentType == documentType.Value);
+            }
+
+            var definitions = await query
                 .OrderByDescending(d => d.IsActive)
                 .ThenBy(d => d.Name)
                 .ToListAsync();
+            ViewBag.SelectedDocumentType = documentType;
             return View(definitions);
         }
 

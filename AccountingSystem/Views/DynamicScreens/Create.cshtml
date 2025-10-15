@@ -1,0 +1,21 @@
+@model AccountingSystem.ViewModels.DynamicScreens.DynamicScreenEditViewModel
+@{
+    ViewData["Title"] = "إنشاء شاشة ديناميكية";
+}
+
+<h2 class="mb-4">إنشاء شاشة ديناميكية</h2>
+
+<form asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+    <partial name="_Form" model="Model" />
+    <div class="mt-4 text-end">
+        <button type="submit" class="btn btn-primary"><i class="fa fa-save ms-1"></i> حفظ</button>
+        <a asp-action="Index" class="btn btn-secondary">إلغاء</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <partial name="_FormScripts" />
+}

@@ -61,6 +61,7 @@
         var canReceiptVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.create")).Succeeded;
         var canDisbursementVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.create")).Succeeded;
         var canPaymentVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "paymentvouchers.create")).Succeeded;
+        var canDynamicScreensManage = (await AuthorizationService.AuthorizeAsync(User, "dynamicscreens.manage")).Succeeded;
         var showVouchers = canReceiptVouchers || canDisbursementVouchers || canPaymentVouchers || canWorkflowApprovalsView || canWorkflowDefinitionsManage || canReceiptVouchersCreate || canDisbursementVouchersCreate || canPaymentVouchersCreate;
         var showAccountManagement = canBusinessStatementBulk || canBusnissStatment || canDriverPayment || canDriverStatment || canUserPayment;
         var canAssets = (await AuthorizationService.AuthorizeAsync(User, "assets.view")).Succeeded;
@@ -279,9 +280,14 @@
                                 {
                                     <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "WorkflowDefinitions")"><i class="fas fa-project-diagram"></i> سير عمل السندات</a></li>
                                 }
+                                @if (canDynamicScreensManage)
+                                {
+                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "DynamicScreens")"><i class="fas fa-layer-group"></i> إدارة الشاشات الديناميكية</a></li>
+                                }
                             </ul>
                         </li>
                     }
+                    @await Component.InvokeAsync("DynamicScreensMenu")
                     @if (showAccountManagement)
                     {
                         <li class="nav-item" data-menu-key="account-management">

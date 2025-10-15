@@ -1,0 +1,70 @@
+@model AccountingSystem.ViewModels.DynamicScreens.DynamicScreenEntriesIndexViewModel
+@{
+    ViewData["Title"] = $"حركات {Model.Screen.DisplayName}";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">@Model.Screen.DisplayName</h2>
+        <div class="text-muted">@Model.Screen.Description</div>
+    </div>
+    <div class="text-end">
+        <a asp-controller="DynamicScreenEntries" asp-action="Create" asp-route-id="@Model.Screen.Id" class="btn btn-primary"><i class="fa fa-plus ms-1"></i> إضافة حركة</a>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>التاريخ</th>
+            <th>الوصف</th>
+            <th>المبلغ</th>
+            <th>المورد</th>
+            <th>الحالة</th>
+            <th>أضيفت بواسطة</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!Model.Entries.Any())
+        {
+            <tr>
+                <td colspan="6" class="text-center text-muted">لا توجد أي حركات مسجلة.</td>
+            </tr>
+        }
+        else
+        {
+            foreach (var entry in Model.Entries)
+            {
+                <tr>
+                    <td>@entry.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td>@(string.IsNullOrWhiteSpace(entry.Description) ? "-" : entry.Description)</td>
+                    <td>@entry.Amount.ToString("N2")</td>
+                    <td>@(entry.Supplier?.NameAr ?? "-")</td>
+                    <td>
+                        @switch (entry.Status)
+                        {
+                            case AccountingSystem.Models.DynamicScreens.DynamicScreenEntryStatus.PendingApproval:
+                                <span class="badge bg-warning text-dark">بانتظار الاعتماد</span>
+                                break;
+                            case AccountingSystem.Models.DynamicScreens.DynamicScreenEntryStatus.Approved:
+                                <span class="badge bg-success">معتمد</span>
+                                break;
+                            case AccountingSystem.Models.DynamicScreens.DynamicScreenEntryStatus.Rejected:
+                                <span class="badge bg-danger">مرفوض</span>
+                                break;
+                            default:
+                                <span class="badge bg-secondary">مسودة</span>
+                                break;
+                        }
+                    </td>
+                    <td>@entry.CreatedBy?.FullName</td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
