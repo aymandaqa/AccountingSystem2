@@ -2000,6 +2000,7 @@ namespace AccountingSystem.Controllers
 
                     return new TrialBalanceAccountViewModel
                     {
+                        AccountId = a.Id,
                         AccountCode = a.Code,
                         AccountName = a.NameAr,
                         DebitBalance = debitSelected,

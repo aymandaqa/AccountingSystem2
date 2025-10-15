@@ -68,6 +68,7 @@
                                 <tr>
                                     <th>رمز الحساب</th>
                                     <th>اسم الحساب</th>
+                                    <th class="text-center">الإجراءات</th>
                                     <th>الرصيد المدين (@Model.SelectedCurrencyCode)</th>
                                     <th>الرصيد الدائن (@Model.SelectedCurrencyCode)</th>
                                     <th>الرصيد المدين (@Model.BaseCurrencyCode)</th>
@@ -81,6 +82,13 @@
                                     <tr class="@(isMismatch ? "table-danger" : string.Empty)">
                                         <td>@account.AccountCode</td>
                                         <td>@account.AccountName</td>
+                                        <td class="text-center">
+                                            <a class="btn btn-sm btn-outline-primary"
+                                               href="@Url.Action("AccountStatement", "Reports", new { accountId = account.AccountId, branchId = Model.BranchId, fromDate = Model.FromDate.ToString("yyyy-MM-dd"), toDate = Model.ToDate.ToString("yyyy-MM-dd") })">
+                                                <i class="fas fa-file-alt me-1"></i>
+                                                كشف حساب
+                                            </a>
+                                        </td>
                                         <td>@account.DebitBalance.ToString("N2")</td>
                                         <td>@account.CreditBalance.ToString("N2")</td>
                                         <td>@account.DebitBalanceBase.ToString("N2")</td>
@@ -91,6 +99,7 @@
                             <tfoot class="@(Model.TotalDebits == Model.TotalCredits ? "table-secondary" : "table-danger")">
                                 <tr>
                                     <th colspan="2">الإجمالي</th>
+                                    <th></th>
                                     <th>@Model.TotalDebits.ToString("N2")</th>
                                     <th>@Model.TotalCredits.ToString("N2")</th>
                                     <th>@Model.TotalDebitsBase.ToString("N2")</th>
