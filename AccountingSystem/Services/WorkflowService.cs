@@ -1,6 +1,7 @@
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.Models.Workflows;
+using AccountingSystem.Models.DynamicScreens;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -245,6 +246,7 @@ namespace AccountingSystem.Services
             return documentType switch
             {
                 WorkflowDocumentType.PaymentVoucher => "طلب موافقة سند دفع",
+                WorkflowDocumentType.DynamicScreenEntry => "طلب موافقة حركة ديناميكية",
                 _ => "طلب موافقة"
             };
         }
@@ -254,6 +256,7 @@ namespace AccountingSystem.Services
             return instance.DocumentType switch
             {
                 WorkflowDocumentType.PaymentVoucher => $"يوجد سند دفع رقم {instance.DocumentId} بانتظار الموافقة",
+                WorkflowDocumentType.DynamicScreenEntry => $"يوجد طلب على شاشة ديناميكية رقم {instance.DocumentId} بانتظار الموافقة",
                 _ => $"هناك مستند رقم {instance.DocumentId} بانتظار الموافقة"
             };
         }
@@ -316,16 +319,28 @@ namespace AccountingSystem.Services
                 pending.Status = WorkflowActionStatus.Skipped;
             }
 
-            if (action.WorkflowInstance.DocumentType == WorkflowDocumentType.PaymentVoucher)
+            switch (action.WorkflowInstance.DocumentType)
             {
-                var voucher = await _context.PaymentVouchers.FirstOrDefaultAsync(v => v.Id == action.WorkflowInstance.DocumentId, cancellationToken);
-                if (voucher != null)
-                {
-                    voucher.Status = PaymentVoucherStatus.Rejected;
-                    voucher.ApprovedAt = null;
-                    voucher.ApprovedById = null;
-                    voucher.WorkflowInstanceId = action.WorkflowInstance.Id;
-                }
+                case WorkflowDocumentType.PaymentVoucher:
+                    var voucher = await _context.PaymentVouchers.FirstOrDefaultAsync(v => v.Id == action.WorkflowInstance.DocumentId, cancellationToken);
+                    if (voucher != null)
+                    {
+                        voucher.Status = PaymentVoucherStatus.Rejected;
+                        voucher.ApprovedAt = null;
+                        voucher.ApprovedById = null;
+                        voucher.WorkflowInstanceId = action.WorkflowInstance.Id;
+                    }
+                    break;
+                case WorkflowDocumentType.DynamicScreenEntry:
+                    var entry = await _context.DynamicScreenEntries.FirstOrDefaultAsync(e => e.Id == action.WorkflowInstance.DocumentId, cancellationToken);
+                    if (entry != null)
+                    {
+                        entry.Status = DynamicScreenEntryStatus.Rejected;
+                        entry.RejectedAt = DateTime.UtcNow;
+                        entry.RejectedById = action.UserId;
+                        entry.WorkflowInstanceId = action.WorkflowInstance.Id;
+                    }
+                    break;
             }
 
             await _context.SaveChangesAsync(cancellationToken);
@@ -336,14 +351,26 @@ namespace AccountingSystem.Services
             instance.Status = WorkflowInstanceStatus.Approved;
             instance.CompletedAt = DateTime.UtcNow;
 
-            if (instance.DocumentType == WorkflowDocumentType.PaymentVoucher)
+            switch (instance.DocumentType)
             {
-                var voucher = await _context.PaymentVouchers.FirstOrDefaultAsync(v => v.Id == instance.DocumentId, cancellationToken);
-                if (voucher != null)
-                {
-                    voucher.WorkflowInstanceId = instance.Id;
-                    await _paymentVoucherProcessor.FinalizeVoucherAsync(voucher, approvedById, cancellationToken);
-                }
+                case WorkflowDocumentType.PaymentVoucher:
+                    var voucher = await _context.PaymentVouchers.FirstOrDefaultAsync(v => v.Id == instance.DocumentId, cancellationToken);
+                    if (voucher != null)
+                    {
+                        voucher.WorkflowInstanceId = instance.Id;
+                        await _paymentVoucherProcessor.FinalizeVoucherAsync(voucher, approvedById, cancellationToken);
+                    }
+                    break;
+                case WorkflowDocumentType.DynamicScreenEntry:
+                    var entry = await _context.DynamicScreenEntries.FirstOrDefaultAsync(e => e.Id == instance.DocumentId, cancellationToken);
+                    if (entry != null)
+                    {
+                        entry.WorkflowInstanceId = instance.Id;
+                        entry.Status = DynamicScreenEntryStatus.Approved;
+                        entry.ApprovedAt = DateTime.UtcNow;
+                        entry.ApprovedById = approvedById;
+                    }
+                    break;
             }
 
             await _context.SaveChangesAsync(cancellationToken);
@@ -356,6 +383,10 @@ namespace AccountingSystem.Services
                 WorkflowDocumentType.PaymentVoucher => await _context.PaymentVouchers
                     .Where(v => v.Id == instance.DocumentId)
                     .Select(v => v.CreatedBy.PaymentBranchId)
+                    .FirstOrDefaultAsync(cancellationToken),
+                WorkflowDocumentType.DynamicScreenEntry => await _context.DynamicScreenEntries
+                    .Where(e => e.Id == instance.DocumentId)
+                    .Select(e => e.BranchId)
                     .FirstOrDefaultAsync(cancellationToken),
                 _ => null
             };

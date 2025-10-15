@@ -60,6 +60,31 @@ else
                         </div>
                     </div>
                 }
+                else if (request.DynamicEntry != null)
+                {
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="fw-bold">الشاشة</div>
+                            <div>@request.DynamicEntry.Screen.DisplayName</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="fw-bold">المبلغ</div>
+                            <div>@request.DynamicEntry.Amount.ToString("N2")</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="fw-bold">أنشئ بواسطة</div>
+                            <div>@(request.DynamicEntry.CreatedBy?.FullName ?? request.DynamicEntry.CreatedById)</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="fw-bold">المورد</div>
+                            <div>@(request.DynamicEntry.Supplier?.NameAr ?? "-" )</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="fw-bold">الوصف</div>
+                            <div>@(string.IsNullOrWhiteSpace(request.DynamicEntry.Description) ? "-" : request.DynamicEntry.Description)</div>
+                        </div>
+                    </div>
+                }
             </div>
             <div class="collapse" id="reject-@request.ActionId">
                 <div class="card-body border-top">

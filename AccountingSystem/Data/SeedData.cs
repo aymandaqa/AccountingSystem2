@@ -153,7 +153,8 @@ namespace AccountingSystem.Data
                 new Permission { Name = "salarypayments.view", DisplayName = "عرض سندات صرف الرواتب", Category = "شؤون الموظفين" },
                 new Permission { Name = "salarypayments.create", DisplayName = "إنشاء سند صرف راتب", Category = "شؤون الموظفين" },
                 new Permission { Name = "employeeadvances.view", DisplayName = "عرض سندات صرف السلف", Category = "شؤون الموظفين" },
-                new Permission { Name = "employeeadvances.create", DisplayName = "إنشاء سند صرف سلفة", Category = "شؤون الموظفين" }
+                new Permission { Name = "employeeadvances.create", DisplayName = "إنشاء سند صرف سلفة", Category = "شؤون الموظفين" },
+                new Permission { Name = "dynamicscreens.manage", DisplayName = "إدارة الشاشات الديناميكية", Category = "الشاشات الديناميكية" }
             };
 
 

@@ -1,0 +1,54 @@
+@model IEnumerable<AccountingSystem.Models.DynamicScreens.DynamicScreenDefinition>
+@{
+    ViewData["Title"] = "الشاشات الديناميكية";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">الشاشات الديناميكية</h2>
+    <a asp-action="Create" class="btn btn-primary"><i class="fa fa-plus ms-1"></i> إنشاء شاشة</a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+<table class="table table-hover align-middle">
+    <thead>
+        <tr>
+            <th>الاسم</th>
+            <th>النوع</th>
+            <th>طريقة الدفع</th>
+            <th>سير العمل</th>
+            <th>الصلاحية</th>
+            <th class="text-end">خيارات</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!Model.Any())
+        {
+            <tr>
+                <td colspan="6" class="text-center text-muted">لا توجد شاشات ديناميكية مسجلة.</td>
+            </tr>
+        }
+        else
+        {
+            foreach (var screen in Model)
+            {
+                <tr>
+                    <td>
+                        <div class="fw-bold">@screen.DisplayName</div>
+                        <div class="text-muted small">@screen.Description</div>
+                    </td>
+                    <td>@screen.ScreenType</td>
+                    <td>@screen.PaymentMode</td>
+                    <td>@(screen.WorkflowDefinition?.Name ?? "بدون")</td>
+                    <td>@screen.PermissionName</td>
+                    <td class="text-end">
+                        <a asp-action="Edit" asp-route-id="@screen.Id" class="btn btn-sm btn-outline-primary"><i class="fa fa-edit ms-1"></i> تعديل</a>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
