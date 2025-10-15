@@ -69,11 +69,12 @@
                                     عرض التقرير
                                 </button>
                                 <a class="btn btn-success" asp-action="TrialBalanceExcel"
-                                   asp-route-fromDate="@Model.FromDate.ToString(\"yyyy-MM-dd\")"
-                                   asp-route-toDate="@Model.ToDate.ToString(\"yyyy-MM-dd\")"
-                                   asp-route-branchId="@Model.BranchId"
-                                   asp-route-includePending="@Model.IncludePending"
-                                   asp-route-currencyId="@Model.SelectedCurrencyId">
+                                   asp-route-fromDate='@Model.FromDate.ToString("yyyy-MM-dd")'
+                                   asp-route-toDate='@Model.ToDate.ToString("yyyy-MM-dd")'
+                                   asp-route-branchId='@Model.BranchId'
+                                   asp-route-includePending='@Model.IncludePending'
+                                   asp-route-currencyId='@Model.SelectedCurrencyId'
+                                   asp-route-level='@Model.SelectedLevel'>
                                     <i class="fas fa-file-excel me-1"></i>
                                     تصدير Excel
                                 </a>
