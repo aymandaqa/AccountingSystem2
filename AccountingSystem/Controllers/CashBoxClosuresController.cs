@@ -308,7 +308,7 @@ namespace AccountingSystem.Controllers
                     {
                         AccountId = diffAccountId,
                         DebitAmount = difference,
-                        Description = "قيد تسوية فرق إغلاق الصندوق"
+                        Description = "زيادة قيد تسوية فرق إغلاق الصندوق"
                     });
                 }
                 else
@@ -318,7 +318,7 @@ namespace AccountingSystem.Controllers
                     {
                         AccountId = diffAccountId,
                         CreditAmount = absDiff,
-                        Description = "قيد تسوية فرق إغلاق الصندوق"
+                        Description = "قيد تسوية فرق إغلاق الصندوق نقص"
                     });
                     lines.Add(new JournalEntryLine
                     {

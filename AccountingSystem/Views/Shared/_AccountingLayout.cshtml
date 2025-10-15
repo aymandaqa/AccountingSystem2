@@ -194,7 +194,11 @@
                                 }
                                 @if (canCashClosuresApprove)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Pending", "CashBoxClosures")"><i class="fas fa-sitemap"></i> جرد الصندوق مواقة</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="@Url.Action("Pending", "CashBoxClosures")">
+                                            <i class="fas fa-sitemap"></i> طلبات إغلاق الصندوق
+                                        </a>
+                                    </li>
                                 }
                                 @if (canCashClosuresCreate)
                                 {

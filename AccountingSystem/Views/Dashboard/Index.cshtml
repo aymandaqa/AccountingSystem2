@@ -295,7 +295,7 @@
                         </div>
                         <section class="dashboard-panels row g-4 mb-0">
                             @{
-                                var accountTreeColumnClass = canViewCashBoxes ? "col-12 col-xl-6" : "col-12 col-xl-6";
+                                var accountTreeColumnClass = canViewCashBoxes ? "col-12 col-xl-12" : "col-12 col-xl-12";
                             }
 
                             @if (canViewCashBoxes)
@@ -348,7 +348,7 @@
                                 </div>
                             }
 
-                            @if (canViewAccounts)
+                            @*        @if (canViewAccounts)
                             {
                                 <div class="@accountTreeColumnClass">
                                     <div class="card account-tree-card shadow-sm border-0 h-100">
@@ -384,7 +384,7 @@
                                         </div>
                                     </div>
                                 </div>
-                            }
+                            } *@
                         </section>
                     </div>
                 }
@@ -554,11 +554,11 @@
             background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(16, 185, 129, 0.08));
         }
 
-        .dashboard-customization-card .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-        }
+            .dashboard-customization-card .btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.35rem;
+            }
 
         .dashboard-widgets-grid {
             display: grid;
@@ -574,30 +574,30 @@
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
-        .dashboard-widget .card,
-        .dashboard-widget section {
-            width: 100%;
-        }
+            .dashboard-widget .card,
+            .dashboard-widget section {
+                width: 100%;
+            }
 
-        .dashboard-widget.size-small {
-            grid-column: span 1;
-        }
+            .dashboard-widget.size-small {
+                grid-column: span 1;
+            }
 
-        .dashboard-widget.size-medium {
-            grid-column: span 2;
-        }
+            .dashboard-widget.size-medium {
+                grid-column: span 2;
+            }
 
-        .dashboard-widget.size-large {
-            grid-column: span 3;
-        }
+            .dashboard-widget.size-large {
+                grid-column: span 3;
+            }
 
-        .dashboard-widget.size-full {
-            grid-column: 1 / -1;
-        }
+            .dashboard-widget.size-full {
+                grid-column: 1 / -1;
+            }
 
-        .dashboard-widget.is-hidden {
-            display: none !important;
-        }
+            .dashboard-widget.is-hidden {
+                display: none !important;
+            }
 
         .dashboard-widgets-grid.is-editing .dashboard-widget {
             border-radius: 18px;
@@ -642,11 +642,11 @@
             min-height: 28px;
         }
 
-        .widget-control-btn:hover,
-        .widget-control-btn:focus {
-            background: rgba(255, 255, 255, 0.15);
-            color: #fff;
-        }
+            .widget-control-btn:hover,
+            .widget-control-btn:focus {
+                background: rgba(255, 255, 255, 0.15);
+                color: #fff;
+            }
 
         .widget-resize-controls {
             display: inline-flex;
@@ -658,10 +658,10 @@
             box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
         }
 
-        .dashboard-widget.is-dragging .card,
-        .dashboard-widget.is-dragging section {
-            pointer-events: none;
-        }
+            .dashboard-widget.is-dragging .card,
+            .dashboard-widget.is-dragging section {
+                pointer-events: none;
+            }
 
         .widget-placeholder {
             border: 2px dashed rgba(79, 70, 229, 0.4);

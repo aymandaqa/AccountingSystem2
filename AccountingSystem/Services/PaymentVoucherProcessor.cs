@@ -78,23 +78,23 @@ namespace AccountingSystem.Services
 
             var lines = new List<JournalEntryLine>
             {
-                new JournalEntryLine { AccountId = selectedAccount.Id, DebitAmount = loadedVoucher.Amount },
-                new JournalEntryLine { AccountId = supplierAccount.Id, CreditAmount = loadedVoucher.Amount }
+                new JournalEntryLine { AccountId = selectedAccount.Id, DebitAmount = loadedVoucher.Amount,Description= "سند مصاريف" },
+                new JournalEntryLine { AccountId = supplierAccount.Id, CreditAmount = loadedVoucher.Amount ,Description= "سند مصاريف"}
             };
 
             if (loadedVoucher.IsCash && cashAccount != null)
             {
-                lines.Add(new JournalEntryLine { AccountId = supplierAccount.Id, DebitAmount = loadedVoucher.Amount });
-                lines.Add(new JournalEntryLine { AccountId = cashAccount.Id, CreditAmount = loadedVoucher.Amount });
+                lines.Add(new JournalEntryLine { AccountId = supplierAccount.Id, DebitAmount = loadedVoucher.Amount, Description = "سند دفع مصاريف" });
+                lines.Add(new JournalEntryLine { AccountId = cashAccount.Id, CreditAmount = loadedVoucher.Amount, Description = "سند دفع مصاريف" });
             }
 
-            var reference = $"PAYV:{loadedVoucher.Id}";
+            var reference = $"سند مصاريف:{loadedVoucher.Id}";
             var existingEntry = await _context.JournalEntries.FirstOrDefaultAsync(j => j.Reference == reference, cancellationToken);
             if (existingEntry == null)
             {
                 await _journalEntryService.CreateJournalEntryAsync(
                     loadedVoucher.Date,
-                    loadedVoucher.Notes == null ? "سند دفع" : "سند دفع" + Environment.NewLine + loadedVoucher.Notes,
+                    loadedVoucher.Notes == null ? "سند مصاريف" : "سند مصاريف" + Environment.NewLine + loadedVoucher.Notes,
                     loadedVoucher.CreatedBy.PaymentBranchId ?? throw new InvalidOperationException("Creator branch is required"),
                     approvedById,
                     lines,

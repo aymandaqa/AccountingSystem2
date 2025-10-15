@@ -1920,14 +1920,14 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/TrialBalance
-        public async Task<IActionResult> TrialBalance(DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 5)
+        public async Task<IActionResult> TrialBalance(DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 6)
         {
             var viewModel = await BuildTrialBalanceViewModel(fromDate, toDate, includePending, currencyId, level);
 
             return View(viewModel);
         }
 
-        public async Task<IActionResult> TrialBalanceExcel(DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 5)
+        public async Task<IActionResult> TrialBalanceExcel(DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 6)
         {
             var viewModel = await BuildTrialBalanceViewModel(fromDate, toDate, includePending, currencyId, level);
 
@@ -1994,9 +1994,9 @@ namespace AccountingSystem.Controllers
             var to = toDate ?? DateTime.Today;
 
             var normalizedLevel = level;
-            if (normalizedLevel < 1 || normalizedLevel > 5)
+            if (normalizedLevel < 1 || normalizedLevel > 6)
             {
-                normalizedLevel = 5;
+                normalizedLevel = 6;
             }
 
             var filteredAccounts = accounts
@@ -2086,7 +2086,7 @@ namespace AccountingSystem.Controllers
                 SelectedCurrencyCode = selectedCurrency.Code,
                 BaseCurrencyCode = baseCurrency.Code,
                 SelectedLevel = normalizedLevel,
-                Levels = Enumerable.Range(1, 5)
+                Levels = Enumerable.Range(1, 6)
                     .Select(l => new SelectListItem
                     {
                         Value = l.ToString(),
@@ -2591,10 +2591,7 @@ namespace AccountingSystem.Controllers
             var sectionOrder = new[]
             {
                 AccountType.Revenue,
-                AccountType.Expenses,
-                AccountType.Assets,
-                AccountType.Liabilities,
-                AccountType.Equity
+                AccountType.Expenses
             };
 
             var sections = new List<BranchPerformanceSummarySection>();

@@ -41,7 +41,7 @@
                     var baseCurrencyCode = ViewData["BaseCurrencyCode"] as string ?? string.Empty;
                 }
                 <span class="ms-auto text-nowrap">
-                    <span title="الرصيد بالعملة المختارة" class="text-primary">(@node.BalanceSelected.ToString("N2") @selectedCurrencyCode)</span>
+                    <span title="الرصيد بالعملة المختارة" class="text-primary">@node.BalanceSelected.ToString("0") @selectedCurrencyCode</span>
                 </span>
             </div>
         </div>
