@@ -29,24 +29,6 @@
                             <input type="date" name="toDate" class="form-control" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">الفرع:</label>
-                            <select name="branchId" class="form-select">
-                                <option value="">جميع الفروع</option>
-                                @foreach (var branch in Model.Branches)
-                                {
-                                    var isSelected = branch.Value == Model.BranchId?.ToString();
-                                    if (isSelected)
-                                    {
-                                        <option value="@branch.Value" selected>@branch.Text</option>
-                                    }
-                                    else
-                                    {
-                                        <option value="@branch.Value">@branch.Text</option>
-                                    }
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-3">
                             <label class="form-label">العملة:</label>
                             <select name="currencyId" class="form-select">
                                 @foreach (var currency in Model.Currencies)
@@ -94,7 +76,6 @@
                                 <a class="btn btn-success" asp-action="TrialBalanceExcel"
                                    asp-route-fromDate='@Model.FromDate.ToString("yyyy-MM-dd")'
                                    asp-route-toDate='@Model.ToDate.ToString("yyyy-MM-dd")'
-                                   asp-route-branchId='@Model.BranchId'
                                    asp-route-includePending='@Model.IncludePending'
                                    asp-route-currencyId='@Model.SelectedCurrencyId'
                                    asp-route-level='@Model.SelectedLevel'>
