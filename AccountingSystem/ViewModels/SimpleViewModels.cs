@@ -150,8 +150,8 @@ namespace AccountingSystem.ViewModels
     // Report ViewModels
     public class TrialBalanceViewModel
     {
-        public DateTime FromDate { get; set; } = DateTime.Now.AddMonths(-1);
-        public DateTime ToDate { get; set; } = DateTime.Now;
+        public DateTime FromDate { get; set; } = new DateTime(2025, 1, 1);
+        public DateTime ToDate { get; set; } = DateTime.Today;
         public DateTime AsOfDate { get; set; } = DateTime.Now;
         public int? BranchId { get; set; }
         public bool IncludePending { get; set; }
@@ -167,6 +167,8 @@ namespace AccountingSystem.ViewModels
         public string BaseCurrencyCode { get; set; } = string.Empty;
         public List<SelectListItem> Currencies { get; set; } = new List<SelectListItem>();
         public bool IsBalanced { get; set; }
+        public int SelectedLevel { get; set; } = 5;
+        public List<SelectListItem> Levels { get; set; } = new List<SelectListItem>();
     }
 
     public class TrialBalanceAccountViewModel
@@ -178,6 +180,7 @@ namespace AccountingSystem.ViewModels
         public decimal CreditBalance { get; set; }
         public decimal DebitBalanceBase { get; set; }
         public decimal CreditBalanceBase { get; set; }
+        public int Level { get; set; }
     }
 
     public class TrialBalanceItemViewModel

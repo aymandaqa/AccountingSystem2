@@ -600,14 +600,44 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "assets.delete")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var asset = await _context.Assets.FindAsync(id);
+            var asset = await _context.Assets
+                .Include(a => a.Account)
+                    .ThenInclude(a => a!.JournalEntryLines)
+                .Include(a => a.Expenses)
+                .FirstOrDefaultAsync(a => a.Id == id);
+
             if (asset == null)
             {
                 return NotFound();
             }
 
+            if (asset.AccountId.HasValue)
+            {
+                var hasTransactions = await _context.JournalEntryLines
+                    .AnyAsync(line => line.AccountId == asset.AccountId.Value);
+
+                if (hasTransactions)
+                {
+                    TempData["ErrorMessage"] = "لا يمكن حذف الأصل لوجود حركات مالية مرتبطة به.";
+                    return RedirectToAction(nameof(Index));
+                }
+            }
+
+            if (asset.Expenses.Any())
+            {
+                TempData["ErrorMessage"] = "لا يمكن حذف الأصل لوجود مصاريف مرتبطة به.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (asset.Account != null)
+            {
+                _context.Accounts.Remove(asset.Account);
+            }
+
             _context.Assets.Remove(asset);
             await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "تم حذف الأصل بنجاح.";
             return RedirectToAction(nameof(Index));
         }
 

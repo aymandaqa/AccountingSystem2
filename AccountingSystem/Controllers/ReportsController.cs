@@ -1919,7 +1919,7 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/TrialBalance
-        public async Task<IActionResult> TrialBalance(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null)
+        public async Task<IActionResult> TrialBalance(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 5)
         {
             var accounts = await _context.Accounts
                 .Include(a => a.Branch)
@@ -1929,8 +1929,19 @@ namespace AccountingSystem.Controllers
                 .OrderBy(a => a.Code)
                 .ToListAsync();
 
-            var from = fromDate ?? DateTime.Now.AddMonths(-1);
-            var to = toDate ?? DateTime.Now;
+            var fiscalYearStart = new DateTime(2025, 1, 1);
+            var from = fromDate ?? fiscalYearStart;
+            var to = toDate ?? DateTime.Today;
+
+            var normalizedLevel = level;
+            if (normalizedLevel < 1 || normalizedLevel > 5)
+            {
+                normalizedLevel = 5;
+            }
+
+            var filteredAccounts = accounts
+                .Where(a => a.Level <= normalizedLevel)
+                .ToList();
 
             var pending = includePending
                 ? await _context.JournalEntryLines
@@ -1953,7 +1964,7 @@ namespace AccountingSystem.Controllers
                 ToDate = to,
                 BranchId = branchId,
                 IncludePending = includePending,
-                Accounts = accounts.Select(a =>
+                Accounts = filteredAccounts.Select(a =>
                 {
                     pending.TryGetValue(a.Id, out var p);
                     var pendingBalance = a.Nature == AccountNature.Debit ? p.Debit - p.Credit : p.Credit - p.Debit;
@@ -2006,7 +2017,8 @@ namespace AccountingSystem.Controllers
                         DebitBalance = debitSelected,
                         CreditBalance = creditSelected,
                         DebitBalanceBase = debitBase,
-                        CreditBalanceBase = creditBase
+                        CreditBalanceBase = creditBase,
+                        Level = a.Level
                     };
                 }).ToList(),
                 Branches = await GetBranchesSelectList(),
@@ -2015,7 +2027,16 @@ namespace AccountingSystem.Controllers
                     .ToListAsync(),
                 SelectedCurrencyId = selectedCurrency.Id,
                 SelectedCurrencyCode = selectedCurrency.Code,
-                BaseCurrencyCode = baseCurrency.Code
+                BaseCurrencyCode = baseCurrency.Code,
+                SelectedLevel = normalizedLevel,
+                Levels = Enumerable.Range(1, 5)
+                    .Select(l => new SelectListItem
+                    {
+                        Value = l.ToString(),
+                        Text = l.ToString(),
+                        Selected = l == normalizedLevel
+                    })
+                    .ToList()
             };
 
             viewModel.TotalDebits = viewModel.Accounts.Sum(a => a.DebitBalance);
