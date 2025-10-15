@@ -961,6 +961,7 @@ namespace AccountingSystem.Data
 
                 new Permission { Id = 22, Name = "reports.view", DisplayName = "عرض التقارير", Category = "التقارير", CreatedAt = createdAt },
                 new Permission { Id = 23, Name = "reports.export", DisplayName = "تصدير التقارير", Category = "التقارير", CreatedAt = createdAt },
+                new Permission { Id = 70, Name = "reports.quickaccountstatement", DisplayName = "اختصار كشف الحساب المباشر", Category = "التقارير", CreatedAt = createdAt },
 
                 new Permission { Id = 24, Name = "dashboard.view", DisplayName = "عرض لوحة التحكم", Category = "لوحة التحكم", CreatedAt = createdAt },
                 new Permission { Id = 25, Name = "dashboard.widget.stats", DisplayName = "عرض إحصائيات لوحة التحكم", Category = "لوحة التحكم", CreatedAt = createdAt },
