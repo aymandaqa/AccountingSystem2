@@ -71,7 +71,11 @@
         var canReportsView = (await AuthorizationService.AuthorizeAsync(User, "reports.view")).Succeeded;
         var canReportsPending = (await AuthorizationService.AuthorizeAsync(User, "reports.pending")).Succeeded;
         var canReportsDynamic = (await AuthorizationService.AuthorizeAsync(User, "reports.dynamic")).Succeeded;
+        var canQuickAccountStatementShortcut = (await AuthorizationService.AuthorizeAsync(User, "reports.quickaccountstatement")).Succeeded;
         var showReports = canReportsView || canReportsPending || canReportsDynamic;
+
+        var isSuperAdmin = User.IsInRole("SuperAdmin") || User.IsInRole("Admin");
+        var showQuickAccountStatement = (isSuperAdmin && canReportsView) || canQuickAccountStatementShortcut;
 
         var canBranches = (await AuthorizationService.AuthorizeAsync(User, "branches.view")).Succeeded;
         var canCostCenters = (await AuthorizationService.AuthorizeAsync(User, "costcenters.view")).Succeeded;
@@ -435,6 +439,13 @@
                     <h1 class="page-title mb-0">@ViewData["Title"]</h1>
                 </div>
                 <div class="topbar-right ms-auto d-flex align-items-center gap-3">
+                    @if (showQuickAccountStatement)
+                    {
+                        <a class="btn btn-outline-primary d-none d-md-inline-flex align-items-center" href="@Url.Action("AccountStatement", "Reports")">
+                            <i class="fa-solid fa-file-lines me-2"></i>
+                            كشف حساب مباشر
+                        </a>
+                    }
                     <form class="d-none d-md-block">
                         <div class="search-box position-relative">
                             <input type="text" class="form-control" placeholder="بحث...">
