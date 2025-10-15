@@ -261,13 +261,15 @@ namespace AccountingSystem.Controllers
                     entry.Reference,
                     entry.Status,
                     BranchName = entry.Branch.NameAr,
-                    TotalAmount = entry.Lines.Sum(l => l.DebitAmount),
+                    TotalDebit = entry.Lines.Sum(l => l.DebitAmount),
+                    TotalCredit = entry.Lines.Sum(l => l.CreditAmount),
                     LinesCount = entry.Lines.Count
                 })
                 .AsEnumerable()
                 .Select(entry =>
                 {
                     var info = GetStatusInfo(entry.Status);
+                    var isBalanced = entry.TotalDebit == entry.TotalCredit;
                     return new JournalEntryViewModel
                     {
                         Id = entry.Id,
@@ -277,15 +279,16 @@ namespace AccountingSystem.Controllers
                         Reference = entry.Reference ?? string.Empty,
                         Status = entry.Status.ToString(),
                         BranchName = entry.BranchName,
-                        TotalAmount = entry.TotalAmount,
+                        TotalAmount = entry.TotalDebit,
                         LinesCount = entry.LinesCount,
                         StatusDisplay = info.Text,
                         StatusClass = info.CssClass,
                         DateFormatted = entry.Date.ToString("dd/MM/yyyy"),
                         DateGroup = entry.Date.ToString("yyyy-MM"),
-                        TotalAmountFormatted = entry.TotalAmount.ToString("N2"),
+                        TotalAmountFormatted = entry.TotalDebit.ToString("N2"),
                         IsDraft = entry.Status == JournalEntryStatus.Draft,
-                        CanDelete = entry.Status == JournalEntryStatus.Draft || entry.Status == JournalEntryStatus.Posted
+                        CanDelete = entry.Status == JournalEntryStatus.Draft || entry.Status == JournalEntryStatus.Posted,
+                        IsBalanced = isBalanced
                     };
                 });
 
