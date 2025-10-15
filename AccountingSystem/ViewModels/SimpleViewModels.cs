@@ -153,11 +153,9 @@ namespace AccountingSystem.ViewModels
         public DateTime FromDate { get; set; } = new DateTime(2025, 1, 1);
         public DateTime ToDate { get; set; } = DateTime.Today;
         public DateTime AsOfDate { get; set; } = DateTime.Now;
-        public int? BranchId { get; set; }
         public bool IncludePending { get; set; }
         public List<TrialBalanceItemViewModel> Items { get; set; } = new List<TrialBalanceItemViewModel>();
         public List<TrialBalanceAccountViewModel> Accounts { get; set; } = new List<TrialBalanceAccountViewModel>();
-        public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
         public decimal TotalDebits { get; set; }
         public decimal TotalCredits { get; set; }
         public decimal TotalDebitsBase { get; set; }

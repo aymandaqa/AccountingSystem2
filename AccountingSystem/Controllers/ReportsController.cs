@@ -1920,27 +1920,26 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/TrialBalance
-        public async Task<IActionResult> TrialBalance(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 5)
+        public async Task<IActionResult> TrialBalance(DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 5)
         {
-            var viewModel = await BuildTrialBalanceViewModel(branchId, fromDate, toDate, includePending, currencyId, level);
+            var viewModel = await BuildTrialBalanceViewModel(fromDate, toDate, includePending, currencyId, level);
 
             return View(viewModel);
         }
 
-        public async Task<IActionResult> TrialBalanceExcel(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 5)
+        public async Task<IActionResult> TrialBalanceExcel(DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 5)
         {
-            var viewModel = await BuildTrialBalanceViewModel(branchId, fromDate, toDate, includePending, currencyId, level);
+            var viewModel = await BuildTrialBalanceViewModel(fromDate, toDate, includePending, currencyId, level);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.AddWorksheet("TrialBalance");
 
             worksheet.Cell(1, 1).Value = "ميزان المراجعة";
             worksheet.Cell(2, 1).Value = $"الفترة: من {viewModel.FromDate:dd/MM/yyyy} إلى {viewModel.ToDate:dd/MM/yyyy}";
-            worksheet.Cell(3, 1).Value = viewModel.BranchId.HasValue ? $"الفرع: {viewModel.Branches.FirstOrDefault(b => b.Value == viewModel.BranchId.Value.ToString())?.Text ?? "غير محدد"}" : "الفرع: جميع الفروع";
-            worksheet.Cell(4, 1).Value = $"العملة المختارة: {viewModel.SelectedCurrencyCode}";
-            worksheet.Cell(5, 1).Value = $"العملة الأساسية: {viewModel.BaseCurrencyCode}";
+            worksheet.Cell(3, 1).Value = $"العملة المختارة: {viewModel.SelectedCurrencyCode}";
+            worksheet.Cell(4, 1).Value = $"العملة الأساسية: {viewModel.BaseCurrencyCode}";
 
-            var headerRow = 7;
+            var headerRow = 6;
             worksheet.Cell(headerRow, 1).Value = "رمز الحساب";
             worksheet.Cell(headerRow, 2).Value = "اسم الحساب";
             worksheet.Cell(headerRow, 3).Value = $"الرصيد المدين ({viewModel.SelectedCurrencyCode})";
@@ -1982,13 +1981,11 @@ namespace AccountingSystem.Controllers
             return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
-        private async Task<TrialBalanceViewModel> BuildTrialBalanceViewModel(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending, int? currencyId, int level = 5)
+        private async Task<TrialBalanceViewModel> BuildTrialBalanceViewModel(DateTime? fromDate, DateTime? toDate, bool includePending, int? currencyId, int level = 5)
         {
             var accounts = await _context.Accounts
-                .Include(a => a.Branch)
                 .Include(a => a.Currency)
                 .Where(a => a.CanPostTransactions)
-                .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
                 .OrderBy(a => a.Code)
                 .ToListAsync();
 
@@ -2011,7 +2008,6 @@ namespace AccountingSystem.Controllers
                     .Include(l => l.JournalEntry)
                     .Where(l => l.JournalEntry.Status != JournalEntryStatus.Posted)
                     .Where(l => l.JournalEntry.Date >= from && l.JournalEntry.Date <= to)
-                    .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
                     .GroupBy(l => l.AccountId)
                     .Select(g => new { g.Key, Debit = g.Sum(x => x.DebitAmount), Credit = g.Sum(x => x.CreditAmount) })
                     .ToDictionaryAsync(x => x.Key, x => (x.Debit, x.Credit))
@@ -2025,7 +2021,6 @@ namespace AccountingSystem.Controllers
             {
                 FromDate = from,
                 ToDate = to,
-                BranchId = branchId,
                 IncludePending = includePending,
                 Accounts = filteredAccounts.Select(a =>
                 {
@@ -2084,7 +2079,6 @@ namespace AccountingSystem.Controllers
                         Level = a.Level
                     };
                 }).ToList(),
-                Branches = await GetBranchesSelectList(),
                 Currencies = await _context.Currencies
                     .Select(c => new SelectListItem { Value = c.Id.ToString(), Text = c.Code })
                     .ToListAsync(),
