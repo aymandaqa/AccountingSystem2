@@ -34,7 +34,15 @@
                                 <option value="">جميع الفروع</option>
                                 @foreach (var branch in Model.Branches)
                                 {
-                                    <option value="@branch.Value" selected="@(branch.Value == Model.BranchId?.ToString())">@branch.Text</option>
+                                    var isSelected = branch.Value == Model.BranchId?.ToString();
+                                    if (isSelected)
+                                    {
+                                        <option value="@branch.Value" selected>@branch.Text</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@branch.Value">@branch.Text</option>
+                                    }
                                 }
                             </select>
                         </div>
@@ -43,7 +51,15 @@
                             <select name="currencyId" class="form-select">
                                 @foreach (var currency in Model.Currencies)
                                 {
-                                    <option value="@currency.Value" selected="@(currency.Value == Model.SelectedCurrencyId?.ToString())">@currency.Text</option>
+                                    var isSelected = currency.Value == Model.SelectedCurrencyId?.ToString();
+                                    if (isSelected)
+                                    {
+                                        <option value="@currency.Value" selected>@currency.Text</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@currency.Value">@currency.Text</option>
+                                    }
                                 }
                             </select>
                         </div>
@@ -52,7 +68,14 @@
                             <select name="level" class="form-select">
                                 @foreach (var level in Model.Levels)
                                 {
-                                    <option value="@level.Value" @(level.Selected ? "selected" : string.Empty)>@level.Text</option>
+                                    if (level.Selected)
+                                    {
+                                        <option value="@level.Value" selected>@level.Text</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@level.Value">@level.Text</option>
+                                    }
                                 }
                             </select>
                         </div>
