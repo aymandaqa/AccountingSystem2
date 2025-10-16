@@ -1945,6 +1945,7 @@ namespace AccountingSystem.Controllers
                 .ToList();
 
             var aggregatedBalances = new Dictionary<int, (decimal NetSelected, decimal NetBase)>();
+            var directBalances = new Dictionary<int, (decimal NetSelected, decimal NetBase)>();
 
             var pending = includePending
                 ? await _context.JournalEntryLines
@@ -1973,6 +1974,8 @@ namespace AccountingSystem.Controllers
                 var balance = account.CurrentBalance + pendingBalance;
                 var balanceSelected = _currencyService.Convert(balance, account.Currency, selectedCurrency);
                 var balanceBase = _currencyService.Convert(balance, account.Currency, baseCurrency);
+
+                directBalances[account.Id] = (balanceSelected, balanceBase);
 
                 var current = account;
                 while (current != null)
@@ -2066,11 +2069,17 @@ namespace AccountingSystem.Controllers
             var displayedAccounts = accounts
                 .Where(a => a.Level <= normalizedLevel)
                 .Where(a => aggregatedBalances.ContainsKey(a.Id))
-                .Where(a => !HasChildWithinLevel(a.Id))
+                .Where(a => a.CanPostTransactions || !HasChildWithinLevel(a.Id))
                 .OrderBy(a => a.Code)
                 .Select(a =>
                 {
                     var totals = aggregatedBalances[a.Id];
+
+                    if (HasChildWithinLevel(a.Id) && a.CanPostTransactions && directBalances.TryGetValue(a.Id, out var directTotals))
+                    {
+                        totals = directTotals;
+                    }
+
                     var balances = CalculateDisplayBalances(a, totals.NetSelected, totals.NetBase);
 
                     return new TrialBalanceAccountViewModel
