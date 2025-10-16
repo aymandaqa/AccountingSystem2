@@ -7,7 +7,7 @@
     var hasMismatch = Model.Accounts.Any(a => a.DebitBalance != 0 && a.CreditBalance != 0);
     var maxLevelValue = Model.Levels
         .Select(l => int.TryParse(l.Value, out var parsed) ? parsed : 0)
-        .DefaultIfEmpty(6)
+        .DefaultIfEmpty(5)
         .Max();
     var defaultAccountLabel = "جميع الحسابات";
 }
