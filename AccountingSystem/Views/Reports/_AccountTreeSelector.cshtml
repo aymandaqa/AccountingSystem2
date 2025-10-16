@@ -1,0 +1,38 @@
+@model List<AccountingSystem.ViewModels.AccountTreeNodeViewModel>
+@{
+    var selectedId = ViewData["SelectedAccountId"] as int?;
+}
+
+@foreach (var node in Model)
+{
+    var hasChildren = node.Children.Any();
+    var isSelected = selectedId.HasValue && selectedId.Value == node.Id;
+    var displayLabel = !string.IsNullOrWhiteSpace(node.Code)
+        ? $"{node.Code} - {node.NameAr}"
+        : node.NameAr;
+    <div class="account-tree-node level-@node.Level @(isSelected ? "selected" : string.Empty)" data-node-id="@node.Id" data-level="@node.Level" data-can-post="@(node.CanPostTransactions.ToString().ToLower())">
+        <div class="tree-node-label">
+            @if (hasChildren)
+            {
+                <button type="button" class="toggle-btn" aria-label="تبديل" data-expanded="true">
+                    <i class="fas fa-minus"></i>
+                </button>
+            }
+            else
+            {
+                <span class="toggle-placeholder"></span>
+            }
+            <span class="node-text">@displayLabel</span>
+            @if (!node.CanPostTransactions)
+            {
+                <span class="badge bg-secondary ms-2">تجميعي</span>
+            }
+        </div>
+        @if (hasChildren)
+        {
+            <div class="tree-children">
+                @await Html.PartialAsync("_AccountTreeSelector", node.Children, new ViewDataDictionary(ViewData) { ["SelectedAccountId"] = selectedId })
+            </div>
+        }
+    </div>
+}

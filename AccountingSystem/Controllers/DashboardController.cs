@@ -46,6 +46,7 @@ namespace AccountingSystem.Controllers
                 {
                     Id = 0,
                     NameAr = g.Key.ToString(),
+                    ParentAccountName = string.Empty,
                     AccountType = g.Key,
                     Level = 0,
                     Balance = g.Sum(n => n.Balance),
@@ -153,6 +154,7 @@ namespace AccountingSystem.Controllers
                     Id = n.Id,
                     Code = n.Code,
                     NameAr = n.NameAr,
+                    ParentAccountName = n.ParentAccountName,
                     AccountType = n.AccountType,
                     Nature = n.Nature,
                     CurrencyCode = n.CurrencyCode,
@@ -201,6 +203,7 @@ namespace AccountingSystem.Controllers
                         Code = n.Code,
                         Name = n.Name,
                         NameAr = n.NameAr,
+                        ParentAccountName = n.ParentAccountName,
                         AccountType = n.AccountType,
                         Nature = n.Nature,
                         CurrencyCode = n.CurrencyCode,
@@ -287,6 +290,7 @@ namespace AccountingSystem.Controllers
                 .Include(a => a.JournalEntryLines)
                     .ThenInclude(l => l.JournalEntry)
                 .Include(a => a.Currency)
+                .Include(a => a.Parent)
                 .AsNoTracking()
                 .ToListAsync();
 
@@ -321,6 +325,7 @@ namespace AccountingSystem.Controllers
                     Code = a.Code,
                     Name = a.NameEn ?? a.NameAr,
                     NameAr = a.NameAr,
+                    ParentAccountName = a.Parent != null ? a.Parent.NameAr : string.Empty,
                     AccountType = a.AccountType,
                     Nature = a.Nature,
                     CurrencyCode = a.Currency.Code,
@@ -405,6 +410,7 @@ namespace AccountingSystem.Controllers
                         Code = source.Code,
                         Name = source.Name,
                         NameAr = source.NameAr,
+                        ParentAccountName = source.ParentAccountName,
                         AccountType = source.AccountType,
                         Nature = source.Nature,
                         CurrencyCode = source.CurrencyCode,
@@ -442,6 +448,7 @@ namespace AccountingSystem.Controllers
                     Code = source.Code,
                     Name = source.Name,
                     NameAr = source.NameAr,
+                    ParentAccountName = source.ParentAccountName,
                     AccountType = source.AccountType,
                     Nature = source.Nature,
                     CurrencyCode = source.CurrencyCode,

@@ -221,7 +221,7 @@ namespace AccountingSystem.Controllers
 
         [HttpPost]
         [Authorize(Policy = "journal.view")]
-        public IActionResult UrlDatasourceJournalEntries([FromBody] DataManagerRequest dm, DateTime? fromDate, DateTime? toDate, int? branchId, string? status)
+        public IActionResult UrlDatasourceJournalEntries([FromBody] DataManagerRequest dm, DateTime? fromDate, DateTime? toDate, int? branchId, string? status, bool showUnbalancedOnly = false)
         {
             var query = _context.JournalEntries
                 .AsNoTracking()
@@ -249,6 +249,11 @@ namespace AccountingSystem.Controllers
             {
                 var to = toDate.Value.Date.AddDays(1);
                 query = query.Where(j => j.Date < to);
+            }
+
+            if (showUnbalancedOnly)
+            {
+                query = query.Where(j => j.Lines.Sum(l => l.DebitAmount) != j.Lines.Sum(l => l.CreditAmount));
             }
 
             var dataSource = query
@@ -280,12 +285,16 @@ namespace AccountingSystem.Controllers
                         Status = entry.Status.ToString(),
                         BranchName = entry.BranchName,
                         TotalAmount = entry.TotalDebit,
+                        TotalDebit = entry.TotalDebit,
+                        TotalCredit = entry.TotalCredit,
                         LinesCount = entry.LinesCount,
                         StatusDisplay = info.Text,
                         StatusClass = info.CssClass,
                         DateFormatted = entry.Date.ToString("dd/MM/yyyy"),
                         DateGroup = entry.Date.ToString("yyyy-MM"),
                         TotalAmountFormatted = entry.TotalDebit.ToString("N2"),
+                        TotalDebitFormatted = entry.TotalDebit.ToString("N2"),
+                        TotalCreditFormatted = entry.TotalCredit.ToString("N2"),
                         IsDraft = entry.Status == JournalEntryStatus.Draft,
                         CanDelete = entry.Status == JournalEntryStatus.Draft || entry.Status == JournalEntryStatus.Posted,
                         IsBalanced = isBalanced

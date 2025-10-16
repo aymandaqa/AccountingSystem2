@@ -45,14 +45,20 @@
                         <table class="table table-striped">
                             <thead class="table-dark">
                                 <tr>
-                                    <th>التاريخ</th>
+                                    <th>تاريخ الإنشاء</th>
+                                    <th>تاريخ الإغلاق</th>
+                                    <th>المستخدم</th>
                                     <th>الحساب</th>
                                     <th>الفرع</th>
-                                    <th>الرصيد الافتتاحي</th>
-                                    <th>المبلغ المعدود</th>
-                                    <th>الفرق</th>
-                                    <th>الرصيد الختامي</th>
+                                    <th class="text-end">الرصيد الافتتاحي</th>
+                                    <th class="text-end">المبلغ المعدود</th>
+                                    <th class="text-end">الرصيد المتوقع</th>
+                                    <th class="text-end">الرصيد الختامي</th>
+                                    <th class="text-end">قيمة الفرق</th>
+                                    <th>نوع الفرق</th>
                                     <th>الحالة</th>
+                                    <th>الملاحظات</th>
+                                    <th>ملاحظات الاعتماد</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -60,22 +66,29 @@
                                 {
                                     foreach (var c in Model.Closures)
                                     {
+                                        var expectedBalance = c.ClosingBalance - c.OpeningBalance;
                                         <tr>
-                                            <td>@c.CreatedAt.ToString("dd/MM/yyyy")</td>
+                                            <td>@c.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td>@(c.ClosingDate.HasValue ? c.ClosingDate.Value.ToString("dd/MM/yyyy HH:mm") : "-")</td>
+                                            <td>@c.UserName</td>
                                             <td>@c.AccountName</td>
                                             <td>@c.BranchName</td>
                                             <td class="text-end">@c.OpeningBalance.ToString("N2")</td>
                                             <td class="text-end">@c.CountedAmount.ToString("N2")</td>
-                                            <td class="text-end">@c.Difference.ToString("N2")</td>
+                                            <td class="text-end">@expectedBalance.ToString("N2")</td>
                                             <td class="text-end">@c.ClosingBalance.ToString("N2")</td>
+                                            <td class="text-end">@c.Difference.ToString("N2")</td>
+                                            <td>@c.DifferenceType</td>
                                             <td>@c.Status</td>
+                                            <td>@(string.IsNullOrWhiteSpace(c.Notes) ? "-" : c.Notes)</td>
+                                            <td>@(string.IsNullOrWhiteSpace(c.ApprovalNotes) ? "-" : c.ApprovalNotes)</td>
                                         </tr>
                                     }
                                 }
                                 else
                                 {
                                     <tr>
-                                        <td colspan="8" class="text-center text-muted">لا توجد بيانات</td>
+                                        <td colspan="14" class="text-center text-muted">لا توجد بيانات</td>
                                     </tr>
                                 }
                             </tbody>

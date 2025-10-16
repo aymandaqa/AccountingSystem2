@@ -167,6 +167,9 @@ namespace AccountingSystem.ViewModels
         public bool IsBalanced { get; set; }
         public int SelectedLevel { get; set; } = 5;
         public List<SelectListItem> Levels { get; set; } = new List<SelectListItem>();
+        public int? SelectedAccountId { get; set; }
+        public string SelectedAccountName { get; set; } = "جميع الحسابات";
+        public List<AccountTreeNodeViewModel> AccountTree { get; set; } = new List<AccountTreeNodeViewModel>();
     }
 
     public class TrialBalanceAccountViewModel
@@ -492,6 +495,7 @@ namespace AccountingSystem.ViewModels
         public string Code { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string NameAr { get; set; } = string.Empty;
+        public string ParentAccountName { get; set; } = string.Empty;
         public AccountType AccountType { get; set; }
         public AccountNature Nature { get; set; }
         public string CurrencyCode { get; set; } = string.Empty;
@@ -524,6 +528,10 @@ namespace AccountingSystem.ViewModels
         public string DateFormatted { get; set; } = string.Empty;
         public string DateGroup { get; set; } = string.Empty;
         public string TotalAmountFormatted { get; set; } = string.Empty;
+        public decimal TotalDebit { get; set; }
+        public decimal TotalCredit { get; set; }
+        public string TotalDebitFormatted { get; set; } = string.Empty;
+        public string TotalCreditFormatted { get; set; } = string.Empty;
         public bool IsDraft { get; set; }
         public bool CanDelete { get; set; }
         public bool IsBalanced { get; set; }
