@@ -3919,7 +3919,8 @@ namespace AccountingSystem.Migrations
 
                     b.HasOne("AccountingSystem.Models.Supplier", "Supplier")
                         .WithMany()
-                        .HasForeignKey("SupplierId");
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("AccountingSystem.Models.Workflows.WorkflowInstance", "WorkflowInstance")
                         .WithMany()

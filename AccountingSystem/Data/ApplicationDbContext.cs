@@ -205,6 +205,14 @@ namespace AccountingSystem.Data
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
+            builder.Entity<PaymentVoucher>(entity =>
+            {
+                entity.HasOne(e => e.Supplier)
+                    .WithMany()
+                    .HasForeignKey(e => e.SupplierId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
             builder.Entity<User>(entity =>
             {
                 entity.HasOne(e => e.Agent)
