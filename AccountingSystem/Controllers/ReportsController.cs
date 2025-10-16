@@ -2897,6 +2897,7 @@ namespace AccountingSystem.Controllers
                 .Include(a => a.JournalEntryLines)
                     .ThenInclude(l => l.JournalEntry)
                 .Include(a => a.Currency)
+                .Include(a => a.Parent)
                 .Where(a => a.Classification == AccountClassification.BalanceSheet)
                 .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
                 .AsNoTracking()
@@ -2921,6 +2922,7 @@ namespace AccountingSystem.Controllers
                     Id = a.Id,
                     Code = a.Code,
                     NameAr = a.NameAr,
+                    ParentAccountName = a.Parent != null ? a.Parent.NameAr : string.Empty,
                     AccountType = a.AccountType,
                     Nature = a.Nature,
                     CurrencyCode = a.Currency.Code,
@@ -3002,6 +3004,7 @@ namespace AccountingSystem.Controllers
                 .Include(a => a.JournalEntryLines)
                     .ThenInclude(l => l.JournalEntry)
                 .Include(a => a.Currency)
+                .Include(a => a.Parent)
                 .Where(a => a.Classification == AccountClassification.IncomeStatement)
                 .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
                 .AsNoTracking()
@@ -3026,6 +3029,7 @@ namespace AccountingSystem.Controllers
                     Id = a.Id,
                     Code = a.Code,
                     NameAr = a.NameAr,
+                    ParentAccountName = a.Parent != null ? a.Parent.NameAr : string.Empty,
                     AccountType = a.AccountType,
                     Nature = a.Nature,
                     CurrencyCode = a.Currency.Code,
