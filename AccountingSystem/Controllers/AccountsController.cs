@@ -98,6 +98,7 @@ namespace AccountingSystem.Controllers
         public async Task<IActionResult> LoadTreeNodes(int? parentId, AccountType? accountType)
         {
             IQueryable<Account> query = _context.Accounts
+                .Include(a => a.Parent)
                 .Where(a => a.IsActive);
 
             if (parentId.HasValue && parentId.Value > 0)
@@ -121,6 +122,7 @@ namespace AccountingSystem.Controllers
                     Id = a.Id,
                     Code = a.Code,
                     NameAr = a.NameAr,
+                    ParentAccountName = a.Parent != null ? a.Parent.NameAr : string.Empty,
                     AccountType = a.AccountType,
                     Nature = a.Nature,
                     CurrencyCode = a.Currency.Code,
@@ -216,6 +218,7 @@ namespace AccountingSystem.Controllers
                     Id = 0,
                     Code = string.Empty,
                     NameAr = type.ToString(),
+                    ParentAccountName = string.Empty,
                     AccountType = type,
                     Level = 0,
                     CanPostTransactions = false,
@@ -235,6 +238,7 @@ namespace AccountingSystem.Controllers
                 Id = account.Id,
                 Code = account.Code,
                 NameAr = account.NameAr,
+                ParentAccountName = account.Parent != null ? account.Parent.NameAr : string.Empty,
                 AccountType = account.AccountType,
                 Nature = account.Nature,
                 CurrencyCode = account.Currency?.Code ?? string.Empty,

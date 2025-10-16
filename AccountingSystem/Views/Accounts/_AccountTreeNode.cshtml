@@ -45,6 +45,11 @@
                     {
                         <span class="badge bg-danger">غير نشط</span>
                     }
+
+                    @if (!string.IsNullOrWhiteSpace(node.ParentAccountName))
+                    {
+                        <span class="text-muted small ms-2"><i class="fas fa-level-up-alt me-1"></i>الحساب الأب: @node.ParentAccountName</span>
+                    }
                 }
             </div>
 

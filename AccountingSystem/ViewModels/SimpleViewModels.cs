@@ -495,6 +495,7 @@ namespace AccountingSystem.ViewModels
         public string Code { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string NameAr { get; set; } = string.Empty;
+        public string ParentAccountName { get; set; } = string.Empty;
         public AccountType AccountType { get; set; }
         public AccountNature Nature { get; set; }
         public string CurrencyCode { get; set; } = string.Empty;
