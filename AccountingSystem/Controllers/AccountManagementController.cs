@@ -1058,6 +1058,10 @@ namespace Roadfn.Controllers
             //string userId = User.Claims.SingleOrDefault(x => x.Type.Equals(ClaimTypes.NameIdentifier)).Value;
             //var user = await _context.Users.FindAsync(Convert.ToInt32(userId));
             var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Unauthorized();
+            }
 
             if (rptDriverPay.Count > 0)
             {
