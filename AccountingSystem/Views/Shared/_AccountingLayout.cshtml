@@ -136,12 +136,17 @@
             <div class="sidebar-menu flex-grow-1 overflow-auto px-2">
                 <ul class="nav flex-column" id="sidebarMenu">
                     <li class="nav-item" data-menu-key="dashboard">
-                        <a class="nav-link @(currentController == "Dashboard" && currentAction == "Index" ? "active" : "")" href="@Url.Action("Index", "Dashboard")">
+                        <a class="nav-link @(currentController == "dashboard" && currentAction == "index" ? "active" : "")"
+                           asp-controller="Dashboard"
+                           asp-action="Index"
+                           asp-require-permission="dashboard.view">
                             <i class="fas fa-tachometer-alt"></i> لوحة التحكم
                         </a>
                     </li>
                     <li class="nav-item" data-menu-key="company-performance">
-                        <a class="nav-link @(currentController == "Dashboard" && currentAction == "Index" ? "active" : "")" href="@Url.Action("Index", "home")">
+                        <a class="nav-link @(currentController == "home" && currentAction == "index" ? "active" : "")"
+                           asp-controller="Home"
+                           asp-action="Index">
                             <i class="fas fa-tachometer-alt"></i> عرض اداء الشركة
                         </a>
                     </li>
@@ -151,16 +156,47 @@
                             <i class="fas fa-angle-down toggle-icon"></i>
                         </a>
                         <ul class="submenu collapse nav flex-column @(accountsActive ? "show" : "")" id="accountsMenu">
-                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Tree", "Accounts")"><i class="fas fa-sitemap"></i> شجرة الحسابات</a></li>
-                            <li class="nav-item"><a class="nav-link" href="@Url.Action("ManageTree", "Accounts")"><i class="fas fa-diagram-project"></i> إدارة شجرة الحسابات</a></li>
-                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Accounts")"><i class="fas fa-list"></i> قائمة الحسابات</a></li>
-                            <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "Accounts")"><i class="fas fa-plus"></i> إضافة حساب جديد</a></li>
+                            <li class="nav-item">
+                                <a class="nav-link"
+                                   asp-controller="Accounts"
+                                   asp-action="Tree"
+                                   asp-require-permission="accounts.view">
+                                    <i class="fas fa-sitemap"></i> شجرة الحسابات
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link"
+                                   asp-controller="Accounts"
+                                   asp-action="ManageTree"
+                                   asp-require-permission="accounts.edit">
+                                    <i class="fas fa-diagram-project"></i> إدارة شجرة الحسابات
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link"
+                                   asp-controller="Accounts"
+                                   asp-action="Index"
+                                   asp-require-permission="accounts.view">
+                                    <i class="fas fa-list"></i> قائمة الحسابات
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link"
+                                   asp-controller="Accounts"
+                                   asp-action="Create"
+                                   asp-require-permission="accounts.create">
+                                    <i class="fas fa-plus"></i> إضافة حساب جديد
+                                </a>
+                            </li>
                         </ul>
                     </li>
                     @if (canAgents)
                     {
                         <li class="nav-item" data-menu-key="agents">
-                            <a class="nav-link @(currentController == "agents" ? "active" : "")" href="@Url.Action("Index", "Agents")">
+                            <a class="nav-link @(currentController == "agents" ? "active" : "")"
+                               asp-controller="Agents"
+                               asp-action="Index"
+                               asp-require-permission="agents.view">
                                 <i class="fas fa-user-tie"></i> الوكلاء
                             </a>
                         </li>
@@ -168,7 +204,10 @@
                     @if (canSuppliers)
                     {
                         <li class="nav-item" data-menu-key="suppliers">
-                            <a class="nav-link @(currentController == "suppliers" ? "active" : "")" href="@Url.Action("Index", "Suppliers")">
+                            <a class="nav-link @(currentController == "suppliers" ? "active" : "")"
+                               asp-controller="Suppliers"
+                               asp-action="Index"
+                               asp-require-permission="suppliers.view">
                                 <i class="fas fa-truck"></i> الموردين
                             </a>
                         </li>
@@ -176,7 +215,10 @@
                     @if (canSystemSettings)
                     {
                         <li class="nav-item" data-menu-key="system-settings">
-                            <a class="nav-link @(currentController == "SystemSettings" ? "active" : "")" href="@Url.Action("Index", "SystemSettings")">
+                            <a class="nav-link @(currentController == "systemsettings" ? "active" : "")"
+                               asp-controller="SystemSettings"
+                               asp-action="Index"
+                               asp-require-permission="systemsettings.view">
                                 <i class="fas fa-cog"></i> إعدادات النظام
                             </a>
                         </li>
@@ -191,27 +233,58 @@
                             <ul class="submenu collapse nav flex-column @(operationsActive ? "show" : "")" id="operationsMenu">
                                 @if (canCashClosuresView)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("MyClosures", "CashBoxClosures")"><i class="fas fa-sitemap"></i> جرد الصندوق قائمة</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="CashBoxClosures"
+                                           asp-action="MyClosures"
+                                           asp-require-permission="cashclosures.view">
+                                            <i class="fas fa-sitemap"></i> جرد الصندوق قائمة
+                                        </a>
+                                    </li>
                                 }
                                 @if (canCashClosuresApprove)
                                 {
                                     <li class="nav-item">
-                                        <a class="nav-link" href="@Url.Action("Pending", "CashBoxClosures")">
+                                        <a class="nav-link"
+                                           asp-controller="CashBoxClosures"
+                                           asp-action="Pending"
+                                           asp-require-permission="cashclosures.approve">
                                             <i class="fas fa-sitemap"></i> طلبات إغلاق الصندوق
                                         </a>
                                     </li>
                                 }
                                 @if (canCashClosuresCreate)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "CashBoxClosures")"><i class="fas fa-sitemap"></i> جرد الصندوق</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="CashBoxClosures"
+                                           asp-action="Create"
+                                           asp-require-permission="cashclosures.create">
+                                            <i class="fas fa-sitemap"></i> جرد الصندوق
+                                        </a>
+                                    </li>
                                 }
                                 @if (canCashClosuresReport || canCashClosuresView)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Report", "CashBoxClosures")"><i class="fas fa-file-alt"></i> تقرير إغلاقات الصندوق</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="CashBoxClosures"
+                                           asp-action="Report"
+                                           asp-require-permission="@(canCashClosuresReport ? "cashclosures.report" : "cashclosures.view")">
+                                            <i class="fas fa-file-alt"></i> تقرير إغلاقات الصندوق
+                                        </a>
+                                    </li>
                                 }
                                 @if (canTransfersView)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "transfers")"><i class="fas fa-exchange"></i> الحوالات</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Transfers"
+                                           asp-action="Index"
+                                           asp-require-permission="transfers.view">
+                                            <i class="fas fa-exchange"></i> الحوالات
+                                        </a>
+                                    </li>
                                 }
                             </ul>
                         </li>
@@ -226,15 +299,36 @@
                             <ul class="submenu collapse nav flex-column @(assetsActive ? "show" : "")" id="assetsMenu">
                                 @if (canAssets)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Assets")"><i class="fas fa-list"></i> قائمة الأصول الثابته</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Assets"
+                                           asp-action="Index"
+                                           asp-require-permission="assets.view">
+                                            <i class="fas fa-list"></i> قائمة الأصول الثابته
+                                        </a>
+                                    </li>
                                 }
                                 @if (canAssetTypes)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "AssetTypes")"><i class="fas fa-tags"></i> أنواع الأصول</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="AssetTypes"
+                                           asp-action="Index"
+                                           asp-require-permission="assettypes.view">
+                                            <i class="fas fa-tags"></i> أنواع الأصول
+                                        </a>
+                                    </li>
                                 }
                                 @if (canAssetExpenses)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "AssetExpenses")"><i class="fas fa-money-bill"></i> مصاريف الأصول الثابته</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="AssetExpenses"
+                                           asp-action="Index"
+                                           asp-require-permission="assetexpenses.view">
+                                            <i class="fas fa-money-bill"></i> مصاريف الأصول الثابته
+                                        </a>
+                                    </li>
                                 }
                             </ul>
                         </li>
@@ -249,40 +343,110 @@
                             <ul class="submenu collapse nav flex-column @(vouchersActive ? "show" : "")" id="vouchersMenu">
                                 @if (canReceiptVouchers)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "ReceiptVouchers")"><i class="fas fa-list"></i> سندات القبض</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="ReceiptVouchers"
+                                           asp-action="Index"
+                                           asp-require-permission="receiptvouchers.view">
+                                            <i class="fas fa-list"></i> سندات القبض
+                                        </a>
+                                    </li>
                                 }
                                 @if (canReceiptVouchersCreate)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "ReceiptVouchers")"><i class="fas fa-plus"></i> إضافة سند قبض</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="ReceiptVouchers"
+                                           asp-action="Create"
+                                           asp-require-permission="receiptvouchers.create">
+                                            <i class="fas fa-plus"></i> إضافة سند قبض
+                                        </a>
+                                    </li>
                                 }
                                 @if (canDisbursementVouchers)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "DisbursementVouchers")"><i class="fas fa-list"></i> سندات دفع</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="DisbursementVouchers"
+                                           asp-action="Index"
+                                           asp-require-permission="disbursementvouchers.view">
+                                            <i class="fas fa-list"></i> سندات دفع
+                                        </a>
+                                    </li>
                                 }
                                 @if (canDisbursementVouchersCreate)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "DisbursementVouchers")"><i class="fas fa-plus"></i> إضافة سند دفع</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="DisbursementVouchers"
+                                           asp-action="Create"
+                                           asp-require-permission="disbursementvouchers.create">
+                                            <i class="fas fa-plus"></i> إضافة سند دفع
+                                        </a>
+                                    </li>
                                 }
                                 @if (canPaymentVouchers)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "PaymentVouchers")"><i class="fas fa-list"></i> سندات المصاريف</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="PaymentVouchers"
+                                           asp-action="Index"
+                                           asp-require-permission="paymentvouchers.view">
+                                            <i class="fas fa-list"></i> سندات المصاريف
+                                        </a>
+                                    </li>
                                 }
                                 @if (canPaymentVouchersCreate)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "PaymentVouchers")"><i class="fas fa-plus"></i> إضافة سند صرف</a></li>
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("CreateFromAgent", "PaymentVouchers")"><i class="fas fa-user-tie"></i> سند صرف من حساب وكيل</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="PaymentVouchers"
+                                           asp-action="Create"
+                                           asp-require-permission="paymentvouchers.create">
+                                            <i class="fas fa-plus"></i> إضافة سند صرف
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="PaymentVouchers"
+                                           asp-action="CreateFromAgent"
+                                           asp-require-permission="paymentvouchers.create">
+                                            <i class="fas fa-user-tie"></i> سند صرف من حساب وكيل
+                                        </a>
+                                    </li>
                                 }
                                 @if (canWorkflowApprovalsView)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "WorkflowApprovals")"><i class="fas fa-check-circle"></i> موافقات سندات الدفع</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="WorkflowApprovals"
+                                           asp-action="Index"
+                                           asp-require-permission="workflowapprovals.view">
+                                            <i class="fas fa-check-circle"></i> موافقات سندات الدفع
+                                        </a>
+                                    </li>
                                 }
                                 @if (canWorkflowDefinitionsManage)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "WorkflowDefinitions")"><i class="fas fa-project-diagram"></i> سير عمل السندات</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="WorkflowDefinitions"
+                                           asp-action="Index"
+                                           asp-require-permission="workflowdefinitions.manage">
+                                            <i class="fas fa-project-diagram"></i> سير عمل السندات
+                                        </a>
+                                    </li>
                                 }
                                 @if (canDynamicScreensManage)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "DynamicScreens")"><i class="fas fa-layer-group"></i> إدارة الشاشات الديناميكية</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="DynamicScreens"
+                                           asp-action="Index"
+                                           asp-require-permission="dynamicscreens.manage">
+                                            <i class="fas fa-layer-group"></i> إدارة الشاشات الديناميكية
+                                        </a>
+                                    </li>
                                 }
                             </ul>
                         </li>
@@ -298,23 +462,58 @@
                             <ul class="submenu collapse nav flex-column @(accountMgmtActive ? "show" : "")" id="accountMgmtMenu">
                                 @if (canBusinessStatementBulk)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("BusinessStatementBulk", "AccountManagement")">حساب العميل كلي</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="AccountManagement"
+                                           asp-action="BusinessStatementBulk"
+                                           asp-require-permission="accountmanagement.businessstatementbulk">
+                                            حساب العميل كلي
+                                        </a>
+                                    </li>
                                 }
                                 @if (canBusnissStatment)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("BusnissStatment", "AccountManagement")">حساب العميل</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="AccountManagement"
+                                           asp-action="BusnissStatment"
+                                           asp-require-permission="accountmanagement.busnissstatment">
+                                            حساب العميل
+                                        </a>
+                                    </li>
                                 }
                                 @if (canDriverPayment)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("DriverPayment", "AccountManagement")">دفعات السائق</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="AccountManagement"
+                                           asp-action="DriverPayment"
+                                           asp-require-permission="accountmanagement.driverpayment">
+                                            دفعات السائق
+                                        </a>
+                                    </li>
                                 }
                                 @if (canDriverStatment)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("DriverStatment", "AccountManagement")">حساب السائق</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="AccountManagement"
+                                           asp-action="DriverStatment"
+                                           asp-require-permission="accountmanagement.driverstatment">
+                                            حساب السائق
+                                        </a>
+                                    </li>
                                 }
                                 @if (canUserPayment)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("UserPayment", "AccountManagement")">دفعات العميل</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="AccountManagement"
+                                           asp-action="UserPayment"
+                                           asp-require-permission="accountmanagement.userpayment">
+                                            دفعات العميل
+                                        </a>
+                                    </li>
                                 }
                             </ul>
                         </li>
@@ -331,17 +530,52 @@
                             <ul class="submenu collapse nav flex-column @(journalActive ? "show" : "")" id="journalMenu">
                                 @if (canJournalView)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "JournalEntries")"><i class="fas fa-list"></i> قائمة القيود</a></li>
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Draft", "JournalEntries")"><i class="fas fa-edit"></i> المسودات</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="JournalEntries"
+                                           asp-action="Index"
+                                           asp-require-permission="journal.view">
+                                            <i class="fas fa-list"></i> قائمة القيود
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="JournalEntries"
+                                           asp-action="Draft"
+                                           asp-require-permission="journal.view">
+                                            <i class="fas fa-edit"></i> المسودات
+                                        </a>
+                                    </li>
                                 }
                                 @if (canJournalApprove)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Posted", "JournalEntries")"><i class="fas fa-check"></i> المرحلة</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="JournalEntries"
+                                           asp-action="Posted"
+                                           asp-require-permission="journal.approve">
+                                            <i class="fas fa-check"></i> المرحلة
+                                        </a>
+                                    </li>
                                 }
                                 @if (canJournalCreate)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Create", "JournalEntries")"><i class="fas fa-plus"></i> إضافة قيد جديد</a></li>
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "CompoundJournalDefinitions")"><i class="fas fa-project-diagram"></i> القيود المركبة</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="JournalEntries"
+                                           asp-action="Create"
+                                           asp-require-permission="journal.create">
+                                            <i class="fas fa-plus"></i> إضافة قيد جديد
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="CompoundJournalDefinitions"
+                                           asp-action="Index"
+                                           asp-require-permission="journal.create">
+                                            <i class="fas fa-project-diagram"></i> القيود المركبة
+                                        </a>
+                                    </li>
                                 }
                             </ul>
                         </li>
@@ -356,19 +590,47 @@
                             <ul class="submenu collapse nav flex-column @(hrActive ? "show" : "")" id="hrMenu">
                                 @if (canEmployeesView)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Employees")"><i class="fas fa-user"></i> إدارة الموظفين</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Employees"
+                                           asp-action="Index"
+                                           asp-require-permission="employees.view">
+                                            <i class="fas fa-user"></i> إدارة الموظفين
+                                        </a>
+                                    </li>
                                 }
                                 @if (canPayrollView)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Payrolls")"><i class="fas fa-money-check-alt"></i> إدارة الرواتب</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Payrolls"
+                                           asp-action="Index"
+                                           asp-require-permission="payroll.view">
+                                            <i class="fas fa-money-check-alt"></i> إدارة الرواتب
+                                        </a>
+                                    </li>
                                 }
                                 @if (canSalaryPaymentsView)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "SalaryPayments")"><i class="fas fa-file-invoice-dollar"></i> سندات صرف الرواتب</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="SalaryPayments"
+                                           asp-action="Index"
+                                           asp-require-permission="salarypayments.view">
+                                            <i class="fas fa-file-invoice-dollar"></i> سندات صرف الرواتب
+                                        </a>
+                                    </li>
                                 }
                                 @if (canEmployeeAdvancesView)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "EmployeeAdvances")"><i class="fas fa-hand-holding-usd"></i> سندات صرف السلف</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="EmployeeAdvances"
+                                           asp-action="Index"
+                                           asp-require-permission="employeeadvances.view">
+                                            <i class="fas fa-hand-holding-usd"></i> سندات صرف السلف
+                                        </a>
+                                    </li>
                                 }
                             </ul>
                         </li>
@@ -383,24 +645,101 @@
                             <ul class="submenu collapse nav flex-column @(reportsActive ? "show" : "")" id="reportsMenu">
                                 @if (canReportsView)
                                 {
-                                    <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("TrialBalance", "Reports")"><i class="fas fa-balance-scale"></i> ميزان المراجعة</a></li>
-                                    <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("BalanceSheet", "Reports")"><i class="fas fa-chart-pie"></i> الميزانية العمومية</a></li>
-                                    <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("IncomeStatement", "Reports")"><i class="fas fa-chart-line"></i> قائمة الدخل</a></li>
+                                    <li class="report-item nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Reports"
+                                           asp-action="TrialBalance"
+                                           asp-require-permission="reports.view">
+                                            <i class="fas fa-balance-scale"></i> ميزان المراجعة
+                                        </a>
+                                    </li>
+                                    <li class="report-item nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Reports"
+                                           asp-action="BalanceSheet"
+                                           asp-require-permission="reports.view">
+                                            <i class="fas fa-chart-pie"></i> الميزانية العمومية
+                                        </a>
+                                    </li>
+                                    <li class="report-item nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Reports"
+                                           asp-action="IncomeStatement"
+                                           asp-require-permission="reports.view">
+                                            <i class="fas fa-chart-line"></i> قائمة الدخل
+                                        </a>
+                                    </li>
                                     <li class="report-item"><hr class="dropdown-divider"></li>
-                                    <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("GeneralLedger", "Reports")"><i class="fas fa-book"></i> دفتر الأستاذ العام</a></li>
-                                    <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("AccountStatement", "Reports")"><i class="fas fa-file-alt"></i> كشف حساب</a></li>
-                                    <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("BranchExpenses", "Reports")"><i class="fas fa-code-branch"></i> تقرير مصروفات الفروع</a></li>
-                                    <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("BranchIncomeStatement", "Reports")"><i class="fas fa-sitemap"></i> قائمة الدخل للفروع</a></li>
-                                    <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("BranchPerformanceSummary", "Reports")"><i class="fas fa-network-wired"></i> ملخص أداء الفروع</a></li>
+                                    <li class="report-item nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Reports"
+                                           asp-action="GeneralLedger"
+                                           asp-require-permission="reports.view">
+                                            <i class="fas fa-book"></i> دفتر الأستاذ العام
+                                        </a>
+                                    </li>
+                                    <li class="report-item nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Reports"
+                                           asp-action="AccountStatement"
+                                           asp-require-permission="reports.view">
+                                            <i class="fas fa-file-alt"></i> كشف حساب
+                                        </a>
+                                    </li>
+                                    <li class="report-item nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Reports"
+                                           asp-action="BranchExpenses"
+                                           asp-require-permission="reports.view">
+                                            <i class="fas fa-code-branch"></i> تقرير مصروفات الفروع
+                                        </a>
+                                    </li>
+                                    <li class="report-item nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Reports"
+                                           asp-action="BranchIncomeStatement"
+                                           asp-require-permission="reports.view">
+                                            <i class="fas fa-sitemap"></i> قائمة الدخل للفروع
+                                        </a>
+                                    </li>
+                                    <li class="report-item nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Reports"
+                                           asp-action="BranchPerformanceSummary"
+                                           asp-require-permission="reports.view">
+                                            <i class="fas fa-network-wired"></i> ملخص أداء الفروع
+                                        </a>
+                                    </li>
                                 }
                                 @if (canReportsPending)
                                 {
-                                    <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("PendingTransactions", "Reports")"><i class="fas fa-hourglass-half"></i> الحركات غير المرحلة</a></li>
+                                    <li class="report-item nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Reports"
+                                           asp-action="PendingTransactions"
+                                           asp-require-permission="reports.pending">
+                                            <i class="fas fa-hourglass-half"></i> الحركات غير المرحلة
+                                        </a>
+                                    </li>
                                 }
                                 @if (canReportsDynamic)
                                 {
-                                    <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("DynamicPivot", "Reports")"><i class="fas fa-hourglass-half"></i>انشاء تقريرPivot </a></li>
-                                    <li class="report-item nav-item"><a class="nav-link" href="@Url.Action("QueryBuilder", "Reports")"><i class="fas fa-project-diagram"></i> مصمم التقارير</a></li>
+                                    <li class="report-item nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Reports"
+                                           asp-action="DynamicPivot"
+                                           asp-require-permission="reports.dynamic">
+                                            <i class="fas fa-hourglass-half"></i>انشاء تقريرPivot
+                                        </a>
+                                    </li>
+                                    <li class="report-item nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Reports"
+                                           asp-action="QueryBuilder"
+                                           asp-require-permission="reports.dynamic">
+                                            <i class="fas fa-project-diagram"></i> مصمم التقارير
+                                        </a>
+                                    </li>
                                 }
                             </ul>
                         </li>
@@ -415,19 +754,47 @@
                             <ul class="submenu collapse nav flex-column @(settingsActive ? "show" : "")" id="settingsMenu">
                                 @if (canBranches)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Branches")"><i class="fas fa-building"></i> الفروع</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Branches"
+                                           asp-action="Index"
+                                           asp-require-permission="branches.view">
+                                            <i class="fas fa-building"></i> الفروع
+                                        </a>
+                                    </li>
                                 }
                                 @if (canCostCenters)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "CostCenters")"><i class="fas fa-bullseye"></i> مراكز التكلفة</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="CostCenters"
+                                           asp-action="Index"
+                                           asp-require-permission="costcenters.view">
+                                            <i class="fas fa-bullseye"></i> مراكز التكلفة
+                                        </a>
+                                    </li>
                                 }
                                 @if (canCurrencies)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Currencies")"><i class="fas fa-money-bill-wave"></i> العملات</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Currencies"
+                                           asp-action="Index"
+                                           asp-require-permission="currencies.view">
+                                            <i class="fas fa-money-bill-wave"></i> العملات
+                                        </a>
+                                    </li>
                                 }
                                 @if (canPermissionGroups)
                                 {
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "PermissionGroups")"><i class="fas fa-key"></i> مجموعات الصلاحيات</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="PermissionGroups"
+                                           asp-action="Index"
+                                           asp-require-permission="permissiongroups.view">
+                                            <i class="fas fa-key"></i> مجموعات الصلاحيات
+                                        </a>
+                                    </li>
                                 }
                                 @if (canUsers)
                                 {
@@ -435,7 +802,14 @@
                                     {
                                         <li><hr class="dropdown-divider"></li>
                                     }
-                                    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index", "Users")"><i class="fas fa-users"></i> المستخدمون</a></li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Users"
+                                           asp-action="Index"
+                                           asp-require-permission="users.view">
+                                            <i class="fas fa-users"></i> المستخدمون
+                                        </a>
+                                    </li>
                                 }
                             </ul>
                         </li>
@@ -465,7 +839,10 @@
                         @if (showQuickAccountStatement)
                         {
                             <li class="nav-item">
-                                <a class="btn btn-outline-primary d-none d-md-inline-flex align-items-center" href="@Url.Action("AccountStatement", "Reports")">
+                                <a class="btn btn-outline-primary d-none d-md-inline-flex align-items-center"
+                                   asp-controller="Reports"
+                                   asp-action="AccountStatement"
+                                   asp-require-permission="@(isSuperAdmin && canReportsView ? "reports.view" : "reports.quickaccountstatement")">
                                     <i class="fa-solid fa-file-lines me-2"></i>
                                     كشف حساب مباشر
                                 </a>
