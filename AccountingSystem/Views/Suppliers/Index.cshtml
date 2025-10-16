@@ -24,8 +24,20 @@
             <td>@item.Phone</td>
             <td>@item.Email</td>
             <td>
-                <a class="btn btn-sm btn-warning" href="@Url.Action("Edit", new { id = item.Id })" asp-require-permission="suppliers.edit">تعديل</a>
-                <button class="btn btn-sm btn-danger" onclick="deleteSupplier(@item.Id)" asp-require-permission="suppliers.delete">حذف</button>
+                <div class="btn-group btn-group-sm" role="group">
+                    @if (item.AccountId.HasValue)
+                    {
+                        <a class="btn btn-success" href="@Url.Action("AccountStatement", "Reports", new { accountId = item.AccountId })" target="_blank" asp-require-permission="reports.accountstatement" title="كشف الحساب">
+                            <i class="fas fa-file-alt"></i>
+                        </a>
+                    }
+                    <a class="btn btn-warning" href="@Url.Action("Edit", new { id = item.Id })" asp-require-permission="suppliers.edit" title="تعديل">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    <button class="btn btn-danger" onclick="deleteSupplier(@item.Id)" asp-require-permission="suppliers.delete" title="حذف">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
             </td>
         </tr>
     }
