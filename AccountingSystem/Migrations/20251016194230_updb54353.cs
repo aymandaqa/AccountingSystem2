@@ -39,9 +39,11 @@ namespace AccountingSystem.Migrations
                 (22, "التقارير", "عرض التقارير", "reports.view"),
                 (23, "التقارير", "تصدير التقارير", "reports.export"),
                 (24, "لوحة التحكم", "عرض لوحة التحكم", "dashboard.view"),
+                (111, "لوحة التحكم", "عرض أداء الشركة", "dashboard.companyperformance"),
                 (25, "لوحة التحكم", "عرض إحصائيات لوحة التحكم", "dashboard.widget.stats"),
                 (26, "لوحة التحكم", "عرض أرصدة الحسابات بلوحة التحكم", "dashboard.widget.accounts"),
                 (27, "لوحة التحكم", "عرض الروابط السريعة بلوحة التحكم", "dashboard.widget.links"),
+                (110, "لوحة التحكم", "عرض أرصدة الصناديق بلوحة التحكم", "dashboard.widget.cashboxes"),
                 (28, "المصاريف", "عرض المصاريف", "expenses.view"),
                 (29, "المصاريف", "إنشاء المصاريف", "expenses.create"),
                 (30, "المصاريف", "تعديل المصاريف", "expenses.edit"),
@@ -126,6 +128,8 @@ namespace AccountingSystem.Migrations
                 (109, "الأصول", "حذف نوع أصل", "assettypes.delete"),
             };
 
+            migrationBuilder.Sql("SET IDENTITY_INSERT [Permissions] ON;");
+
             foreach (var permission in permissions)
             {
                 var escapedCategory = permission.Category.Replace("'", "''");
@@ -141,12 +145,14 @@ BEGIN
     VALUES ({permission.Id}, N'{escapedCategory}', '{createdAtSql}', N'{escapedDisplayName}', 1, N'{escapedName}');
 END");
             }
+
+            migrationBuilder.Sql("SET IDENTITY_INSERT [Permissions] OFF;");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            for (var id = 73; id <= 109; id++)
+            for (var id = 73; id <= 111; id++)
             {
                 migrationBuilder.DeleteData(
                     table: "Permissions",
