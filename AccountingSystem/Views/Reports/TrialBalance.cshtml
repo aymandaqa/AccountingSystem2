@@ -120,6 +120,7 @@
                                     <th>الرصيد الدائن (@Model.SelectedCurrencyCode)</th>
                                     <th>الرصيد المدين (@Model.BaseCurrencyCode)</th>
                                     <th>الرصيد الدائن (@Model.BaseCurrencyCode)</th>
+                                    <th class="text-center">إجراءات</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -137,6 +138,17 @@
                                         <td>@account.CreditBalance.ToString("N2")</td>
                                         <td>@account.DebitBalanceBase.ToString("N2")</td>
                                         <td>@account.CreditBalanceBase.ToString("N2")</td>
+                                        <td class="text-center">
+                                            <a asp-controller="Reports"
+                                               asp-action="AccountStatement"
+                                               asp-route-accountId="@account.AccountId"
+                                               class="btn btn-sm btn-outline-primary"
+                                               target="_blank"
+                                               asp-require-permission="reports.accountstatement"
+                                               title="كشف الحساب">
+                                                <i class="fas fa-file-alt"></i>
+                                            </a>
+                                        </td>
                                     </tr>
                                 }
                             </tbody>
@@ -147,6 +159,7 @@
                                     <th>@Model.TotalCredits.ToString("N2")</th>
                                     <th>@Model.TotalDebitsBase.ToString("N2")</th>
                                     <th>@Model.TotalCreditsBase.ToString("N2")</th>
+                                    <th></th>
                                 </tr>
                             </tfoot>
                         </table>

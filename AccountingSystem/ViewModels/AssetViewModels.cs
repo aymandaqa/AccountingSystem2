@@ -15,6 +15,7 @@ namespace AccountingSystem.ViewModels
         public string? AssetNumber { get; set; }
         public string? Notes { get; set; }
         public decimal OpeningBalance { get; set; }
+        public int? AccountId { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
     }

@@ -96,6 +96,18 @@
                                     <td>@asset.CreatedAt.ToString("dd/MM/yyyy")</td>
                                     <td>
                                         <div class="btn-group btn-group-sm" role="group">
+                                            @if (asset.AccountId.HasValue)
+                                            {
+                                                <a asp-controller="Reports"
+                                                   asp-action="AccountStatement"
+                                                   asp-route-accountId="@asset.AccountId"
+                                                   class="btn btn-success"
+                                                   target="_blank"
+                                                   asp-require-permission="reports.accountstatement"
+                                                   title="كشف الحساب">
+                                                    <i class="fas fa-file-alt"></i>
+                                                </a>
+                                            }
                                             <a asp-action="Edit" asp-route-id="@asset.Id" class="btn btn-warning" asp-require-permission="assets.edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
