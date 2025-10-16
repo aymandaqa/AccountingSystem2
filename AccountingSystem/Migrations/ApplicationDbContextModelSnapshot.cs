@@ -2506,7 +2506,7 @@ namespace AccountingSystem.Migrations
                             Name = "assettypes.delete"
                         }
 
-                        });
+                        );
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.PermissionGroup", b =>
