@@ -146,7 +146,8 @@
                     <li class="nav-item" data-menu-key="company-performance">
                         <a class="nav-link @(currentController == "home" && currentAction == "index" ? "active" : "")"
                            asp-controller="Home"
-                           asp-action="Index">
+                           asp-action="Index"
+                           asp-require-permission="dashboard.companyperformance">
                             <i class="fas fa-tachometer-alt"></i> عرض اداء الشركة
                         </a>
                     </li>

@@ -25,6 +25,7 @@ public class HomeController : Controller
         _context = context;
         _userManager = userManager;
     }
+    [Authorize(Policy = "dashboard.companyperformance")]
 
     public async Task<IActionResult> Index(DateTime? fromDate = null, DateTime? toDate = null)
     {

@@ -2,7 +2,7 @@
 @using AccountingSystem.ViewModels
 @using System.Linq
 
-@{ 
+@{
     ViewData["Title"] = "ميزان المراجعة";
     var hasMismatch = Model.Accounts.Any(a => a.DebitBalance != 0 && a.CreditBalance != 0);
     var maxLevelValue = Model.Levels
@@ -208,69 +208,69 @@
             transition: background-color 0.2s ease, border-color 0.2s ease;
         }
 
-        .account-tree-node:last-child {
-            margin-bottom: 0;
-        }
+            .account-tree-node:last-child {
+                margin-bottom: 0;
+            }
 
-        .account-tree-node.selected {
-            background-color: rgba(13, 110, 253, 0.12);
-            border: 1px solid rgba(13, 110, 253, 0.35);
-        }
+            .account-tree-node.selected {
+                background-color: rgba(13, 110, 253, 0.12);
+                border: 1px solid rgba(13, 110, 253, 0.35);
+            }
 
-        .account-tree-node .tree-node-label {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            cursor: pointer;
-            color: #212529;
-        }
+            .account-tree-node .tree-node-label {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                cursor: pointer;
+                color: #212529;
+            }
 
-        .account-tree-node .tree-node-label:hover {
-            color: #0d6efd;
-        }
+                .account-tree-node .tree-node-label:hover {
+                    color: #0d6efd;
+                }
 
-        .account-tree-node .toggle-btn,
-        .account-tree-node .toggle-placeholder {
-            width: 1.75rem;
-            height: 1.75rem;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-        }
+            .account-tree-node .toggle-btn,
+            .account-tree-node .toggle-placeholder {
+                width: 1.75rem;
+                height: 1.75rem;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 50%;
+            }
 
-        .account-tree-node .toggle-btn {
-            border: none;
-            background-color: transparent;
-            color: #0d6efd;
-            transition: background-color 0.2s ease, color 0.2s ease;
-        }
+            .account-tree-node .toggle-btn {
+                border: none;
+                background-color: transparent;
+                color: #0d6efd;
+                transition: background-color 0.2s ease, color 0.2s ease;
+            }
 
-        .account-tree-node .toggle-btn:hover {
-            background-color: rgba(13, 110, 253, 0.08);
-        }
+                .account-tree-node .toggle-btn:hover {
+                    background-color: rgba(13, 110, 253, 0.08);
+                }
 
-        .account-tree-node .node-text {
-            flex: 1 1 auto;
-            font-weight: 500;
-        }
+            .account-tree-node .node-text {
+                flex: 1 1 auto;
+                font-weight: 500;
+            }
 
-        .account-tree-node .tree-children {
-            margin-right: 1.5rem;
-            border-right: 1px dashed #ced4da;
-            padding-right: 1rem;
-            margin-top: 0.35rem;
-        }
+            .account-tree-node .tree-children {
+                margin-right: 1.5rem;
+                border-right: 1px dashed #ced4da;
+                padding-right: 1rem;
+                margin-top: 0.35rem;
+            }
 
-        .account-tree-node .tree-children.collapsed {
-            display: none;
-        }
+                .account-tree-node .tree-children.collapsed {
+                    display: none;
+                }
 
-        .account-tree-node .badge {
-            font-size: 0.7rem;
-        }
+            .account-tree-node .badge {
+                font-size: 0.7rem;
+            }
 
-        @media (max-width: 767.98px) {
+        @@media (max-width: 767.98px) {
             .account-tree-container {
                 max-height: 260px;
             }
