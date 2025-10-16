@@ -602,8 +602,6 @@ namespace AccountingSystem.Controllers
         {
             var asset = await _context.Assets
                 .Include(a => a.Account)
-                    .ThenInclude(a => a!.JournalEntryLines)
-                .Include(a => a.Expenses)
                 .FirstOrDefaultAsync(a => a.Id == id);
 
             if (asset == null)
@@ -623,7 +621,10 @@ namespace AccountingSystem.Controllers
                 }
             }
 
-            if (asset.Expenses.Any())
+            var hasExpenses = await _context.AssetExpenses
+                .AnyAsync(expense => expense.AssetId == asset.Id);
+
+            if (hasExpenses)
             {
                 TempData["ErrorMessage"] = "لا يمكن حذف الأصل لوجود مصاريف مرتبطة به.";
                 return RedirectToAction(nameof(Index));
