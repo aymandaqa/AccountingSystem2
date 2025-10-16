@@ -91,8 +91,7 @@ namespace AccountingSystem.Controllers
             }
 
             var currency = await _context.Currencies.FindAsync(model.CurrencyId);
-            if (model.ExchangeRate <= 0)
-                model.ExchangeRate = currency?.ExchangeRate ?? 1m;
+            model.ExchangeRate = currency?.ExchangeRate ?? 1m;
 
             model.Date = DateTime.Now;
             model.CreatedById = user.Id;
