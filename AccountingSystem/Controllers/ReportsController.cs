@@ -1924,7 +1924,6 @@ namespace AccountingSystem.Controllers
             var accounts = await _context.Accounts
                 .Include(a => a.Branch)
                 .Include(a => a.Currency)
-                .Where(a => a.CanPostTransactions)
                 .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
                 .OrderBy(a => a.Code)
                 .ToListAsync();
@@ -1939,9 +1938,13 @@ namespace AccountingSystem.Controllers
                 normalizedLevel = 5;
             }
 
-            var filteredAccounts = accounts
-                .Where(a => a.Level <= normalizedLevel)
+            var accountsById = accounts.ToDictionary(a => a.Id);
+
+            var postingAccounts = accounts
+                .Where(a => a.CanPostTransactions)
                 .ToList();
+
+            var aggregatedBalances = new Dictionary<int, (decimal NetSelected, decimal NetBase)>();
 
             var pending = includePending
                 ? await _context.JournalEntryLines
@@ -1958,68 +1961,138 @@ namespace AccountingSystem.Controllers
             var selectedCurrency = currencyId.HasValue ? await _context.Currencies.FirstOrDefaultAsync(c => c.Id == currencyId.Value) : baseCurrency;
             selectedCurrency ??= baseCurrency;
 
+            var childLookup = accounts
+                .Where(a => a.ParentId.HasValue)
+                .GroupBy(a => a.ParentId!.Value)
+                .ToDictionary(g => g.Key, g => g.Select(child => child.Id).ToList());
+
+            foreach (var account in postingAccounts)
+            {
+                pending.TryGetValue(account.Id, out var p);
+                var pendingBalance = account.Nature == AccountNature.Debit ? p.Debit - p.Credit : p.Credit - p.Debit;
+                var balance = account.CurrentBalance + pendingBalance;
+                var balanceSelected = _currencyService.Convert(balance, account.Currency, selectedCurrency);
+                var balanceBase = _currencyService.Convert(balance, account.Currency, baseCurrency);
+
+                var current = account;
+                while (current != null)
+                {
+                    if (current.Level <= normalizedLevel)
+                    {
+                        if (!aggregatedBalances.TryGetValue(current.Id, out var totals))
+                        {
+                            totals = (0m, 0m);
+                        }
+
+                        totals.NetSelected += balanceSelected;
+                        totals.NetBase += balanceBase;
+                        aggregatedBalances[current.Id] = totals;
+                    }
+
+                    if (!current.ParentId.HasValue)
+                    {
+                        break;
+                    }
+
+                    accountsById.TryGetValue(current.ParentId.Value, out current);
+                }
+            }
+
+            bool HasChildWithinLevel(int accountId)
+            {
+                if (!childLookup.TryGetValue(accountId, out var children))
+                {
+                    return false;
+                }
+
+                foreach (var childId in children)
+                {
+                    if (!accountsById.TryGetValue(childId, out var child))
+                    {
+                        continue;
+                    }
+
+                    if (child.Level <= normalizedLevel && aggregatedBalances.ContainsKey(child.Id))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            (decimal DebitSelected, decimal CreditSelected, decimal DebitBase, decimal CreditBase) CalculateDisplayBalances(Account account, decimal netSelected, decimal netBase)
+            {
+                decimal debitSelected;
+                decimal creditSelected;
+                decimal debitBase;
+                decimal creditBase;
+
+                if (account.AccountType == AccountType.Liabilities)
+                {
+                    if (netSelected < 0)
+                    {
+                        debitSelected = Math.Abs(netSelected);
+                        creditSelected = 0;
+                    }
+                    else
+                    {
+                        debitSelected = 0;
+                        creditSelected = netSelected;
+                    }
+
+                    if (netBase < 0)
+                    {
+                        debitBase = Math.Abs(netBase);
+                        creditBase = 0;
+                    }
+                    else
+                    {
+                        debitBase = 0;
+                        creditBase = netBase;
+                    }
+                }
+                else
+                {
+                    debitSelected = account.Nature == AccountNature.Debit ? netSelected : 0;
+                    creditSelected = account.Nature == AccountNature.Credit ? netSelected : 0;
+                    debitBase = account.Nature == AccountNature.Debit ? netBase : 0;
+                    creditBase = account.Nature == AccountNature.Credit ? netBase : 0;
+                }
+
+                return (debitSelected, creditSelected, debitBase, creditBase);
+            }
+
+            var displayedAccounts = accounts
+                .Where(a => a.Level <= normalizedLevel)
+                .Where(a => aggregatedBalances.ContainsKey(a.Id))
+                .Where(a => !HasChildWithinLevel(a.Id))
+                .OrderBy(a => a.Code)
+                .Select(a =>
+                {
+                    var totals = aggregatedBalances[a.Id];
+                    var balances = CalculateDisplayBalances(a, totals.NetSelected, totals.NetBase);
+
+                    return new TrialBalanceAccountViewModel
+                    {
+                        AccountCode = a.Code,
+                        AccountName = a.NameAr,
+                        DebitBalance = balances.DebitSelected,
+                        CreditBalance = balances.CreditSelected,
+                        DebitBalanceBase = balances.DebitBase,
+                        CreditBalanceBase = balances.CreditBase,
+                        Level = a.Level
+                    };
+                })
+                .ToList();
+
             var viewModel = new TrialBalanceViewModel
             {
                 FromDate = from,
                 ToDate = to,
                 BranchId = branchId,
                 IncludePending = includePending,
-                Accounts = filteredAccounts.Select(a =>
-                {
-                    pending.TryGetValue(a.Id, out var p);
-                    var pendingBalance = a.Nature == AccountNature.Debit ? p.Debit - p.Credit : p.Credit - p.Debit;
-                    var balance = a.CurrentBalance + pendingBalance;
-                    var balanceSelected = _currencyService.Convert(balance, a.Currency, selectedCurrency);
-                    var balanceBase = _currencyService.Convert(balance, a.Currency, baseCurrency);
-
-                    decimal debitSelected;
-                    decimal creditSelected;
-                    decimal debitBase;
-                    decimal creditBase;
-
-                    if (a.AccountType == AccountType.Liabilities)
-                    {
-                        if (balanceSelected < 0)
-                        {
-                            debitSelected = Math.Abs(balanceSelected);
-                            creditSelected = 0;
-                        }
-                        else
-                        {
-                            debitSelected = 0;
-                            creditSelected = balanceSelected;
-                        }
-
-                        if (balanceBase < 0)
-                        {
-                            debitBase = Math.Abs(balanceBase);
-                            creditBase = 0;
-                        }
-                        else
-                        {
-                            debitBase = 0;
-                            creditBase = balanceBase;
-                        }
-                    }
-                    else
-                    {
-                        debitSelected = a.Nature == AccountNature.Debit ? balanceSelected : 0;
-                        creditSelected = a.Nature == AccountNature.Credit ? balanceSelected : 0;
-                        debitBase = a.Nature == AccountNature.Debit ? balanceBase : 0;
-                        creditBase = a.Nature == AccountNature.Credit ? balanceBase : 0;
-                    }
-
-                    return new TrialBalanceAccountViewModel
-                    {
-                        AccountCode = a.Code,
-                        AccountName = a.NameAr,
-                        DebitBalance = debitSelected,
-                        CreditBalance = creditSelected,
-                        DebitBalanceBase = debitBase,
-                        CreditBalanceBase = creditBase,
-                        Level = a.Level
-                    };
-                }).ToList(),
+                Accounts = displayedAccounts,
                 Branches = await GetBranchesSelectList(),
                 Currencies = await _context.Currencies
                     .Select(c => new SelectListItem { Value = c.Id.ToString(), Text = c.Code })
