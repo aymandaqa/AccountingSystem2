@@ -2053,8 +2053,10 @@ namespace AccountingSystem.Controllers
             }
             else
             {
+                var accountsWithChildren = new HashSet<int>(childrenLookup.Keys);
+
                 accountScope = allAccounts
-                    .Where(a => a.Level == normalizedLevel)
+                    .Where(a => a.Level == normalizedLevel || (a.Level < normalizedLevel && !accountsWithChildren.Contains(a.Id)))
                     .OrderBy(a => a.Code)
                     .ToList();
 
