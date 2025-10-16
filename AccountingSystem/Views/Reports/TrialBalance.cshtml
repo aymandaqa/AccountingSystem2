@@ -5,10 +5,7 @@
 @{ 
     ViewData["Title"] = "ميزان المراجعة";
     var hasMismatch = Model.Accounts.Any(a => a.DebitBalance != 0 && a.CreditBalance != 0);
-    var maxLevelValue = Model.Levels
-        .Select(l => int.TryParse(l.Value, out var parsed) ? parsed : 0)
-        .DefaultIfEmpty(6)
-        .Max();
+    var initialLevelValue = Model.SelectedLevel;
     var defaultAccountLabel = "جميع الحسابات";
 }
 
@@ -50,6 +47,22 @@
                                 }
                             </select>
                         </div>
+                        <div class="col-md-3">
+                            <label class="form-label">المستوى:</label>
+                            <select name="level" id="levelSelect" class="form-select">
+                                @foreach (var level in Model.Levels)
+                                {
+                                    if (level.Selected)
+                                    {
+                                        <option value="@level.Value" selected>@level.Text</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@level.Value">@level.Text</option>
+                                    }
+                                }
+                            </select>
+                        </div>
                         <div class="col-md-3 d-flex align-items-end">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="includePending" value="true" @(Model.IncludePending ? "checked" : "") />
@@ -72,8 +85,7 @@
                                     </div>
                                 </div>
                                 <input type="hidden" name="accountId" id="selectedAccountId" value="@(Model.SelectedAccountId?.ToString() ?? string.Empty)" />
-                                <input type="hidden" name="level" id="selectedLevelInput" value="@Model.SelectedLevel" />
-                                <div id="accountSelectionTree" class="account-tree-container" data-default-level="@maxLevelValue" data-empty-label="@defaultAccountLabel">
+                                <div id="accountSelectionTree" class="account-tree-container" data-default-level="@initialLevelValue" data-empty-label="@defaultAccountLabel">
                                     @if (Model.AccountTree.Any())
                                     {
                                         @await Html.PartialAsync("_AccountTreeSelector", Model.AccountTree, new ViewDataDictionary(ViewData) { ["SelectedAccountId"] = Model.SelectedAccountId })
@@ -287,11 +299,15 @@
             }
 
             var hiddenAccountId = document.getElementById('selectedAccountId');
-            var hiddenLevel = document.getElementById('selectedLevelInput');
+            var levelSelect = document.getElementById('levelSelect');
             var selectedLabel = document.getElementById('selectedAccountLabel');
             var clearButton = document.getElementById('clearAccountSelection');
             var defaultLevel = treeContainer.getAttribute('data-default-level');
+            if (!defaultLevel && levelSelect) {
+                defaultLevel = levelSelect.value;
+            }
             var emptyLabel = treeContainer.getAttribute('data-empty-label') || 'جميع الحسابات';
+            var manualLevelValue = levelSelect ? levelSelect.value : defaultLevel;
 
             function updateSelectedLabel(label, enableClear) {
                 if (selectedLabel) {
@@ -308,8 +324,9 @@
                     hiddenAccountId.value = '';
                 }
 
-                if (hiddenLevel && defaultLevel) {
-                    hiddenLevel.value = defaultLevel;
+                if (levelSelect) {
+                    levelSelect.value = manualLevelValue;
+                    manualLevelValue = levelSelect.value;
                 }
 
                 treeContainer.querySelectorAll('.account-tree-node.selected').forEach(function (node) {
@@ -374,8 +391,8 @@
                     hiddenAccountId.value = nodeId;
                 }
 
-                if (hiddenLevel && level) {
-                    hiddenLevel.value = level;
+                if (levelSelect && level) {
+                    levelSelect.value = level;
                 }
 
                 updateSelectedLabel(labelText, true);
@@ -421,6 +438,12 @@
                 clearButton.addEventListener('click', function (event) {
                     event.preventDefault();
                     clearSelection();
+                });
+            }
+
+            if (levelSelect) {
+                levelSelect.addEventListener('change', function () {
+                    manualLevelValue = levelSelect.value;
                 });
             }
 

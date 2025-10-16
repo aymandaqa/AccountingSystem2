@@ -1985,7 +1985,6 @@ namespace AccountingSystem.Controllers
         {
             var allAccounts = await _context.Accounts
                 .Include(a => a.Currency)
-                .Where(a => a.IsActive)
                 .OrderBy(a => a.Code)
                 .ToListAsync();
 
