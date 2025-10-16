@@ -122,13 +122,24 @@
                 </div>
                 <ul class="nav flex-column gap-1" id="sidebarNav">
                     <li class="nav-item">
-                        <a class="nav-link @(currentController == "dashboard" && currentAction == "index" ? "active" : "")" href="@Url.Action("Index", "Dashboard")" data-bs-toggle="tooltip" data-bs-placement="left" title="لوحة التحكم">
+                        <a class="nav-link @(currentController == "dashboard" && currentAction == "index" ? "active" : "")"
+                           asp-controller="Dashboard"
+                           asp-action="Index"
+                           asp-require-permission="dashboard.view"
+                           data-bs-toggle="tooltip"
+                           data-bs-placement="left"
+                           title="لوحة التحكم">
                             <i class="fa-solid fa-chart-line"></i>
                             <span class="menu-title">لوحة التحكم</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link @(currentController == "home" && currentAction == "index" ? "active" : "")" href="@Url.Action("Index", "Home")" data-bs-toggle="tooltip" data-bs-placement="left" title="عرض أداء الشركة">
+                        <a class="nav-link @(currentController == "home" && currentAction == "index" ? "active" : "")"
+                           asp-controller="Home"
+                           asp-action="Index"
+                           data-bs-toggle="tooltip"
+                           data-bs-placement="left"
+                           title="عرض أداء الشركة">
                             <i class="fa-solid fa-gauge-high"></i>
                             <span class="menu-title">عرض أداء الشركة</span>
                         </a>
@@ -140,15 +151,42 @@
                             <i class="fa-solid fa-angle-left ms-auto submenu-arrow"></i>
                         </a>
                         <ul class="collapse menu-dropdown @(accountsActive ? "show" : "")" id="accountsMenu">
-                            <li><a class="dropdown-item" href="@Url.Action("Tree", "Accounts")"><i class="fa-solid fa-sitemap"></i><span>شجرة الحسابات</span></a></li>
-                            <li><a class="dropdown-item" href="@Url.Action("Index", "Accounts")"><i class="fa-solid fa-list"></i><span>قائمة الحسابات</span></a></li>
-                            <li><a class="dropdown-item" href="@Url.Action("Create", "Accounts")"><i class="fa-solid fa-plus"></i><span>إضافة حساب جديد</span></a></li>
+                            <li>
+                                <a class="dropdown-item"
+                                   asp-controller="Accounts"
+                                   asp-action="Tree"
+                                   asp-require-permission="accounts.view">
+                                    <i class="fa-solid fa-sitemap"></i><span>شجرة الحسابات</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item"
+                                   asp-controller="Accounts"
+                                   asp-action="Index"
+                                   asp-require-permission="accounts.view">
+                                    <i class="fa-solid fa-list"></i><span>قائمة الحسابات</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item"
+                                   asp-controller="Accounts"
+                                   asp-action="Create"
+                                   asp-require-permission="accounts.create">
+                                    <i class="fa-solid fa-plus"></i><span>إضافة حساب جديد</span>
+                                </a>
+                            </li>
                         </ul>
                     </li>
                     @if (canAgents)
                     {
                         <li class="nav-item">
-                            <a class="nav-link @(currentController == "agents" ? "active" : "")" href="@Url.Action("Index", "Agents")" data-bs-toggle="tooltip" data-bs-placement="left" title="الوكلاء">
+                            <a class="nav-link @(currentController == "agents" ? "active" : "")"
+                               asp-controller="Agents"
+                               asp-action="Index"
+                               asp-require-permission="agents.view"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="left"
+                               title="الوكلاء">
                                 <i class="fa-solid fa-user-tie"></i>
                                 <span class="menu-title">الوكلاء</span>
                             </a>
@@ -157,7 +195,13 @@
                     @if (canSuppliers)
                     {
                         <li class="nav-item">
-                            <a class="nav-link @(currentController == "suppliers" ? "active" : "")" href="@Url.Action("Index", "Suppliers")" data-bs-toggle="tooltip" data-bs-placement="left" title="الموردين">
+                            <a class="nav-link @(currentController == "suppliers" ? "active" : "")"
+                               asp-controller="Suppliers"
+                               asp-action="Index"
+                               asp-require-permission="suppliers.view"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="left"
+                               title="الموردين">
                                 <i class="fa-solid fa-truck"></i>
                                 <span class="menu-title">الموردين</span>
                             </a>
@@ -166,7 +210,13 @@
                     @if (canSystemSettings)
                     {
                         <li class="nav-item">
-                            <a class="nav-link @(currentController == "systemsettings" ? "active" : "")" href="@Url.Action("Index", "SystemSettings")" data-bs-toggle="tooltip" data-bs-placement="left" title="إعدادات النظام">
+                            <a class="nav-link @(currentController == "systemsettings" ? "active" : "")"
+                               asp-controller="SystemSettings"
+                               asp-action="Index"
+                               asp-require-permission="systemsettings.view"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="left"
+                               title="إعدادات النظام">
                                 <i class="fa-solid fa-sliders"></i>
                                 <span class="menu-title">إعدادات النظام</span>
                             </a>
@@ -183,23 +233,58 @@
                             <ul class="collapse menu-dropdown @(operationsActive ? "show" : "")" id="operationsMenu">
                                 @if (canCashClosuresView)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("MyClosures", "CashBoxClosures")"><i class="fa-solid fa-box-archive"></i><span>جرد الصندوق قائمة</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="CashBoxClosures"
+                                           asp-action="MyClosures"
+                                           asp-require-permission="cashclosures.view">
+                                            <i class="fa-solid fa-box-archive"></i><span>جرد الصندوق قائمة</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canCashClosuresApprove)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Pending", "CashBoxClosures")"><i class="fa-solid fa-hourglass-half"></i><span>جرد الصندوق موقعة</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="CashBoxClosures"
+                                           asp-action="Pending"
+                                           asp-require-permission="cashclosures.approve">
+                                            <i class="fa-solid fa-hourglass-half"></i><span>جرد الصندوق موقعة</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canCashClosuresCreate)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Create", "CashBoxClosures")"><i class="fa-solid fa-plus"></i><span>جرد الصندوق</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="CashBoxClosures"
+                                           asp-action="Create"
+                                           asp-require-permission="cashclosures.create">
+                                            <i class="fa-solid fa-plus"></i><span>جرد الصندوق</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canCashClosuresReport || canCashClosuresView)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Report", "CashBoxClosures")"><i class="fa-solid fa-file-lines"></i><span>تقرير إغلاقات الصندوق</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="CashBoxClosures"
+                                           asp-action="Report"
+                                           asp-require-permission="@(canCashClosuresReport ? "cashclosures.report" : "cashclosures.view")">
+                                            <i class="fa-solid fa-file-lines"></i><span>تقرير إغلاقات الصندوق</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canTransfersView)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "Transfers")"><i class="fa-solid fa-right-left"></i><span>الحوالات</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="Transfers"
+                                           asp-action="Index"
+                                           asp-require-permission="transfers.view">
+                                            <i class="fa-solid fa-right-left"></i><span>الحوالات</span>
+                                        </a>
+                                    </li>
                                 }
                             </ul>
                         </li>
@@ -215,15 +300,36 @@
                             <ul class="collapse menu-dropdown @(assetsActive ? "show" : "")" id="assetsMenu">
                                 @if (canAssets)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "Assets")"><i class="fa-solid fa-list"></i><span>قائمة الأصول الثابتة</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="Assets"
+                                           asp-action="Index"
+                                           asp-require-permission="assets.view">
+                                            <i class="fa-solid fa-list"></i><span>قائمة الأصول الثابتة</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canAssetTypes)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "AssetTypes")"><i class="fa-solid fa-tags"></i><span>أنواع الأصول</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="AssetTypes"
+                                           asp-action="Index"
+                                           asp-require-permission="assettypes.view">
+                                            <i class="fa-solid fa-tags"></i><span>أنواع الأصول</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canAssetExpenses)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "AssetExpenses")"><i class="fa-solid fa-money-bill"></i><span>مصاريف الأصول الثابتة</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="AssetExpenses"
+                                           asp-action="Index"
+                                           asp-require-permission="assetexpenses.view">
+                                            <i class="fa-solid fa-money-bill"></i><span>مصاريف الأصول الثابتة</span>
+                                        </a>
+                                    </li>
                                 }
                             </ul>
                         </li>
@@ -239,32 +345,88 @@
                             <ul class="collapse menu-dropdown @(vouchersActive ? "show" : "")" id="vouchersMenu">
                                 @if (canDisbursementVouchers)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "DisbursementVouchers")"><i class="fa-solid fa-list"></i><span>سندات دفع</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="DisbursementVouchers"
+                                           asp-action="Index"
+                                           asp-require-permission="disbursementvouchers.view">
+                                            <i class="fa-solid fa-list"></i><span>سندات دفع</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canDisbursementVouchersCreate)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Create", "DisbursementVouchers")"><i class="fa-solid fa-plus"></i><span>إضافة سند دفع</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="DisbursementVouchers"
+                                           asp-action="Create"
+                                           asp-require-permission="disbursementvouchers.create">
+                                            <i class="fa-solid fa-plus"></i><span>إضافة سند دفع</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canPaymentVouchers)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "PaymentVouchers")"><i class="fa-solid fa-list"></i><span>سندات المصاريف</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="PaymentVouchers"
+                                           asp-action="Index"
+                                           asp-require-permission="paymentvouchers.view">
+                                            <i class="fa-solid fa-list"></i><span>سندات المصاريف</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canPaymentVouchersCreate)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Create", "PaymentVouchers")"><i class="fa-solid fa-plus"></i><span>إضافة سند صرف</span></a></li>
-                                    <li><a class="dropdown-item" href="@Url.Action("CreateFromAgent", "PaymentVouchers")"><i class="fa-solid fa-user-tie"></i><span>سند صرف من حساب وكيل</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="PaymentVouchers"
+                                           asp-action="Create"
+                                           asp-require-permission="paymentvouchers.create">
+                                            <i class="fa-solid fa-plus"></i><span>إضافة سند صرف</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="PaymentVouchers"
+                                           asp-action="CreateFromAgent"
+                                           asp-require-permission="paymentvouchers.create">
+                                            <i class="fa-solid fa-user-tie"></i><span>سند صرف من حساب وكيل</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canWorkflowApprovalsView)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "WorkflowApprovals")"><i class="fa-solid fa-check-to-slot"></i><span>موافقات سندات الدفع</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="WorkflowApprovals"
+                                           asp-action="Index"
+                                           asp-require-permission="workflowapprovals.view">
+                                            <i class="fa-solid fa-check-to-slot"></i><span>موافقات سندات الدفع</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canWorkflowDefinitionsManage)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "WorkflowDefinitions")"><i class="fa-solid fa-diagram-project"></i><span>سير عمل السندات</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="WorkflowDefinitions"
+                                           asp-action="Index"
+                                           asp-require-permission="workflowdefinitions.manage">
+                                            <i class="fa-solid fa-diagram-project"></i><span>سير عمل السندات</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canDynamicScreensManage)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "DynamicScreens")"><i class="fa-solid fa-layer-group"></i><span>إدارة الشاشات الديناميكية</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="DynamicScreens"
+                                           asp-action="Index"
+                                           asp-require-permission="dynamicscreens.manage">
+                                            <i class="fa-solid fa-layer-group"></i><span>إدارة الشاشات الديناميكية</span>
+                                        </a>
+                                    </li>
                                 }
                             </ul>
                         </li>
@@ -281,23 +443,58 @@
                             <ul class="collapse menu-dropdown @(accountMgmtActive ? "show" : "")" id="accountMgmtMenu">
                                 @if (canBusinessStatementBulk)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("BusinessStatementBulk", "AccountManagement")"><i class="fa-solid fa-file-circle-check"></i><span>حساب العميل كلي</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="AccountManagement"
+                                           asp-action="BusinessStatementBulk"
+                                           asp-require-permission="accountmanagement.businessstatementbulk">
+                                            <i class="fa-solid fa-file-circle-check"></i><span>حساب العميل كلي</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canBusnissStatment)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("BusnissStatment", "AccountManagement")"><i class="fa-solid fa-file-invoice"></i><span>حساب العميل</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="AccountManagement"
+                                           asp-action="BusnissStatment"
+                                           asp-require-permission="accountmanagement.busnissstatment">
+                                            <i class="fa-solid fa-file-invoice"></i><span>حساب العميل</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canDriverPayment)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("DriverPayment", "AccountManagement")"><i class="fa-solid fa-money-check-dollar"></i><span>دفعات السائق</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="AccountManagement"
+                                           asp-action="DriverPayment"
+                                           asp-require-permission="accountmanagement.driverpayment">
+                                            <i class="fa-solid fa-money-check-dollar"></i><span>دفعات السائق</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canDriverStatment)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("DriverStatment", "AccountManagement")"><i class="fa-solid fa-id-card"></i><span>حساب السائق</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="AccountManagement"
+                                           asp-action="DriverStatment"
+                                           asp-require-permission="accountmanagement.driverstatment">
+                                            <i class="fa-solid fa-id-card"></i><span>حساب السائق</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canUserPayment)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("UserPayment", "AccountManagement")"><i class="fa-solid fa-sack-dollar"></i><span>دفعات العميل</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="AccountManagement"
+                                           asp-action="UserPayment"
+                                           asp-require-permission="accountmanagement.userpayment">
+                                            <i class="fa-solid fa-sack-dollar"></i><span>دفعات العميل</span>
+                                        </a>
+                                    </li>
                                 }
                             </ul>
                         </li>
@@ -313,17 +510,52 @@
                             <ul class="collapse menu-dropdown @(journalActive ? "show" : "")" id="journalMenu">
                                 @if (canJournalView)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "JournalEntries")"><i class="fa-solid fa-list"></i><span>قائمة القيود</span></a></li>
-                                    <li><a class="dropdown-item" href="@Url.Action("Draft", "JournalEntries")"><i class="fa-solid fa-pen-to-square"></i><span>المسودات</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="JournalEntries"
+                                           asp-action="Index"
+                                           asp-require-permission="journal.view">
+                                            <i class="fa-solid fa-list"></i><span>قائمة القيود</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="JournalEntries"
+                                           asp-action="Draft"
+                                           asp-require-permission="journal.view">
+                                            <i class="fa-solid fa-pen-to-square"></i><span>المسودات</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canJournalApprove)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Posted", "JournalEntries")"><i class="fa-solid fa-circle-check"></i><span>المرحلة</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="JournalEntries"
+                                           asp-action="Posted"
+                                           asp-require-permission="journal.approve">
+                                            <i class="fa-solid fa-circle-check"></i><span>المرحلة</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canJournalCreate)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Create", "JournalEntries")"><i class="fa-solid fa-plus"></i><span>إضافة قيد جديد</span></a></li>
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "CompoundJournalDefinitions")"><i class="fa-solid fa-diagram-project"></i><span>القيود المركبة</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="JournalEntries"
+                                           asp-action="Create"
+                                           asp-require-permission="journal.create">
+                                            <i class="fa-solid fa-plus"></i><span>إضافة قيد جديد</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="CompoundJournalDefinitions"
+                                           asp-action="Index"
+                                           asp-require-permission="journal.create">
+                                            <i class="fa-solid fa-diagram-project"></i><span>القيود المركبة</span>
+                                        </a>
+                                    </li>
                                 }
                             </ul>
                         </li>
@@ -339,19 +571,47 @@
                             <ul class="collapse menu-dropdown @(hrActive ? "show" : "")" id="hrMenu">
                                 @if (canEmployeesView)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "Employees")"><i class="fa-solid fa-user"></i><span>إدارة الموظفين</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="Employees"
+                                           asp-action="Index"
+                                           asp-require-permission="employees.view">
+                                            <i class="fa-solid fa-user"></i><span>إدارة الموظفين</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canPayrollView)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "Payrolls")"><i class="fa-solid fa-money-check-alt"></i><span>إدارة الرواتب</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="Payrolls"
+                                           asp-action="Index"
+                                           asp-require-permission="payroll.view">
+                                            <i class="fa-solid fa-money-check-alt"></i><span>إدارة الرواتب</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canSalaryPaymentsView)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "SalaryPayments")"><i class="fa-solid fa-file-invoice-dollar"></i><span>سندات صرف الرواتب</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="SalaryPayments"
+                                           asp-action="Index"
+                                           asp-require-permission="salarypayments.view">
+                                            <i class="fa-solid fa-file-invoice-dollar"></i><span>سندات صرف الرواتب</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canEmployeeAdvancesView)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "EmployeeAdvances")"><i class="fa-solid fa-hand-holding-dollar"></i><span>سندات صرف السلف</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="EmployeeAdvances"
+                                           asp-action="Index"
+                                           asp-require-permission="employeeadvances.view">
+                                            <i class="fa-solid fa-hand-holding-dollar"></i><span>سندات صرف السلف</span>
+                                        </a>
+                                    </li>
                                 }
                             </ul>
                         </li>
@@ -371,24 +631,101 @@
                                 <ul class="list-unstyled mb-0" id="reportsList">
                                     @if (canReportsView)
                                     {
-                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("TrialBalance", "Reports")"><i class="fa-solid fa-scale-balanced"></i><span>ميزان المراجعة</span></a></li>
-                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("BalanceSheet", "Reports")"><i class="fa-solid fa-chart-pie"></i><span>الميزانية العمومية</span></a></li>
-                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("IncomeStatement", "Reports")"><i class="fa-solid fa-chart-line"></i><span>قائمة الدخل</span></a></li>
+                                        <li class="report-item">
+                                            <a class="dropdown-item"
+                                               asp-controller="Reports"
+                                               asp-action="TrialBalance"
+                                               asp-require-permission="reports.view">
+                                                <i class="fa-solid fa-scale-balanced"></i><span>ميزان المراجعة</span>
+                                            </a>
+                                        </li>
+                                        <li class="report-item">
+                                            <a class="dropdown-item"
+                                               asp-controller="Reports"
+                                               asp-action="BalanceSheet"
+                                               asp-require-permission="reports.view">
+                                                <i class="fa-solid fa-chart-pie"></i><span>الميزانية العمومية</span>
+                                            </a>
+                                        </li>
+                                        <li class="report-item">
+                                            <a class="dropdown-item"
+                                               asp-controller="Reports"
+                                               asp-action="IncomeStatement"
+                                               asp-require-permission="reports.view">
+                                                <i class="fa-solid fa-chart-line"></i><span>قائمة الدخل</span>
+                                            </a>
+                                        </li>
                                         <li><hr class="dropdown-divider"></li>
-                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("GeneralLedger", "Reports")"><i class="fa-solid fa-book"></i><span>دفتر الأستاذ العام</span></a></li>
-                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("AccountStatement", "Reports")"><i class="fa-solid fa-file-lines"></i><span>كشف حساب</span></a></li>
-                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("BranchExpenses", "Reports")"><i class="fa-solid fa-code-branch"></i><span>تقرير مصروفات الفروع</span></a></li>
-                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("BranchIncomeStatement", "Reports")"><i class="fa-solid fa-sitemap"></i><span>قائمة الدخل للفروع</span></a></li>
-                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("BranchPerformanceSummary", "Reports")"><i class="fa-solid fa-network-wired"></i><span>ملخص أداء الفروع</span></a></li>
+                                        <li class="report-item">
+                                            <a class="dropdown-item"
+                                               asp-controller="Reports"
+                                               asp-action="GeneralLedger"
+                                               asp-require-permission="reports.view">
+                                                <i class="fa-solid fa-book"></i><span>دفتر الأستاذ العام</span>
+                                            </a>
+                                        </li>
+                                        <li class="report-item">
+                                            <a class="dropdown-item"
+                                               asp-controller="Reports"
+                                               asp-action="AccountStatement"
+                                               asp-require-permission="reports.view">
+                                                <i class="fa-solid fa-file-lines"></i><span>كشف حساب</span>
+                                            </a>
+                                        </li>
+                                        <li class="report-item">
+                                            <a class="dropdown-item"
+                                               asp-controller="Reports"
+                                               asp-action="BranchExpenses"
+                                               asp-require-permission="reports.view">
+                                                <i class="fa-solid fa-code-branch"></i><span>تقرير مصروفات الفروع</span>
+                                            </a>
+                                        </li>
+                                        <li class="report-item">
+                                            <a class="dropdown-item"
+                                               asp-controller="Reports"
+                                               asp-action="BranchIncomeStatement"
+                                               asp-require-permission="reports.view">
+                                                <i class="fa-solid fa-sitemap"></i><span>قائمة الدخل للفروع</span>
+                                            </a>
+                                        </li>
+                                        <li class="report-item">
+                                            <a class="dropdown-item"
+                                               asp-controller="Reports"
+                                               asp-action="BranchPerformanceSummary"
+                                               asp-require-permission="reports.view">
+                                                <i class="fa-solid fa-network-wired"></i><span>ملخص أداء الفروع</span>
+                                            </a>
+                                        </li>
                                     }
                                     @if (canReportsPending)
                                     {
-                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("PendingTransactions", "Reports")"><i class="fa-solid fa-clock"></i><span>الحركات غير المرحلة</span></a></li>
+                                        <li class="report-item">
+                                            <a class="dropdown-item"
+                                               asp-controller="Reports"
+                                               asp-action="PendingTransactions"
+                                               asp-require-permission="reports.pending">
+                                                <i class="fa-solid fa-clock"></i><span>الحركات غير المرحلة</span>
+                                            </a>
+                                        </li>
                                     }
                                     @if (canReportsDynamic)
                                     {
-                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("DynamicPivot", "Reports")"><i class="fa-solid fa-table"></i><span>إنشاء تقرير Pivot</span></a></li>
-                                        <li class="report-item"><a class="dropdown-item" href="@Url.Action("QueryBuilder", "Reports")"><i class="fa-solid fa-diagram-project"></i><span>مصمم التقارير</span></a></li>
+                                        <li class="report-item">
+                                            <a class="dropdown-item"
+                                               asp-controller="Reports"
+                                               asp-action="DynamicPivot"
+                                               asp-require-permission="reports.dynamic">
+                                                <i class="fa-solid fa-table"></i><span>إنشاء تقرير Pivot</span>
+                                            </a>
+                                        </li>
+                                        <li class="report-item">
+                                            <a class="dropdown-item"
+                                               asp-controller="Reports"
+                                               asp-action="QueryBuilder"
+                                               asp-require-permission="reports.dynamic">
+                                                <i class="fa-solid fa-diagram-project"></i><span>مصمم التقارير</span>
+                                            </a>
+                                        </li>
                                     }
                                 </ul>
                             </div>
@@ -405,19 +742,47 @@
                             <ul class="collapse menu-dropdown @(settingsActive ? "show" : "")" id="settingsMenu">
                                 @if (canBranches)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "Branches")"><i class="fa-solid fa-building"></i><span>الفروع</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="Branches"
+                                           asp-action="Index"
+                                           asp-require-permission="branches.view">
+                                            <i class="fa-solid fa-building"></i><span>الفروع</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canCostCenters)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "CostCenters")"><i class="fa-solid fa-bullseye"></i><span>مراكز التكلفة</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="CostCenters"
+                                           asp-action="Index"
+                                           asp-require-permission="costcenters.view">
+                                            <i class="fa-solid fa-bullseye"></i><span>مراكز التكلفة</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canCurrencies)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "Currencies")"><i class="fa-solid fa-coins"></i><span>العملات</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="Currencies"
+                                           asp-action="Index"
+                                           asp-require-permission="currencies.view">
+                                            <i class="fa-solid fa-coins"></i><span>العملات</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canPermissionGroups)
                                 {
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "PermissionGroups")"><i class="fa-solid fa-key"></i><span>مجموعات الصلاحيات</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="PermissionGroups"
+                                           asp-action="Index"
+                                           asp-require-permission="permissiongroups.view">
+                                            <i class="fa-solid fa-key"></i><span>مجموعات الصلاحيات</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canUsers)
                                 {
@@ -425,7 +790,14 @@
                                     {
                                         <li><hr class="dropdown-divider"></li>
                                     }
-                                    <li><a class="dropdown-item" href="@Url.Action("Index", "Users")"><i class="fa-solid fa-users"></i><span>المستخدمون</span></a></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="Users"
+                                           asp-action="Index"
+                                           asp-require-permission="users.view">
+                                            <i class="fa-solid fa-users"></i><span>المستخدمون</span>
+                                        </a>
+                                    </li>
                                 }
                             </ul>
                         </li>
