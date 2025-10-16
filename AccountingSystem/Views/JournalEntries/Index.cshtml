@@ -8,6 +8,10 @@
 
 @section Styles {
     <style>
+        .journal-entries-wrapper {
+            padding-inline: clamp(0.5rem, 1vw, 1.5rem);
+        }
+
         .table-actions .btn {
             min-width: 2.25rem;
         }
@@ -20,6 +24,26 @@
             font-weight: 600;
         }
 
+        .filters-card .form-check-label {
+            font-weight: 600;
+        }
+
+        .quick-search {
+            min-width: clamp(16rem, 24vw, 22rem);
+        }
+
+            .quick-search .form-control {
+                border-inline-start: 0;
+            }
+
+        .quick-search .input-group-text {
+            background-color: #f8f9fa;
+        }
+
+        .quick-search .btn-clear-search {
+            border-radius: 0 var(--bs-border-radius) var(--bs-border-radius) 0;
+        }
+
         .unbalanced-entry {
             background-color: #fdeaea;
         }
@@ -27,23 +51,43 @@
             .unbalanced-entry .e-rowcell {
                 color: #b71c1c;
             }
+
+        @media (max-width: 767.98px) {
+            .quick-search {
+                width: 100%;
+            }
+
+                .quick-search .btn,
+                .quick-search .input-group-text {
+                    border-radius: 0;
+                }
+        }
     </style>
 }
 
-<div class="container-fluid">
+<div class="container-fluid journal-entries-wrapper">
     <div class="row">
         <div class="col-12">
             <div class="card shadow-sm">
-                <div class="card-header d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2">
-                    <h3 class="card-title mb-0">
-                        <i class="fas fa-file-invoice me-2"></i>
-                        القيود المالية
-                    </h3>
-                    <div class="d-flex flex-column flex-md-row align-items-md-center gap-2">
-                        <a asp-action="Create" class="btn btn-primary" asp-require-permission="journal.create">
-                            <i class="fas fa-plus me-1"></i>
-                            إضافة قيد جديد
-                        </a>
+                <div class="card-header">
+                    <div class="d-flex flex-column flex-xl-row align-items-xl-center gap-3">
+                        <h3 class="card-title mb-0 d-flex align-items-center gap-2">
+                            <i class="fas fa-file-invoice"></i>
+                            <span>القيود المالية</span>
+                        </h3>
+                        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-lg-end gap-2 w-100">
+                            <div class="input-group quick-search" role="search">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="search" id="quickSearch" class="form-control" placeholder="بحث سريع برقم القيد أو الوصف أو المرجع" aria-label="بحث سريع" />
+                                <button type="button" id="clearQuickSearch" class="btn btn-outline-secondary btn-clear-search" title="مسح البحث">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <a asp-action="Create" class="btn btn-primary" asp-require-permission="journal.create">
+                                <i class="fas fa-plus me-1"></i>
+                                إضافة قيد جديد
+                            </a>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body filters-card">
@@ -84,6 +128,12 @@
                                 <option value="Reference">حسب المرجع</option>
                             </select>
                         </div>
+                        <div class="col-sm-6 col-lg-3 d-flex align-items-center">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="showUnbalancedOnly">
+                                <label class="form-check-label" for="showUnbalancedOnly">عرض القيود غير المتوازنة فقط</label>
+                            </div>
+                        </div>
                         <div class="col-sm-6 col-lg-3 d-flex">
                             <button type="button" id="resetFilters" class="btn btn-outline-secondary w-100 mt-auto">
                                 <i class="fas fa-undo"></i> إعادة تعيين
@@ -97,24 +147,37 @@
                               allowFiltering="true"
                               allowGrouping="true"
                               allowExcelExport="true"
+                              allowTextWrap="true"
+                              allowResizing="true"
+                              allowReordering="true"
                               enableStickyHeader="true"
                               enableRtl="true"
                               allowSelection="false"
-                              height="500"
+                              height="100%"
                               gridLines="Both"
                               toolbar="@toolbarItems">
                         <e-data-manager url="@Url.Action("UrlDatasourceJournalEntries", "JournalEntries")" adaptor="UrlAdaptor"></e-data-manager>
                         <e-grid-filterSettings type="Excel"></e-grid-filterSettings>
+                        <e-grid-aggregates>
+                            <e-grid-aggregate>
+                                <e-aggregate-columns>
+                                    <e-aggregate-column field="TotalDebit" type="Sum" format="N2" footerTemplate="<div class='text-end fw-semibold'>إجمالي المدين: ${Sum}</div>" groupCaptionTemplate="<span class='fw-semibold text-primary'>إجمالي المدين: ${Sum}</span>"></e-aggregate-column>
+                                    <e-aggregate-column field="TotalCredit" type="Sum" format="N2" footerTemplate="<div class='text-end fw-semibold'>إجمالي الدائن: ${Sum}</div>" groupCaptionTemplate="<span class='fw-semibold text-primary'>إجمالي الدائن: ${Sum}</span>"></e-aggregate-column>
+                                </e-aggregate-columns>
+                            </e-grid-aggregate>
+                        </e-grid-aggregates>
                         <e-grid-columns>
                             <e-grid-column field="Number" headerText="رقم القيد" width="140"></e-grid-column>
                             <e-grid-column field="Date" headerText="التاريخ" format="dd/MM/yyyy HH:mm" type="date" textAlign="Center" width="140"></e-grid-column>
                             <e-grid-column field="Description" headerText="الوصف" width="220"></e-grid-column>
                             <e-grid-column field="Reference" headerText="المرجع" width="180"></e-grid-column>
                             <e-grid-column field="BranchName" headerText="الفرع" width="180"></e-grid-column>
-                            <e-grid-column field="TotalAmount" headerText="المبلغ الإجمالي" format="N2" type="number" textAlign="Right" width="170"></e-grid-column>
+                            <e-grid-column field="TotalDebit" headerText="إجمالي المدين" format="N2" type="number" textAlign="Right" width="160"></e-grid-column>
+                            <e-grid-column field="TotalCredit" headerText="إجمالي الدائن" format="N2" type="number" textAlign="Right" width="160"></e-grid-column>
                             <e-grid-column field="LinesCount" headerText="عدد البنود" textAlign="Center" width="130"></e-grid-column>
                             <e-grid-column field="StatusDisplay" headerText="الحالة" template="#statusTemplate" textAlign="Center" width="140"></e-grid-column>
                             <e-grid-column field="DateGroup" headerText="الشهر" visible="false"></e-grid-column>
+                            <e-grid-column field="IsBalanced" visible="false"></e-grid-column>
                             <e-grid-column field="Id" headerText="الإجراءات" template="#actionsTemplate" textAlign="Center" width="210" allowSorting="false" allowFiltering="false"></e-grid-column>
                         </e-grid-columns>
                     </ejs-grid>
@@ -163,6 +226,9 @@
             var postUrlBase = '@Url.Action("Post", "JournalEntries")';
             var deleteUrlBase = '@Url.Action("Delete", "JournalEntries")';
             var gridElement = document.getElementById('journalEntriesGrid');
+            var searchInput = document.getElementById('quickSearch');
+            var clearSearchButton = document.getElementById('clearQuickSearch');
+            var unbalancedToggle = document.getElementById('showUnbalancedOnly');
             if (!gridElement || !gridElement.ej2_instances || !gridElement.ej2_instances.length) {
                 return;
             }
@@ -184,8 +250,18 @@
                 return Object.assign({}, options, { headers: headers });
             }
 
-            grid.pageSettings = { pageSize: 10, pageSizes: [10, 25, 50, 100, 'All'] };
-            grid.groupSettings = { showDropArea: false, columns: ['Reference'] };
+            grid.pageSettings = { pageSize: 25, pageSizes: [10, 25, 50, 100, 'All'] };
+            grid.groupSettings = { showDropArea: false };
+            grid.searchSettings = { fields: ['Number', 'Description', 'Reference', 'BranchName'], operator: 'contains', key: '', ignoreCase: true };
+
+            function updateGridHeight() {
+                var headerRect = gridElement.getBoundingClientRect();
+                var availableHeight = window.innerHeight - headerRect.top - 180;
+                grid.height = Math.max(availableHeight, 420);
+            }
+
+            updateGridHeight();
+            window.addEventListener('resize', updateGridHeight);
 
             grid.rowDataBound = function (args) {
                 if (!args || !args.row) {
@@ -225,11 +301,13 @@
                 var toDate = document.getElementById('toDate').value;
                 var branchId = document.getElementById('branchFilter').value;
                 var status = document.getElementById('statusFilter').value;
+                var showUnbalancedOnly = unbalancedToggle && unbalancedToggle.checked;
 
                 if (fromDate) params.append('fromDate', fromDate);
                 if (toDate) params.append('toDate', toDate);
                 if (branchId) params.append('branchId', branchId);
                 if (status) params.append('status', status);
+                if (showUnbalancedOnly) params.append('showUnbalancedOnly', 'true');
 
                 var query = params.toString();
                 return query ? dataUrl + '?' + query : dataUrl;
@@ -237,10 +315,12 @@
 
             function reloadGrid() {
                 showLoading();
+                var searchValue = searchInput ? searchInput.value.trim() : '';
                 grid.dataSource = new ej.data.DataManager({
                     url: buildDataUrl(),
                     adaptor: new ej.data.UrlAdaptor()
                 });
+                grid.searchSettings.key = searchValue;
                 grid.refresh();
             }
 
@@ -258,6 +338,13 @@
                 });
             });
 
+            if (unbalancedToggle) {
+                unbalancedToggle.addEventListener('change', function () {
+                    grid.pageSettings.currentPage = 1;
+                    reloadGrid();
+                });
+            }
+
             var resetButton = document.getElementById('resetFilters');
             if (resetButton) {
                 resetButton.addEventListener('click', function () {
@@ -265,15 +352,20 @@
                     document.getElementById('toDate').value = '';
                     document.getElementById('branchFilter').selectedIndex = 0;
                     document.getElementById('statusFilter').selectedIndex = 0;
-                    document.getElementById('groupBy').value = 'Reference';
+                    document.getElementById('groupBy').value = '';
+                    if (unbalancedToggle) {
+                        unbalancedToggle.checked = false;
+                    }
 
                     grid.clearFiltering();
                     grid.clearSorting();
                     grid.searchSettings.key = '';
                     grid.clearGrouping();
-                    grid.groupColumn('Reference');
                     grid.pageSettings.currentPage = 1;
                     reloadGrid();
+                    if (searchInput) {
+                        searchInput.value = '';
+                    }
                 });
             }
 
@@ -291,6 +383,56 @@
                     }
                 });
             }
+
+            function executeSearch() {
+                if (!searchInput) {
+                    return;
+                }
+                var value = searchInput.value.trim();
+                grid.search(value);
+            }
+
+            var searchDebounce;
+            if (searchInput) {
+                searchInput.addEventListener('keyup', function (event) {
+                    if (event.key === 'Enter') {
+                        executeSearch();
+                    }
+                });
+
+                searchInput.addEventListener('change', executeSearch);
+                searchInput.addEventListener('search', executeSearch);
+                searchInput.addEventListener('input', function () {
+                    clearTimeout(searchDebounce);
+                    searchDebounce = setTimeout(executeSearch, 350);
+                });
+            }
+
+            if (clearSearchButton) {
+                clearSearchButton.addEventListener('click', function () {
+                    if (!searchInput) {
+                        return;
+                    }
+                    searchInput.value = '';
+                    grid.search('');
+                });
+            }
+
+            grid.toolbarClick = function (args) {
+                if (args.item && typeof args.item.id === 'string' && args.item.id.toLowerCase().indexOf('excelexport') !== -1) {
+                    grid.excelExport({
+                        fileName: 'journal-entries.xlsx',
+                        header: {
+                            headerRows: 2,
+                            rows: [
+                                { cells: [{ colSpan: 6, value: 'قائمة القيود المالية', style: { fontSize: 16, bold: true, hAlign: 'Right' } }] },
+                                { cells: [{ colSpan: 6, value: 'تاريخ التصدير: ' + new Date().toLocaleString(), style: { hAlign: 'Right' } }] }
+                            ]
+                        }
+                    });
+                    args.cancel = true;
+                }
+            };
 
             document.getElementById('journalEntriesGrid').addEventListener('click', function (event) {
                 var postButton = event.target.closest('.btn-post-entry');

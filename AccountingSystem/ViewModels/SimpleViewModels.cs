@@ -527,6 +527,10 @@ namespace AccountingSystem.ViewModels
         public string DateFormatted { get; set; } = string.Empty;
         public string DateGroup { get; set; } = string.Empty;
         public string TotalAmountFormatted { get; set; } = string.Empty;
+        public decimal TotalDebit { get; set; }
+        public decimal TotalCredit { get; set; }
+        public string TotalDebitFormatted { get; set; } = string.Empty;
+        public string TotalCreditFormatted { get; set; } = string.Empty;
         public bool IsDraft { get; set; }
         public bool CanDelete { get; set; }
         public bool IsBalanced { get; set; }
