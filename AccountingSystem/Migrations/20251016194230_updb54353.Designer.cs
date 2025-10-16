@@ -1763,6 +1763,15 @@ namespace AccountingSystem.Migrations
                         },
                         new
                         {
+                            Id = 111,
+                            Category = "لوحة التحكم",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض أداء الشركة",
+                            IsActive = true,
+                            Name = "dashboard.companyperformance"
+                        },
+                        new
+                        {
                             Id = 25,
                             Category = "لوحة التحكم",
                             CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
@@ -1787,6 +1796,15 @@ namespace AccountingSystem.Migrations
                             DisplayName = "عرض الروابط السريعة بلوحة التحكم",
                             IsActive = true,
                             Name = "dashboard.widget.links"
+                        },
+                        new
+                        {
+                            Id = 110,
+                            Category = "لوحة التحكم",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض أرصدة الصناديق بلوحة التحكم",
+                            IsActive = true,
+                            Name = "dashboard.widget.cashboxes"
                         },
                         new
                         {
