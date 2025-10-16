@@ -252,7 +252,7 @@
 
             grid.pageSettings = { pageSize: 25, pageSizes: [10, 25, 50, 100, 'All'] };
             grid.groupSettings = { showDropArea: false };
-            grid.searchSettings = { fields: ['Number', 'Description', 'Reference', 'BranchName'], operator: 'contains', key: '', ignoreCase: true };
+            grid.searchSettings = { fields: ['Number', 'Description', 'Reference', 'BranchName', 'StatusDisplay', 'TotalDebitFormatted', 'TotalCreditFormatted'], operator: 'contains', key: '', ignoreCase: true };
 
             function updateGridHeight() {
                 var headerRect = gridElement.getBoundingClientRect();
@@ -295,7 +295,11 @@
                 hideLoading();
             };
 
-            function buildDataUrl() {
+            function getQuickSearchValue() {
+                return searchInput ? searchInput.value.trim() : '';
+            }
+
+            function buildDataUrl(searchValue) {
                 var params = new URLSearchParams();
                 var fromDate = document.getElementById('fromDate').value;
                 var toDate = document.getElementById('toDate').value;
@@ -308,6 +312,7 @@
                 if (branchId) params.append('branchId', branchId);
                 if (status) params.append('status', status);
                 if (showUnbalancedOnly) params.append('showUnbalancedOnly', 'true');
+                if (searchValue) params.append('searchTerm', searchValue);
 
                 var query = params.toString();
                 return query ? dataUrl + '?' + query : dataUrl;
@@ -315,9 +320,9 @@
 
             function reloadGrid() {
                 showLoading();
-                var searchValue = searchInput ? searchInput.value.trim() : '';
+                var searchValue = getQuickSearchValue();
                 grid.dataSource = new ej.data.DataManager({
-                    url: buildDataUrl(),
+                    url: buildDataUrl(searchValue),
                     adaptor: new ej.data.UrlAdaptor()
                 });
                 grid.searchSettings.key = searchValue;
@@ -325,7 +330,7 @@
             }
 
             grid.dataSource = new ej.data.DataManager({
-                url: buildDataUrl(),
+                url: buildDataUrl(getQuickSearchValue()),
                 adaptor: new ej.data.UrlAdaptor()
             });
 
@@ -388,8 +393,8 @@
                 if (!searchInput) {
                     return;
                 }
-                var value = searchInput.value.trim();
-                grid.search(value);
+                grid.pageSettings.currentPage = 1;
+                reloadGrid();
             }
 
             var searchDebounce;
@@ -403,20 +408,21 @@
                 searchInput.addEventListener('change', executeSearch);
                 searchInput.addEventListener('search', executeSearch);
                 searchInput.addEventListener('input', function () {
-                    clearTimeout(searchDebounce);
-                    searchDebounce = setTimeout(executeSearch, 350);
-                });
-            }
+                clearTimeout(searchDebounce);
+                searchDebounce = setTimeout(executeSearch, 350);
+            });
+        }
 
-            if (clearSearchButton) {
-                clearSearchButton.addEventListener('click', function () {
-                    if (!searchInput) {
-                        return;
-                    }
-                    searchInput.value = '';
-                    grid.search('');
-                });
-            }
+        if (clearSearchButton) {
+            clearSearchButton.addEventListener('click', function () {
+                if (!searchInput) {
+                    return;
+                }
+                searchInput.value = '';
+                grid.pageSettings.currentPage = 1;
+                reloadGrid();
+            });
+        }
 
             grid.toolbarClick = function (args) {
                 if (args.item && typeof args.item.id === 'string' && args.item.id.toLowerCase().indexOf('excelexport') !== -1) {

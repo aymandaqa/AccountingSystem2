@@ -6,6 +6,7 @@ using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
@@ -221,7 +222,7 @@ namespace AccountingSystem.Controllers
 
         [HttpPost]
         [Authorize(Policy = "journal.view")]
-        public IActionResult UrlDatasourceJournalEntries([FromBody] DataManagerRequest dm, DateTime? fromDate, DateTime? toDate, int? branchId, string? status, bool showUnbalancedOnly = false)
+        public IActionResult UrlDatasourceJournalEntries([FromBody] DataManagerRequest dm, DateTime? fromDate, DateTime? toDate, int? branchId, string? status, bool showUnbalancedOnly = false, string? searchTerm = null)
         {
             var query = _context.JournalEntries
                 .AsNoTracking()
@@ -254,6 +255,42 @@ namespace AccountingSystem.Controllers
             if (showUnbalancedOnly)
             {
                 query = query.Where(j => j.Lines.Sum(l => l.DebitAmount) != j.Lines.Sum(l => l.CreditAmount));
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var trimmedTerm = searchTerm.Trim();
+                var normalizedTerm = trimmedTerm.ToLowerInvariant();
+                var statusMatches = Enum.GetValues<JournalEntryStatus>()
+                    .Where(s => GetStatusInfo(s).Text.Contains(trimmedTerm, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                var searchForUnbalanced = normalizedTerm.Contains("غير") &&
+                    (normalizedTerm.Contains("متوازن") || normalizedTerm.Contains("متزنة") || normalizedTerm.Contains("موزون"));
+
+                decimal? numericSearch = null;
+                if (decimal.TryParse(trimmedTerm, NumberStyles.Number, CultureInfo.InvariantCulture, out var invariantNumeric))
+                {
+                    numericSearch = invariantNumeric;
+                }
+                else if (decimal.TryParse(trimmedTerm, NumberStyles.Number, CultureInfo.CurrentCulture, out var cultureNumeric))
+                {
+                    numericSearch = cultureNumeric;
+                }
+
+                query = query.Where(j =>
+                    j.Number.ToLower().Contains(normalizedTerm) ||
+                    j.Description.ToLower().Contains(normalizedTerm) ||
+                    (j.Reference != null && j.Reference.ToLower().Contains(normalizedTerm)) ||
+                    j.Branch.NameAr.ToLower().Contains(normalizedTerm) ||
+                    j.Lines.Any(l => l.Description != null && l.Description.ToLower().Contains(normalizedTerm)) ||
+                    (statusMatches.Count > 0 && statusMatches.Contains(j.Status)) ||
+                    (searchForUnbalanced && j.Lines.Sum(l => l.DebitAmount) != j.Lines.Sum(l => l.CreditAmount)) ||
+                    (numericSearch.HasValue && (
+                        j.TotalDebit == numericSearch.Value ||
+                        j.TotalCredit == numericSearch.Value ||
+                        j.Lines.Sum(l => l.DebitAmount) == numericSearch.Value ||
+                        j.Lines.Sum(l => l.CreditAmount) == numericSearch.Value))
+                );
             }
 
             var dataSource = query
