@@ -1920,16 +1920,16 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/TrialBalance
-        public async Task<IActionResult> TrialBalance(DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 6)
+        public async Task<IActionResult> TrialBalance(DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 6, int? accountId = null)
         {
-            var viewModel = await BuildTrialBalanceViewModel(fromDate, toDate, includePending, currencyId, level);
+            var viewModel = await BuildTrialBalanceViewModel(fromDate, toDate, includePending, currencyId, level, accountId);
 
             return View(viewModel);
         }
 
-        public async Task<IActionResult> TrialBalanceExcel(DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 6)
+        public async Task<IActionResult> TrialBalanceExcel(DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 6, int? accountId = null)
         {
-            var viewModel = await BuildTrialBalanceViewModel(fromDate, toDate, includePending, currencyId, level);
+            var viewModel = await BuildTrialBalanceViewModel(fromDate, toDate, includePending, currencyId, level, accountId);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.AddWorksheet("TrialBalance");
@@ -1981,13 +1981,23 @@ namespace AccountingSystem.Controllers
             return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
-        private async Task<TrialBalanceViewModel> BuildTrialBalanceViewModel(DateTime? fromDate, DateTime? toDate, bool includePending, int? currencyId, int level = 5)
+        private async Task<TrialBalanceViewModel> BuildTrialBalanceViewModel(DateTime? fromDate, DateTime? toDate, bool includePending, int? currencyId, int level = 5, int? accountId = null)
         {
-            var accounts = await _context.Accounts
+            var allAccounts = await _context.Accounts
                 .Include(a => a.Currency)
-                .Where(a => a.CanPostTransactions)
+                .Where(a => a.IsActive)
                 .OrderBy(a => a.Code)
                 .ToListAsync();
+
+            var accountsLookup = allAccounts.ToDictionary(a => a.Id);
+            var childrenLookup = allAccounts
+                .Where(a => a.ParentId.HasValue)
+                .GroupBy(a => a.ParentId!.Value)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            var postingAccounts = allAccounts
+                .Where(a => a.CanPostTransactions)
+                .ToList();
 
             var fiscalYearStart = new DateTime(2025, 1, 1);
             var from = fromDate ?? fiscalYearStart;
@@ -1999,9 +2009,52 @@ namespace AccountingSystem.Controllers
                 normalizedLevel = 6;
             }
 
-            var filteredAccounts = accounts
-                .Where(a => a.Level <= normalizedLevel)
-                .ToList();
+            var normalizedAccountId = accountId.HasValue && accountId.Value > 0
+                ? accountId
+                : null;
+
+            List<Account> filteredAccounts;
+            string selectedAccountName = "جميع الحسابات";
+
+            if (normalizedAccountId.HasValue && accountsLookup.TryGetValue(normalizedAccountId.Value, out var selectedAccount))
+            {
+                var descendantIds = new HashSet<int>();
+
+                void CollectDescendants(Account account)
+                {
+                    if (!descendantIds.Add(account.Id))
+                    {
+                        return;
+                    }
+
+                    if (childrenLookup.TryGetValue(account.Id, out var children))
+                    {
+                        foreach (var child in children)
+                        {
+                            CollectDescendants(child);
+                        }
+                    }
+                }
+
+                CollectDescendants(selectedAccount);
+
+                filteredAccounts = postingAccounts
+                    .Where(a => descendantIds.Contains(a.Id))
+                    .ToList();
+
+                normalizedLevel = selectedAccount.Level;
+                selectedAccountName = string.IsNullOrWhiteSpace(selectedAccount.Code)
+                    ? selectedAccount.NameAr
+                    : $"{selectedAccount.Code} - {selectedAccount.NameAr}";
+            }
+            else
+            {
+                filteredAccounts = postingAccounts
+                    .Where(a => a.Level <= normalizedLevel)
+                    .ToList();
+
+                normalizedAccountId = null;
+            }
 
             var pending = includePending
                 ? await _context.JournalEntryLines
@@ -2016,6 +2069,62 @@ namespace AccountingSystem.Controllers
             var baseCurrency = await _context.Currencies.FirstAsync(c => c.IsBase);
             var selectedCurrency = currencyId.HasValue ? await _context.Currencies.FirstOrDefaultAsync(c => c.Id == currencyId.Value) : baseCurrency;
             selectedCurrency ??= baseCurrency;
+
+            var accountTreeLookup = allAccounts
+                .Select(a => new AccountTreeNodeViewModel
+                {
+                    Id = a.Id,
+                    Code = a.Code,
+                    NameAr = a.NameAr,
+                    AccountType = a.AccountType,
+                    Nature = a.Nature,
+                    CurrencyCode = a.Currency?.Code ?? string.Empty,
+                    OpeningBalance = a.OpeningBalance,
+                    CurrentBalance = a.CurrentBalance,
+                    IsActive = a.IsActive,
+                    CanPostTransactions = a.CanPostTransactions,
+                    ParentId = a.ParentId,
+                    Level = a.Level,
+                    Children = new List<AccountTreeNodeViewModel>()
+                })
+                .ToDictionary(n => n.Id);
+
+            foreach (var node in accountTreeLookup.Values)
+            {
+                if (node.ParentId.HasValue && accountTreeLookup.TryGetValue(node.ParentId.Value, out var parent))
+                {
+                    parent.Children.Add(node);
+                }
+            }
+
+            void SortAndMark(AccountTreeNodeViewModel node)
+            {
+                if (node.Children.Any())
+                {
+                    node.Children = node.Children
+                        .OrderBy(child => child.Code)
+                        .ToList();
+                    node.HasChildren = true;
+                    foreach (var child in node.Children)
+                    {
+                        SortAndMark(child);
+                    }
+                }
+                else
+                {
+                    node.HasChildren = false;
+                }
+            }
+
+            var accountTree = accountTreeLookup.Values
+                .Where(n => n.ParentId == null)
+                .OrderBy(n => n.Code)
+                .ToList();
+
+            foreach (var root in accountTree)
+            {
+                SortAndMark(root);
+            }
 
             var viewModel = new TrialBalanceViewModel
             {
@@ -2093,7 +2202,10 @@ namespace AccountingSystem.Controllers
                         Text = l.ToString(),
                         Selected = l == normalizedLevel
                     })
-                    .ToList()
+                    .ToList(),
+                SelectedAccountId = normalizedAccountId,
+                SelectedAccountName = selectedAccountName,
+                AccountTree = accountTree
             };
 
             viewModel.TotalDebits = viewModel.Accounts.Sum(a => a.DebitBalance);
