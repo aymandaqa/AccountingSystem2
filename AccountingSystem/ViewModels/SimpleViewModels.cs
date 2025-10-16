@@ -167,6 +167,9 @@ namespace AccountingSystem.ViewModels
         public bool IsBalanced { get; set; }
         public int SelectedLevel { get; set; } = 5;
         public List<SelectListItem> Levels { get; set; } = new List<SelectListItem>();
+        public int? SelectedAccountId { get; set; }
+        public string SelectedAccountName { get; set; } = "جميع الحسابات";
+        public List<AccountTreeNodeViewModel> AccountTree { get; set; } = new List<AccountTreeNodeViewModel>();
     }
 
     public class TrialBalanceAccountViewModel
