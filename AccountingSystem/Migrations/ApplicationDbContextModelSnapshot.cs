@@ -2171,6 +2171,341 @@ namespace AccountingSystem.Migrations
                             DisplayName = "إدارة الشاشات الديناميكية",
                             IsActive = true,
                             Name = "dynamicscreens.manage"
+                        },
+                        new
+                        {
+                            Id = 73,
+                            Category = "إدارة الحسابات",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "كشف حساب العميل الكلي",
+                            IsActive = true,
+                            Name = "accountmanagement.businessstatementbulk"
+                        },
+                        new
+                        {
+                            Id = 74,
+                            Category = "إدارة الحسابات",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "كشف حساب العميل",
+                            IsActive = true,
+                            Name = "accountmanagement.busnissstatment"
+                        },
+                        new
+                        {
+                            Id = 75,
+                            Category = "إدارة الحسابات",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "دفعات السائق",
+                            IsActive = true,
+                            Name = "accountmanagement.driverpayment"
+                        },
+                        new
+                        {
+                            Id = 76,
+                            Category = "إدارة الحسابات",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "كشف حساب السائق",
+                            IsActive = true,
+                            Name = "accountmanagement.driverstatment"
+                        },
+                        new
+                        {
+                            Id = 77,
+                            Category = "إدارة الحسابات",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "دفعات العميل",
+                            IsActive = true,
+                            Name = "accountmanagement.userpayment"
+                        },
+                        new
+                        {
+                            Id = 78,
+                            Category = "إدارة الحسابات",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "شحنات العميل المرتجعة",
+                            IsActive = true,
+                            Name = "accountmanagement.busnissshipmentsreturn"
+                        },
+                        new
+                        {
+                            Id = 79,
+                            Category = "إدارة الحسابات",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "استلام المدفوعات",
+                            IsActive = true,
+                            Name = "accountmanagement.receivepayments"
+                        },
+                        new
+                        {
+                            Id = 80,
+                            Category = "إدارة الحسابات",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "استلام مدفوعات المرتجعات",
+                            IsActive = true,
+                            Name = "accountmanagement.receiveretpayments"
+                        },
+                        new
+                        {
+                            Id = 81,
+                            Category = "إدارة الحسابات",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "كشف مرتجعات العميل الكلي",
+                            IsActive = true,
+                            Name = "accountmanagement.businessretstatementbulk"
+                        },
+                        new
+                        {
+                            Id = 82,
+                            Category = "إدارة الحسابات",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "طباعة سند الحساب",
+                            IsActive = true,
+                            Name = "accountmanagement.printslip"
+                        },
+                        new
+                        {
+                            Id = 83,
+                            Category = "الرواتب",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض الرواتب",
+                            IsActive = true,
+                            Name = "payroll.view"
+                        },
+                        new
+                        {
+                            Id = 84,
+                            Category = "الرواتب",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "معالجة الرواتب",
+                            IsActive = true,
+                            Name = "payroll.process"
+                        },
+                        new
+                        {
+                            Id = 85,
+                            Category = "الموظفين",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض الموظفين",
+                            IsActive = true,
+                            Name = "employees.view"
+                        },
+                        new
+                        {
+                            Id = 86,
+                            Category = "الموظفين",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "إنشاء موظف",
+                            IsActive = true,
+                            Name = "employees.create"
+                        },
+                        new
+                        {
+                            Id = 87,
+                            Category = "الموظفين",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "تعديل موظف",
+                            IsActive = true,
+                            Name = "employees.edit"
+                        },
+                        new
+                        {
+                            Id = 88,
+                            Category = "الموظفين",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "حذف موظف",
+                            IsActive = true,
+                            Name = "employees.delete"
+                        },
+                        new
+                        {
+                            Id = 89,
+                            Category = "سلف الموظفين",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض سندات صرف السلف",
+                            IsActive = true,
+                            Name = "employeeadvances.view"
+                        },
+                        new
+                        {
+                            Id = 90,
+                            Category = "سلف الموظفين",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "إنشاء سند صرف سلفة",
+                            IsActive = true,
+                            Name = "employeeadvances.create"
+                        },
+                        new
+                        {
+                            Id = 91,
+                            Category = "الرواتب",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض سندات صرف الرواتب",
+                            IsActive = true,
+                            Name = "salarypayments.view"
+                        },
+                        new
+                        {
+                            Id = 92,
+                            Category = "الرواتب",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "إنشاء سند صرف راتب",
+                            IsActive = true,
+                            Name = "salarypayments.create"
+                        },
+                        new
+                        {
+                            Id = 93,
+                            Category = "السندات",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض سندات الدفع",
+                            IsActive = true,
+                            Name = "disbursementvouchers.view"
+                        },
+                        new
+                        {
+                            Id = 94,
+                            Category = "السندات",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "إنشاء سند دفع",
+                            IsActive = true,
+                            Name = "disbursementvouchers.create"
+                        },
+                        new
+                        {
+                            Id = 95,
+                            Category = "السندات",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "حذف سند دفع",
+                            IsActive = true,
+                            Name = "disbursementvouchers.delete"
+                        },
+                        new
+                        {
+                            Id = 96,
+                            Category = "السندات",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض سندات القبض",
+                            IsActive = true,
+                            Name = "receiptvouchers.view"
+                        },
+                        new
+                        {
+                            Id = 97,
+                            Category = "السندات",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "إنشاء سند قبض",
+                            IsActive = true,
+                            Name = "receiptvouchers.create"
+                        },
+                        new
+                        {
+                            Id = 98,
+                            Category = "السندات",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "حذف سند قبض",
+                            IsActive = true,
+                            Name = "receiptvouchers.delete"
+                        },
+                        new
+                        {
+                            Id = 99,
+                            Category = "السندات",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض سندات الدفع",
+                            IsActive = true,
+                            Name = "paymentvouchers.view"
+                        },
+                        new
+                        {
+                            Id = 100,
+                            Category = "السندات",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "إنشاء سند دفع",
+                            IsActive = true,
+                            Name = "paymentvouchers.create"
+                        },
+                        new
+                        {
+                            Id = 101,
+                            Category = "السندات",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "حذف سند دفع",
+                            IsActive = true,
+                            Name = "paymentvouchers.delete"
+                        },
+                        new
+                        {
+                            Id = 102,
+                            Category = "إغلاق الصندوق",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض إغلاقات الصندوق",
+                            IsActive = true,
+                            Name = "cashclosures.view"
+                        },
+                        new
+                        {
+                            Id = 103,
+                            Category = "إغلاق الصندوق",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "إنشاء إغلاق صندوق",
+                            IsActive = true,
+                            Name = "cashclosures.create"
+                        },
+                        new
+                        {
+                            Id = 104,
+                            Category = "إغلاق الصندوق",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "اعتماد إغلاقات الصندوق",
+                            IsActive = true,
+                            Name = "cashclosures.approve"
+                        },
+                        new
+                        {
+                            Id = 105,
+                            Category = "إغلاق الصندوق",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "تقرير إغلاقات الصندوق",
+                            IsActive = true,
+                            Name = "cashclosures.report"
+                        },
+                        new
+                        {
+                            Id = 106,
+                            Category = "الأصول",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض أنواع الأصول",
+                            IsActive = true,
+                            Name = "assettypes.view"
+                        },
+                        new
+                        {
+                            Id = 107,
+                            Category = "الأصول",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "إنشاء نوع أصل",
+                            IsActive = true,
+                            Name = "assettypes.create"
+                        },
+                        new
+                        {
+                            Id = 108,
+                            Category = "الأصول",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "تعديل نوع أصل",
+                            IsActive = true,
+                            Name = "assettypes.edit"
+                        },
+                        new
+                        {
+                            Id = 109,
+                            Category = "الأصول",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "حذف نوع أصل",
+                            IsActive = true,
+                            Name = "assettypes.delete"
+                        }
+
                         });
                 });
 

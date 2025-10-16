@@ -1107,7 +1107,54 @@ namespace AccountingSystem.Data
                 new Permission { Id = 67, Name = "agents.edit", DisplayName = "تعديل وكيل", Category = "الوكلاء", CreatedAt = createdAt },
                 new Permission { Id = 68, Name = "agents.delete", DisplayName = "حذف وكيل", Category = "الوكلاء", CreatedAt = createdAt },
                 new Permission { Id = 69, Name = "userbalances.view", DisplayName = "عرض أرصدة حسابات المستخدم", Category = "المستخدمين", CreatedAt = createdAt },
-                new Permission { Id = 71, Name = "dynamicscreens.manage", DisplayName = "إدارة الشاشات الديناميكية", Category = "الشاشات الديناميكية", CreatedAt = createdAt }
+                new Permission { Id = 71, Name = "dynamicscreens.manage", DisplayName = "إدارة الشاشات الديناميكية", Category = "الشاشات الديناميكية", CreatedAt = createdAt },
+
+                // Account management permissions
+                new Permission { Id = 73, Name = "accountmanagement.businessstatementbulk", DisplayName = "كشف حساب العميل الكلي", Category = "إدارة الحسابات", CreatedAt = createdAt },
+                new Permission { Id = 74, Name = "accountmanagement.busnissstatment", DisplayName = "كشف حساب العميل", Category = "إدارة الحسابات", CreatedAt = createdAt },
+                new Permission { Id = 75, Name = "accountmanagement.driverpayment", DisplayName = "دفعات السائق", Category = "إدارة الحسابات", CreatedAt = createdAt },
+                new Permission { Id = 76, Name = "accountmanagement.driverstatment", DisplayName = "كشف حساب السائق", Category = "إدارة الحسابات", CreatedAt = createdAt },
+                new Permission { Id = 77, Name = "accountmanagement.userpayment", DisplayName = "دفعات العميل", Category = "إدارة الحسابات", CreatedAt = createdAt },
+                new Permission { Id = 78, Name = "accountmanagement.busnissshipmentsreturn", DisplayName = "شحنات العميل المرتجعة", Category = "إدارة الحسابات", CreatedAt = createdAt },
+                new Permission { Id = 79, Name = "accountmanagement.receivepayments", DisplayName = "استلام المدفوعات", Category = "إدارة الحسابات", CreatedAt = createdAt },
+                new Permission { Id = 80, Name = "accountmanagement.receiveretpayments", DisplayName = "استلام مدفوعات المرتجعات", Category = "إدارة الحسابات", CreatedAt = createdAt },
+                new Permission { Id = 81, Name = "accountmanagement.businessretstatementbulk", DisplayName = "كشف مرتجعات العميل الكلي", Category = "إدارة الحسابات", CreatedAt = createdAt },
+                new Permission { Id = 82, Name = "accountmanagement.printslip", DisplayName = "طباعة سند الحساب", Category = "إدارة الحسابات", CreatedAt = createdAt },
+
+                // Payroll and employees
+                new Permission { Id = 83, Name = "payroll.view", DisplayName = "عرض الرواتب", Category = "الرواتب", CreatedAt = createdAt },
+                new Permission { Id = 84, Name = "payroll.process", DisplayName = "معالجة الرواتب", Category = "الرواتب", CreatedAt = createdAt },
+                new Permission { Id = 85, Name = "employees.view", DisplayName = "عرض الموظفين", Category = "الموظفين", CreatedAt = createdAt },
+                new Permission { Id = 86, Name = "employees.create", DisplayName = "إنشاء موظف", Category = "الموظفين", CreatedAt = createdAt },
+                new Permission { Id = 87, Name = "employees.edit", DisplayName = "تعديل موظف", Category = "الموظفين", CreatedAt = createdAt },
+                new Permission { Id = 88, Name = "employees.delete", DisplayName = "حذف موظف", Category = "الموظفين", CreatedAt = createdAt },
+                new Permission { Id = 89, Name = "employeeadvances.view", DisplayName = "عرض سندات صرف السلف", Category = "سلف الموظفين", CreatedAt = createdAt },
+                new Permission { Id = 90, Name = "employeeadvances.create", DisplayName = "إنشاء سند صرف سلفة", Category = "سلف الموظفين", CreatedAt = createdAt },
+                new Permission { Id = 91, Name = "salarypayments.view", DisplayName = "عرض سندات صرف الرواتب", Category = "الرواتب", CreatedAt = createdAt },
+                new Permission { Id = 92, Name = "salarypayments.create", DisplayName = "إنشاء سند صرف راتب", Category = "الرواتب", CreatedAt = createdAt },
+
+                // Voucher management
+                new Permission { Id = 93, Name = "disbursementvouchers.view", DisplayName = "عرض سندات الدفع", Category = "السندات", CreatedAt = createdAt },
+                new Permission { Id = 94, Name = "disbursementvouchers.create", DisplayName = "إنشاء سند دفع", Category = "السندات", CreatedAt = createdAt },
+                new Permission { Id = 95, Name = "disbursementvouchers.delete", DisplayName = "حذف سند دفع", Category = "السندات", CreatedAt = createdAt },
+                new Permission { Id = 96, Name = "receiptvouchers.view", DisplayName = "عرض سندات القبض", Category = "السندات", CreatedAt = createdAt },
+                new Permission { Id = 97, Name = "receiptvouchers.create", DisplayName = "إنشاء سند قبض", Category = "السندات", CreatedAt = createdAt },
+                new Permission { Id = 98, Name = "receiptvouchers.delete", DisplayName = "حذف سند قبض", Category = "السندات", CreatedAt = createdAt },
+                new Permission { Id = 99, Name = "paymentvouchers.view", DisplayName = "عرض سندات الدفع", Category = "السندات", CreatedAt = createdAt },
+                new Permission { Id = 100, Name = "paymentvouchers.create", DisplayName = "إنشاء سند دفع", Category = "السندات", CreatedAt = createdAt },
+                new Permission { Id = 101, Name = "paymentvouchers.delete", DisplayName = "حذف سند دفع", Category = "السندات", CreatedAt = createdAt },
+
+                // Cash box closures
+                new Permission { Id = 102, Name = "cashclosures.view", DisplayName = "عرض إغلاقات الصندوق", Category = "إغلاق الصندوق", CreatedAt = createdAt },
+                new Permission { Id = 103, Name = "cashclosures.create", DisplayName = "إنشاء إغلاق صندوق", Category = "إغلاق الصندوق", CreatedAt = createdAt },
+                new Permission { Id = 104, Name = "cashclosures.approve", DisplayName = "اعتماد إغلاقات الصندوق", Category = "إغلاق الصندوق", CreatedAt = createdAt },
+                new Permission { Id = 105, Name = "cashclosures.report", DisplayName = "تقرير إغلاقات الصندوق", Category = "إغلاق الصندوق", CreatedAt = createdAt },
+
+                // Asset types
+                new Permission { Id = 106, Name = "assettypes.view", DisplayName = "عرض أنواع الأصول", Category = "الأصول", CreatedAt = createdAt },
+                new Permission { Id = 107, Name = "assettypes.create", DisplayName = "إنشاء نوع أصل", Category = "الأصول", CreatedAt = createdAt },
+                new Permission { Id = 108, Name = "assettypes.edit", DisplayName = "تعديل نوع أصل", Category = "الأصول", CreatedAt = createdAt },
+                new Permission { Id = 109, Name = "assettypes.delete", DisplayName = "حذف نوع أصل", Category = "الأصول", CreatedAt = createdAt }
             );
         }
     }
