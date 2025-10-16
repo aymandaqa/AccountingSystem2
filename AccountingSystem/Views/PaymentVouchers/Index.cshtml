@@ -1,7 +1,7 @@
 @using AccountingSystem.Models
 @model IEnumerable<AccountingSystem.Models.PaymentVoucher>
 @{
-    ViewData["Title"] = "سندات   صرف موردين";
+    ViewData["Title"] = "سندات الدفع";
 }
 
 <div class="container-fluid">
@@ -52,7 +52,7 @@
             {
                 <tr>
                     <td>@v.Date.ToString("dd/MM/yyyy")</td>
-                    <td>@v.Supplier.NameAr</td>
+                    <td>@(v.Supplier != null ? v.Supplier.NameAr : "-")</td>
                     <td>@(v.Agent != null ? v.Agent.Name : "-")</td>
                     <td>@v.Currency.Code</td>
                     <td>@v.ExchangeRate.ToString("N6")</td>

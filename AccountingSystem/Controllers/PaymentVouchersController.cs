@@ -47,23 +47,6 @@ namespace AccountingSystem.Controllers
             }
         }
 
-        private async Task PopulateAgentSelectListAsync()
-        {
-            ViewBag.Agents = await _context.Agents
-                .Include(a => a.Account).ThenInclude(a => a.Currency)
-                .Where(a => a.AccountId != null)
-                .OrderBy(a => a.Name)
-                .Select(a => new
-                {
-                    a.Id,
-                    a.Name,
-                    a.AccountId,
-                    CurrencyId = a.Account!.CurrencyId,
-                    CurrencyCode = a.Account.Currency.Code
-                })
-                .ToListAsync();
-        }
-
         private async Task PopulateSupplierSelectListAsync()
         {
             ViewBag.Suppliers = await _context.Suppliers
@@ -120,11 +103,20 @@ namespace AccountingSystem.Controllers
             if (user == null || user.PaymentAccountId == null || user.PaymentBranchId == null)
                 return Challenge();
 
-            var supplier = await _context.Suppliers
-                .Include(s => s.Account)
-                .FirstOrDefaultAsync(s => s.Id == model.SupplierId);
-            if (supplier?.Account == null)
-                ModelState.AddModelError("SupplierId", "المورد غير موجود");
+            if (!model.SupplierId.HasValue)
+            {
+                ModelState.AddModelError(nameof(PaymentVoucher.SupplierId), "الرجاء اختيار المورد");
+            }
+
+            Supplier? supplier = null;
+            if (model.SupplierId.HasValue)
+            {
+                supplier = await _context.Suppliers
+                    .Include(s => s.Account)
+                    .FirstOrDefaultAsync(s => s.Id == model.SupplierId.Value);
+                if (supplier?.Account == null)
+                    ModelState.AddModelError(nameof(PaymentVoucher.SupplierId), "المورد غير موجود");
+            }
 
             Account? selectedAccount = await _context.Accounts.FindAsync(model.AccountId);
             var settingAccount = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "SupplierPaymentsParentAccountId");
@@ -142,7 +134,7 @@ namespace AccountingSystem.Controllers
             if (supplier?.Account != null && selectedAccount != null)
             {
                 if (supplier.Account.CurrencyId != selectedAccount.CurrencyId)
-                    ModelState.AddModelError("SupplierId", "يجب أن تكون الحسابات بنفس العملة");
+                    ModelState.AddModelError(nameof(PaymentVoucher.SupplierId), "يجب أن تكون الحسابات بنفس العملة");
                 if (model.IsCash && cashAccount != null && selectedAccount.CurrencyId != cashAccount.CurrencyId)
                     ModelState.AddModelError("AccountId", "يجب أن تكون الحسابات بنفس العملة");
             }
@@ -167,10 +159,67 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "paymentvouchers.create")]
         public async Task<IActionResult> CreateFromAgent()
         {
-            await PopulateSupplierSelectListAsync();
-            await PopulateAgentSelectListAsync();
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Challenge();
 
-            return View(new PaymentVoucher { Date = DateTime.Now, IsCash = false });
+            if (user.AgentId == null)
+            {
+                TempData["ErrorMessage"] = "لم يتم ربط المستخدم بأي وكيل.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (user.PaymentAccountId == null || user.PaymentBranchId == null)
+            {
+                TempData["ErrorMessage"] = "لم يتم إعداد حساب الدفع للمستخدم.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var agent = await _context.Agents
+                .Include(a => a.Account).ThenInclude(a => a.Currency)
+                .FirstOrDefaultAsync(a => a.Id == user.AgentId.Value);
+
+            if (agent?.Account == null)
+            {
+                TempData["ErrorMessage"] = "لا يملك الوكيل المحدد حساباً مالياً.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var paymentAccount = await _context.Accounts
+                .Include(a => a.Currency)
+                .FirstOrDefaultAsync(a => a.Id == user.PaymentAccountId.Value);
+
+            if (paymentAccount == null)
+            {
+                TempData["ErrorMessage"] = "حساب الدفع المحدد للمستخدم غير موجود.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (paymentAccount.CurrencyId != agent.Account.CurrencyId)
+            {
+                TempData["ErrorMessage"] = "عملة حساب الدفع لا تطابق عملة حساب الوكيل.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            ViewBag.Agent = new { agent.Id, agent.Name };
+            ViewBag.PaymentAccount = new
+            {
+                paymentAccount.Id,
+                paymentAccount.Code,
+                paymentAccount.NameAr
+            };
+            ViewBag.CurrencyCode = agent.Account.Currency.Code;
+
+            var model = new PaymentVoucher
+            {
+                Date = DateTime.Now,
+                AgentId = agent.Id,
+                AccountId = paymentAccount.Id,
+                CurrencyId = agent.Account.CurrencyId,
+                IsCash = false
+            };
+
+            return View(model);
         }
 
         [HttpPost]
@@ -182,38 +231,56 @@ namespace AccountingSystem.Controllers
             if (user == null || user.PaymentAccountId == null || user.PaymentBranchId == null)
                 return Challenge();
 
+            ModelState.Remove(nameof(PaymentVoucher.SupplierId));
             ModelState.Remove(nameof(PaymentVoucher.AccountId));
-
-            var supplier = await _context.Suppliers
-                .Include(s => s.Account)
-                .FirstOrDefaultAsync(s => s.Id == model.SupplierId);
-            if (supplier?.Account == null)
-                ModelState.AddModelError(nameof(PaymentVoucher.SupplierId), "المورد غير موجود");
-
-            var agent = await _context.Agents
-                .Include(a => a.Account)
-                .FirstOrDefaultAsync(a => a.Id == model.AgentId);
-            if (agent?.Account == null)
-                ModelState.AddModelError(nameof(PaymentVoucher.AgentId), "الوكيل غير موجود");
-
-            if (supplier?.Account != null && agent?.Account != null)
-            {
-                if (supplier.Account.CurrencyId != agent.Account.CurrencyId)
-                    ModelState.AddModelError(nameof(PaymentVoucher.AgentId), "يجب أن تكون الحسابات بنفس العملة");
-
-                model.CurrencyId = supplier.Account.CurrencyId;
-                model.AccountId = agent.Account.Id;
-                model.AgentId = agent.Id;
-                model.IsCash = false;
-            }
-
+            ModelState.Remove(nameof(PaymentVoucher.AgentId));
             ModelState.Remove(nameof(PaymentVoucher.CurrencyId));
             ModelState.Remove(nameof(PaymentVoucher.ExchangeRate));
 
+            if (user.AgentId == null)
+            {
+                ModelState.AddModelError(string.Empty, "لم يتم ربط المستخدم بأي وكيل.");
+            }
+
+            var agent = user.AgentId.HasValue
+                ? await _context.Agents
+                    .Include(a => a.Account).ThenInclude(a => a.Currency)
+                    .FirstOrDefaultAsync(a => a.Id == user.AgentId.Value)
+                : null;
+
+            if (agent?.Account == null)
+            {
+                ModelState.AddModelError(nameof(PaymentVoucher.AgentId), "لا يملك الوكيل المحدد حساباً مالياً.");
+            }
+
+            var paymentAccount = await _context.Accounts
+                .Include(a => a.Currency)
+                .FirstOrDefaultAsync(a => a.Id == user.PaymentAccountId.Value);
+
+            if (paymentAccount == null)
+            {
+                ModelState.AddModelError(nameof(PaymentVoucher.AccountId), "حساب الدفع المحدد للمستخدم غير موجود.");
+            }
+
+            if (agent?.Account != null && paymentAccount != null && agent.Account.CurrencyId != paymentAccount.CurrencyId)
+            {
+                ModelState.AddModelError(nameof(PaymentVoucher.AgentId), "عملة حساب الوكيل لا تطابق عملة حساب الدفع.");
+            }
+
+            if (agent?.Account != null && paymentAccount != null)
+            {
+                model.AgentId = agent.Id;
+                model.AccountId = paymentAccount.Id;
+                model.CurrencyId = agent.Account.CurrencyId;
+                model.SupplierId = null;
+                model.IsCash = false;
+            }
+
             if (!ModelState.IsValid)
             {
-                await PopulateSupplierSelectListAsync();
-                await PopulateAgentSelectListAsync();
+                ViewBag.Agent = agent != null ? new { agent.Id, agent.Name } : null;
+                ViewBag.PaymentAccount = paymentAccount != null ? new { paymentAccount.Id, paymentAccount.Code, paymentAccount.NameAr } : null;
+                ViewBag.CurrencyCode = agent?.Account?.Currency?.Code;
                 return View(model);
             }
 

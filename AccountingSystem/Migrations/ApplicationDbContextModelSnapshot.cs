@@ -232,7 +232,7 @@ namespace AccountingSystem.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<int>("SupplierId")
+                    b.Property<int?>("SupplierId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -669,7 +669,7 @@ namespace AccountingSystem.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<int>("SupplierId")
+                    b.Property<int?>("SupplierId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -1367,7 +1367,7 @@ namespace AccountingSystem.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
-                    b.Property<int>("SupplierId")
+                    b.Property<int?>("SupplierId")
                         .HasColumnType("int");
 
                     b.Property<int?>("WorkflowInstanceId")
@@ -3560,8 +3560,7 @@ namespace AccountingSystem.Migrations
                     b.HasOne("AccountingSystem.Models.Supplier", "Supplier")
                         .WithMany()
                         .HasForeignKey("SupplierId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("AccountingSystem.Models.Workflows.WorkflowInstance", "WorkflowInstance")
                         .WithMany()

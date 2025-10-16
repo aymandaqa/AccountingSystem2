@@ -5,34 +5,29 @@
 
 <div class="container-fluid">
     <form asp-action="CreateFromAgent" method="post" class="row g-3">
-        <div class="col-md-6">
-            <label class="form-label">المورد</label>
-            <select asp-for="SupplierId" class="form-select" id="supplierSelect">
-                <option value="">اختر المورد</option>
-                @foreach (var s in ViewBag.Suppliers)
-                {
-                    <option value="@s.Id" data-currency-id="@s.CurrencyId" data-currency-code="@s.CurrencyCode">@s.NameAr</option>
-                }
-            </select>
-            <span asp-validation-for="SupplierId" class="text-danger"></span>
-        </div>
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <input asp-for="AgentId" type="hidden" />
+        <input asp-for="AccountId" type="hidden" />
+        <input asp-for="CurrencyId" type="hidden" />
+        <input asp-for="SupplierId" type="hidden" />
+        <input asp-for="ExchangeRate" type="hidden" value="1" />
+
         <div class="col-md-6">
             <label class="form-label">الوكيل</label>
-            <select asp-for="AgentId" class="form-select" id="agentSelect">
-                <option value="">اختر الوكيل</option>
-                @foreach (var a in ViewBag.Agents)
-                {
-                    <option value="@a.Id" data-currency-id="@a.CurrencyId" data-currency-code="@a.CurrencyCode">@a.Name</option>
-                }
-            </select>
+            <input type="text" class="form-control" value="@ViewBag.Agent?.Name" readonly />
             <span asp-validation-for="AgentId" class="text-danger"></span>
         </div>
         <div class="col-md-6">
-            <label class="form-label">العملة</label>
-            <input type="text" class="form-control" id="currencyDisplay" readonly />
-            <input type="hidden" asp-for="CurrencyId" id="currencyId" />
+            <label class="form-label">حساب الدفع</label>
+            <input type="text" class="form-control" value="@(ViewBag.PaymentAccount != null ? ($"{ViewBag.PaymentAccount.Code} - {ViewBag.PaymentAccount.NameAr}") : string.Empty)" readonly />
+            <span asp-validation-for="AccountId" class="text-danger"></span>
         </div>
-        <input asp-for="ExchangeRate" type="hidden" value="1" />
+
+        <div class="col-md-6">
+            <label class="form-label">العملة</label>
+            <input type="text" class="form-control" value="@ViewBag.CurrencyCode" readonly />
+        </div>
+
         <div class="col-md-6">
             <label class="form-label">المبلغ</label>
             <input asp-for="Amount" class="form-control" />
@@ -56,51 +51,4 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const supplierSelect = document.getElementById('supplierSelect');
-            const agentSelect = document.getElementById('agentSelect');
-            const currencyDisplay = document.getElementById('currencyDisplay');
-            const currencyId = document.getElementById('currencyId');
-
-            function updateCurrency() {
-                const option = supplierSelect.options[supplierSelect.selectedIndex];
-                const currencyCode = option ? option.getAttribute('data-currency-code') : '';
-                const currencyValue = option ? option.getAttribute('data-currency-id') : '';
-                currencyDisplay.value = currencyCode || '';
-                currencyId.value = currencyValue || '';
-                filterAgents(currencyValue);
-            }
-
-            function filterAgents(currency) {
-                if (!agentSelect) {
-                    return;
-                }
-                let hasVisible = false;
-                Array.from(agentSelect.options).forEach(function (opt) {
-                    if (!opt.value) {
-                        opt.hidden = false;
-                        return;
-                    }
-                    const matches = !currency || opt.getAttribute('data-currency-id') === currency;
-                    opt.hidden = !matches;
-                    if (matches && !hasVisible) {
-                        hasVisible = true;
-                    }
-                });
-                if (hasVisible) {
-                    const selected = agentSelect.options[agentSelect.selectedIndex];
-                    if (!selected || selected.hidden) {
-                        const firstVisible = Array.from(agentSelect.options).find(function (opt) { return !opt.hidden && opt.value; });
-                        if (firstVisible) {
-                            agentSelect.value = firstVisible.value;
-                        }
-                    }
-                }
-            }
-
-            supplierSelect.addEventListener('change', updateCurrency);
-            updateCurrency();
-        });
-    </script>
 }
