@@ -484,7 +484,8 @@ namespace AccountingSystem.Controllers
                     {
                         return SelectFieldResult.FromError($"القيمة المحددة غير مسموح بها للحقل {field.Label}");
                     }
-                    if (!await _context.Expenses.AnyAsync(e => e.Id == expenseId))
+                    if (!await _context.Accounts
+                        .AnyAsync(a => a.Id == expenseId && a.AccountType == AccountType.Expenses))
                     {
                         return SelectFieldResult.FromError($"المصروف المحدد غير موجود");
                     }
