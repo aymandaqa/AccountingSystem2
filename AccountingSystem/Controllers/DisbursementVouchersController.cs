@@ -94,6 +94,7 @@ namespace AccountingSystem.Controllers
             if (model.ExchangeRate <= 0)
                 model.ExchangeRate = currency?.ExchangeRate ?? 1m;
 
+            model.Date = DateTime.Now;
             model.CreatedById = user.Id;
             _context.DisbursementVouchers.Add(model);
             await _context.SaveChangesAsync();
