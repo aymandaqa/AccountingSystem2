@@ -45,12 +45,17 @@ namespace AccountingSystem.ViewModels
     public class CashBoxClosureReportItemViewModel
     {
         public DateTime CreatedAt { get; set; }
+        public DateTime? ClosingDate { get; set; }
+        public string UserName { get; set; } = string.Empty;
         public string AccountName { get; set; } = string.Empty;
         public string BranchName { get; set; } = string.Empty;
         public decimal OpeningBalance { get; set; }
         public decimal CountedAmount { get; set; }
         public decimal ClosingBalance { get; set; }
         public decimal Difference { get; set; }
+        public string DifferenceType { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
+        public string? Notes { get; set; }
+        public string? ApprovalNotes { get; set; }
     }
 }
