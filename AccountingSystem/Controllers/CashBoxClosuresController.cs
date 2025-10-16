@@ -3,8 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using System.Text;
+using ClosedXML.Excel;
 using System.Collections.Generic;
+using System.IO;
 using System;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
@@ -197,36 +198,60 @@ namespace AccountingSystem.Controllers
             var query = _context.CashBoxClosures
                 .Include(c => c.Account)
                 .Include(c => c.Branch)
+                .Include(c => c.User)
                 .AsQueryable();
 
             if (accountId.HasValue)
                 query = query.Where(c => c.AccountId == accountId.Value);
             if (fromDate.HasValue)
-                query = query.Where(c => c.CreatedAt >= fromDate.Value);
+            {
+                var from = fromDate.Value.Date;
+                query = query.Where(c => c.CreatedAt >= from);
+            }
             if (toDate.HasValue)
-                query = query.Where(c => c.CreatedAt <= toDate.Value);
+            {
+                var to = toDate.Value.Date.AddDays(1);
+                query = query.Where(c => c.CreatedAt < to);
+            }
 
             var closures = await query
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync();
 
-            model.Closures = closures.Select(c => new CashBoxClosureReportItemViewModel
+            model.Closures = closures.Select(c =>
             {
-                CreatedAt = c.CreatedAt,
-                AccountName = c.Account?.NameAr ?? string.Empty,
-                BranchName = c.Branch?.NameAr ?? string.Empty,
-                OpeningBalance = c.OpeningBalance,
-                CountedAmount = c.CountedAmount,
-                ClosingBalance = c.ClosingBalance,
-                Difference = c.CountedAmount - (c.ClosingBalance - c.OpeningBalance),
-                Status = c.Status switch
+                var expectedBalance = c.ClosingBalance - c.OpeningBalance;
+                var difference = c.CountedAmount - expectedBalance;
+                var differenceType = difference switch
                 {
-                    CashBoxClosureStatus.Pending => "قيد الانتظار",
-                    CashBoxClosureStatus.ApprovedMatched => "مطابق",
-                    CashBoxClosureStatus.ApprovedWithDifference => "مع فرق",
-                    CashBoxClosureStatus.Rejected => "مرفوض",
-                    _ => c.Status.ToString()
-                }
+                    > 0 => "زيادة",
+                    < 0 => "نقص",
+                    _ => "بدون فرق"
+                };
+
+                return new CashBoxClosureReportItemViewModel
+                {
+                    CreatedAt = c.CreatedAt,
+                    ClosingDate = c.ClosingDate,
+                    UserName = c.User?.FullName ?? c.User?.UserName ?? string.Empty,
+                    AccountName = c.Account?.NameAr ?? string.Empty,
+                    BranchName = c.Branch?.NameAr ?? string.Empty,
+                    OpeningBalance = c.OpeningBalance,
+                    CountedAmount = c.CountedAmount,
+                    ClosingBalance = c.ClosingBalance,
+                    Difference = difference,
+                    DifferenceType = differenceType,
+                    Status = c.Status switch
+                    {
+                        CashBoxClosureStatus.Pending => "قيد الانتظار",
+                        CashBoxClosureStatus.ApprovedMatched => "مطابق",
+                        CashBoxClosureStatus.ApprovedWithDifference => "مع فرق",
+                        CashBoxClosureStatus.Rejected => "مرفوض",
+                        _ => c.Status.ToString()
+                    },
+                    Notes = c.Notes,
+                    ApprovalNotes = c.Reason
+                };
             }).ToList();
 
             return View(model);
@@ -238,26 +263,102 @@ namespace AccountingSystem.Controllers
             var query = _context.CashBoxClosures
                 .Include(c => c.Account)
                 .Include(c => c.Branch)
+                .Include(c => c.User)
                 .AsQueryable();
 
             if (accountId.HasValue)
                 query = query.Where(c => c.AccountId == accountId.Value);
             if (fromDate.HasValue)
-                query = query.Where(c => c.CreatedAt >= fromDate.Value);
+            {
+                var from = fromDate.Value.Date;
+                query = query.Where(c => c.CreatedAt >= from);
+            }
             if (toDate.HasValue)
-                query = query.Where(c => c.CreatedAt <= toDate.Value);
+            {
+                var to = toDate.Value.Date.AddDays(1);
+                query = query.Where(c => c.CreatedAt < to);
+            }
 
             var closures = await query.OrderBy(c => c.CreatedAt).ToListAsync();
 
-            var sb = new StringBuilder();
-            sb.AppendLine("Date,Account,Branch,OpeningBalance,CountedAmount,ClosingBalance,Difference,Status");
-            foreach (var c in closures)
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Closures");
+
+            var headers = new[]
             {
-                var diff = c.CountedAmount - (c.ClosingBalance - c.OpeningBalance);
-                sb.AppendLine($"{c.CreatedAt:dd/MM/yyyy},{c.Account?.NameAr},{c.Branch?.NameAr},{c.OpeningBalance},{c.CountedAmount},{c.ClosingBalance},{diff},{c.Status}");
+                "التاريخ",
+                "تاريخ الإغلاق",
+                "المستخدم",
+                "الحساب",
+                "الفرع",
+                "الرصيد الافتتاحي",
+                "المبلغ المعدود",
+                "الرصيد المتوقع",
+                "الرصيد الختامي",
+                "قيمة الفرق",
+                "نوع الفرق",
+                "الحالة",
+                "ملاحظات",
+                "ملاحظات الاعتماد"
+            };
+
+            for (var i = 0; i < headers.Length; i++)
+            {
+                worksheet.Cell(1, i + 1).Value = headers[i];
+                worksheet.Cell(1, i + 1).Style.Font.Bold = true;
             }
 
-            return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", "cashbox_closures.csv");
+            var row = 2;
+            foreach (var closure in closures)
+            {
+                var expectedBalance = closure.ClosingBalance - closure.OpeningBalance;
+                var difference = closure.CountedAmount - expectedBalance;
+                var differenceType = difference switch
+                {
+                    > 0 => "زيادة",
+                    < 0 => "نقص",
+                    _ => "بدون فرق"
+                };
+
+                worksheet.Cell(row, 1).Value = closure.CreatedAt;
+                worksheet.Cell(row, 1).Style.DateFormat.Format = "dd/MM/yyyy HH:mm";
+                worksheet.Cell(row, 2).Value = closure.ClosingDate;
+                worksheet.Cell(row, 2).Style.DateFormat.Format = "dd/MM/yyyy HH:mm";
+                worksheet.Cell(row, 3).Value = closure.User?.FullName ?? closure.User?.UserName ?? string.Empty;
+                worksheet.Cell(row, 4).Value = closure.Account?.NameAr ?? string.Empty;
+                worksheet.Cell(row, 5).Value = closure.Branch?.NameAr ?? string.Empty;
+                worksheet.Cell(row, 6).Value = closure.OpeningBalance;
+                worksheet.Cell(row, 6).Style.NumberFormat.Format = "#,##0.00";
+                worksheet.Cell(row, 7).Value = closure.CountedAmount;
+                worksheet.Cell(row, 7).Style.NumberFormat.Format = "#,##0.00";
+                worksheet.Cell(row, 8).Value = expectedBalance;
+                worksheet.Cell(row, 8).Style.NumberFormat.Format = "#,##0.00";
+                worksheet.Cell(row, 9).Value = closure.ClosingBalance;
+                worksheet.Cell(row, 9).Style.NumberFormat.Format = "#,##0.00";
+                worksheet.Cell(row, 10).Value = difference;
+                worksheet.Cell(row, 10).Style.NumberFormat.Format = "#,##0.00";
+                worksheet.Cell(row, 11).Value = differenceType;
+                worksheet.Cell(row, 12).Value = closure.Status switch
+                {
+                    CashBoxClosureStatus.Pending => "قيد الانتظار",
+                    CashBoxClosureStatus.ApprovedMatched => "مطابق",
+                    CashBoxClosureStatus.ApprovedWithDifference => "مع فرق",
+                    CashBoxClosureStatus.Rejected => "مرفوض",
+                    _ => closure.Status.ToString()
+                };
+                worksheet.Cell(row, 13).Value = closure.Notes ?? string.Empty;
+                worksheet.Cell(row, 14).Value = closure.Reason ?? string.Empty;
+
+                row++;
+            }
+
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "cashbox_closures.xlsx");
         }
 
         [HttpPost]
