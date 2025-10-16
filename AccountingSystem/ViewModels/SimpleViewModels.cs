@@ -369,6 +369,7 @@ namespace AccountingSystem.ViewModels
         public DateTime FromDate { get; set; }
         public DateTime ToDate { get; set; }
         public int? BranchId { get; set; }
+        public string? SelectedBranchName { get; set; }
         public decimal OpeningBalance { get; set; }
         public decimal OpeningBalanceBase { get; set; }
         public decimal ClosingBalance { get; set; }
@@ -394,6 +395,8 @@ namespace AccountingSystem.ViewModels
         public string Reference { get; set; } = string.Empty;
         public string MovementType { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public string BranchName { get; set; } = string.Empty;
+        public string CreatedByName { get; set; } = string.Empty;
         public decimal DebitAmount { get; set; }
         public decimal CreditAmount { get; set; }
         public decimal RunningBalance { get; set; }

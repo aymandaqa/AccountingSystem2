@@ -3306,11 +3306,13 @@ namespace AccountingSystem.Controllers
                 }).ToListAsync();
 
             var branches = await GetBranchesSelectList();
+            string? selectedBranchName = null;
             foreach (var branch in branches)
             {
-                if (branchId.HasValue && int.TryParse(branch.Value, out var branchValue))
+                if (branchId.HasValue && int.TryParse(branch.Value, out var branchValue) && branchValue == branchId.Value)
                 {
-                    branch.Selected = branchValue == branchId.Value;
+                    branch.Selected = true;
+                    selectedBranchName = branch.Text;
                 }
             }
 
@@ -3324,7 +3326,8 @@ namespace AccountingSystem.Controllers
                 BranchId = branchId,
                 Accounts = accounts,
                 Branches = branches,
-                BaseCurrencyCode = baseCurrency.Code
+                BaseCurrencyCode = baseCurrency.Code,
+                SelectedBranchName = selectedBranchName
             };
 
             if (accountId.HasValue)
@@ -3365,6 +3368,9 @@ namespace AccountingSystem.Controllers
                     var lines = await _context.JournalEntryLines
                         .AsNoTracking()
                         .Include(l => l.JournalEntry)
+                            .ThenInclude(j => j.Branch)
+                        .Include(l => l.JournalEntry)
+                            .ThenInclude(j => j.CreatedBy)
                         .Where(l => l.AccountId == accountId.Value)
                         .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
                         .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
@@ -3391,6 +3397,8 @@ namespace AccountingSystem.Controllers
                             Reference = line.JournalEntry.Reference ?? string.Empty,
                             MovementType = line.JournalEntry.Description,
                             Description = line.Description ?? string.Empty,
+                            BranchName = line.JournalEntry.Branch?.NameAr ?? string.Empty,
+                            CreatedByName = line.JournalEntry.CreatedBy?.FullName ?? line.JournalEntry.CreatedBy?.UserName ?? string.Empty,
                             DebitAmount = line.DebitAmount,
                             CreditAmount = line.CreditAmount,
                             RunningBalance = running,

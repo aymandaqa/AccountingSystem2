@@ -3,6 +3,10 @@
     Layout = null;
     var printDate = DateTime.Now;
     var showBaseCurrency = !string.Equals(Model?.CurrencyCode, Model?.BaseCurrencyCode, System.StringComparison.OrdinalIgnoreCase);
+    var branchLabel = string.IsNullOrWhiteSpace(Model?.SelectedBranchName)
+        ? "جميع الفروع"
+        : Model!.SelectedBranchName!;
+    var transactionsCount = Model?.Transactions?.Count ?? 0;
 }
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -111,14 +115,8 @@
                     <div><strong>الحساب:</strong> @Model.AccountName</div>
                     <div><strong>رقم الحساب:</strong> @Model.AccountCode</div>
                     <div><strong>الفترة:</strong> @Model.FromDate.ToString("dd/MM/yyyy") - @Model.ToDate.ToString("dd/MM/yyyy")</div>
-                    @if (Model.BranchId.HasValue)
-                    {
-                        var selectedBranch = Model.Branches.FirstOrDefault(b => b.Value == Model.BranchId.Value.ToString());
-                        if (selectedBranch != null)
-                        {
-                            <div><strong>الفرع:</strong> @selectedBranch.Text</div>
-                        }
-                    }
+                    <div><strong>الفرع:</strong> @branchLabel</div>
+                    <div><strong>عدد الحركات:</strong> @transactionsCount</div>
                 </div>
             </div>
             <div class="col-6">
@@ -175,6 +173,8 @@
                     <th>التاريخ</th>
                     <th>رقم القيد</th>
                     <th>المرجع</th>
+                    <th>الفرع</th>
+                    <th>المستخدم</th>
                     <th>نوع الحركة</th>
                     <th>البيان</th>
                     <th class="text-end">مدين (@Model.CurrencyCode)</th>
@@ -185,12 +185,15 @@
             <tbody>
                 <tr class="table-light">
                     <td>@Model.FromDate.ToString("yyyy/MM/dd")</td>
-                    <td colspan="4" class="fw-bold text-center">الرصيد الافتتاحي</td>
+                    <td colspan="6" class="fw-bold text-center">الرصيد الافتتاحي</td>
                     <td class="text-end">-</td>
                     <td class="text-end">-</td>
                     <td class="text-end">
                         @Model.OpeningBalance.ToString("N2")
-                        <div class="text-muted">@Model.OpeningBalanceBase.ToString("N2") @Model.BaseCurrencyCode</div>
+                        @if (showBaseCurrency)
+                        {
+                            <div class="text-muted">@Model.OpeningBalanceBase.ToString("N2") @Model.BaseCurrencyCode</div>
+                        }
                     </td>
                 </tr>
                 @if (Model.Transactions != null && Model.Transactions.Any())
@@ -201,20 +204,22 @@
                             <td>@transaction.Date.ToString("dd/MM/yyyy")</td>
                             <td>@transaction.JournalEntryNumber</td>
                             <td>@(string.IsNullOrWhiteSpace(transaction.Reference) ? "-" : transaction.Reference)</td>
-                            <td>@transaction.MovementType</td>
-                            <td>@transaction.Description</td>
+                            <td>@(string.IsNullOrWhiteSpace(transaction.BranchName) ? "-" : transaction.BranchName)</td>
+                            <td>@(string.IsNullOrWhiteSpace(transaction.CreatedByName) ? "-" : transaction.CreatedByName)</td>
+                            <td>@(string.IsNullOrWhiteSpace(transaction.MovementType) ? "-" : transaction.MovementType)</td>
+                            <td>@(string.IsNullOrWhiteSpace(transaction.Description) ? "-" : transaction.Description)</td>
                             <td class="text-end">
                                 @(transaction.DebitAmount > 0 ? transaction.DebitAmount.ToString("N2") : "-")
-                                @if (showBaseCurrency)
+                                @if (showBaseCurrency && transaction.DebitAmount > 0)
                                 {
-                                    <div class="text-muted">@(transaction.DebitAmount > 0 ? transaction.DebitAmountBase.ToString("N2") + " " + Model.BaseCurrencyCode : "")</div>
+                                    <div class="text-muted">@transaction.DebitAmountBase.ToString("N2") @Model.BaseCurrencyCode</div>
                                 }
                             </td>
                             <td class="text-end">
                                 @(transaction.CreditAmount > 0 ? transaction.CreditAmount.ToString("N2") : "-")
-                                @if (showBaseCurrency)
+                                @if (showBaseCurrency && transaction.CreditAmount > 0)
                                 {
-                                    <div class="text-muted">@(transaction.CreditAmount > 0 ? transaction.CreditAmountBase.ToString("N2") + " " + Model.BaseCurrencyCode : "")</div>
+                                    <div class="text-muted">@transaction.CreditAmountBase.ToString("N2") @Model.BaseCurrencyCode</div>
                                 }
                             </td>
                             <td class="text-end">
@@ -230,7 +235,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="8" class="text-center text-muted">لا توجد حركات في الفترة المحددة</td>
+                        <td colspan="10" class="text-center text-muted">لا توجد حركات في الفترة المحددة</td>
                     </tr>
                 }
             </tbody>
