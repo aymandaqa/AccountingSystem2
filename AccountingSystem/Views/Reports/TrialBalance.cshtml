@@ -5,11 +5,6 @@
 @{
     ViewData["Title"] = "ميزان المراجعة";
     var hasMismatch = Model.Accounts.Any(a => a.DebitBalance != 0 && a.CreditBalance != 0);
-    var maxLevelValue = Model.Levels
-        .Select(l => int.TryParse(l.Value, out var parsed) ? parsed : 0)
-        .DefaultIfEmpty(5)
-        .Max();
-    var defaultAccountLabel = "جميع الحسابات";
 }
 
 <div class="container-fluid">
@@ -50,42 +45,27 @@
                                 }
                             </select>
                         </div>
+                        <div class="col-md-3">
+                            <label class="form-label">المستوى:</label>
+                            <select name="level" class="form-select">
+                                @foreach (var levelOption in Model.Levels)
+                                {
+                                    if (levelOption.Selected)
+                                    {
+                                        <option value="@levelOption.Value" selected>@levelOption.Text</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@levelOption.Value">@levelOption.Text</option>
+                                    }
+                                }
+                            </select>
+                            <small class="level-hint">يعرض التقرير الحسابات حتى المستوى المحدد مع تضمين أرصدة التفرعات التابعة لكل حساب.</small>
+                        </div>
                         <div class="col-md-3 d-flex align-items-end">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="includePending" value="true" @(Model.IncludePending ? "checked" : "") />
                                 <label class="form-check-label">شمل القيود غير المرحلة</label>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">اختر الحساب أو المستوى:</label>
-                            <div class="account-tree-wrapper border rounded p-3 bg-light">
-                                <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
-                                    <div>
-                                        <span class="fw-semibold">الحساب المختار:</span>
-                                        <span id="selectedAccountLabel" class="text-primary">@Model.SelectedAccountName</span>
-                                    </div>
-                                    <div class="d-flex gap-2">
-                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clearAccountSelection" @(Model.SelectedAccountId.HasValue ? string.Empty : "disabled")>
-                                            <i class="fas fa-times me-1"></i>
-                                            إلغاء التحديد
-                                        </button>
-                                    </div>
-                                </div>
-                                <input type="hidden" name="accountId" id="selectedAccountId" value="@(Model.SelectedAccountId?.ToString() ?? string.Empty)" />
-                                <input type="hidden" name="level" id="selectedLevelInput" value="@Model.SelectedLevel" />
-                                <div id="accountSelectionTree" class="account-tree-container" data-default-level="@maxLevelValue" data-empty-label="@defaultAccountLabel">
-                                    @if (Model.AccountTree.Any())
-                                    {
-                                        @await Html.PartialAsync("_AccountTreeSelector", Model.AccountTree, new ViewDataDictionary(ViewData) { ["SelectedAccountId"] = Model.SelectedAccountId })
-                                    }
-                                    else
-                                    {
-                                        <div class="alert alert-info mb-0">
-                                            لا توجد حسابات متاحة لعرضها في الشجرة.
-                                        </div>
-                                    }
-                                </div>
-                                <small class="text-muted d-block mt-2">اختر أي حساب من الشجرة ليتم تضمين جميع الحسابات الفرعية التابعة له في التقرير.</small>
                             </div>
                         </div>
                         <div class="col-12">
@@ -99,8 +79,7 @@
                                    asp-route-toDate='@Model.ToDate.ToString("yyyy-MM-dd")'
                                    asp-route-includePending='@Model.IncludePending'
                                    asp-route-currencyId='@Model.SelectedCurrencyId'
-                                   asp-route-level='@Model.SelectedLevel'
-                                   asp-route-accountId='@Model.SelectedAccountId'>
+                                   asp-route-level='@Model.SelectedLevel'>
                                     <i class="fas fa-file-excel me-1"></i>
                                     تصدير Excel
                                 </a>
@@ -201,257 +180,9 @@
 
 @section Styles {
     <style>
-        .account-tree-wrapper {
-            background-color: #f8f9fa;
-        }
-
-        .account-tree-container {
-            max-height: 320px;
-            overflow-y: auto;
-            background-color: #fff;
-            border: 1px solid #dee2e6;
-            border-radius: 0.75rem;
-            padding: 0.75rem;
-        }
-
-        .account-tree-node {
-            border-radius: 0.5rem;
-            padding: 0.35rem 0.5rem;
-            margin-bottom: 0.25rem;
-            transition: background-color 0.2s ease, border-color 0.2s ease;
-        }
-
-            .account-tree-node:last-child {
-                margin-bottom: 0;
-            }
-
-            .account-tree-node.selected {
-                background-color: rgba(13, 110, 253, 0.12);
-                border: 1px solid rgba(13, 110, 253, 0.35);
-            }
-
-            .account-tree-node .tree-node-label {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                cursor: pointer;
-                color: #212529;
-            }
-
-                .account-tree-node .tree-node-label:hover {
-                    color: #0d6efd;
-                }
-
-            .account-tree-node .toggle-btn,
-            .account-tree-node .toggle-placeholder {
-                width: 1.75rem;
-                height: 1.75rem;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 50%;
-            }
-
-            .account-tree-node .toggle-btn {
-                border: none;
-                background-color: transparent;
-                color: #0d6efd;
-                transition: background-color 0.2s ease, color 0.2s ease;
-            }
-
-                .account-tree-node .toggle-btn:hover {
-                    background-color: rgba(13, 110, 253, 0.08);
-                }
-
-            .account-tree-node .node-text {
-                flex: 1 1 auto;
-                font-weight: 500;
-            }
-
-            .account-tree-node .tree-children {
-                margin-right: 1.5rem;
-                border-right: 1px dashed #ced4da;
-                padding-right: 1rem;
-                margin-top: 0.35rem;
-            }
-
-                .account-tree-node .tree-children.collapsed {
-                    display: none;
-                }
-
-            .account-tree-node .badge {
-                font-size: 0.7rem;
-            }
-
-        @@media (max-width: 767.98px) {
-            .account-tree-container {
-                max-height: 260px;
-            }
+        .level-hint {
+            font-size: 0.875rem;
+            color: #6c757d;
         }
     </style>
-}
-
-@section Scripts {
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            var treeContainer = document.getElementById('accountSelectionTree');
-            if (!treeContainer) {
-                return;
-            }
-
-            var hiddenAccountId = document.getElementById('selectedAccountId');
-            var hiddenLevel = document.getElementById('selectedLevelInput');
-            var selectedLabel = document.getElementById('selectedAccountLabel');
-            var clearButton = document.getElementById('clearAccountSelection');
-            var defaultLevel = treeContainer.getAttribute('data-default-level');
-            var emptyLabel = treeContainer.getAttribute('data-empty-label') || 'جميع الحسابات';
-
-            function updateSelectedLabel(label, enableClear) {
-                if (selectedLabel) {
-                    selectedLabel.textContent = label;
-                }
-
-                if (clearButton) {
-                    clearButton.disabled = !enableClear;
-                }
-            }
-
-            function clearSelection() {
-                if (hiddenAccountId) {
-                    hiddenAccountId.value = '';
-                }
-
-                if (hiddenLevel && defaultLevel) {
-                    hiddenLevel.value = defaultLevel;
-                }
-
-                treeContainer.querySelectorAll('.account-tree-node.selected').forEach(function (node) {
-                    node.classList.remove('selected');
-                });
-
-                updateSelectedLabel(emptyLabel, false);
-            }
-
-            function ensureExpanded(node) {
-                var current = node;
-                while (current) {
-                    var parentElement = current.parentElement;
-                    if (!parentElement) {
-                        break;
-                    }
-
-                    var parentNode = parentElement.closest('.account-tree-node');
-                    if (parentNode) {
-                        var children = parentNode.querySelector(':scope > .tree-children');
-                        if (children) {
-                            children.classList.remove('collapsed');
-                            children.style.display = 'block';
-                        }
-
-                        var toggle = parentNode.querySelector(':scope > .tree-node-label > .toggle-btn');
-                        if (toggle) {
-                            toggle.dataset.expanded = 'true';
-                            var icon = toggle.querySelector('i');
-                            if (icon) {
-                                icon.classList.remove('fa-plus');
-                                icon.classList.add('fa-minus');
-                            }
-                        }
-                    }
-
-                    current = parentNode;
-                }
-            }
-
-            function setSelectedNode(node) {
-                if (!node) {
-                    return;
-                }
-
-                var nodeId = node.getAttribute('data-node-id');
-                if (!nodeId || nodeId === '0') {
-                    return;
-                }
-
-                treeContainer.querySelectorAll('.account-tree-node.selected').forEach(function (n) {
-                    n.classList.remove('selected');
-                });
-
-                node.classList.add('selected');
-
-                var level = node.getAttribute('data-level') || defaultLevel;
-                var labelElement = node.querySelector('.node-text');
-                var labelText = labelElement ? labelElement.textContent.trim() : emptyLabel;
-
-                if (hiddenAccountId) {
-                    hiddenAccountId.value = nodeId;
-                }
-
-                if (hiddenLevel && level) {
-                    hiddenLevel.value = level;
-                }
-
-                updateSelectedLabel(labelText, true);
-                ensureExpanded(node);
-            }
-
-            treeContainer.addEventListener('click', function (event) {
-                var toggleButton = event.target.closest('.toggle-btn');
-                if (toggleButton) {
-                    event.preventDefault();
-                    var node = toggleButton.closest('.account-tree-node');
-                    var children = node ? node.querySelector(':scope > .tree-children') : null;
-                    if (children) {
-                        var isExpanded = toggleButton.dataset.expanded !== 'false';
-                        var shouldExpand = !isExpanded;
-                        toggleButton.dataset.expanded = shouldExpand ? 'true' : 'false';
-                        children.style.display = shouldExpand ? 'block' : 'none';
-                        children.classList.toggle('collapsed', !shouldExpand);
-                        var icon = toggleButton.querySelector('i');
-                        if (icon) {
-                            if (shouldExpand) {
-                                icon.classList.add('fa-minus');
-                                icon.classList.remove('fa-plus');
-                            } else {
-                                icon.classList.add('fa-plus');
-                                icon.classList.remove('fa-minus');
-                            }
-                        }
-                    }
-
-                    return;
-                }
-
-                var label = event.target.closest('.tree-node-label');
-                if (label) {
-                    event.preventDefault();
-                    var node = label.closest('.account-tree-node');
-                    setSelectedNode(node);
-                }
-            });
-
-            if (clearButton) {
-                clearButton.addEventListener('click', function (event) {
-                    event.preventDefault();
-                    clearSelection();
-                });
-            }
-
-            var initialId = hiddenAccountId ? hiddenAccountId.value : '';
-            if (initialId) {
-                var initialNode = treeContainer.querySelector('.account-tree-node[data-node-id="' + initialId + '"]');
-                if (initialNode) {
-                    initialNode.classList.add('selected');
-                    ensureExpanded(initialNode);
-                    var initialLabel = initialNode.querySelector('.node-text');
-                    var labelText = initialLabel ? initialLabel.textContent.trim() : emptyLabel;
-                    updateSelectedLabel(labelText, true);
-                } else {
-                    updateSelectedLabel(emptyLabel, false);
-                }
-            } else {
-                updateSelectedLabel(emptyLabel, false);
-            }
-        });
-    </script>
 }

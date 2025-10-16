@@ -1920,16 +1920,16 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/TrialBalance
-        public async Task<IActionResult> TrialBalance(DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 5, int? accountId = null)
+        public async Task<IActionResult> TrialBalance(DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 5)
         {
-            var viewModel = await BuildTrialBalanceViewModel(fromDate, toDate, includePending, currencyId, level, accountId);
+            var viewModel = await BuildTrialBalanceViewModel(fromDate, toDate, includePending, currencyId, level);
 
             return View(viewModel);
         }
 
-        public async Task<IActionResult> TrialBalanceExcel(DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 5, int? accountId = null)
+        public async Task<IActionResult> TrialBalanceExcel(DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null, int level = 5)
         {
-            var viewModel = await BuildTrialBalanceViewModel(fromDate, toDate, includePending, currencyId, level, accountId);
+            var viewModel = await BuildTrialBalanceViewModel(fromDate, toDate, includePending, currencyId, level);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.AddWorksheet("TrialBalance");
@@ -1981,7 +1981,7 @@ namespace AccountingSystem.Controllers
             return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
-        private async Task<TrialBalanceViewModel> BuildTrialBalanceViewModel(DateTime? fromDate, DateTime? toDate, bool includePending, int? currencyId, int level = 5, int? accountId = null)
+        private async Task<TrialBalanceViewModel> BuildTrialBalanceViewModel(DateTime? fromDate, DateTime? toDate, bool includePending, int? currencyId, int level = 5)
         {
             var allAccounts = await _context.Accounts
                 .Include(a => a.Currency)
@@ -1995,10 +1995,6 @@ namespace AccountingSystem.Controllers
                 .GroupBy(a => a.ParentId!.Value)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
-            var postingAccounts = allAccounts
-                .Where(a => a.CanPostTransactions)
-                .ToList();
-
             var fiscalYearStart = new DateTime(2025, 1, 1);
             var from = fromDate ?? fiscalYearStart;
             var to = toDate ?? DateTime.Today;
@@ -2009,56 +2005,32 @@ namespace AccountingSystem.Controllers
                 normalizedLevel = 5;
             }
 
-            var normalizedAccountId = accountId.HasValue && accountId.Value > 0
-                ? accountId
-                : null;
+            var accountScope = allAccounts
+                .Where(a => a.Level == normalizedLevel)
+                .OrderBy(a => a.Code)
+                .ToList();
 
-            var selectedAccountName = "جميع الحسابات";
-            var useAggregatedLevel = true;
-
-            List<Account> accountScope;
-
-            if (normalizedAccountId.HasValue && accountsLookup.TryGetValue(normalizedAccountId.Value, out var selectedAccount))
+            if (!accountScope.Any())
             {
-                var descendantIds = new HashSet<int>();
+                var availableLevels = allAccounts
+                    .Select(a => a.Level)
+                    .Distinct()
+                    .OrderBy(l => l)
+                    .ToList();
 
-                void CollectDescendants(Account account)
+                if (availableLevels.Any())
                 {
-                    if (!descendantIds.Add(account.Id))
-                    {
-                        return;
-                    }
+                    var fallbackLevel = availableLevels
+                        .Where(l => l <= normalizedLevel)
+                        .DefaultIfEmpty(availableLevels.Max())
+                        .Max();
 
-                    if (childrenLookup.TryGetValue(account.Id, out var children))
-                    {
-                        foreach (var child in children)
-                        {
-                            CollectDescendants(child);
-                        }
-                    }
+                    normalizedLevel = fallbackLevel;
+                    accountScope = allAccounts
+                        .Where(a => a.Level == normalizedLevel)
+                        .OrderBy(a => a.Code)
+                        .ToList();
                 }
-
-                CollectDescendants(selectedAccount);
-
-                accountScope = postingAccounts
-                    .Where(a => descendantIds.Contains(a.Id))
-                    .OrderBy(a => a.Code)
-                    .ToList();
-
-                normalizedLevel = selectedAccount.Level;
-                selectedAccountName = string.IsNullOrWhiteSpace(selectedAccount.Code)
-                    ? selectedAccount.NameAr
-                    : $"{selectedAccount.Code} - {selectedAccount.NameAr}";
-                useAggregatedLevel = false;
-            }
-            else
-            {
-                accountScope = allAccounts
-                    .Where(a => a.Level == normalizedLevel)
-                    .OrderBy(a => a.Code)
-                    .ToList();
-
-                normalizedAccountId = null;
             }
 
             var pending = includePending
@@ -2074,62 +2046,6 @@ namespace AccountingSystem.Controllers
             var baseCurrency = await _context.Currencies.FirstAsync(c => c.IsBase);
             var selectedCurrency = currencyId.HasValue ? await _context.Currencies.FirstOrDefaultAsync(c => c.Id == currencyId.Value) : baseCurrency;
             selectedCurrency ??= baseCurrency;
-
-            var accountTreeLookup = allAccounts
-                .Select(a => new AccountTreeNodeViewModel
-                {
-                    Id = a.Id,
-                    Code = a.Code,
-                    NameAr = a.NameAr,
-                    AccountType = a.AccountType,
-                    Nature = a.Nature,
-                    CurrencyCode = a.Currency?.Code ?? string.Empty,
-                    OpeningBalance = a.OpeningBalance,
-                    CurrentBalance = a.CurrentBalance,
-                    IsActive = a.IsActive,
-                    CanPostTransactions = a.CanPostTransactions,
-                    ParentId = a.ParentId,
-                    Level = a.Level,
-                    Children = new List<AccountTreeNodeViewModel>()
-                })
-                .ToDictionary(n => n.Id);
-
-            foreach (var node in accountTreeLookup.Values)
-            {
-                if (node.ParentId.HasValue && accountTreeLookup.TryGetValue(node.ParentId.Value, out var parent))
-                {
-                    parent.Children.Add(node);
-                }
-            }
-
-            void SortAndMark(AccountTreeNodeViewModel node)
-            {
-                if (node.Children.Any())
-                {
-                    node.Children = node.Children
-                        .OrderBy(child => child.Code)
-                        .ToList();
-                    node.HasChildren = true;
-                    foreach (var child in node.Children)
-                    {
-                        SortAndMark(child);
-                    }
-                }
-                else
-                {
-                    node.HasChildren = false;
-                }
-            }
-
-            var accountTree = accountTreeLookup.Values
-                .Where(n => n.ParentId == null)
-                .OrderBy(n => n.Code)
-                .ToList();
-
-            foreach (var root in accountTree)
-            {
-                SortAndMark(root);
-            }
 
             var postingBalanceCache = new Dictionary<int, (decimal DebitSelected, decimal CreditSelected, decimal DebitBase, decimal CreditBase)>();
             var aggregatedBalanceCache = new Dictionary<int, (decimal DebitSelected, decimal CreditSelected, decimal DebitBase, decimal CreditBase)>();
@@ -2228,39 +2144,23 @@ namespace AccountingSystem.Controllers
                 return result;
             }
 
-            var reportAccounts = useAggregatedLevel
-                ? accountScope.Select(account =>
+            var reportAccounts = accountScope
+                .Select(account =>
+                {
+                    var balance = CalculateAggregatedBalance(account.Id);
+                    return new TrialBalanceAccountViewModel
                     {
-                        var balance = CalculateAggregatedBalance(account.Id);
-                        return new TrialBalanceAccountViewModel
-                        {
-                            AccountId = account.Id,
-                            AccountCode = account.Code,
-                            AccountName = account.NameAr,
-                            DebitBalance = balance.DebitSelected,
-                            CreditBalance = balance.CreditSelected,
-                            DebitBalanceBase = balance.DebitBase,
-                            CreditBalanceBase = balance.CreditBase,
-                            Level = account.Level
-                        };
-                    })
-                    .ToList()
-                : accountScope.Select(account =>
-                    {
-                        var balance = CalculatePostingBalance(account);
-                        return new TrialBalanceAccountViewModel
-                        {
-                            AccountId = account.Id,
-                            AccountCode = account.Code,
-                            AccountName = account.NameAr,
-                            DebitBalance = balance.DebitSelected,
-                            CreditBalance = balance.CreditSelected,
-                            DebitBalanceBase = balance.DebitBase,
-                            CreditBalanceBase = balance.CreditBase,
-                            Level = account.Level
-                        };
-                    })
-                    .ToList();
+                        AccountId = account.Id,
+                        AccountCode = account.Code,
+                        AccountName = account.NameAr,
+                        DebitBalance = balance.DebitSelected,
+                        CreditBalance = balance.CreditSelected,
+                        DebitBalanceBase = balance.DebitBase,
+                        CreditBalanceBase = balance.CreditBase,
+                        Level = account.Level
+                    };
+                })
+                .ToList();
 
             var viewModel = new TrialBalanceViewModel
             {
@@ -2282,10 +2182,7 @@ namespace AccountingSystem.Controllers
                         Text = l.ToString(),
                         Selected = l == normalizedLevel
                     })
-                    .ToList(),
-                SelectedAccountId = normalizedAccountId,
-                SelectedAccountName = selectedAccountName,
-                AccountTree = accountTree
+                    .ToList()
             };
 
             viewModel.TotalDebits = viewModel.Accounts.Sum(a => a.DebitBalance);
