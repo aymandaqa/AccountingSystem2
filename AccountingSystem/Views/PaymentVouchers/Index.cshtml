@@ -1,13 +1,13 @@
 @using AccountingSystem.Models
 @model IEnumerable<AccountingSystem.Models.PaymentVoucher>
 @{
-    ViewData["Title"] = "سندات   صرف موردين";
+    ViewData["Title"] = "سندات الدفع";
 }
 
 <div class="container-fluid">
     <div class="d-flex gap-2 mb-3">
-        <a asp-action="Create" class="btn btn-primary" asp-require-permission="paymentvouchers.create">سند صرف جديد</a>
-        <a asp-action="CreateFromAgent" class="btn btn-outline-primary" asp-require-permission="paymentvouchers.create">سند صرف من حساب وكيل</a>
+        <a asp-action="Create" class="btn btn-primary" asp-require-permission="paymentvouchers.create">سند دفع جديد</a>
+        <a asp-action="CreateFromAgent" class="btn btn-outline-primary" asp-require-permission="paymentvouchers.create">سند دفع من حساب وكيل</a>
     </div>
     <table class="table table-striped table-hover">
         <thead class="table-dark">
@@ -27,7 +27,7 @@
             {
                 <tr>
                     <td>@v.Date.ToString("dd/MM/yyyy")</td>
-                    <td>@v.Supplier.NameAr</td>
+                    <td>@(v.Supplier != null ? v.Supplier.NameAr : "-")</td>
                     <td>@(v.Agent != null ? v.Agent.Name : "-")</td>
                     <td>@v.Currency.Code</td>
                     <td>@v.ExchangeRate.ToString("N6")</td>

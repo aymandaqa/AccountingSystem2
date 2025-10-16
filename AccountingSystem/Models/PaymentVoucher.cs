@@ -9,8 +9,7 @@ namespace AccountingSystem.Models
     {
         public int Id { get; set; }
 
-        [Required]
-        public int SupplierId { get; set; }
+        public int? SupplierId { get; set; }
 
         // Account used when voucher is non-cash (credit account)
         public int? AccountId { get; set; }
@@ -44,7 +43,7 @@ namespace AccountingSystem.Models
         public int? WorkflowInstanceId { get; set; }
 
         [ValidateNever]
-        public virtual Supplier Supplier { get; set; } = null!;
+        public virtual Supplier? Supplier { get; set; }
 
         [ValidateNever]
         public virtual Account? Account { get; set; }
