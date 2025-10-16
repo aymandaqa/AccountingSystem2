@@ -1742,6 +1742,15 @@ namespace AccountingSystem.Migrations
                         },
                         new
                         {
+                            Id = 72,
+                            Category = "التقارير",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض كشف الحساب من السجلات",
+                            IsActive = true,
+                            Name = "reports.accountstatement"
+                        },
+                        new
+                        {
                             Id = 24,
                             Category = "لوحة التحكم",
                             CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),

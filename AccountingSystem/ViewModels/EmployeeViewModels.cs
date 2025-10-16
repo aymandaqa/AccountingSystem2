@@ -15,6 +15,7 @@ namespace AccountingSystem.ViewModels
         public decimal Salary { get; set; }
         public string AccountCode { get; set; } = string.Empty;
         public string AccountName { get; set; } = string.Empty;
+        public int? AccountId { get; set; }
         public bool IsActive { get; set; }
         public string? NationalId { get; set; }
     }

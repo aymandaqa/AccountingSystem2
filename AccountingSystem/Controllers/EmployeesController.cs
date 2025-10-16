@@ -61,8 +61,9 @@ namespace AccountingSystem.Controllers
                     BranchId = employee.BranchId,
                     JobTitle = employee.JobTitle,
                     Salary = employee.Salary,
-                    AccountCode = employee.Account.Code,
-                    AccountName = employee.Account.NameAr,
+                    AccountCode = employee.Account?.Code ?? string.Empty,
+                    AccountName = employee.Account?.NameAr ?? string.Empty,
+                    AccountId = employee.AccountId,
                     IsActive = employee.IsActive,
                     NationalId = employee.NationalId
                 });

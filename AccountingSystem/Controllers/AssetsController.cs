@@ -232,6 +232,7 @@ namespace AccountingSystem.Controllers
             var assets = await _context.Assets
                 .Include(a => a.Branch)
                 .Include(a => a.AssetType)
+                .Include(a => a.Account)
                 .OrderBy(a => a.Name)
                 .ToListAsync();
 
@@ -244,6 +245,7 @@ namespace AccountingSystem.Controllers
                 AssetNumber = a.AssetNumber,
                 Notes = a.Notes,
                 OpeningBalance = a.OpeningBalance,
+                AccountId = a.AccountId,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt
             }).ToList();
