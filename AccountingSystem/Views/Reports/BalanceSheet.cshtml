@@ -1,22 +1,30 @@
 @model AccountingSystem.ViewModels.BalanceSheetViewModel
 @{
     ViewData["Title"] = "الميزانية العمومية";
+    var totalLiabilitiesAndEquity = Model.TotalLiabilities + Model.TotalEquity;
+    var totalLiabilitiesAndEquityBase = Model.TotalLiabilitiesBase + Model.TotalEquityBase;
+    var difference = Model.TotalAssets - totalLiabilitiesAndEquity;
+    var differenceBase = Model.TotalAssetsBase - totalLiabilitiesAndEquityBase;
 }
 
-<div class="container-fluid">
+<div class="container-fluid balance-sheet-page">
     <div class="row">
         <div class="col-12">
             <div class="card shadow">
                 <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">
-                        <i class="fas fa-balance-scale me-2"></i>
-                        الميزانية العمومية
-                    </h4>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <h4 class="mb-0">
+                            <i class="fas fa-balance-scale me-2"></i>
+                            الميزانية العمومية
+                        </h4>
+                        <span class="badge bg-light text-primary fw-bold">
+                            كما في: @Model.AsOfDate.ToString("dd/MM/yyyy")
+                        </span>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <!-- فلاتر التقرير -->
-                    <form method="get" class="row g-3 mb-4">
-                        <div class="col-md-3">
+                    <form method="get" class="row g-3 mb-4 align-items-end balance-sheet-filters">
+                        <div class="col-sm-6 col-lg-3">
                             <label for="branchId" class="form-label">الفرع:</label>
                             <select name="branchId" id="branchId" class="form-select">
                                 <option value="">جميع الفروع</option>
@@ -26,123 +34,165 @@
                                 }
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-sm-6 col-lg-3">
                             <label for="asOfDate" class="form-label">كما في تاريخ:</label>
                             <input type="date" name="asOfDate" id="asOfDate" class="form-control" value="@Model.AsOfDate.ToString("yyyy-MM-dd")" />
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">العملة:</label>
-                            <select name="currencyId" class="form-select">
+                        <div class="col-sm-6 col-lg-3">
+                            <label for="currencyId" class="form-label">العملة:</label>
+                            <select name="currencyId" id="currencyId" class="form-select">
                                 @foreach (var currency in Model.Currencies)
                                 {
                                     <option value="@currency.Value" selected="@(currency.Value == Model.SelectedCurrencyId?.ToString())">@currency.Text</option>
                                 }
                             </select>
                         </div>
-                        <div class="col-md-3 d-flex align-items-end">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="includePending" value="true" @(Model.IncludePending ? "checked" : "") />
-                                <label class="form-check-label">شمل القيود غير المرحلة</label>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
+                        <div class="col-sm-6 col-lg-3">
                             <label class="form-label">&nbsp;</label>
-                            <div class="d-flex">
-                                <button type="submit" class="btn btn-primary me-2">
-                                    <i class="fas fa-search me-1"></i>
-                                    عرض التقرير
-                                </button>
-                                @if (Model.Assets.Any() || Model.Liabilities.Any() || Model.Equity.Any())
-                                {
-                                    <a class="btn btn-secondary me-2" href="@Url.Action("BalanceSheetPdf", new { branchId = Model.BranchId, asOfDate = Model.AsOfDate.ToString("yyyy-MM-dd"), includePending = Model.IncludePending, currencyId = Model.SelectedCurrencyId })">
-                                        <i class="fas fa-file-pdf me-1"></i> PDF
-                                    </a>
-                                    <a class="btn btn-success" href="@Url.Action("BalanceSheetExcel", new { branchId = Model.BranchId, asOfDate = Model.AsOfDate.ToString("yyyy-MM-dd"), includePending = Model.IncludePending, currencyId = Model.SelectedCurrencyId })">
-                                        <i class="fas fa-file-excel me-1"></i> Excel
-                                    </a>
-                                }
+                            <div class="d-flex flex-column flex-lg-row gap-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includePending" value="true" @(Model.IncludePending ? "checked" : string.Empty) id="includePending" />
+                                    <label class="form-check-label" for="includePending">شمل القيود غير المرحلة</label>
+                                </div>
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-search me-1"></i>
+                                        عرض التقرير
+                                    </button>
+                                    @if (Model.Assets.Any() || Model.Liabilities.Any() || Model.Equity.Any())
+                                    {
+                                        <a class="btn btn-outline-secondary" href="@Url.Action("BalanceSheetPdf", new { branchId = Model.BranchId, asOfDate = Model.AsOfDate.ToString("yyyy-MM-dd"), includePending = Model.IncludePending, currencyId = Model.SelectedCurrencyId })">
+                                            <i class="fas fa-file-pdf me-1"></i> PDF
+                                        </a>
+                                        <a class="btn btn-outline-success" href="@Url.Action("BalanceSheetExcel", new { branchId = Model.BranchId, asOfDate = Model.AsOfDate.ToString("yyyy-MM-dd"), includePending = Model.IncludePending, currencyId = Model.SelectedCurrencyId })">
+                                            <i class="fas fa-file-excel me-1"></i> Excel
+                                        </a>
+                                    }
+                                </div>
                             </div>
                         </div>
                     </form>
-                    @{
-                        ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode; ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
+
+                    @if (!Model.Assets.Any() && !Model.Liabilities.Any() && !Model.Equity.Any())
+                    {
+                        <div class="alert alert-info text-center mb-0">لا توجد بيانات متاحة للفترة المختارة.</div>
                     }
+                    else
+                    {
+                        ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode;
+                        ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
 
-                    <div class="row">
-                        <!-- الأصول -->
-                        <div class="col-md-6">
-                            <div class="card border-success">
-                                <div class="card-header bg-success text-white">
-                                    <h5 class="mb-0">الأصول</h5>
+                        <div class="row g-3 mb-4 balance-sheet-summary">
+                            <div class="col-md-4">
+                                <div class="summary-card border-success">
+                                    <div class="summary-title text-success">إجمالي الأصول</div>
+                                    <div class="summary-amount">@Model.TotalAssets.ToString("N2") <span class="currency">@Model.SelectedCurrencyCode</span></div>
+                                    <div class="summary-amount-base text-muted">(@Model.TotalAssetsBase.ToString("N2") @Model.BaseCurrencyCode)</div>
                                 </div>
-                                <div class="card-body">
-                                    @if (Model.Assets.Any())
-                                    {
-                                        <div class="tree-container">
-                                            @await Html.PartialAsync("_AccountBalanceTreeNode", Model.Assets)
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <div class="alert alert-info text-center">لا توجد بيانات</div>
-                                    }
-                                    <div class="d-flex justify-content-between border-top pt-3 mt-3">
-                                        <strong>إجمالي الأصول:</strong>
-                                        <strong class="text-success">@Model.TotalAssets.ToString("N2") @Model.SelectedCurrencyCode <small class="text-muted">(@Model.TotalAssetsBase.ToString("N2") @Model.BaseCurrencyCode)</small></strong>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="summary-card border-warning">
+                                    <div class="summary-title text-warning">إجمالي الخصوم وحقوق الملكية</div>
+                                    <div class="summary-amount">@totalLiabilitiesAndEquity.ToString("N2") <span class="currency">@Model.SelectedCurrencyCode</span></div>
+                                    <div class="summary-amount-base text-muted">(@totalLiabilitiesAndEquityBase.ToString("N2") @Model.BaseCurrencyCode)</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="summary-card border-info">
+                                    <div class="summary-title text-info">الفارق</div>
+                                    <div class="summary-amount @(Math.Abs(difference) < 0.01m ? "text-success" : "text-danger")">
+                                        @difference.ToString("N2") <span class="currency">@Model.SelectedCurrencyCode</span>
+                                    </div>
+                                    <div class="summary-amount-base text-muted">(@differenceBase.ToString("N2") @Model.BaseCurrencyCode)</div>
+                                    <div class="mt-2">
+                                        @if (Model.IsBalanced)
+                                        {
+                                            <span class="badge bg-success">الميزانية متوازنة</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">الميزانية غير متوازنة</span>
+                                        }
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- الخصوم وحقوق الملكية -->
-                        <div class="col-md-6">
-                            <!-- الخصوم -->
-                            <div class="card border-danger mb-3">
-                                <div class="card-header bg-danger text-white">
-                                    <h5 class="mb-0">الخصوم</h5>
-                                </div>
-                                <div class="card-body">
-                                    @if (Model.Liabilities.Any())
-                                    {
-                                        <div class="tree-container">
-                                            @await Html.PartialAsync("_AccountBalanceTreeNode", Model.Liabilities)
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <div class="alert alert-info text-center">لا توجد بيانات</div>
-                                    }
-                                    <div class="d-flex justify-content-between border-top pt-3 mt-3">
-                                        <strong>إجمالي الخصوم:</strong>
-                                        <strong class="text-danger">@Model.TotalLiabilities.ToString("N2") @Model.SelectedCurrencyCode <small class="text-muted">(@Model.TotalLiabilitiesBase.ToString("N2") @Model.BaseCurrencyCode)</small></strong>
+                        <div class="row g-4 balance-sheet-grid">
+                            <div class="col-12 col-xl-6">
+                                <div class="balance-card">
+                                    <div class="balance-card-header bg-success text-white">
+                                        الأصول
+                                    </div>
+                                    <div class="balance-card-body">
+                                        <table class="table table-sm balance-sheet-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>البند</th>
+                                                    <th class="text-end">الرصيد (@Model.SelectedCurrencyCode)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @await Html.PartialAsync("_AccountBalanceTableRows", Model.Assets)
+                                            </tbody>
+                                            <tfoot>
+                                                <tr>
+                                                    <th>إجمالي الأصول</th>
+                                                    <th class="text-end text-success">@Model.TotalAssets.ToString("N2")</th>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
                                     </div>
                                 </div>
                             </div>
+                            <div class="col-12 col-xl-6">
+                                <div class="balance-card">
+                                    <div class="balance-card-header bg-danger text-white">
+                                        الخصوم وحقوق الملكية
+                                    </div>
+                                    <div class="balance-card-body">
+                                        <div class="section-title text-danger">الخصوم</div>
+                                        <table class="table table-sm balance-sheet-table mb-4">
+                                            <thead>
+                                                <tr>
+                                                    <th>البند</th>
+                                                    <th class="text-end">الرصيد (@Model.SelectedCurrencyCode)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @await Html.PartialAsync("_AccountBalanceTableRows", Model.Liabilities)
+                                            </tbody>
+                                            <tfoot>
+                                                <tr>
+                                                    <th>إجمالي الخصوم</th>
+                                                    <th class="text-end text-danger">@Model.TotalLiabilities.ToString("N2")</th>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
 
-                            <!-- حقوق الملكية -->
-                            <div class="card border-info">
-                                <div class="card-header bg-info text-white">
-                                    <h5 class="mb-0">حقوق الملكية</h5>
-                                </div>
-                                <div class="card-body">
-                                    @if (Model.Equity.Any())
-                                    {
-                                        <div class="tree-container">
-                                            @await Html.PartialAsync("_AccountBalanceTreeNode", Model.Equity)
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <div class="alert alert-info text-center">لا توجد بيانات</div>
-                                    }
-                                    <div class="d-flex justify-content-between border-top pt-3 mt-3">
-                                        <strong>إجمالي حقوق الملكية:</strong>
-                                        <strong class="text-info">@Model.TotalEquity.ToString("N2") @Model.SelectedCurrencyCode <small class="text-muted">(@Model.TotalEquityBase.ToString("N2") @Model.BaseCurrencyCode)</small></strong>
+                                        <div class="section-title text-info">حقوق الملكية</div>
+                                        <table class="table table-sm balance-sheet-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>البند</th>
+                                                    <th class="text-end">الرصيد (@Model.SelectedCurrencyCode)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @await Html.PartialAsync("_AccountBalanceTableRows", Model.Equity)
+                                            </tbody>
+                                            <tfoot>
+                                                <tr>
+                                                    <th>إجمالي حقوق الملكية</th>
+                                                    <th class="text-end text-info">@Model.TotalEquity.ToString("N2")</th>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    }
                 </div>
             </div>
         </div>
@@ -151,79 +201,137 @@
 
 @section Styles {
     <style>
-        .tree-container {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        .balance-sheet-page {
+            font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        .tree-node {
-            margin: 5px 0;
-            padding: 8px;
-            border-radius: 5px;
+        .balance-sheet-filters .form-check {
+            margin-bottom: 0;
         }
 
-        .tree-node-content {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+        .summary-card {
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 0.75rem;
+            padding: 1rem 1.25rem;
+            background-color: #fff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+            height: 100%;
         }
 
-        .tree-node-info {
-            display: flex;
-            align-items: center;
-            flex-grow: 1;
+        .summary-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.35rem;
         }
 
-        .tree-children {
-            margin-right: 25px;
-            border-right: 2px solid #e9ecef;
-            padding-right: 15px;
+        .summary-amount {
+            font-size: 1.4rem;
+            font-weight: 700;
         }
 
-        .account-code {
-            font-weight: bold;
-            color: #495057;
-            margin-left: 10px;
+        .summary-amount .currency {
+            font-size: 0.9rem;
+            font-weight: 400;
         }
 
-        .account-name {
-            color: #212529;
-            margin-left: 10px;
+        .summary-amount-base {
+            font-size: 0.85rem;
         }
 
-        .toggle-btn {
-            background: none;
-            border: none;
-            color: #6c757d;
-            cursor: pointer;
-            padding: 0;
-            margin-left: 5px;
-            width: 20px;
+        .balance-card {
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            background-color: #fff;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
+        }
+
+        .balance-card-header {
+            padding: 0.85rem 1.25rem;
+            font-size: 1.1rem;
+            font-weight: 700;
             text-align: center;
+            letter-spacing: 0.5px;
         }
 
-            .toggle-btn:hover {
-                color: #495057;
-            }
-    </style>
-}
+        .balance-card-body {
+            padding: 1.25rem;
+        }
 
-@section Scripts {
-    <script>
-        $(function () {
-            $('.toggle-btn').on('click', function () {
-                var $this = $(this);
-                var $children = $this.closest('.tree-node').find('> .tree-children');
-                if ($children.is(':visible')) {
-                    $children.hide();
-                    $this.html('<i class="fas fa-plus"></i>');
-                } else {
-                    $children.show();
-                    $this.html('<i class="fas fa-minus"></i>');
-                }
-            });
-        });
-        $(document).ready(function () {
-            $('.tree-node[data-level="0"] .toggle-btn').click();
-        });
-    </script>
+        .section-title {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .balance-sheet-table {
+            border: 1px solid #e9ecef;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .balance-sheet-table thead {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            font-weight: 600;
+        }
+
+        .balance-sheet-table th,
+        .balance-sheet-table td {
+            vertical-align: middle;
+            padding: 0.6rem 0.75rem;
+        }
+
+        .balance-sheet-row {
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        .balance-sheet-row:hover {
+            background-color: rgba(13, 110, 253, 0.08);
+        }
+
+        .balance-sheet-row.bs-row-root {
+            background-color: rgba(255, 193, 7, 0.15);
+            font-weight: 700;
+        }
+
+        .balance-sheet-row.bs-row-group {
+            background-color: rgba(255, 243, 205, 0.6);
+            font-weight: 600;
+        }
+
+        .balance-sheet-row.bs-row-leaf .account-name {
+            font-weight: 500;
+        }
+
+        .balance-sheet-label {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+        }
+
+        .balance-sheet-label .account-code {
+            font-weight: 600;
+            color: #6c757d;
+        }
+
+        .balance-sheet-label .account-name {
+            color: #212529;
+        }
+
+        .balance-sheet-label .account-currency {
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 767.98px) {
+            .summary-amount {
+                font-size: 1.15rem;
+            }
+
+            .balance-sheet-label {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
 }
