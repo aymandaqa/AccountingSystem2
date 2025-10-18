@@ -212,6 +212,7 @@ namespace AccountingSystem.Controllers
             var advance = await _context.EmployeeAdvances
                 .Include(a => a.Employee).ThenInclude(e => e.Branch)
                 .Include(a => a.PaymentAccount).ThenInclude(a => a.Currency)
+                .Include(a => a.Currency)
                 .Include(a => a.CreatedBy)
                 .Include(a => a.Branch)
                 .FirstOrDefaultAsync(a => a.Id == id && a.CreatedById == user.Id);
