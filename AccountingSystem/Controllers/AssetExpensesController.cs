@@ -217,16 +217,17 @@ namespace AccountingSystem.Controllers
 
                 if (assetExpense.IsCash)
                 {
-                    lines.Add(new JournalEntryLine { AccountId = supplier.AccountId.Value, DebitAmount = assetExpense.Amount });
-                    lines.Add(new JournalEntryLine { AccountId = user.PaymentAccountId!.Value, CreditAmount = assetExpense.Amount });
+                    lines.Add(new JournalEntryLine { AccountId = supplier.AccountId.Value, DebitAmount = assetExpense.Amount, Description = "دفع لمصورف اصل ثابت" });
+                    lines.Add(new JournalEntryLine { AccountId = user.PaymentAccountId!.Value, CreditAmount = assetExpense.Amount, Description = "دفع لمصورف اصل ثابت" });
                 }
             }
 
             var reference = $"ASSETEXP:{assetExpense.Id}";
 
+            var ass = await _context.Assets.FirstOrDefaultAsync(t => t.Id == model.AssetId);
             await _journalEntryService.CreateJournalEntryAsync(
                 assetExpense.Date,
-                assetExpense.Notes == null ? "مصروف أصل" : "مصروف أصل" + Environment.NewLine + assetExpense.Notes,
+                assetExpense.Notes == null ? "مصروف أصل" : "مصروف أصل" + Environment.NewLine + ass?.Name + Environment.NewLine + assetExpense.Notes,
                 asset!.BranchId,
                 user.Id,
                 lines,
