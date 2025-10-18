@@ -179,6 +179,8 @@ namespace AccountingSystem.ViewModels
         public decimal DebitBalanceBase { get; set; }
         public decimal CreditBalanceBase { get; set; }
         public int Level { get; set; }
+        public int? ParentAccountId { get; set; }
+        public bool HasChildren { get; set; }
     }
 
     public class TrialBalanceItemViewModel
