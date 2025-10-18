@@ -1202,7 +1202,9 @@ namespace Roadfn.Controllers
                     tottxn.CreditAmount = 0;
                     if (Convert.ToDecimal(Paytxn.ShipmentTotal) <= 0)
                     {
-                        tottxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentPrice) * -1;
+
+                        tottxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentTotal) * -1;
+
                     }
                     else
                     {
@@ -1332,7 +1334,7 @@ namespace Roadfn.Controllers
 
                     await _journalEntryService.CreateJournalEntryAsync(
                         DateTime.Now,
-                        "DriverInvoice_" + driverPaymentHeader.Id,
+                        "DriverInvoice_" + driverPaymentHeader.Id + "_" + sh.ShipmentTrackingNo,
                         Accbrn.Id,
                         user.Id,
                         lines,

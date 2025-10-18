@@ -1986,7 +1986,7 @@ namespace AccountingSystem.Controllers
             return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
-        private async Task<TrialBalanceViewModel> BuildTrialBalanceViewModel(DateTime? fromDate, DateTime? toDate, bool includePending, int? currencyId, int level = 5)
+        private async Task<TrialBalanceViewModel> BuildTrialBalanceViewModel(DateTime? fromDate, DateTime? toDate, bool includePending, int? currencyId, int level = 6)
         {
             var allAccounts = await _context.Accounts
                 .Include(a => a.Currency)
@@ -2005,9 +2005,9 @@ namespace AccountingSystem.Controllers
             var to = toDate ?? DateTime.Today;
 
             var normalizedLevel = level;
-            if (normalizedLevel < 1 || normalizedLevel > 5)
+            if (normalizedLevel < 1 || normalizedLevel > 6)
             {
-                normalizedLevel = 5;
+                normalizedLevel = 6;
             }
 
             var availableLevels = allAccounts
@@ -2198,7 +2198,7 @@ namespace AccountingSystem.Controllers
                 SelectedCurrencyCode = selectedCurrency.Code,
                 BaseCurrencyCode = baseCurrency.Code,
                 SelectedLevel = normalizedLevel,
-                Levels = Enumerable.Range(1, 5)
+                Levels = Enumerable.Range(1, 6)
                     .Select(l => new SelectListItem
                     {
                         Value = l.ToString(),
