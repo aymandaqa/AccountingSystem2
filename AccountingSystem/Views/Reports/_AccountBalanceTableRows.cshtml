@@ -1,0 +1,37 @@
+@model IEnumerable<AccountingSystem.ViewModels.AccountTreeNodeViewModel>
+@{
+    var selectedCurrencyCode = ViewData["SelectedCurrencyCode"] as string ?? string.Empty;
+}
+
+@foreach (var node in Model.OrderBy(n => n.Code))
+{
+    var level = node.Level;
+    var indent = Math.Max(0, (level - 1) * 18);
+    var hasChildren = node.Children.Any();
+    var isRoot = node.ParentId == null;
+    var rowClass = isRoot ? "bs-row-root" : hasChildren ? "bs-row-group" : "bs-row-leaf";
+    <tr class="balance-sheet-row @rowClass" data-level="@level">
+        <td>
+            <div class="balance-sheet-label" style="margin-right:@(indent)px;">
+                @if (!string.IsNullOrWhiteSpace(node.Code))
+                {
+                    <span class="account-code">@node.Code</span>
+                }
+                <span class="account-name">@node.NameAr</span>
+                @if (!string.IsNullOrWhiteSpace(node.CurrencyCode))
+                {
+                    <span class="account-currency text-muted">(@node.CurrencyCode)</span>
+                }
+            </div>
+        </td>
+        <td class="text-end">
+            <span class="amount">@node.BalanceSelected.ToString("N2")</span>
+            <span class="currency text-muted">@selectedCurrencyCode</span>
+        </td>
+    </tr>
+
+    if (hasChildren)
+    {
+        @await Html.PartialAsync("_AccountBalanceTableRows", node.Children.OrderBy(c => c.Code))
+    }
+}
