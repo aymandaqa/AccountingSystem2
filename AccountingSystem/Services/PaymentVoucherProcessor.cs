@@ -111,6 +111,11 @@ namespace AccountingSystem.Services
                     throw new InvalidOperationException("عملة حساب الوكيل لا تطابق عملة حساب الدفع.");
                 }
 
+                if (loadedVoucher.Amount > agentAccount.CurrentBalance)
+                {
+                    throw new InvalidOperationException("الرصيد المتاح في حساب الوكيل لا يكفي لإتمام العملية.");
+                }
+
                 lines = new List<JournalEntryLine>
                 {
                     new JournalEntryLine { AccountId = selectedAccount.Id, DebitAmount = loadedVoucher.Amount, Description = "سند دفع وكيل" },

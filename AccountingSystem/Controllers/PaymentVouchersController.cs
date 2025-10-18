@@ -267,6 +267,11 @@ namespace AccountingSystem.Controllers
                 ModelState.AddModelError(nameof(PaymentVoucher.AgentId), "عملة حساب الوكيل لا تطابق عملة حساب الدفع.");
             }
 
+            if (agent?.Account != null && model.Amount > agent.Account.CurrentBalance)
+            {
+                ModelState.AddModelError(nameof(PaymentVoucher.Amount), "الرصيد المتاح في حساب الوكيل لا يكفي لإتمام العملية.");
+            }
+
             if (agent?.Account != null && paymentAccount != null)
             {
                 model.AgentId = agent.Id;
@@ -370,10 +375,16 @@ namespace AccountingSystem.Controllers
             if (!CanAccessVoucher(user, voucher.CreatedBy, userBranchIds))
                 return Forbid();
 
+            var journalReferences = new[]
+            {
+                $"سند مصاريف:{voucher.Id}",
+                $"سند دفع وكيل:{voucher.Id}"
+            };
+
             var journalEntries = await _context.JournalEntries
                 .Include(j => j.Lines)
                     .ThenInclude(l => l.Account)
-                .Where(j => j.Reference == $"سند مصاريف:{voucher.Id}")
+                .Where(j => journalReferences.Contains(j.Reference!))
                 .ToListAsync();
 
             foreach (var entry in journalEntries.Where(e => e.Status == JournalEntryStatus.Posted))
