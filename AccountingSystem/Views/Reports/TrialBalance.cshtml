@@ -157,11 +157,28 @@
                         @foreach (var account in Model.Accounts)
                         {
                             var isMismatch = account.DebitBalance != 0 && account.CreditBalance != 0;
-                            <tr class="@(isMismatch ? "table-row-warning" : string.Empty)">
+                            var indentation = (account.Level - 1) * 1.5m;
+                            <tr class="trial-account-row @(isMismatch ? "table-row-warning" : string.Empty)"
+                                data-account-id="@account.AccountId"
+                                data-parent-id="@(account.ParentAccountId?.ToString() ?? string.Empty)"
+                                data-level="@account.Level"
+                                data-has-children="@account.HasChildren.ToString().ToLowerInvariant()">
                                 <td class="text-center fw-semibold">@account.AccountCode</td>
                                 <td>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <span class="tree-indicator" style="margin-right:@((account.Level - 1) * 1.25)rem"></span>
+                                    <div class="account-tree-cell" style="margin-right:@indentation.ToString("0.###", CultureInfo.InvariantCulture)rem">
+                                        @if (account.HasChildren)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-link btn-sm toggle-children p-0"
+                                                    data-account-id="@account.AccountId"
+                                                    title="عرض التفاصيل">
+                                                <i class="fas fa-chevron-down toggle-icon"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <span class="tree-placeholder"></span>
+                                        }
                                         <span>@account.AccountName</span>
                                     </div>
                                 </td>
@@ -314,10 +331,40 @@
             background-color: rgba(255, 193, 7, 0.15);
         }
 
-        .tree-indicator {
-            width: 1.5rem;
-            border-bottom: 1px dashed #dee2e6;
+        .account-tree-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .account-tree-cell .toggle-children {
+            color: #0d6efd;
+            width: 1.75rem;
+            height: 1.75rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .account-tree-cell .toggle-children:hover {
+            color: #0a58ca;
+            text-decoration: none;
+            background-color: rgba(13, 110, 253, 0.08);
+        }
+
+        .account-tree-cell .toggle-icon {
+            font-size: 0.85rem;
+        }
+
+        .account-tree-cell .tree-placeholder {
+            width: 1.75rem;
             display: inline-block;
+        }
+
+        .trial-account-row.hidden-by-level,
+        .trial-account-row.hidden-by-parent {
+            display: none;
         }
 
         .info-card {
@@ -356,4 +403,149 @@
                 }
         }
     </style>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const rows = Array.from(document.querySelectorAll('.trial-account-row'));
+            if (!rows.length) {
+                return;
+            }
+
+            const levelSelector = document.querySelector('select[name="level"]');
+            const parsedLevel = levelSelector ? parseInt(levelSelector.value, 10) : 1;
+            const selectedLevel = Number.isNaN(parsedLevel) ? 1 : parsedLevel;
+            const rowMap = new Map();
+            const childrenMap = new Map();
+
+            rows.forEach(row => {
+                const accountId = row.dataset.accountId;
+                const parentId = row.dataset.parentId;
+
+                rowMap.set(accountId, row);
+
+                if (parentId) {
+                    if (!childrenMap.has(parentId)) {
+                        childrenMap.set(parentId, []);
+                    }
+                    childrenMap.get(parentId).push(row);
+                    row.classList.add('hidden-by-parent');
+                }
+
+                const level = parseInt(row.dataset.level, 10);
+                if (level > selectedLevel) {
+                    row.classList.add('hidden-by-level');
+                }
+            });
+
+            const toggleButtons = document.querySelectorAll('.toggle-children');
+
+            const updateToggleIcon = (row) => {
+                const icon = row.querySelector('.toggle-icon');
+                if (!icon) {
+                    return;
+                }
+
+                if (row.classList.contains('collapsed')) {
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-right');
+                } else {
+                    icon.classList.remove('fa-chevron-right');
+                    icon.classList.add('fa-chevron-down');
+                }
+            };
+
+            const hideDescendants = (accountId) => {
+                const children = childrenMap.get(accountId) || [];
+                children.forEach(child => {
+                    if (!child.classList.contains('hidden-by-parent')) {
+                        child.classList.add('hidden-by-parent');
+                    }
+                    hideDescendants(child.dataset.accountId);
+                });
+            };
+
+            const unlockLevelRestriction = (accountId) => {
+                const children = childrenMap.get(accountId) || [];
+                children.forEach(child => {
+                    if (child.classList.contains('hidden-by-level')) {
+                        child.classList.remove('hidden-by-level');
+                    }
+                });
+            };
+
+            const applyVisibility = (accountId) => {
+                const parentRow = rowMap.get(accountId);
+                const parentCollapsed = parentRow ? parentRow.classList.contains('collapsed') : false;
+                const children = childrenMap.get(accountId) || [];
+
+                children.forEach(child => {
+                    if (parentCollapsed) {
+                        child.classList.add('hidden-by-parent');
+                        hideDescendants(child.dataset.accountId);
+                        return;
+                    }
+
+                    if (!child.classList.contains('hidden-by-level')) {
+                        child.classList.remove('hidden-by-parent');
+                        if (child.classList.contains('collapsed')) {
+                            hideDescendants(child.dataset.accountId);
+                        } else {
+                            applyVisibility(child.dataset.accountId);
+                        }
+                    } else {
+                        child.classList.add('hidden-by-parent');
+                    }
+                });
+            };
+
+            const updateVisibility = () => {
+                const roots = rows.filter(row => !row.dataset.parentId);
+                roots.forEach(root => {
+                    root.classList.remove('hidden-by-parent');
+                    applyVisibility(root.dataset.accountId);
+                });
+            };
+
+            rows.forEach(row => {
+                const hasChildren = row.dataset.hasChildren === 'true';
+                if (!hasChildren) {
+                    return;
+                }
+
+                const level = parseInt(row.dataset.level, 10);
+                if (level >= selectedLevel) {
+                    row.classList.add('collapsed');
+                } else {
+                    row.classList.remove('collapsed');
+                }
+
+                updateToggleIcon(row);
+            });
+
+            updateVisibility();
+
+            toggleButtons.forEach(button => {
+                button.addEventListener('click', function (event) {
+                    event.preventDefault();
+
+                    const row = this.closest('.trial-account-row');
+                    if (!row) {
+                        return;
+                    }
+
+                    const isCollapsed = row.classList.toggle('collapsed');
+                    if (!isCollapsed) {
+                        unlockLevelRestriction(row.dataset.accountId);
+                    } else {
+                        hideDescendants(row.dataset.accountId);
+                    }
+
+                    updateToggleIcon(row);
+                    updateVisibility();
+                });
+            });
+        });
+    </script>
 }

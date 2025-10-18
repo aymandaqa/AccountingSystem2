@@ -1952,7 +1952,12 @@ namespace AccountingSystem.Controllers
             worksheet.Range(headerRow, 1, headerRow, 6).Style.Font.FontColor = XLColor.White;
 
             var currentRow = headerRow + 1;
-            foreach (var account in viewModel.Accounts)
+            var excelAccounts = viewModel.Accounts
+                .Where(a => a.Level == viewModel.SelectedLevel)
+                .OrderBy(a => a.AccountCode)
+                .ToList();
+
+            foreach (var account in excelAccounts)
             {
                 worksheet.Cell(currentRow, 1).Value = account.AccountCode;
                 worksheet.Cell(currentRow, 2).Value = account.AccountName;
@@ -2005,32 +2010,18 @@ namespace AccountingSystem.Controllers
                 normalizedLevel = 5;
             }
 
-            var accountScope = allAccounts
-                .Where(a => a.Level == normalizedLevel)
-                .OrderBy(a => a.Code)
+            var availableLevels = allAccounts
+                .Select(a => a.Level)
+                .Distinct()
+                .OrderBy(l => l)
                 .ToList();
 
-            if (!accountScope.Any())
+            if (availableLevels.Any() && !availableLevels.Contains(normalizedLevel))
             {
-                var availableLevels = allAccounts
-                    .Select(a => a.Level)
-                    .Distinct()
-                    .OrderBy(l => l)
-                    .ToList();
-
-                if (availableLevels.Any())
-                {
-                    var fallbackLevel = availableLevels
-                        .Where(l => l <= normalizedLevel)
-                        .DefaultIfEmpty(availableLevels.Max())
-                        .Max();
-
-                    normalizedLevel = fallbackLevel;
-                    accountScope = allAccounts
-                        .Where(a => a.Level == normalizedLevel)
-                        .OrderBy(a => a.Code)
-                        .ToList();
-                }
+                normalizedLevel = availableLevels
+                    .Where(l => l <= normalizedLevel)
+                    .DefaultIfEmpty(availableLevels.Max())
+                    .Max();
             }
 
             var pending = includePending
@@ -2144,22 +2135,54 @@ namespace AccountingSystem.Controllers
                 return result;
             }
 
-            var reportAccounts = accountScope
-                .Select(account =>
+            var reportAccounts = new List<TrialBalanceAccountViewModel>();
+            var visitedAccounts = new HashSet<int>();
+
+            void BuildReportAccounts(Account account)
+            {
+                if (!visitedAccounts.Add(account.Id))
                 {
-                    var balance = CalculateAggregatedBalance(account.Id);
-                    return new TrialBalanceAccountViewModel
+                    return;
+                }
+
+                var balance = CalculateAggregatedBalance(account.Id);
+                var hasChildren = childrenLookup.TryGetValue(account.Id, out var childAccounts) && childAccounts.Any();
+
+                reportAccounts.Add(new TrialBalanceAccountViewModel
+                {
+                    AccountId = account.Id,
+                    AccountCode = account.Code,
+                    AccountName = account.NameAr,
+                    DebitBalance = balance.DebitSelected,
+                    CreditBalance = balance.CreditSelected,
+                    DebitBalanceBase = balance.DebitBase,
+                    CreditBalanceBase = balance.CreditBase,
+                    Level = account.Level,
+                    ParentAccountId = account.ParentId,
+                    HasChildren = hasChildren
+                });
+
+                if (hasChildren)
+                {
+                    foreach (var child in childAccounts.OrderBy(c => c.Code))
                     {
-                        AccountId = account.Id,
-                        AccountCode = account.Code,
-                        AccountName = account.NameAr,
-                        DebitBalance = balance.DebitSelected,
-                        CreditBalance = balance.CreditSelected,
-                        DebitBalanceBase = balance.DebitBase,
-                        CreditBalanceBase = balance.CreditBase,
-                        Level = account.Level
-                    };
-                })
+                        BuildReportAccounts(child);
+                    }
+                }
+            }
+
+            foreach (var rootAccount in allAccounts.Where(a => !a.ParentId.HasValue).OrderBy(a => a.Code))
+            {
+                BuildReportAccounts(rootAccount);
+            }
+
+            foreach (var orphanAccount in allAccounts.Where(a => !visitedAccounts.Contains(a.Id)).OrderBy(a => a.Code))
+            {
+                BuildReportAccounts(orphanAccount);
+            }
+
+            var totalsScope = reportAccounts
+                .Where(a => a.Level == normalizedLevel)
                 .ToList();
 
             var viewModel = new TrialBalanceViewModel
@@ -2185,10 +2208,10 @@ namespace AccountingSystem.Controllers
                     .ToList()
             };
 
-            viewModel.TotalDebits = viewModel.Accounts.Sum(a => a.DebitBalance);
-            viewModel.TotalCredits = viewModel.Accounts.Sum(a => a.CreditBalance);
-            viewModel.TotalDebitsBase = viewModel.Accounts.Sum(a => a.DebitBalanceBase);
-            viewModel.TotalCreditsBase = viewModel.Accounts.Sum(a => a.CreditBalanceBase);
+            viewModel.TotalDebits = totalsScope.Sum(a => a.DebitBalance);
+            viewModel.TotalCredits = totalsScope.Sum(a => a.CreditBalance);
+            viewModel.TotalDebitsBase = totalsScope.Sum(a => a.DebitBalanceBase);
+            viewModel.TotalCreditsBase = totalsScope.Sum(a => a.CreditBalanceBase);
             viewModel.IsBalanced = viewModel.TotalDebits == viewModel.TotalCredits;
 
             return viewModel;

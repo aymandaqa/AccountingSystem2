@@ -10,9 +10,30 @@
     var hasChildren = node.Children.Any();
     var isRoot = node.ParentId == null;
     var rowClass = isRoot ? "bs-row-root" : hasChildren ? "bs-row-group" : "bs-row-leaf";
-    <tr class="balance-sheet-row @rowClass" data-level="@level">
+    var nodeId = node.Id.ToString();
+    var parentId = node.ParentId?.ToString() ?? string.Empty;
+    <tr class="balance-sheet-row @rowClass"
+        data-level="@level"
+        data-node-id="@nodeId"
+        data-parent-id="@parentId"
+        data-has-children="@hasChildren.ToString().ToLowerInvariant()">
         <td>
             <div class="balance-sheet-label" style="margin-right:@(indent)px;">
+                @if (hasChildren)
+                {
+                    <button type="button"
+                            class="balance-toggle"
+                            data-node-id="@nodeId"
+                            aria-label="تبديل عرض الحساب"
+                            aria-expanded="true">
+                        <i class="fas fa-minus-square"></i>
+                    </button>
+                }
+                else
+                {
+                    <span class="balance-toggle-placeholder"></span>
+                }
+
                 @if (!string.IsNullOrWhiteSpace(node.Code))
                 {
                     <span class="account-code">@node.Code</span>

@@ -306,8 +306,39 @@
 
         .balance-sheet-label {
             display: flex;
-            align-items: baseline;
-            gap: 0.5rem;
+            align-items: center;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+
+        .balance-toggle {
+            background: none;
+            border: none;
+            color: #0d6efd;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.35rem;
+            height: 1.35rem;
+            padding: 0;
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+
+        .balance-toggle:hover,
+        .balance-toggle:focus {
+            color: #0a58ca;
+            outline: none;
+        }
+
+        .balance-toggle-placeholder {
+            display: inline-flex;
+            width: 1.35rem;
+            height: 1.35rem;
+        }
+
+        .balance-sheet-row.is-collapsed {
+            background-color: rgba(255, 243, 205, 0.45);
         }
 
             .balance-sheet-label .account-code {
@@ -334,4 +365,102 @@
             }
         }
     </style>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const tables = document.querySelectorAll('.balance-sheet-table');
+
+            tables.forEach(function (table) {
+                const rows = Array.from(table.querySelectorAll('.balance-sheet-row'));
+                if (!rows.length) {
+                    return;
+                }
+
+                const rowMap = new Map();
+                rows.forEach(function (row) {
+                    const nodeId = row.dataset.nodeId;
+                    if (nodeId) {
+                        rowMap.set(nodeId, row);
+                    }
+
+                    if (row.dataset.hasChildren === 'true' && !row.dataset.expanded) {
+                        row.dataset.expanded = 'true';
+                    }
+                });
+
+                function updateToggleIcon(row) {
+                    if (row.dataset.hasChildren !== 'true') {
+                        return;
+                    }
+
+                    const toggle = row.querySelector('.balance-toggle');
+                    if (!toggle) {
+                        return;
+                    }
+
+                    const icon = toggle.querySelector('i');
+                    const isExpanded = row.dataset.expanded !== 'false';
+
+                    if (icon) {
+                        icon.className = isExpanded ? 'fas fa-minus-square' : 'fas fa-plus-square';
+                    }
+
+                    toggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+                    row.classList.toggle('is-collapsed', !isExpanded);
+                }
+
+                function isAncestorCollapsed(row) {
+                    let parentId = row.dataset.parentId;
+
+                    while (parentId) {
+                        const parentRow = rowMap.get(parentId);
+                        if (!parentRow) {
+                            break;
+                        }
+
+                        if (parentRow.dataset.expanded === 'false') {
+                            return true;
+                        }
+
+                        parentId = parentRow.dataset.parentId;
+                    }
+
+                    return false;
+                }
+
+                function applyVisibility() {
+                    rows.forEach(function (row) {
+                        if (isAncestorCollapsed(row)) {
+                            row.style.display = 'none';
+                        } else {
+                            row.style.display = '';
+                        }
+
+                        updateToggleIcon(row);
+                    });
+                }
+
+                rows.forEach(function (row) {
+                    if (row.dataset.hasChildren === 'true') {
+                        const toggle = row.querySelector('.balance-toggle');
+                        if (toggle) {
+                            toggle.addEventListener('click', function (event) {
+                                event.preventDefault();
+                                event.stopPropagation();
+
+                                const isExpanded = row.dataset.expanded !== 'false';
+                                row.dataset.expanded = isExpanded ? 'false' : 'true';
+
+                                applyVisibility();
+                            });
+                        }
+                    }
+                });
+
+                applyVisibility();
+            });
+        });
+    </script>
 }
