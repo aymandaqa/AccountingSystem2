@@ -138,9 +138,24 @@ namespace AccountingSystem.Services
                     reference: reference);
             }
 
-            loadedVoucher.Status = PaymentVoucherStatus.Approved;
-            loadedVoucher.ApprovedAt = DateTime.UtcNow;
-            loadedVoucher.ApprovedById = approvedById;
+            if (loadedVoucher.Status != PaymentVoucherStatus.Approved)
+            {
+                loadedVoucher.Status = PaymentVoucherStatus.Approved;
+                loadedVoucher.ApprovedAt = DateTime.UtcNow;
+                loadedVoucher.ApprovedById = approvedById;
+            }
+            else
+            {
+                if (!loadedVoucher.ApprovedAt.HasValue)
+                {
+                    loadedVoucher.ApprovedAt = DateTime.UtcNow;
+                }
+
+                if (string.IsNullOrEmpty(loadedVoucher.ApprovedById))
+                {
+                    loadedVoucher.ApprovedById = approvedById;
+                }
+            }
 
             await _context.SaveChangesAsync(cancellationToken);
         }
