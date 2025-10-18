@@ -22,11 +22,6 @@ namespace AccountingSystem.Services
 
         public async Task FinalizeVoucherAsync(PaymentVoucher voucher, string approvedById, CancellationToken cancellationToken = default)
         {
-            if (voucher.Status == PaymentVoucherStatus.Approved)
-            {
-                return;
-            }
-
             var loadedVoucher = await _context.PaymentVouchers
                 .Include(v => v.Supplier).ThenInclude(s => s.Account)
                 .Include(v => v.Agent).ThenInclude(a => a.Account)
