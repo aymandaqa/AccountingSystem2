@@ -1,5 +1,7 @@
 @model TrialBalanceViewModel
 @using AccountingSystem.ViewModels
+@using System
+@using System.Globalization
 @using System.Linq
 
 @{
@@ -7,170 +9,216 @@
     var hasMismatch = Model.Accounts.Any(a => a.DebitBalance != 0 && a.CreditBalance != 0);
 }
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title mb-0">
-                        <i class="fas fa-balance-scale me-2"></i>
-                        ميزان المراجعة
-                    </h3>
+@{
+    var totalMovement = Model.TotalDebits + Model.TotalCredits;
+    var debitPercentage = totalMovement == 0 ? 50m : Math.Round((Model.TotalDebits / (totalMovement == 0 ? 1m : totalMovement)) * 100, 2);
+    var creditPercentage = 100m - debitPercentage;
+    var debitPercentageStyle = debitPercentage.ToString("0.##", CultureInfo.InvariantCulture);
+    var creditPercentageStyle = creditPercentage.ToString("0.##", CultureInfo.InvariantCulture);
+    var difference = Model.TotalDebits - Model.TotalCredits;
+}
+
+<div class="container-fluid trial-balance-container">
+    <div class="report-header mb-4">
+        <div>
+            <h2 class="report-title">
+                <i class="fas fa-balance-scale ms-2"></i>
+                ميزان مراجعة شامل
+            </h2>
+            <p class="text-muted mb-0">استعرض حركة الحسابات ومطابقتها خلال الفترة المحددة.</p>
+        </div>
+        <div class="text-end">
+            <span class="badge @(Model.IsBalanced ? "bg-success" : "bg-danger") balance-status">
+                @(Model.IsBalanced ? "متوازن" : "غير متوازن")
+            </span>
+            <div class="small text-muted">آخر تحديث: @Model.AsOfDate.ToString("dd-MM-yyyy HH:mm")</div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4 summary-cards">
+        <div class="col-lg-3 col-md-6">
+            <div class="summary-card">
+                <div class="summary-label">إجمالي المدين</div>
+                <div class="summary-value">@Model.TotalDebits.ToString("N2") <span class="summary-unit">@Model.SelectedCurrencyCode</span></div>
+                <div class="summary-subtext">ما يعادل @Model.TotalDebitsBase.ToString("N2") @Model.BaseCurrencyCode</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="summary-card">
+                <div class="summary-label">إجمالي الدائن</div>
+                <div class="summary-value">@Model.TotalCredits.ToString("N2") <span class="summary-unit">@Model.SelectedCurrencyCode</span></div>
+                <div class="summary-subtext">ما يعادل @Model.TotalCreditsBase.ToString("N2") @Model.BaseCurrencyCode</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="summary-card">
+                <div class="summary-label">نسبة التوزيع</div>
+                <div class="progress distribution-progress">
+                    <div class="progress-bar bg-primary" role="progressbar" style="width: @debitPercentageStyle%" aria-valuenow="@debitPercentage.ToString("0.##", CultureInfo.InvariantCulture)" aria-valuemin="0" aria-valuemax="100">مدين @debitPercentage.ToString("0.##")%</div>
+                    <div class="progress-bar bg-danger" role="progressbar" style="width: @creditPercentageStyle%" aria-valuenow="@creditPercentage.ToString("0.##", CultureInfo.InvariantCulture)" aria-valuemin="0" aria-valuemax="100">دائن @creditPercentage.ToString("0.##")%</div>
                 </div>
-                <div class="card-body">
-                    <!-- فلاتر التقرير -->
-                    <form method="get" class="row g-3 mb-4">
-                        <div class="col-md-3">
-                            <label class="form-label">من تاريخ:</label>
-                            <input type="date" name="fromDate" class="form-control" value="@Model.FromDate.ToString("yyyy-MM-dd")" />
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">إلى تاريخ:</label>
-                            <input type="date" name="toDate" class="form-control" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">العملة:</label>
-                            <select name="currencyId" class="form-select">
-                                @foreach (var currency in Model.Currencies)
-                                {
-                                    var isSelected = currency.Value == Model.SelectedCurrencyId?.ToString();
-                                    if (isSelected)
-                                    {
-                                        <option value="@currency.Value" selected>@currency.Text</option>
-                                    }
-                                    else
-                                    {
-                                        <option value="@currency.Value">@currency.Text</option>
-                                    }
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">المستوى:</label>
-                            <select name="level" class="form-select">
-                                @foreach (var levelOption in Model.Levels)
-                                {
-                                    if (levelOption.Selected)
-                                    {
-                                        <option value="@levelOption.Value" selected>@levelOption.Text</option>
-                                    }
-                                    else
-                                    {
-                                        <option value="@levelOption.Value">@levelOption.Text</option>
-                                    }
-                                }
-                            </select>
-                            <small class="level-hint">يعرض التقرير الحسابات حتى المستوى المحدد مع تضمين أرصدة التفرعات التابعة لكل حساب.</small>
-                        </div>
-                        <div class="col-md-3 d-flex align-items-end">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="includePending" value="true" @(Model.IncludePending ? "checked" : "") />
-                                <label class="form-check-label">شمل القيود غير المرحلة</label>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="d-flex flex-wrap gap-2">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-search me-1"></i>
-                                    عرض التقرير
-                                </button>
-                                <a class="btn btn-success" asp-action="TrialBalanceExcel"
-                                   asp-route-fromDate='@Model.FromDate.ToString("yyyy-MM-dd")'
-                                   asp-route-toDate='@Model.ToDate.ToString("yyyy-MM-dd")'
-                                   asp-route-includePending='@Model.IncludePending'
-                                   asp-route-currencyId='@Model.SelectedCurrencyId'
-                                   asp-route-level='@Model.SelectedLevel'>
-                                    <i class="fas fa-file-excel me-1"></i>
-                                    تصدير Excel
-                                </a>
-                            </div>
-                        </div>
-                    </form>
+                <div class="summary-subtext">نسبة المدين إلى الدائن للفترة المحددة</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="summary-card difference-card @(difference == 0 ? "balanced" : (difference > 0 ? "debit" : "credit"))">
+                <div class="summary-label">فرق الأرصدة</div>
+                <div class="summary-value">@Math.Abs(difference).ToString("N2") <span class="summary-unit">@Model.SelectedCurrencyCode</span></div>
+                <div class="summary-subtext">@((difference == 0 ? "الحسابات متوازنة" : difference > 0 ? "يميل لصالح المدين" : "يميل لصالح الدائن"))</div>
+            </div>
+        </div>
+    </div>
 
-                    <!-- جدول التقرير -->
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>رمز الحساب</th>
-                                    <th>اسم الحساب</th>
-                                    <th>المستوى</th>
-                                    <th>الرصيد المدين (@Model.SelectedCurrencyCode)</th>
-                                    <th>الرصيد الدائن (@Model.SelectedCurrencyCode)</th>
-                                    <th>الرصيد المدين (@Model.BaseCurrencyCode)</th>
-                                    <th>الرصيد الدائن (@Model.BaseCurrencyCode)</th>
-                                    <th class="text-center">إجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var account in Model.Accounts)
-                                {
-                                    var isMismatch = account.DebitBalance != 0 && account.CreditBalance != 0;
-                                    <tr class="@(isMismatch ? "table-danger" : string.Empty)">
-                                        <td>@account.AccountCode</td>
-                                        <td class="text-nowrap">
-                                            <span style="display:inline-block; padding-right:@((account.Level - 1) * 1.5)rem"></span>
-                                            @account.AccountName
-                                        </td>
-                                        <td>@account.Level</td>
-                                        <td>@account.DebitBalance.ToString("N2")</td>
-                                        <td>@account.CreditBalance.ToString("N2")</td>
-                                        <td>@account.DebitBalanceBase.ToString("N2")</td>
-                                        <td>@account.CreditBalanceBase.ToString("N2")</td>
-                                        <td class="text-center">
-                                            <a asp-controller="Reports"
-                                               asp-action="AccountStatement"
-                                               asp-route-accountId="@account.AccountId"
-                                               class="btn btn-sm btn-outline-primary"
-                                               target="_blank"
-                                               asp-require-permission="reports.accountstatement"
-                                               title="كشف الحساب">
-                                                <i class="fas fa-file-alt"></i>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                            <tfoot class="@(Model.TotalDebits == Model.TotalCredits ? "table-secondary" : "table-danger")">
-                                <tr>
-                                    <th colspan="3">الإجمالي</th>
-                                    <th>@Model.TotalDebits.ToString("N2")</th>
-                                    <th>@Model.TotalCredits.ToString("N2")</th>
-                                    <th>@Model.TotalDebitsBase.ToString("N2")</th>
-                                    <th>@Model.TotalCreditsBase.ToString("N2")</th>
-                                    <th></th>
-                                </tr>
-                            </tfoot>
-                        </table>
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end report-filter">
+                <div class="col-xl-2 col-md-3">
+                    <label class="form-label">من تاريخ</label>
+                    <input type="date" name="fromDate" class="form-control" value="@Model.FromDate.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-xl-2 col-md-3">
+                    <label class="form-label">إلى تاريخ</label>
+                    <input type="date" name="toDate" class="form-control" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-xl-2 col-md-3">
+                    <label class="form-label">العملة</label>
+                    <select name="currencyId" class="form-select">
+                        @foreach (var currency in Model.Currencies)
+                        {
+                            var isSelected = currency.Value == Model.SelectedCurrencyId?.ToString();
+                            if (isSelected)
+                            {
+                                <option value="@currency.Value" selected>@currency.Text</option>
+                            }
+                            else
+                            {
+                                <option value="@currency.Value">@currency.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-xl-2 col-md-3">
+                    <label class="form-label">المستوى</label>
+                    <select name="level" class="form-select">
+                        @foreach (var levelOption in Model.Levels)
+                        {
+                            if (levelOption.Selected)
+                            {
+                                <option value="@levelOption.Value" selected>@levelOption.Text</option>
+                            }
+                            else
+                            {
+                                <option value="@levelOption.Value">@levelOption.Text</option>
+                            }
+                        }
+                    </select>
+                    <small class="form-text text-muted">عرض الحسابات حتى المستوى المحدد</small>
+                </div>
+                <div class="col-xl-2 col-md-4">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="includePending" value="true" @(Model.IncludePending ? "checked" : "") />
+                        <label class="form-check-label">شمل القيود غير المرحلة</label>
                     </div>
+                </div>
+                <div class="col-xl-2 col-md-4 text-md-end">
+                    <div class="d-flex gap-2 justify-content-end flex-wrap">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search ms-1"></i>
+                            تطبيق
+                        </button>
+                        <a class="btn btn-outline-success" asp-action="TrialBalanceExcel"
+                           asp-route-fromDate='@Model.FromDate.ToString("yyyy-MM-dd")'
+                           asp-route-toDate='@Model.ToDate.ToString("yyyy-MM-dd")'
+                           asp-route-includePending='@Model.IncludePending'
+                           asp-route-currencyId='@Model.SelectedCurrencyId'
+                           asp-route-level='@Model.SelectedLevel'>
+                            <i class="fas fa-file-excel ms-1"></i>
+                            تصدير Excel
+                        </a>
+                    </div>
+                </div>
+            </form>
 
-                    @if (hasMismatch)
-                    {
-                        <div class="alert alert-danger mt-3">
-                            توجد قيود غير متطابقة تم تمييزها باللون الأحمر.
-                        </div>
-                    }
+            <div class="table-responsive mt-4">
+                <table class="table table-bordered align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="text-center">رمز الحساب</th>
+                            <th>اسم الحساب</th>
+                            <th class="text-center">المستوى</th>
+                            <th class="text-center">مدين (@Model.SelectedCurrencyCode)</th>
+                            <th class="text-center">دائن (@Model.SelectedCurrencyCode)</th>
+                            <th class="text-center">مدين (@Model.BaseCurrencyCode)</th>
+                            <th class="text-center">دائن (@Model.BaseCurrencyCode)</th>
+                            <th class="text-center">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var account in Model.Accounts)
+                        {
+                            var isMismatch = account.DebitBalance != 0 && account.CreditBalance != 0;
+                            <tr class="@(isMismatch ? "table-row-warning" : string.Empty)">
+                                <td class="text-center fw-semibold">@account.AccountCode</td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="tree-indicator" style="margin-right:@((account.Level - 1) * 1.25)rem"></span>
+                                        <span>@account.AccountName</span>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-light text-dark">@account.Level</span>
+                                </td>
+                                <td class="text-center text-primary fw-semibold">@account.DebitBalance.ToString("N2")</td>
+                                <td class="text-center text-danger fw-semibold">@account.CreditBalance.ToString("N2")</td>
+                                <td class="text-center">@account.DebitBalanceBase.ToString("N2")</td>
+                                <td class="text-center">@account.CreditBalanceBase.ToString("N2")</td>
+                                <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                        <a asp-controller="Reports"
+                                           asp-action="AccountStatement"
+                                           asp-route-accountId="@account.AccountId"
+                                           class="btn btn-sm btn-outline-primary"
+                                           target="_blank"
+                                           asp-require-permission="reports.accountstatement"
+                                           title="كشف الحساب">
+                                            <i class="fas fa-file-alt"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-secondary">
+                            <th colspan="3" class="text-center">الإجمالي</th>
+                            <th class="text-center">@Model.TotalDebits.ToString("N2")</th>
+                            <th class="text-center">@Model.TotalCredits.ToString("N2")</th>
+                            <th class="text-center">@Model.TotalDebitsBase.ToString("N2")</th>
+                            <th class="text-center">@Model.TotalCreditsBase.ToString("N2")</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
 
-                    <!-- معلومات إضافية -->
-                    <div class="row mt-3">
-                        <div class="col-md-6">
-                            <div class="alert alert-info">
-                                <strong>الفترة:</strong> من @Model.FromDate.ToString("dd-MM-yyyy") إلى @Model.ToDate.ToString("dd-MM-yyyy")
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="alert @(Model.TotalDebits == Model.TotalCredits ? "alert-success" : "alert-danger")">
-                                <strong>حالة التوازن:</strong>
-                                @if (Model.TotalDebits == Model.TotalCredits)
-                                {
-                                    <span>متوازن ✓</span>
-                                }
-                                else
-                                {
-                                    <span>غير متوازن ✗</span>
-                                }
-                            </div>
-                        </div>
+            @if (hasMismatch)
+            {
+                <div class="alert alert-warning mt-3">
+                    توجد حسابات تحتوي على أرصدة مدينة ودائنة في نفس الوقت وتم تمييزها للتدقيق.
+                </div>
+            }
+
+            <div class="row mt-4 gy-3">
+                <div class="col-md-6">
+                    <div class="info-card">
+                        <div class="info-card-title">الفترة المحددة</div>
+                        <div class="info-card-value">من @Model.FromDate.ToString("dd-MM-yyyy") إلى @Model.ToDate.ToString("dd-MM-yyyy")</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-card @(Model.IsBalanced ? "info-card-success" : "info-card-danger")">
+                        <div class="info-card-title">حالة التوازن</div>
+                        <div class="info-card-value">@(Model.IsBalanced ? "متوازن ✓" : "غير متوازن ✗")</div>
                     </div>
                 </div>
             </div>
@@ -180,9 +228,132 @@
 
 @section Styles {
     <style>
-        .level-hint {
-            font-size: 0.875rem;
+        .trial-balance-container {
+            direction: rtl;
+        }
+
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .report-title {
+            font-weight: 700;
+        }
+
+        .balance-status {
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+        }
+
+        .summary-cards .summary-card {
+            background: #fff;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
+            height: 100%;
+        }
+
+        .summary-label {
             color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .summary-value {
+            font-size: 1.35rem;
+            font-weight: 700;
+        }
+
+        .summary-unit {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .summary-subtext {
+            font-size: 0.8rem;
+            color: #adb5bd;
+            margin-top: 0.5rem;
+        }
+
+        .distribution-progress {
+            height: 1.75rem;
+            border-radius: 1rem;
+            overflow: hidden;
+            font-size: 0.75rem;
+        }
+
+        .difference-card {
+            border-right: 4px solid transparent;
+        }
+
+        .difference-card.debit {
+            border-color: #0d6efd;
+        }
+
+        .difference-card.credit {
+            border-color: #dc3545;
+        }
+
+        .difference-card.balanced {
+            border-color: #198754;
+        }
+
+        .report-filter .form-label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .table thead th {
+            background: #f8f9fa;
+            vertical-align: middle;
+        }
+
+        .table-row-warning {
+            background-color: rgba(255, 193, 7, 0.15);
+        }
+
+        .tree-indicator {
+            width: 1.5rem;
+            border-bottom: 1px dashed #dee2e6;
+            display: inline-block;
+        }
+
+        .info-card {
+            background: #f8f9fa;
+            border-radius: 0.75rem;
+            padding: 1rem 1.5rem;
+        }
+
+        .info-card-success {
+            border-right: 5px solid #198754;
+        }
+
+        .info-card-danger {
+            border-right: 5px solid #dc3545;
+        }
+
+        .info-card-title {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .info-card-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .report-header {
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .report-header .text-end {
+                width: 100%;
+                text-align: center !important;
+            }
         }
     </style>
 }
