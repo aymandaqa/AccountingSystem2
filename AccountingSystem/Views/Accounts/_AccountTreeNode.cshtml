@@ -1,3 +1,5 @@
+@using AccountingSystem.Models
+@using System.Globalization
 @model List<AccountingSystem.ViewModels.AccountTreeNodeViewModel>
 
 @foreach (var node in Model)
@@ -6,8 +8,22 @@
     var hasPreloadedChildren = node.Children.Any();
     var containerDisplay = hasPreloadedChildren ? "block" : "none";
     var toggleIcon = hasPreloadedChildren ? "minus" : "plus";
-    var nodeLabel = node.Id == 0 ? node.NameAr : $"{node.Code} - {node.NameAr}";
-    <div class="tree-node level-@node.Level" data-level="@node.Level" data-node-id="@node.Id" data-account-type="@(node.Id == 0 ? node.AccountType.ToString() : string.Empty)" data-has-children="@(hasChildren.ToString().ToLower())" data-node-name="@node.NameAr" data-node-code="@node.Code" data-node-label="@nodeLabel">
+    var accountTypeDisplay = node.AccountType switch
+    {
+        AccountType.Assets => "الأصول",
+        AccountType.Liabilities => "الالتزامات",
+        AccountType.Equity => "حقوق الملكية",
+        AccountType.Revenue => "الإيرادات",
+        AccountType.Expenses => "المصروفات",
+        _ => node.AccountType.ToString()
+    };
+    var nodeLabel = node.Id == 0 ? accountTypeDisplay : $"{node.Code} - {node.NameAr}";
+    var natureDisplay = node.Nature == AccountNature.Debit ? "مدين" : "دائن";
+    var postingDisplay = node.CanPostTransactions ? "قابل للترحيل" : "غير قابل للترحيل";
+    var statusDisplay = node.IsActive ? "نشط" : "غير نشط";
+    var openingBalanceValue = node.OpeningBalance.ToString(CultureInfo.InvariantCulture);
+    var currentBalanceValue = node.CurrentBalance.ToString(CultureInfo.InvariantCulture);
+    <div class="tree-node level-@node.Level" data-level="@node.Level" data-node-id="@node.Id" data-account-type="@(node.Id == 0 ? node.AccountType.ToString() : string.Empty)" data-has-children="@(hasChildren.ToString().ToLower())" data-node-name="@(node.Id == 0 ? accountTypeDisplay : node.NameAr)" data-node-code="@node.Code" data-node-label="@nodeLabel" data-type-display="@accountTypeDisplay" data-nature-display="@natureDisplay" data-posting-display="@postingDisplay" data-status-display="@statusDisplay" data-parent-name="@node.ParentAccountName" data-currency-code="@node.CurrencyCode" data-opening-balance="@openingBalanceValue" data-current-balance="@currentBalanceValue">
         <div class="tree-node-content">
             <div class="tree-node-info">
                 @if (hasChildren)
@@ -23,14 +39,14 @@
 
                 @if (node.Id == 0)
                 {
-                    <span class="account-name">@node.NameAr</span>
+                    <span class="account-name">@accountTypeDisplay</span>
                 }
                 else
                 {
                     <span class="account-code">@node.Code</span>
                     <span class="account-name">@node.NameAr</span>
                     <span class="text-muted ms-1">(@node.CurrencyCode)</span>
-                    <span class="account-type badge bg-secondary">@node.AccountType.ToString()</span>
+                    <span class="account-type badge bg-secondary">@accountTypeDisplay</span>
 
                     @if (node.CanPostTransactions)
                     {

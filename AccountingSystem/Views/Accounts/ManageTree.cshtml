@@ -4,78 +4,189 @@
     ViewData["Title"] = "إدارة شجرة الحسابات";
 }
 
-<div class="container-fluid">
-    <div class="row g-3 align-items-start">
+<div class="container-fluid account-tree-manage">
+    <div class="row g-3 mb-3 align-items-stretch">
         <div class="col-12">
-            <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
-                <div>
-                    <h2 class="h4 mb-0">إدارة شجرة الحسابات</h2>
-                    <p class="text-muted small mb-0">اختر حساباً من الشجرة لعرض الحسابات الفرعية وإجراء العمليات السريعة.</p>
-                </div>
-                <div class="btn-group">
-                    <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
-                        <i class="fas fa-list"></i>
-                        عرض قائمة الحسابات
-                    </a>
-                    <a href="@Url.Action("Create")" class="btn btn-primary ajax-modal" id="addAccountButton" data-parent-id="">
-                        <i class="fas fa-plus"></i>
-                        إضافة حساب جديد
-                    </a>
+            <div class="card shadow-sm border-0 page-header-card">
+                <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div>
+                        <h2 class="h4 mb-1">شاشة إدارة شجرة الحسابات</h2>
+                        <p class="text-muted small mb-0">استعرض الحسابات، وابحث عن الحساب المطلوب ثم أدر العمليات من خلال الواجهة المخصصة.</p>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="printTreeButton">
+                            <i class="fas fa-print"></i>
+                            طباعة الشجرة
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="expandTreeButton">
+                            <i class="fas fa-plus-square"></i>
+                            توسيع الكل
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="collapseTreeButton">
+                            <i class="fas fa-minus-square"></i>
+                            طي الكل
+                        </button>
+                        <a href="@Url.Action("Create")" class="btn btn-primary btn-sm ajax-modal" id="addAccountButton" data-parent-id="">
+                            <i class="fas fa-plus"></i>
+                            إضافة حساب رئيسي
+                        </a>
+                        <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-list"></i>
+                            عرض قائمة الحسابات
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-12 col-lg-5 col-xl-4 order-lg-2">
-            <div class="card h-100 shadow-sm tree-card">
-                <div class="card-header bg-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h3 class="card-title h5 mb-0">شجرة الحسابات</h3>
-                        <div class="input-group input-group-sm" style="width: 220px;">
-                            <input type="search" class="form-control" id="treeSearchInput" placeholder="بحث في الشجرة...">
-                            <button class="btn btn-outline-secondary" type="button" id="clearTreeSearch">
+    </div>
+
+    <div class="row g-3 align-items-start">
+        <div class="col-12 col-xl-5 order-xl-1">
+            <div class="card shadow-sm h-100 account-details-card">
+                <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <h3 class="card-title h5 mb-1">بيانات الحساب المحدد</h3>
+                        <p class="text-muted small mb-0">اختر حساباً من الشجرة لعرض تفاصيله وإدارته.</p>
+                    </div>
+                    <span class="badge bg-light text-dark" id="selectedAccountLevel">--</span>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <label class="form-label small text-muted">بحث سريع</label>
+                        <div class="input-group input-group-sm">
+                            <input type="search" class="form-control" id="accountQuickSearchInput" placeholder="اكتب رقم الحساب أو اسمه...">
+                            <button class="btn btn-primary" type="button" id="accountQuickSearchButton">
+                                <i class="fas fa-search"></i>
+                                بحث
+                            </button>
+                            <button class="btn btn-outline-secondary" type="button" id="accountQuickSearchReset" title="مسح البحث">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
                     </div>
-                </div>
-                <div class="card-body overflow-auto" style="max-height: 70vh;">
-                    @if (Model.Any())
-                    {
-                        <div id="accountsTree" class="tree-container">
-                            @await Html.PartialAsync("_AccountTreeNode", Model)
+
+                    <div class="account-info-grid">
+                        <div class="row g-3">
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label small text-muted">رقم الحساب</label>
+                                <input type="text" class="form-control form-control-sm" id="selectedAccountCode" readonly>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label small text-muted">اسم الحساب</label>
+                                <input type="text" class="form-control form-control-sm" id="selectedAccountName" readonly>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label small text-muted">نوع الحساب</label>
+                                <input type="text" class="form-control form-control-sm" id="selectedAccountType" readonly>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label small text-muted">طبيعة الحساب</label>
+                                <input type="text" class="form-control form-control-sm" id="selectedAccountNature" readonly>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label small text-muted">العملة</label>
+                                <input type="text" class="form-control form-control-sm" id="selectedAccountCurrency" readonly>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label small text-muted">الحالة</label>
+                                <input type="text" class="form-control form-control-sm" id="selectedAccountStatus" readonly>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label small text-muted">إمكانية الترحيل</label>
+                                <input type="text" class="form-control form-control-sm" id="selectedAccountPosting" readonly>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label small text-muted">الحساب الأب</label>
+                                <input type="text" class="form-control form-control-sm" id="selectedAccountParent" readonly>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label small text-muted">الرصيد الافتتاحي</label>
+                                <input type="text" class="form-control form-control-sm" id="selectedOpeningBalance" readonly>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label small text-muted">الرصيد الحالي</label>
+                                <input type="text" class="form-control form-control-sm" id="selectedCurrentBalance" readonly>
+                            </div>
                         </div>
-                    }
-                    else
-                    {
-                        <div class="alert alert-info text-center">
-                            <i class="fas fa-info-circle"></i>
-                            لا توجد حسابات متاحة حالياً، قم بإضافة حساب جديد للبدء.
+                    </div>
+
+                    <div class="selected-node-actions mt-4">
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="refreshNodeButton" disabled>
+                                <i class="fas fa-rotate"></i>
+                                تحديث القائمة
+                            </button>
+                            <a href="@Url.Action("Create")" class="btn btn-primary btn-sm ajax-modal disabled" id="addChildAccountButton" data-parent-id="" aria-disabled="true">
+                                <i class="fas fa-plus"></i>
+                                إضافة حساب فرعي
+                            </a>
+                            <a href="#" class="btn btn-outline-info btn-sm disabled" id="viewAccountButton" aria-disabled="true" target="_blank" rel="noopener">
+                                <i class="fas fa-eye"></i>
+                                تفاصيل الحساب
+                            </a>
+                            <a href="#" class="btn btn-outline-warning btn-sm ajax-modal disabled" id="editAccountButton" aria-disabled="true">
+                                <i class="fas fa-edit"></i>
+                                تعديل الحساب
+                            </a>
+                            <button type="button" class="btn btn-outline-danger btn-sm" id="deleteAccountButton" disabled>
+                                <i class="fas fa-trash"></i>
+                                حذف الحساب
+                            </button>
+                            <button type="button" class="btn btn-light btn-sm" id="resetSelectionButton">
+                                <i class="fas fa-eraser"></i>
+                                مسح الحقول
+                            </button>
                         </div>
-                    }
+                    </div>
+
+                    <div class="account-children-wrapper mt-4">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                            <div>
+                                <h4 class="h6 mb-0" id="selectedNodeTitle">الحسابات التابعة</h4>
+                                <p class="text-muted small mb-0" id="selectedNodeDescription">اختر حساباً من الشجرة لعرض حساباته الفرعية.</p>
+                            </div>
+                            <span class="badge bg-light text-dark" id="childrenCountBadge">0</span>
+                        </div>
+                        <div id="accountsListContainer" class="account-children-list">
+                            <div class="text-center text-muted py-5">
+                                <i class="fas fa-diagram-project fa-2x mb-3"></i>
+                                <p class="mb-0">قم باختيار حساب من الشجرة لعرض الحسابات الفرعية وإدارتها.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-12 col-lg-7 col-xl-8 order-lg-1">
-            <div class="card h-100 shadow-sm">
-                <div class="card-header bg-white">
-                    <h3 class="card-title h5 mb-1" id="selectedNodeTitle">الحسابات التابعة</h3>
-                    <span class="text-muted small" id="selectedNodeDescription">اختر حساباً من الشجرة لعرض تفاصيله.</span>
-                </div>
-                <div class="card-body">
-                    <div class="selected-node-actions d-flex flex-wrap gap-2 mb-4">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" id="refreshNodeButton" disabled>
-                            <i class="fas fa-rotate"></i>
-                            تحديث القائمة
-                        </button>
-                        <a href="@Url.Action("Create")" class="btn btn-primary btn-sm ajax-modal" id="addChildAccountButton" data-parent-id="" disabled>
-                            <i class="fas fa-plus"></i>
-                            إضافة حساب فرعي
-                        </a>
+
+        <div class="col-12 col-xl-7 order-xl-2">
+            <div class="card shadow-sm h-100 account-tree-card">
+                <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <h3 class="card-title h5 mb-1">شجرة الحسابات</h3>
+                        <p class="text-muted small mb-0">استعرض الهيكل الكامل للحسابات مع إمكانية التوسعة والبحث السريع.</p>
                     </div>
-                    <div id="accountsListContainer">
-                        <div class="text-center text-muted py-5">
-                            <i class="fas fa-diagram-project fa-2x mb-3"></i>
-                            <p class="mb-0">قم باختيار حساب من الشجرة لعرض الحسابات الفرعية وإدارتها.</p>
-                        </div>
+                    <div class="input-group input-group-sm tree-search-group">
+                        <input type="search" class="form-control" id="treeSearchInput" placeholder="بحث في الشجرة...">
+                        <button class="btn btn-outline-secondary" type="button" id="clearTreeSearch" title="مسح البحث">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="tree-container overflow-auto">
+                        @if (Model.Any())
+                        {
+                            <div id="accountsTree" class="tree-wrapper p-3">
+                                @await Html.PartialAsync("_AccountTreeNode", Model)
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-info text-center m-3">
+                                <i class="fas fa-info-circle"></i>
+                                لا توجد حسابات متاحة حالياً، قم بإضافة حساب جديد للبدء.
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
@@ -83,37 +194,75 @@
     </div>
 </div>
 
-
 @section Styles {
     <style>
-        .tree-container {
+        .account-tree-manage {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        .tree-card {
-            max-height: 100%;
+        .page-header-card {
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(13, 110, 253, 0.08), rgba(13, 202, 240, 0.12));
+        }
+
+        .account-details-card,
+        .account-tree-card {
+            border-radius: 12px;
+        }
+
+        .account-info-grid .form-control {
+            background-color: #f8f9fa;
+            border-color: #e9ecef;
+        }
+
+        .selected-node-actions .btn {
+            min-width: 150px;
+        }
+
+        .account-children-wrapper {
+            border-top: 1px solid #e9ecef;
+            padding-top: 1.5rem;
+        }
+
+        .account-children-list {
+            min-height: 260px;
+            border: 1px dashed #ced4da;
+            border-radius: 10px;
+            padding: 1rem;
+            background-color: #fff;
+        }
+
+        .tree-container {
+            max-height: 75vh;
+        }
+
+        .tree-wrapper {
+            background-color: #f8f9fa;
+            border-radius: 10px;
         }
 
         .tree-node {
-            margin: 4px 0;
-            padding: 6px 8px;
-            border-radius: 6px;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 6px;
             transition: background-color 0.2s ease, border 0.2s ease;
-            cursor: pointer;
+            border: 1px solid transparent;
+            background-color: #fff;
         }
 
-            .tree-node .tree-node-content {
-                cursor: pointer;
-            }
+        .tree-node .tree-node-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+        }
 
-            .tree-node:hover {
-                background-color: #f1f3f5;
-            }
-
-            .tree-node.selected {
-                border: 1px solid #0d6efd;
-                background-color: rgba(13, 110, 253, 0.08);
-            }
+        .tree-node-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
 
         .tree-node-actions {
             opacity: 0;
@@ -125,90 +274,227 @@
             opacity: 1;
         }
 
-        .tree-children {
-            margin-right: 22px;
-            border-right: 2px solid #e9ecef;
-            padding-right: 15px;
+        .tree-node:hover {
+            background-color: rgba(13, 110, 253, 0.08);
         }
 
-        .account-code {
+        .tree-node.selected {
+            border-color: #0d6efd;
+            background-color: rgba(13, 110, 253, 0.12);
+        }
+
+        .tree-node .toggle-btn {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: none;
+            background-color: #e9ecef;
+            color: #495057;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tree-node .toggle-btn:hover {
+            background-color: #0d6efd;
+            color: #fff;
+        }
+
+        .tree-node .account-code {
             font-weight: 600;
             color: #495057;
-            margin-left: 6px;
         }
 
-        .account-type {
-            font-size: 0.75rem;
+        .tree-node .account-name {
+            font-weight: 500;
+        }
+
+        .tree-node .badge {
+            font-size: 0.7rem;
+        }
+
+        .tree-children {
+            margin-right: 22px;
+            border-right: 2px dashed #ced4da;
+            padding-right: 18px;
         }
 
         .list-account-item {
             border: 1px solid #e9ecef;
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 12px 16px;
             margin-bottom: 12px;
-            transition: box-shadow 0.2s ease;
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
             background-color: #fff;
         }
 
-            .list-account-item:hover {
-                box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
-            }
-
-            .list-account-item .badge {
-                font-size: 0.7rem;
-            }
-
-        .selected-node-actions {
-            padding: 12px;
-            background-color: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
+        .list-account-item:hover {
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+            transform: translateY(-1px);
         }
 
+        .list-account-item .badge {
+            font-size: 0.75rem;
+        }
+
+        .tree-search-group .form-control {
+            min-width: 220px;
+        }
+
+        #childrenCountBadge {
+            font-size: 0.75rem;
+        }
+
+        #accountsListContainer .text-center {
+            padding: 3rem 1rem;
+        }
+
+        @@media (max-width: 1199.98px) {
+            .tree-container {
+                max-height: none;
+            }
+        }
+
+        @@media (max-width: 767.98px) {
             .selected-node-actions .btn {
-                min-width: 150px;
+                min-width: unset;
+                flex: 1 1 auto;
             }
-
-        #accountsListContainer {
-            min-height: 320px;
-        }
-
-        @@media (max-width: 991.98px) {
-            .selected-node-actions {
-                width: 100%;
-            }
-
-                .selected-node-actions .btn {
-                    flex: 1 1 auto;
-                }
         }
     </style>
 }
 
 @section Scripts {
+    <div class="modal fade" id="accountModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content"></div>
+        </div>
+    </div>
     <script>
         $(function () {
             var loadTreeUrl = '@Url.Action("LoadTreeNodes")';
             var loadAccountsUrl = '@Url.Action("GetAccountChildren")';
+            var detailsUrl = '@Url.Action("Details")';
+            var editUrl = '@Url.Action("Edit")';
+            var createUrl = '@Url.Action("Create")';
+
             var $accountsList = $('#accountsListContainer');
+            var $childrenCountBadge = $('#childrenCountBadge');
             var $addChildButton = $('#addChildAccountButton');
             var $refreshButton = $('#refreshNodeButton');
             var $nodeTitle = $('#selectedNodeTitle');
             var $nodeDescription = $('#selectedNodeDescription');
+            var $accountCode = $('#selectedAccountCode');
+            var $accountName = $('#selectedAccountName');
+            var $accountType = $('#selectedAccountType');
+            var $accountNature = $('#selectedAccountNature');
+            var $accountCurrency = $('#selectedAccountCurrency');
+            var $accountStatus = $('#selectedAccountStatus');
+            var $accountPosting = $('#selectedAccountPosting');
+            var $accountParent = $('#selectedAccountParent');
+            var $openingBalance = $('#selectedOpeningBalance');
+            var $currentBalance = $('#selectedCurrentBalance');
+            var $accountLevel = $('#selectedAccountLevel');
+            var $viewAccountButton = $('#viewAccountButton');
+            var $editAccountButton = $('#editAccountButton');
+            var $deleteAccountButton = $('#deleteAccountButton');
+            var $resetSelectionButton = $('#resetSelectionButton');
+            var $quickSearchInput = $('#accountQuickSearchInput');
+            var $quickSearchButton = $('#accountQuickSearchButton');
+            var $quickSearchReset = $('#accountQuickSearchReset');
+
             var selectedNodeId = null;
             var selectedAccountType = null;
 
+            function formatCurrency(value) {
+                var number = parseFloat(value);
+                if (isNaN(number)) {
+                    return '';
+                }
+                return number.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            function updateChildrenCount() {
+                var count = $accountsList.find('.list-account-item').length;
+                $childrenCountBadge.text(count);
+            }
+
             function setLoadingState() {
                 $accountsList.html('<div class="text-center py-5 text-muted"><div class="spinner-border text-primary mb-3" role="status"></div><p class="mb-0">جاري تحميل الحسابات...</p></div>');
+                $childrenCountBadge.text('...');
+            }
+
+            function clearAccountDetails() {
+                $accountCode.val('');
+                $accountName.val('');
+                $accountType.val('');
+                $accountNature.val('');
+                $accountCurrency.val('');
+                $accountStatus.val('');
+                $accountPosting.val('');
+                $accountParent.val('');
+                $openingBalance.val('');
+                $currentBalance.val('');
+                $accountLevel.text('--');
+            }
+
+            function disableActionButtons() {
+                $addChildButton.addClass('disabled').attr('aria-disabled', 'true').attr('href', createUrl).data('parent-id', '');
+                $refreshButton.prop('disabled', true);
+                $viewAccountButton.addClass('disabled').attr('aria-disabled', 'true').attr('href', '#');
+                $editAccountButton.addClass('disabled').attr('aria-disabled', 'true').attr('href', '#');
+                $deleteAccountButton.prop('disabled', true).data('account-id', '');
             }
 
             function resetSelection() {
                 selectedNodeId = null;
                 selectedAccountType = null;
-                $addChildButton.prop('disabled', true);
-                $refreshButton.prop('disabled', true);
+                clearAccountDetails();
+                disableActionButtons();
                 $nodeTitle.text('الحسابات التابعة');
-                $nodeDescription.text('اختر حساباً من الشجرة لعرض تفاصيله.');
+                $nodeDescription.text('اختر حساباً من الشجرة لعرض حساباته الفرعية.');
+                $accountsList.html('<div class="text-center text-muted py-5"><i class="fas fa-diagram-project fa-2x mb-3"></i><p class="mb-0">قم باختيار حساب من الشجرة لعرض الحسابات الفرعية وإدارتها.</p></div>');
+                $childrenCountBadge.text('0');
+            }
+
+            function updateSelectionDetails($node) {
+                var nodeId = parseInt($node.data('node-id')) || 0;
+                var nodeName = $node.data('node-name') || '';
+                var nodeCode = $node.data('node-code') || '';
+                var nodeLabel = $node.data('node-label') || nodeName;
+                var accountTypeDisplay = $node.data('type-display') || $node.data('account-type') || '';
+                var natureDisplay = $node.data('nature-display') || '';
+                var currencyCode = $node.data('currency-code') || '';
+                var statusDisplay = $node.data('status-display') || '';
+                var postingDisplay = $node.data('posting-display') || '';
+                var parentName = $node.data('parent-name') || '';
+                var openingBalance = $node.data('opening-balance');
+                var currentBalance = $node.data('current-balance');
+                var level = parseInt($node.data('level')) || 0;
+
+                $accountCode.val(nodeCode);
+                $accountName.val(nodeName);
+                $accountType.val(accountTypeDisplay);
+                $accountNature.val(natureDisplay);
+                $accountCurrency.val(currencyCode);
+                $accountStatus.val(statusDisplay);
+                $accountPosting.val(postingDisplay);
+                $accountParent.val(parentName);
+                $openingBalance.val(formatCurrency(openingBalance));
+                $currentBalance.val(formatCurrency(currentBalance));
+                $accountLevel.text(level ? 'المستوى ' + level : 'جذر الشجرة');
+
+                if (nodeId > 0) {
+                    $viewAccountButton.removeClass('disabled').attr('aria-disabled', 'false').attr('href', detailsUrl + '?id=' + nodeId);
+                    $editAccountButton.removeClass('disabled').attr('aria-disabled', 'false').attr('href', editUrl + '?id=' + nodeId);
+                    $deleteAccountButton.prop('disabled', false).data('account-id', nodeId);
+                } else {
+                    $viewAccountButton.addClass('disabled').attr('aria-disabled', 'true').attr('href', '#');
+                    $editAccountButton.addClass('disabled').attr('aria-disabled', 'true').attr('href', '#');
+                    $deleteAccountButton.prop('disabled', true).data('account-id', '');
+                }
+
+                return nodeLabel;
             }
 
             function loadAccounts(nodeId, accountType, nodeName) {
@@ -223,29 +509,34 @@
 
                 $.get(loadAccountsUrl, requestData)
                     .done(function (html) {
-                        if ($.trim(html).length) {
-                            $accountsList.html(html);
+                        var trimmed = $.trim(html);
+                        if (trimmed.length) {
+                            $accountsList.html(trimmed);
                         } else {
                             $accountsList.html('<div class="text-center text-muted py-5"><i class="fas fa-layer-group fa-2x mb-3"></i><p class="mb-0">لا توجد حسابات فرعية لعرضها.</p></div>');
                         }
+                        updateChildrenCount();
                     })
                     .fail(function () {
                         $accountsList.html('<div class="alert alert-danger">تعذر تحميل الحسابات، يرجى المحاولة لاحقاً.</div>');
+                        $childrenCountBadge.text('!');
                     });
 
                 if (nodeId) {
-                    $addChildButton.prop('disabled', false)
-                        .attr('href', '@Url.Action("Create")' + '?parentId=' + nodeId)
-                        .data('parent-id', nodeId);
+                    $addChildButton.removeClass('disabled').attr('aria-disabled', 'false').attr('href', createUrl + '?parentId=' + nodeId).data('parent-id', nodeId);
                 } else {
-                    $addChildButton.prop('disabled', false)
-                        .attr('href', '@Url.Action("Create")')
-                        .data('parent-id', '');
+                    $addChildButton.removeClass('disabled').attr('aria-disabled', 'false').attr('href', createUrl).data('parent-id', '');
                 }
 
                 $refreshButton.prop('disabled', false);
                 $nodeTitle.text(nodeName || 'الحسابات التابعة');
-                $nodeDescription.text(nodeId ? 'إدارة الحسابات التابعة للحساب المحدد.' : 'عرض الحسابات الرئيسية من نوع ' + (nodeName || ''));
+                if (nodeId) {
+                    $nodeDescription.text('إدارة الحسابات التابعة للحساب المحدد.');
+                } else if (accountType) {
+                    $nodeDescription.text('عرض الحسابات الرئيسية من نوع ' + (nodeName || '')); 
+                } else {
+                    $nodeDescription.text('اختر حساباً من الشجرة لعرض حساباته الفرعية.');
+                }
             }
 
             $(document).on('click', '.toggle-btn', function (e) {
@@ -296,7 +587,7 @@
                         } else {
                             $children.data('loaded', true);
                             $node.data('has-children', false);
-                            $button.replaceWith('<span style="width: 20px; display: inline-block;"></span>');
+                            $button.replaceWith('<span style="width: 26px; display: inline-block;"></span>');
                         }
                     })
                     .fail(function () {
@@ -321,7 +612,7 @@
                 selectedNodeId = parseInt($node.data('node-id')) || null;
                 selectedAccountType = $node.data('account-type') || null;
 
-                var nodeLabel = $node.data('node-label') || $node.data('node-name');
+                var nodeLabel = updateSelectionDetails($node);
 
                 loadAccounts(selectedNodeId, selectedAccountType, nodeLabel);
             });
@@ -330,7 +621,31 @@
                 if (!selectedNodeId && !selectedAccountType) {
                     return;
                 }
-                loadAccounts(selectedNodeId, selectedAccountType, $('.tree-node.selected').data('node-label'));
+                var $selectedNode = $('.tree-node.selected');
+                var nodeLabel = $selectedNode.length ? ($selectedNode.data('node-label') || $selectedNode.data('node-name')) : null;
+                loadAccounts(selectedNodeId, selectedAccountType, nodeLabel);
+            });
+
+            $resetSelectionButton.on('click', function () {
+                $('.tree-node').removeClass('selected');
+                resetSelection();
+            });
+
+            $quickSearchButton.on('click', function () {
+                var term = $quickSearchInput.val().toString().trim();
+                $('#treeSearchInput').val(term).trigger('input');
+            });
+
+            $quickSearchReset.on('click', function () {
+                $quickSearchInput.val('');
+                $('#treeSearchInput').val('').trigger('input');
+            });
+
+            $quickSearchInput.on('keypress', function (e) {
+                if (e.which === 13) {
+                    e.preventDefault();
+                    $quickSearchButton.trigger('click');
+                }
             });
 
             $('#treeSearchInput').on('input', function () {
@@ -362,7 +677,43 @@
                 $('.tree-node').show();
             });
 
+            $('#printTreeButton').on('click', function () {
+                window.print();
+            });
+
+            $('#expandTreeButton').on('click', function () {
+                $('.tree-node[data-has-children="true"] > .tree-children').each(function () {
+                    var $children = $(this);
+                    if ($children.data('loaded')) {
+                        $children.show();
+                    }
+                });
+                $('.tree-node[data-has-children="true"] > .tree-node-content .toggle-btn').html('<i class="fas fa-minus"></i>');
+            });
+
+            $('#collapseTreeButton').on('click', function () {
+                $('.tree-node > .tree-children').each(function () {
+                    var $children = $(this);
+                    if ($children.data('loaded')) {
+                        $children.hide();
+                    }
+                });
+                $('.tree-node[data-has-children="true"] > .tree-node-content .toggle-btn').html('<i class="fas fa-plus"></i>');
+            });
+
+            $deleteAccountButton.on('click', function () {
+                var accountId = $(this).data('account-id');
+                if (!accountId) {
+                    return;
+                }
+                deleteAccount(accountId);
+            });
+
             $(document).on('click', '.ajax-modal', function (e) {
+                if ($(this).hasClass('disabled') || $(this).attr('aria-disabled') === 'true') {
+                    e.preventDefault();
+                    return;
+                }
                 e.preventDefault();
                 var url = $(this).attr('href');
                 if (!url) {
@@ -384,7 +735,11 @@
                         if (result.success) {
                             $('#accountModal').modal('hide');
                             if (selectedNodeId || selectedAccountType) {
-                                loadAccounts(selectedNodeId, selectedAccountType, $('.tree-node.selected').data('node-label'));
+                                var $selectedNode = $('.tree-node.selected');
+                                if ($selectedNode.length) {
+                                    updateSelectionDetails($selectedNode);
+                                }
+                                loadAccounts(selectedNodeId, selectedAccountType, $nodeTitle.text());
                             } else {
                                 location.reload();
                             }
@@ -403,13 +758,19 @@
                 $.post('@Url.Action("Delete")', { id: id }, function (result) {
                     if (result.success) {
                         if (selectedNodeId || selectedAccountType) {
-                            loadAccounts(selectedNodeId, selectedAccountType, $('.tree-node.selected').data('node-label'));
+                            var $selectedNode = $('.tree-node.selected');
+                            if ($selectedNode.length) {
+                                updateSelectionDetails($selectedNode);
+                            }
+                            loadAccounts(selectedNodeId, selectedAccountType, $nodeTitle.text());
                         }
                     } else {
                         alert(result.message || 'حدث خطأ أثناء الحذف');
                     }
                 });
             };
+
+            resetSelection();
         });
     </script>
 }
