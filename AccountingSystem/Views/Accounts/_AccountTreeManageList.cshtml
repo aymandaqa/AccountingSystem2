@@ -1,3 +1,4 @@
+@using AccountingSystem.Models
 @model IEnumerable<AccountingSystem.ViewModels.AccountViewModel>
 
 @if (!Model.Any())
@@ -12,6 +13,16 @@ else
     foreach (var account in Model)
     {
         var hasChildren = account.HasChildren;
+        var accountTypeDisplay = account.AccountType switch
+        {
+            AccountType.Assets => "الأصول",
+            AccountType.Liabilities => "الالتزامات",
+            AccountType.Equity => "حقوق الملكية",
+            AccountType.Revenue => "الإيرادات",
+            AccountType.Expenses => "المصروفات",
+            _ => account.AccountType.ToString()
+        };
+        var natureDisplay = account.Nature == AccountNature.Debit ? "مدين" : "دائن";
         <div class="list-account-item d-flex flex-column flex-md-row justify-content-between gap-3">
             <div class="d-flex align-items-start gap-3">
                 <span class="text-primary mt-1">
@@ -21,7 +32,8 @@ else
                     <div class="d-flex align-items-center gap-2 flex-wrap">
                         <span class="fw-semibold">@account.NameAr</span>
                         <span class="text-muted small">(@account.Code)</span>
-                        <span class="badge bg-light text-dark border">@account.AccountType.ToString()</span>
+                        <span class="badge bg-light text-dark border">@accountTypeDisplay</span>
+                        <span class="badge bg-secondary">@natureDisplay</span>
                         <span class="badge bg-info text-dark">@account.CurrencyCode</span>
                         <span class="badge @(account.CanPostTransactions ? "bg-success" : "bg-warning text-dark")">
                             @(account.CanPostTransactions ? "قابل للترحيل" : "غير قابل للترحيل")
