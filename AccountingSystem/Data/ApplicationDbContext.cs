@@ -1073,6 +1073,7 @@ namespace AccountingSystem.Data
                 new Permission { Id = 25, Name = "dashboard.widget.stats", DisplayName = "عرض إحصائيات لوحة التحكم", Category = "لوحة التحكم", CreatedAt = createdAt },
                 new Permission { Id = 26, Name = "dashboard.widget.accounts", DisplayName = "عرض أرصدة الحسابات بلوحة التحكم", Category = "لوحة التحكم", CreatedAt = createdAt },
                 new Permission { Id = 27, Name = "dashboard.widget.links", DisplayName = "عرض الروابط السريعة بلوحة التحكم", Category = "لوحة التحكم", CreatedAt = createdAt },
+                new Permission { Id = 112, Name = "dashboard.widget.search", DisplayName = "عرض البحث السريع بلوحة التحكم", Category = "لوحة التحكم", CreatedAt = createdAt },
                 new Permission { Id = 110, Name = "dashboard.widget.cashboxes", DisplayName = "عرض أرصدة الصناديق بلوحة التحكم", Category = "لوحة التحكم", CreatedAt = createdAt },
                 new Permission { Id = 28, Name = "expenses.view", DisplayName = "عرض المصاريف", Category = "المصاريف", CreatedAt = createdAt },
                 new Permission { Id = 29, Name = "expenses.create", DisplayName = "إنشاء المصاريف", Category = "المصاريف", CreatedAt = createdAt },
