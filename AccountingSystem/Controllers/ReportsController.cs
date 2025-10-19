@@ -2148,6 +2148,12 @@ namespace AccountingSystem.Controllers
                 var balance = CalculateAggregatedBalance(account.Id);
                 var hasChildren = childrenLookup.TryGetValue(account.Id, out var childAccounts) && childAccounts.Any();
 
+                var parentAccountId = account.ParentId;
+                if (parentAccountId.HasValue && !accountsLookup.ContainsKey(parentAccountId.Value))
+                {
+                    parentAccountId = null;
+                }
+
                 reportAccounts.Add(new TrialBalanceAccountViewModel
                 {
                     AccountId = account.Id,
@@ -2158,7 +2164,7 @@ namespace AccountingSystem.Controllers
                     DebitBalanceBase = balance.DebitBase,
                     CreditBalanceBase = balance.CreditBase,
                     Level = account.Level,
-                    ParentAccountId = account.ParentId,
+                    ParentAccountId = parentAccountId,
                     HasChildren = hasChildren
                 });
 
