@@ -134,7 +134,7 @@ namespace AccountingSystem.Controllers
                 var dailyRate = CalculateEmployeeDailyRate(employee.Salary, referenceDate);
                 var salaryBalance = CalculateAccruedSalaryBalance(employee, referenceDate, dailyRate);
                 var accountAvailable = decimal.Round(CalculateEmployeeAccountAvailableBalance(employee.Account), 2, MidpointRounding.AwayFromZero);
-                var maxAdvance = decimal.Round(Math.Min(accountAvailable, salaryBalance), 2, MidpointRounding.AwayFromZero);
+                var maxAdvance = decimal.Round(salaryBalance, 2, MidpointRounding.AwayFromZero);
 
                 if (maxAdvance <= 0)
                 {
@@ -142,13 +142,7 @@ namespace AccountingSystem.Controllers
                 }
                 else if (model.Amount > maxAdvance)
                 {
-                    ModelState.AddModelError(nameof(model.Amount), $"المبلغ يتجاوز الحد الأقصى المسموح به ({maxAdvance.ToString("N2")} {account.Currency.Code}) بناءً على رصيد الحساب ورصيد الراتب المتاح.");
-                }
-
-                var predictedBalance = CalculatePredictedEmployeeBalance(employee.Account, model.Amount);
-                if (predictedBalance < -employee.Salary)
-                {
-                    ModelState.AddModelError(nameof(model.Amount), "الرصيد المتوقع لحساب الموظف سيتجاوز الحد المسموح به");
+                    ModelState.AddModelError(nameof(model.Amount), $"المبلغ يتجاوز الحد الأقصى المسموح به ({maxAdvance.ToString("N2")} {account.Currency.Code}) بناءً على رصيد الراتب المتاح.");
                 }
             }
 
@@ -244,7 +238,7 @@ namespace AccountingSystem.Controllers
                     var dailyRate = CalculateEmployeeDailyRate(e.Salary, referenceDate);
                     var salaryBalance = CalculateAccruedSalaryBalance(e, referenceDate, dailyRate);
                     var accountAvailable = decimal.Round(CalculateEmployeeAccountAvailableBalance(e.Account), 2, MidpointRounding.AwayFromZero);
-                    var maxAdvance = decimal.Round(Math.Min(accountAvailable, salaryBalance), 2, MidpointRounding.AwayFromZero);
+                    var maxAdvance = decimal.Round(salaryBalance, 2, MidpointRounding.AwayFromZero);
 
                     return new EmployeeOptionViewModel
                     {
@@ -332,14 +326,5 @@ namespace AccountingSystem.Controllers
             return balance;
         }
 
-        private static decimal CalculatePredictedEmployeeBalance(Account account, decimal amount)
-        {
-            if (account.Nature == AccountNature.Debit)
-            {
-                return account.CurrentBalance + amount;
-            }
-
-            return account.CurrentBalance - amount;
-        }
     }
 }
