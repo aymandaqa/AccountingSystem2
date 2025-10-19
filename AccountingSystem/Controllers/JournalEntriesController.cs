@@ -75,17 +75,24 @@ namespace AccountingSystem.Controllers
             var query = _context.JournalEntries
                 .AsNoTracking()
                 .Include(j => j.Branch)
+                .Include(j => j.CreatedBy)
                 .Include(j => j.Lines)
                 .AsQueryable();
 
             var searchValue = Request.Query["search[value]"].FirstOrDefault();
             if (!string.IsNullOrWhiteSpace(searchValue))
             {
+                var normalizedSearch = searchValue.Trim().ToLower();
                 query = query.Where(j =>
-                    j.Number.Contains(searchValue) ||
-                    j.Description.Contains(searchValue) ||
-                    (j.Reference != null && j.Reference.Contains(searchValue)) ||
-                    j.Branch.NameAr.Contains(searchValue));
+                    j.Number.ToLower().Contains(normalizedSearch) ||
+                    j.Description.ToLower().Contains(normalizedSearch) ||
+                    (j.Reference != null && j.Reference.ToLower().Contains(normalizedSearch)) ||
+                    j.Branch.NameAr.ToLower().Contains(normalizedSearch) ||
+                    (j.CreatedBy != null && (
+                        (j.CreatedBy.FirstName != null && j.CreatedBy.FirstName.ToLower().Contains(normalizedSearch)) ||
+                        (j.CreatedBy.LastName != null && j.CreatedBy.LastName.ToLower().Contains(normalizedSearch)) ||
+                        (j.CreatedBy.UserName != null && j.CreatedBy.UserName.ToLower().Contains(normalizedSearch))
+                    )));
             }
 
             if (int.TryParse(Request.Query["branchId"], out var branchId))
@@ -190,6 +197,13 @@ namespace AccountingSystem.Controllers
             {
                 var totalAmount = entry.Lines.Sum(l => l.DebitAmount);
                 var info = GetStatusInfo(entry.Status);
+                var fullName = entry.CreatedBy != null
+                    ? string.Join(' ', new[] { entry.CreatedBy.FirstName, entry.CreatedBy.LastName }
+                        .Where(part => !string.IsNullOrWhiteSpace(part))).Trim()
+                    : string.Empty;
+                var createdByName = string.IsNullOrWhiteSpace(fullName)
+                    ? entry.CreatedBy?.UserName ?? string.Empty
+                    : fullName;
                 return new JournalEntryViewModel
                 {
                     Id = entry.Id,
@@ -203,6 +217,7 @@ namespace AccountingSystem.Controllers
                     StatusDisplay = info.Text,
                     StatusClass = info.CssClass,
                     BranchName = entry.Branch.NameAr,
+                    CreatedByName = createdByName,
                     TotalAmount = totalAmount,
                     TotalAmountFormatted = totalAmount.ToString("N2"),
                     LinesCount = entry.Lines.Count,
@@ -227,6 +242,7 @@ namespace AccountingSystem.Controllers
             var query = _context.JournalEntries
                 .AsNoTracking()
                 .Include(j => j.Branch)
+                .Include(j => j.CreatedBy)
                 .Include(j => j.Lines)
                 .AsQueryable();
 
@@ -282,6 +298,11 @@ namespace AccountingSystem.Controllers
                     j.Description.ToLower().Contains(normalizedTerm) ||
                     (j.Reference != null && j.Reference.ToLower().Contains(normalizedTerm)) ||
                     j.Branch.NameAr.ToLower().Contains(normalizedTerm) ||
+                    (j.CreatedBy != null && (
+                        (j.CreatedBy.FirstName != null && j.CreatedBy.FirstName.ToLower().Contains(normalizedTerm)) ||
+                        (j.CreatedBy.LastName != null && j.CreatedBy.LastName.ToLower().Contains(normalizedTerm)) ||
+                        (j.CreatedBy.UserName != null && j.CreatedBy.UserName.ToLower().Contains(normalizedTerm))
+                    )) ||
                     j.Lines.Any(l => l.Description != null && l.Description.ToLower().Contains(normalizedTerm)) ||
                     (statusMatches.Count > 0 && statusMatches.Contains(j.Status)) ||
                     (searchForUnbalanced && j.Lines.Sum(l => l.DebitAmount) != j.Lines.Sum(l => l.CreditAmount)) ||
@@ -303,6 +324,9 @@ namespace AccountingSystem.Controllers
                     entry.Reference,
                     entry.Status,
                     BranchName = entry.Branch.NameAr,
+                    CreatedByFirstName = entry.CreatedBy.FirstName,
+                    CreatedByLastName = entry.CreatedBy.LastName,
+                    CreatedByUserName = entry.CreatedBy.UserName,
                     TotalDebit = entry.Lines.Sum(l => l.DebitAmount),
                     TotalCredit = entry.Lines.Sum(l => l.CreditAmount),
                     LinesCount = entry.Lines.Count
@@ -312,6 +336,11 @@ namespace AccountingSystem.Controllers
                 {
                     var info = GetStatusInfo(entry.Status);
                     var isBalanced = entry.TotalDebit == entry.TotalCredit;
+                    var fullName = string.Join(' ', new[] { entry.CreatedByFirstName, entry.CreatedByLastName }
+                        .Where(part => !string.IsNullOrWhiteSpace(part))).Trim();
+                    var createdByName = string.IsNullOrWhiteSpace(fullName)
+                        ? entry.CreatedByUserName ?? string.Empty
+                        : fullName;
                     return new JournalEntryViewModel
                     {
                         Id = entry.Id,
@@ -321,6 +350,7 @@ namespace AccountingSystem.Controllers
                         Reference = entry.Reference ?? string.Empty,
                         Status = entry.Status.ToString(),
                         BranchName = entry.BranchName,
+                        CreatedByName = createdByName,
                         TotalAmount = entry.TotalDebit,
                         TotalDebit = entry.TotalDebit,
                         TotalCredit = entry.TotalCredit,
