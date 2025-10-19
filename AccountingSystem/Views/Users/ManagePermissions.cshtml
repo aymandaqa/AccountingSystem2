@@ -146,10 +146,19 @@
                 const checkbox = item.querySelector('input[type="checkbox"]');
                 const badge = item.querySelector('.inherited-badge');
                 if (checkbox) {
+                    const isInitiallyInherited = checkbox.dataset.inherited === 'true';
+                    checkbox.dataset.manual = (!isInitiallyInherited && checkbox.checked) ? 'true' : 'false';
+                    checkbox.dataset.touched = 'false';
+
                     checkbox.addEventListener('change', function () {
-                        if (this.dataset.inherited === 'true' && !this.checked) {
+                        this.dataset.touched = 'true';
+                        if (this.dataset.inherited === 'true') {
                             this.checked = true;
+                            this.dataset.manual = 'false';
+                            return;
                         }
+
+                        this.dataset.manual = this.checked ? 'true' : 'false';
                     });
                 }
 
@@ -178,9 +187,29 @@
                 permissionMap.forEach((value, permissionId) => {
                     const isInherited = inherited.has(permissionId);
                     if (value.checkbox) {
+                        const wasInherited = value.checkbox.dataset.inherited === 'true';
                         value.checkbox.dataset.inherited = isInherited ? 'true' : 'false';
+
                         if (isInherited) {
                             value.checkbox.checked = true;
+                            if (value.checkbox.dataset.manual !== 'true') {
+                                value.checkbox.dataset.manual = 'false';
+                            }
+                        } else {
+                            const touched = value.checkbox.dataset.touched === 'true';
+                            const isManual = value.checkbox.dataset.manual === 'true';
+
+                            if (isManual) {
+                                value.checkbox.checked = true;
+                            } else if (touched) {
+                                value.checkbox.checked = false;
+                            } else if (wasInherited) {
+                                value.checkbox.checked = true;
+                                value.checkbox.dataset.manual = 'true';
+                            } else {
+                                value.checkbox.checked = false;
+                                value.checkbox.dataset.manual = 'false';
+                            }
                         }
                     }
                     if (value.badge) {
