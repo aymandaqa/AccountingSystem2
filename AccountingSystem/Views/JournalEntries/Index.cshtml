@@ -172,6 +172,7 @@
                             <e-grid-column field="Description" headerText="الوصف" width="220"></e-grid-column>
                             <e-grid-column field="Reference" headerText="المرجع" width="180"></e-grid-column>
                             <e-grid-column field="BranchName" headerText="الفرع" width="180"></e-grid-column>
+                            <e-grid-column field="CreatedByName" headerText="مدخل القيد" width="200"></e-grid-column>
                             <e-grid-column field="TotalDebit" headerText="إجمالي المدين" format="N2" type="number" textAlign="Right" width="160"></e-grid-column>
                             <e-grid-column field="TotalCredit" headerText="إجمالي الدائن" format="N2" type="number" textAlign="Right" width="160"></e-grid-column>
                             <e-grid-column field="LinesCount" headerText="عدد البنود" textAlign="Center" width="130"></e-grid-column>
@@ -252,7 +253,7 @@
 
             grid.pageSettings = { pageSize: 25, pageSizes: [10, 25, 50, 100, 'All'] };
             grid.groupSettings = { showDropArea: false };
-            grid.searchSettings = { fields: ['Number', 'Description', 'Reference', 'BranchName', 'StatusDisplay', 'TotalDebitFormatted', 'TotalCreditFormatted'], operator: 'contains', key: '', ignoreCase: true };
+            grid.searchSettings = { fields: ['Number', 'Description', 'Reference', 'BranchName', 'CreatedByName', 'StatusDisplay', 'TotalDebitFormatted', 'TotalCreditFormatted'], operator: 'contains', key: '', ignoreCase: true };
 
             function updateGridHeight() {
                 var headerRect = gridElement.getBoundingClientRect();

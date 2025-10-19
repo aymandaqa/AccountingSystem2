@@ -523,6 +523,7 @@ namespace AccountingSystem.ViewModels
         public string? Reference { get; set; }
         public string Status { get; set; } = string.Empty;
         public string BranchName { get; set; } = string.Empty;
+        public string CreatedByName { get; set; } = string.Empty;
         public decimal TotalAmount { get; set; }
         public int LinesCount { get; set; }
         public string StatusDisplay { get; set; } = string.Empty;
