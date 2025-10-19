@@ -1796,6 +1796,15 @@ namespace AccountingSystem.Migrations
                         },
                         new
                         {
+                            Id = 112,
+                            Category = "لوحة التحكم",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "عرض البحث السريع بلوحة التحكم",
+                            IsActive = true,
+                            Name = "dashboard.widget.search"
+                        },
+                        new
+                        {
                             Id = 110,
                             Category = "لوحة التحكم",
                             CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
