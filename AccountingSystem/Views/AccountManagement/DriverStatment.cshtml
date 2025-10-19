@@ -1,6 +1,6 @@
 ﻿@using Newtonsoft.Json
 
-@{ 
+@{
     var rtl = true;
     ViewData["Title"] = "حساب سائق";
 }
@@ -20,9 +20,9 @@
         z-index: 2000;
     }
 
-    .loading-overlay.d-none {
-        display: none !important;
-    }
+        .loading-overlay.d-none {
+            display: none !important;
+        }
 
     #actionsToolbar .btn {
         min-width: 120px;
@@ -114,8 +114,31 @@
                                         </div>
 
                                     </div>
+                                    <div class="col-md-3">
+                                        <h4>شحنات مع السائق</h4>
+                                        <ejs-grid id="GridPending" width="100%"
+                                                  allowExcelExport="true" allowPdfExport="true"
+                                                  enableStickyHeader="true" height="400px" gridLines="Both"
+                                                  enableRtl="@rtl" allowPaging="false" allowSorting="true" allowFiltering="true"
+                                                  allowTextWrap="true"
+                                                  "  >
+                                            <e-data-manager url="/AccountManagement/UrlDatasourceDriverPendingStatment"
+                                                            adaptor="UrlAdaptor"></e-data-manager>
+                                            <e-grid-editSettings allowEditing="true"></e-grid-editSettings>
 
-                                    <div class="col-12">
+                                            <e-grid-filterSettings type="Excel"></e-grid-filterSettings>
+
+                                            <e-grid-columns>
+
+                                                <e-grid-column field="ShipmentTrackingNo" allowEditing="false" template="#ShipmentTrackingNo" headerText="رقم تتبع الشحنة" width="120"></e-grid-column>
+                                                <e-grid-column field="EntryDateTime" allowEditing="false" customFormat="@(new { type = "date", format = "dd/MM/yyyy hh:mm" })" headerText="تاريخ ادخال الشحنة" width="120"></e-grid-column>
+                                                <e-grid-column field="LastUpdate" allowEditing="false" customFormat="@(new { type = "date", format = "dd/MM/yyyy hh:mm" })" headerText="اخر تحديث" width="120"></e-grid-column>
+                                                <e-grid-column field="ClientName" allowEditing="false" headerText="اسم العميل" width="120"></e-grid-column>
+                                                <e-grid-column field="ShipmentTotal" allowEditing="false" headerText="المجموع الكلي" width="120"></e-grid-column>
+                                            </e-grid-columns>
+                                        </ejs-grid>
+                                    </div>
+                                    <div class="col-9">
                                         <ejs-grid id="Grid" width="100%"
                                                   allowExcelExport="true" allowPdfExport="true"
                                                   enableStickyHeader="true" height="400px" gridLines="Both"
@@ -243,10 +266,18 @@
     function GetDriverStmt() {
         var driver = document.getElementById('Driver').ej2_instances[0];
         var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+
+                var GridPending = document.getElementById('GridPending').ej2_instances[0]; // Grid instance
+
         grid1.dataSource = new ej.data.DataManager({
             url: '/AccountManagement/UrlDatasourceDriverStatment?DriverId=' + driver.value,
             updateUrl: "/AccountManagement/update",
             adaptor: new ej.data.UrlAdaptor()
+        });
+
+              GridPending.dataSource = new ej.data.DataManager({
+            url: '/AccountManagement/UrlDatasourceDriverPendingStatment?DriverId=' + driver.value,
+             adaptor: new ej.data.UrlAdaptor()
         });
     }
 
@@ -257,6 +288,12 @@
             url: '/AccountManagement/UrlDatasourceDriverStatment?DriverId=' + driver.value,
             updateUrl: "/AccountManagement/update",
             adaptor: new ej.data.UrlAdaptor()
+        });
+
+                    var GridPending = document.getElementById('GridPending').ej2_instances[0]; // Grid instance
+                     GridPending.dataSource = new ej.data.DataManager({
+            url: '/AccountManagement/UrlDatasourceDriverPendingStatment?DriverId=' + driver.value,
+             adaptor: new ej.data.UrlAdaptor()
         });
     }
     function ExportExcel() {

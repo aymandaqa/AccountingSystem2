@@ -2291,6 +2291,36 @@ namespace Roadfn.Controllers
             return Redirect("/PrintUserSlip?Id=" + Id);
         }
 
+        public IActionResult UrlDatasourceDriverPendingStatment([FromBody] DataManagerRequest dm, int DriverId = 111111111)
+        {
+
+            var DataSource = _context.Shipments.Where(r => r.DriverId == DriverId & r.Status != 8 & r.Status != 23 &
+            r.Status != 10).AsQueryable();
+
+            DataOperations operation = new DataOperations();
+            if (dm.Search != null && dm.Search.Count > 0)
+            {
+                DataSource = operation.PerformSearching(DataSource, dm.Search);  //Search
+            }
+            if (dm.Sorted != null && dm.Sorted.Count > 0) //Sorting
+            {
+                DataSource = operation.PerformSorting(DataSource, dm.Sorted);
+            }
+            if (dm.Where != null && dm.Where.Count > 0) //Filtering
+            {
+                DataSource = operation.PerformFiltering(DataSource, dm.Where, dm.Where[0].Operator);
+            }
+            int count = DataSource.Count();
+            if (dm.Skip != 0)
+            {
+                DataSource = operation.PerformSkip(DataSource, dm.Skip);   //Paging
+            }
+            if (dm.Take != 0)
+            {
+                DataSource = operation.PerformTake(DataSource, dm.Take);
+            }
+            return dm.RequiresCounts ? Json(new { result = DataSource, count = count }) : Json(DataSource);
+        }
 
 
 
