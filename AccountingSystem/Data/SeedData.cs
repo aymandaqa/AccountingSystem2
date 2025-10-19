@@ -103,6 +103,7 @@ namespace AccountingSystem.Data
                 new Permission { Name = "dashboard.widget.stats", DisplayName = "عرض لوحة التحكم stats", Category = "لوحة التحكم" },
                 new Permission { Name = "dashboard.widget.accounts", DisplayName = " accountsعرض لوحة التحكم", Category = "لوحة التحكم" },
                 new Permission { Name = "dashboard.widget.links", DisplayName = " linksعرض لوحة التحكم", Category = "لوحة التحكم" },
+                new Permission { Name = "dashboard.widget.search", DisplayName = "عرض البحث السريع بلوحة التحكم", Category = "لوحة التحكم" },
                 new Permission { Name = "dashboard.widget.cashboxes", DisplayName = "عرض أرصدة الصناديق بلوحة التحكم", Category = "لوحة التحكم" },
                 new Permission { Name = "transfers.view", DisplayName = "عرض الحوالات", Category = "الحوالات" },
                 new Permission { Name = "transfers.create", DisplayName = "إنشاء الحوالات", Category = "الحوالات" },

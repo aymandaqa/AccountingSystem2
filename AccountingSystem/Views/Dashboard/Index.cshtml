@@ -10,6 +10,27 @@
     var canViewAccounts = (await AuthorizationService.AuthorizeAsync(User, "dashboard.widget.accounts")).Succeeded;
     var canViewLinks = (await AuthorizationService.AuthorizeAsync(User, "dashboard.widget.links")).Succeeded;
     var canViewCashBoxes = (await AuthorizationService.AuthorizeAsync(User, "dashboard.widget.cashboxes")).Succeeded;
+    var canViewSearch = (await AuthorizationService.AuthorizeAsync(User, "dashboard.widget.search")).Succeeded;
+
+    var canAccessReports = (await AuthorizationService.AuthorizeAsync(User, "reports.view")).Succeeded;
+    var canAccessAccounts = (await AuthorizationService.AuthorizeAsync(User, "accounts.view")).Succeeded;
+    var canAccessJournal = (await AuthorizationService.AuthorizeAsync(User, "journal.view")).Succeeded;
+    var canAccessBranches = (await AuthorizationService.AuthorizeAsync(User, "branches.view")).Succeeded;
+    var canAccessCostCenters = (await AuthorizationService.AuthorizeAsync(User, "costcenters.view")).Succeeded;
+    var canAccessUsers = (await AuthorizationService.AuthorizeAsync(User, "users.view")).Succeeded;
+    var canAccessSuppliers = (await AuthorizationService.AuthorizeAsync(User, "suppliers.view")).Succeeded;
+    var canViewDashboard = (await AuthorizationService.AuthorizeAsync(User, "dashboard.view")).Succeeded;
+
+    var canCreateReceiptVouchers = (await AuthorizationService.AuthorizeAsync(User, "receiptvouchers.create")).Succeeded;
+    var canCreateDisbursementVouchers = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.create")).Succeeded;
+    var canCreateJournalEntries = (await AuthorizationService.AuthorizeAsync(User, "journal.create")).Succeeded;
+    var canCreateAssets = (await AuthorizationService.AuthorizeAsync(User, "assets.create")).Succeeded;
+
+    var hasCategorySuggestions = new[] { canAccessAccounts, canAccessJournal, canAccessBranches, canAccessCostCenters }.Any(x => x);
+    var hasPopularSuggestions = new[] { canViewDashboard, canAccessReports, canAccessUsers, canAccessSuppliers }.Any(x => x);
+    var hasQuickActionSuggestions = new[] { canCreateReceiptVouchers, canCreateDisbursementVouchers, canCreateJournalEntries, canCreateAssets }.Any(x => x);
+    var hasAnySuggestions = hasCategorySuggestions || hasPopularSuggestions || hasQuickActionSuggestions;
+    var hasQuickLinkTiles = new[] { canAccessAccounts, canAccessJournal, canAccessReports, canAccessBranches, canAccessCostCenters }.Any(x => x);
 
     string selectedBranchName = "جميع الفروع";
     if (Model.SelectedBranchId.HasValue && ViewBag.Branches != null)
@@ -39,20 +60,23 @@
                     <p class="mb-0 text-muted">استعرض أحدث الأرقام وحركات النظام من مكان واحد.</p>
                 </div>
             </div>
-            <div class="toolbar-filters d-flex flex-wrap gap-3">
-                <div class="toolbar-chip">
-                    <span class="chip-label"><i class="fas fa-code-branch ms-1"></i> الفرع الحالي</span>
-                    <span class="chip-value">@selectedBranchName</span>
+            @if (canViewSearch)
+            {
+                <div class="toolbar-filters d-flex flex-wrap gap-3">
+                    <div class="toolbar-chip">
+                        <span class="chip-label"><i class="fas fa-code-branch ms-1"></i> الفرع الحالي</span>
+                        <span class="chip-value">@selectedBranchName</span>
+                    </div>
+                    <div class="toolbar-chip">
+                        <span class="chip-label"><i class="fas fa-calendar-alt ms-1"></i> الفترة</span>
+                        <span class="chip-value">@dateRangeLabel</span>
+                    </div>
+                    <div class="toolbar-chip">
+                        <span class="chip-label"><i class="fas fa-coins ms-1"></i> العملة</span>
+                        <span class="chip-value">@Model.SelectedCurrencyCode</span>
+                    </div>
                 </div>
-                <div class="toolbar-chip">
-                    <span class="chip-label"><i class="fas fa-calendar-alt ms-1"></i> الفترة</span>
-                    <span class="chip-value">@dateRangeLabel</span>
-                </div>
-                <div class="toolbar-chip">
-                    <span class="chip-label"><i class="fas fa-coins ms-1"></i> العملة</span>
-                    <span class="chip-value">@Model.SelectedCurrencyCode</span>
-                </div>
-            </div>
+            }
         </div>
     </div>
 
@@ -84,7 +108,9 @@
             </div>
 
             <div id="dashboardWidgetsGrid" class="dashboard-widgets-grid">
-                <div class="dashboard-widget" data-widget-id="search" data-widget-name="البحث السريع" data-default-size="large">
+                @if (canViewSearch)
+                {
+                    <div class="dashboard-widget" data-widget-id="search" data-widget-name="البحث السريع" data-default-size="large">
                     <div class="widget-controls" aria-hidden="true">
                         <button type="button" class="widget-control-btn widget-drag-handle" title="سحب لترتيب الودجت">
                             <i class="fas fa-grip-vertical"></i>
@@ -101,23 +127,26 @@
                             <i class="fas fa-eye-slash"></i>
                         </button>
                     </div>
-                    <section class="card dashboard-search-card shadow-sm border-0 mb-0">
-                        <div class="card-body">
-                            <div class="dashboard-search-header d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
-                                <div>
-                                    <span class="search-chip">بحث سريع</span>
-                                    <h5 class="mt-2 mb-1">ابحث عن المعاملات وفلتر النتائج بسهولة</h5>
-                                    <p class="text-muted mb-0">اختر الفرع والفترة الزمنية والعملة المناسبة، أو ابدأ فلترة جديدة لإظهار جميع البيانات المتاحة.</p>
+                        <section class="card dashboard-search-card shadow-sm border-0 mb-0">
+                            <div class="card-body">
+                                <div class="dashboard-search-header d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+                                    <div>
+                                        <span class="search-chip">بحث سريع</span>
+                                        <h5 class="mt-2 mb-1">ابحث عن المعاملات وفلتر النتائج بسهولة</h5>
+                                        <p class="text-muted mb-0">اختر الفرع والفترة الزمنية والعملة المناسبة، أو ابدأ فلترة جديدة لإظهار جميع البيانات المتاحة.</p>
+                                    </div>
+                                    <div class="search-actions d-flex flex-wrap gap-2">
+                                        <button type="button" class="btn btn-outline-secondary" id="resetFilters">
+                                            <i class="fas fa-undo-alt ms-1"></i> إعادة التعيين
+                                        </button>
+                                        @if (canAccessReports)
+                                        {
+                                            <a href="@Url.Action("Index", "Reports")" class="btn btn-primary">
+                                                <i class="fas fa-chart-line ms-1"></i> التقارير المالية
+                                            </a>
+                                        }
+                                    </div>
                                 </div>
-                                <div class="search-actions d-flex flex-wrap gap-2">
-                                    <button type="button" class="btn btn-outline-secondary" id="resetFilters">
-                                        <i class="fas fa-undo-alt ms-1"></i> إعادة التعيين
-                                    </button>
-                                    <a href="@Url.Action("Index", "Reports")" class="btn btn-primary">
-                                        <i class="fas fa-chart-line ms-1"></i> التقارير المالية
-                                    </a>
-                                </div>
-                            </div>
                             <div class="dashboard-search-fields row g-3">
                                 <div class="col-12 col-lg-3">
                                     <label for="branchFilter" class="form-label">فلتر حسب الفرع</label>
@@ -169,38 +198,87 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="dashboard-search-suggestions mt-4">
-                                <div class="suggestion-card">
-                                    <h6 class="suggestion-title"><i class="fas fa-layer-group ms-1"></i> التصنيفات</h6>
-                                    <ul class="suggestion-list">
-                                        <li><a href="@Url.Action("Index", "Accounts")">إدارة الحسابات</a></li>
-                                        <li><a href="@Url.Action("Index", "JournalEntries")">القيود المالية</a></li>
-                                        <li><a href="@Url.Action("Index", "Branches")">الفروع</a></li>
-                                        <li><a href="@Url.Action("Index", "CostCenters")">مراكز التكلفة</a></li>
-                                    </ul>
+                            @if (hasAnySuggestions)
+                            {
+                                <div class="dashboard-search-suggestions mt-4">
+                                    @if (hasCategorySuggestions)
+                                    {
+                                        <div class="suggestion-card">
+                                            <h6 class="suggestion-title"><i class="fas fa-layer-group ms-1"></i> التصنيفات</h6>
+                                            <ul class="suggestion-list">
+                                                @if (canAccessAccounts)
+                                                {
+                                                    <li><a href="@Url.Action("Index", "Accounts")">إدارة الحسابات</a></li>
+                                                }
+                                                @if (canAccessJournal)
+                                                {
+                                                    <li><a href="@Url.Action("Index", "JournalEntries")">القيود المالية</a></li>
+                                                }
+                                                @if (canAccessBranches)
+                                                {
+                                                    <li><a href="@Url.Action("Index", "Branches")">الفروع</a></li>
+                                                }
+                                                @if (canAccessCostCenters)
+                                                {
+                                                    <li><a href="@Url.Action("Index", "CostCenters")">مراكز التكلفة</a></li>
+                                                }
+                                            </ul>
+                                        </div>
+                                    }
+                                    @if (hasPopularSuggestions)
+                                    {
+                                        <div class="suggestion-card">
+                                            <h6 class="suggestion-title"><i class="fas fa-star ms-1"></i> عناصر شائعة</h6>
+                                            <ul class="suggestion-list">
+                                                @if (canViewDashboard)
+                                                {
+                                                    <li><a href="@Url.Action("Index", "Dashboard")">لوحة التحكم</a></li>
+                                                }
+                                                @if (canAccessReports)
+                                                {
+                                                    <li><a href="@Url.Action("Index", "Reports")">التقارير المالية</a></li>
+                                                }
+                                                @if (canAccessUsers)
+                                                {
+                                                    <li><a href="@Url.Action("Index", "Users")">إدارة المستخدمين</a></li>
+                                                }
+                                                @if (canAccessSuppliers)
+                                                {
+                                                    <li><a href="@Url.Action("Index", "Suppliers")">الموردون</a></li>
+                                                }
+                                            </ul>
+                                        </div>
+                                    }
+                                    @if (hasQuickActionSuggestions)
+                                    {
+                                        <div class="suggestion-card">
+                                            <h6 class="suggestion-title"><i class="fas fa-bolt ms-1"></i> إجراءات سريعة</h6>
+                                            <ul class="suggestion-list">
+                                                @if (canCreateReceiptVouchers)
+                                                {
+                                                    <li><a href="@Url.Action("Create", "ReceiptVouchers")">سند قبض جديد</a></li>
+                                                }
+                                                @if (canCreateDisbursementVouchers)
+                                                {
+                                                    <li><a href="@Url.Action("Create", "DisbursementVouchers")">سند صرف جديد</a></li>
+                                                }
+                                                @if (canCreateJournalEntries)
+                                                {
+                                                    <li><a href="@Url.Action("Create", "JournalEntries")">قيد مالي جديد</a></li>
+                                                }
+                                                @if (canCreateAssets)
+                                                {
+                                                    <li><a href="@Url.Action("Create", "Assets")">إضافة أصل</a></li>
+                                                }
+                                            </ul>
+                                        </div>
+                                    }
                                 </div>
-                                <div class="suggestion-card">
-                                    <h6 class="suggestion-title"><i class="fas fa-star ms-1"></i> عناصر شائعة</h6>
-                                    <ul class="suggestion-list">
-                                        <li><a href="@Url.Action("Index", "Dashboard")">لوحة التحكم</a></li>
-                                        <li><a href="@Url.Action("Index", "Reports")">التقارير المالية</a></li>
-                                        <li><a href="@Url.Action("Index", "Users")">إدارة المستخدمين</a></li>
-                                        <li><a href="@Url.Action("Index", "Suppliers")">الموردون</a></li>
-                                    </ul>
-                                </div>
-                                <div class="suggestion-card">
-                                    <h6 class="suggestion-title"><i class="fas fa-bolt ms-1"></i> إجراءات سريعة</h6>
-                                    <ul class="suggestion-list">
-                                        <li><a href="@Url.Action("Create", "ReceiptVouchers")">سند قبض جديد</a></li>
-                                        <li><a href="@Url.Action("Create", "DisbursementVouchers")">سند صرف جديد</a></li>
-                                        <li><a href="@Url.Action("Create", "JournalEntries")">قيد مالي جديد</a></li>
-                                        <li><a href="@Url.Action("Create", "Assets")">إضافة أصل</a></li>
-                                    </ul>
-                                </div>
-                            </div>
+                            }
                         </div>
                     </section>
                 </div>
+                }
 
                 @if (canViewStats)
                 {
@@ -414,32 +492,54 @@
                                 <span class="text-muted small">انتقل إلى أكثر الصفحات استخداماً في النظام</span>
                             </div>
                             <div class="card-body">
-                                <div class="quick-links-grid">
-                                    <a href="@Url.Action("Index", "Accounts")" class="quick-link-tile">
-                                        <i class="fas fa-list-alt"></i>
-                                        <span>إدارة الحسابات</span>
-                                    </a>
-                                    <a href="@Url.Action("Tree", "Accounts")" class="quick-link-tile">
-                                        <i class="fas fa-sitemap"></i>
-                                        <span>شجرة الحسابات</span>
-                                    </a>
-                                    <a href="@Url.Action("Index", "JournalEntries")" class="quick-link-tile">
-                                        <i class="fas fa-book"></i>
-                                        <span>القيود المالية</span>
-                                    </a>
-                                    <a href="@Url.Action("Index", "Reports")" class="quick-link-tile">
-                                        <i class="fas fa-chart-bar"></i>
-                                        <span>التقارير المالية</span>
-                                    </a>
-                                    <a href="@Url.Action("Index", "Branches")" class="quick-link-tile">
-                                        <i class="fas fa-building"></i>
-                                        <span>إدارة الفروع</span>
-                                    </a>
-                                    <a href="@Url.Action("Index", "CostCenters")" class="quick-link-tile">
-                                        <i class="fas fa-bullseye"></i>
-                                        <span>مراكز التكلفة</span>
-                                    </a>
-                                </div>
+                                @if (hasQuickLinkTiles)
+                                {
+                                    <div class="quick-links-grid">
+                                        @if (canAccessAccounts)
+                                        {
+                                            <a href="@Url.Action("Index", "Accounts")" class="quick-link-tile">
+                                                <i class="fas fa-list-alt"></i>
+                                                <span>إدارة الحسابات</span>
+                                            </a>
+                                            <a href="@Url.Action("Tree", "Accounts")" class="quick-link-tile">
+                                                <i class="fas fa-sitemap"></i>
+                                                <span>شجرة الحسابات</span>
+                                            </a>
+                                        }
+                                        @if (canAccessJournal)
+                                        {
+                                            <a href="@Url.Action("Index", "JournalEntries")" class="quick-link-tile">
+                                                <i class="fas fa-book"></i>
+                                                <span>القيود المالية</span>
+                                            </a>
+                                        }
+                                        @if (canAccessReports)
+                                        {
+                                            <a href="@Url.Action("Index", "Reports")" class="quick-link-tile">
+                                                <i class="fas fa-chart-bar"></i>
+                                                <span>التقارير المالية</span>
+                                            </a>
+                                        }
+                                        @if (canAccessBranches)
+                                        {
+                                            <a href="@Url.Action("Index", "Branches")" class="quick-link-tile">
+                                                <i class="fas fa-building"></i>
+                                                <span>إدارة الفروع</span>
+                                            </a>
+                                        }
+                                        @if (canAccessCostCenters)
+                                        {
+                                            <a href="@Url.Action("Index", "CostCenters")" class="quick-link-tile">
+                                                <i class="fas fa-bullseye"></i>
+                                                <span>مراكز التكلفة</span>
+                                            </a>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-muted mb-0">لا توجد روابط متاحة بحسب صلاحياتك الحالية.</p>
+                                }
                             </div>
                         </section>
                     </div>
