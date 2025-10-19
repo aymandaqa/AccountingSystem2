@@ -146,10 +146,17 @@
                 const checkbox = item.querySelector('input[type="checkbox"]');
                 const badge = item.querySelector('.inherited-badge');
                 if (checkbox) {
+                    const isInitiallyInherited = checkbox.dataset.inherited === 'true';
+                    checkbox.dataset.manual = (!isInitiallyInherited && checkbox.checked) ? 'true' : 'false';
+
                     checkbox.addEventListener('change', function () {
-                        if (this.dataset.inherited === 'true' && !this.checked) {
+                        if (this.dataset.inherited === 'true') {
                             this.checked = true;
+                            this.dataset.manual = 'false';
+                            return;
                         }
+
+                        this.dataset.manual = this.checked ? 'true' : 'false';
                     });
                 }
 
@@ -181,6 +188,11 @@
                         value.checkbox.dataset.inherited = isInherited ? 'true' : 'false';
                         if (isInherited) {
                             value.checkbox.checked = true;
+                            if (value.checkbox.dataset.manual !== 'true') {
+                                value.checkbox.dataset.manual = 'false';
+                            }
+                        } else if (value.checkbox.dataset.manual !== 'true') {
+                            value.checkbox.checked = false;
                         }
                     }
                     if (value.badge) {
