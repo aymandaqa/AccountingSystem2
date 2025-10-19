@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
@@ -220,7 +221,7 @@ namespace AccountingSystem.Controllers
                 return false;
             }
 
-            var requestHost = Request?.Host;
+            HostString requestHost = Request?.Host ?? default;
             if (!requestHost.HasValue)
             {
                 return false;
