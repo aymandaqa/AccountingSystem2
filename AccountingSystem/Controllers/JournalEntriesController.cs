@@ -697,6 +697,39 @@ namespace AccountingSystem.Controllers
                 return BadRequest("لا يمكن حذف هذا القيد في حالته الحالية.");
             }
 
+            var relatedEntities = new List<string>();
+
+            if (await _context.SalaryPayments.AnyAsync(p => p.JournalEntryId == id))
+            {
+                relatedEntities.Add("سندات صرف الرواتب");
+            }
+
+            if (await _context.EmployeeAdvances.AnyAsync(a => a.JournalEntryId == id))
+            {
+                relatedEntities.Add("سلف الموظفين");
+            }
+
+            if (await _context.PaymentTransfers.AnyAsync(t => t.JournalEntryId == id))
+            {
+                relatedEntities.Add("تحويلات الحسابات");
+            }
+
+            if (await _context.Expenses.AnyAsync(e => e.JournalEntryId == id))
+            {
+                relatedEntities.Add("المصروفات");
+            }
+
+            if (await _context.CompoundJournalExecutionLogs.AnyAsync(l => l.JournalEntryId == id))
+            {
+                relatedEntities.Add("سجل تنفيذ القيود المركبة");
+            }
+
+            if (relatedEntities.Count > 0)
+            {
+                var relatedText = string.Join("، ", relatedEntities);
+                return BadRequest($"لا يمكن حذف هذا القيد لأنه مرتبط بـ: {relatedText}. يرجى حذف السجلات المرتبطة أولاً.");
+            }
+
             if (entry.Status == JournalEntryStatus.Posted)
             {
                 foreach (var line in entry.Lines)
