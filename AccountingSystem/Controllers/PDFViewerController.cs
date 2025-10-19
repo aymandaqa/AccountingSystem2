@@ -53,9 +53,52 @@ namespace AccountingSystem.Controllers
                         {
                             ServicePointManager.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
 
-                            WebClient WebClient = new WebClient();
-                            byte[] pdfDoc = WebClient.DownloadData(jsonData["document"]);
-                            stream = new MemoryStream(pdfDoc);
+                            if (TryReadLocalFileFromUrl(jsonData["document"], out byte[] localBytes))
+                            {
+                                stream = new MemoryStream(localBytes);
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    using (WebClient webClient = new WebClient())
+                                    {
+                                        byte[] pdfDoc = webClient.DownloadData(jsonData["document"]);
+                                        stream = new MemoryStream(pdfDoc);
+                                    }
+                                }
+                                catch (WebException ex)
+                                {
+                                    if (ex.Response is HttpWebResponse httpResponse)
+                                    {
+                                        if (httpResponse.StatusCode == HttpStatusCode.NotFound)
+                                        {
+                                            return StatusCode((int)HttpStatusCode.NotFound, $"Document '{jsonData["document"]}' was not found.");
+                                        }
+
+                                        string errorDetails = string.Empty;
+                                        using (var responseStream = httpResponse.GetResponseStream())
+                                        {
+                                            if (responseStream != null)
+                                            {
+                                                using (var reader = new StreamReader(responseStream))
+                                                {
+                                                    errorDetails = reader.ReadToEnd();
+                                                }
+                                            }
+                                        }
+
+                                        if (string.IsNullOrWhiteSpace(errorDetails))
+                                        {
+                                            errorDetails = $"Unable to download '{jsonData["document"]}'. Remote server returned status {(int)httpResponse.StatusCode} ({httpResponse.StatusDescription}).";
+                                        }
+
+                                        return StatusCode((int)httpResponse.StatusCode, errorDetails);
+                                    }
+
+                                    return StatusCode((int)HttpStatusCode.BadGateway, $"Unable to download '{jsonData["document"]}'. {ex.Message}");
+                                }
+                            }
                         }
                         else
                         {
@@ -160,6 +203,63 @@ namespace AccountingSystem.Controllers
                 documentPath = document;
             }
             return documentPath;
+        }
+
+        private bool TryReadLocalFileFromUrl(string url, out byte[] bytes)
+        {
+            bytes = null;
+
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                return false;
+            }
+
+            if (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var requestHost = Request?.Host;
+            if (!requestHost.HasValue)
+            {
+                return false;
+            }
+
+            string currentHost = requestHost.Host;
+            if (!string.Equals(uri.Host, currentHost, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            string relativePath = uri.AbsolutePath.TrimStart('/');
+            if (string.IsNullOrWhiteSpace(relativePath))
+            {
+                return false;
+            }
+
+            string webRootPath = _hostingEnvironment.WebRootPath;
+            if (string.IsNullOrEmpty(webRootPath))
+            {
+                return false;
+            }
+
+            string candidatePath = Path.Combine(webRootPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+            string fullCandidatePath = Path.GetFullPath(candidatePath);
+            string fullWebRoot = Path.GetFullPath(webRootPath);
+
+            if (!fullCandidatePath.StartsWith(fullWebRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (!System.IO.File.Exists(fullCandidatePath))
+            {
+                return false;
+            }
+
+            bytes = System.IO.File.ReadAllBytes(fullCandidatePath);
+            return true;
         }
 
     }
