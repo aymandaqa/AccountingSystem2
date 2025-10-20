@@ -1,6 +1,9 @@
 @model IEnumerable<AccountingSystem.Models.CashBoxClosure>
+@using System.Linq
 @{
     ViewData["Title"] = "إغلاقات الصندوق";
+    var breakdowns = ViewBag.CashClosureBreakdowns as Dictionary<int, Dictionary<int, int>> ?? new();
+    var unitNames = ViewBag.CashClosureUnitNames as Dictionary<int, string> ?? new();
 }
 
 <div class="container mt-4">
@@ -16,6 +19,7 @@
                         <tr>
                             <th>التاريخ</th>
                             <th>المبلغ المعدود</th>
+                            <th>تفاصيل الفئات</th>
                             <th>ملاحظة</th>
                             <th>الحالة</th>
                             <th>سبب</th>
@@ -24,10 +28,25 @@
                     <tbody>
                         @foreach (var item in Model)
                         {
-                            var diff = item.CountedAmount - item.OpeningBalance;
                             <tr>
                                 <td>@item.CreatedAt.ToString("dd/MM/yyyy")</td>
                                 <td>@item.CountedAmount.ToString("N2")</td>
+                                <td>
+                                    @if (breakdowns.TryGetValue(item.Id, out var units) && units.Any())
+                                    {
+                                        <ul class="mb-0 small">
+                                            @foreach (var entry in units.OrderByDescending(kvp => kvp.Key))
+                                            {
+                                                var label = unitNames.TryGetValue(entry.Key, out var name) ? name : $"فئة رقم {entry.Key}";
+                                                <li>@label: @entry.Value</li>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
                                 <td>@item.Notes </td>
                                 <td>@item.Status</td>
                                 <td>@item.Reason</td>

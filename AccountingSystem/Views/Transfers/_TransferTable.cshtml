@@ -1,4 +1,10 @@
 @model IEnumerable<AccountingSystem.Models.PaymentTransfer>
+@using System.Linq
+@{
+    var breakdowns = ViewBag.TransferCurrencyBreakdowns as Dictionary<int, Dictionary<int, int>> ?? new();
+    var unitNames = ViewBag.CurrencyUnitNames as Dictionary<int, string> ?? new();
+}
+
 <table class="table">
     <thead>
         <tr>
@@ -7,6 +13,7 @@
             <th>المستلم</th>
             <th>فرع الاستقبال</th>
             <th>المبلغ</th>
+            <th>تفاصيل الفئات</th>
             <th>الحالة</th>
             <th>التاريخ</th>
             <th></th>
@@ -21,6 +28,22 @@
             <td>@(item.Receiver?.FullName ?? item.ReceiverId)</td>
             <td>@item.ToBranch?.NameAr</td>
             <td>@item.Amount</td>
+            <td>
+                @if (breakdowns.TryGetValue(item.Id, out var units) && units.Any())
+                {
+                    <ul class="mb-0 small">
+                        @foreach (var entry in units.OrderByDescending(kvp => kvp.Key))
+                        {
+                            var label = unitNames.TryGetValue(entry.Key, out var name) ? name : $"فئة رقم {entry.Key}";
+                            <li>@label: @entry.Value</li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <span class="text-muted">-</span>
+                }
+            </td>
             <td>@item.Status</td>
             <td>@item.CreatedAt.ToString("dd/MM/yyyy")</td>
             <td>
