@@ -97,7 +97,7 @@
                                                 var searchData = $"{permission.DisplayName} {permission.Category}".ToLowerInvariant();
                                                 <div class="col-sm-6 permission-item" data-permission-text="@searchData" data-permission-id="@permission.PermissionId">
                                                     <div class="form-check rounded border p-3 h-100 shadow-sm">
-                                                        <input asp-for="Permissions[index].IsGranted" class="form-check-input me-2" data-inherited="@permission.IsInherited.ToString().ToLowerInvariant()" />
+                                                        <input asp-for="Permissions[index].IsGranted" class="form-check-input me-2" data-inherited="@permission.IsInherited.ToString().ToLowerInvariant()" data-direct="@permission.HasDirectGrant.ToString().ToLowerInvariant()" />
                                                         <input asp-for="Permissions[index].PermissionId" type="hidden" />
                                                         <input asp-for="Permissions[index].DisplayName" type="hidden" />
                                                         <input asp-for="Permissions[index].Category" type="hidden" />
@@ -147,7 +147,8 @@
                 const badge = item.querySelector('.inherited-badge');
                 if (checkbox) {
                     const isInitiallyInherited = checkbox.dataset.inherited === 'true';
-                    checkbox.dataset.manual = (!isInitiallyInherited && checkbox.checked) ? 'true' : 'false';
+                    const hasDirectGrant = checkbox.dataset.direct === 'true';
+                    checkbox.dataset.manual = (hasDirectGrant || (!isInitiallyInherited && checkbox.checked)) ? 'true' : 'false';
                     checkbox.dataset.touched = 'false';
 
                     checkbox.addEventListener('change', function () {

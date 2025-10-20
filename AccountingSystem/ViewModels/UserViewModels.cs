@@ -32,6 +32,7 @@ namespace AccountingSystem.ViewModels
         public string Category { get; set; } = string.Empty;
         public bool IsGranted { get; set; }
         public bool IsInherited { get; set; }
+        public bool HasDirectGrant { get; set; }
     }
 
     public class PermissionGroupSelectionViewModel
