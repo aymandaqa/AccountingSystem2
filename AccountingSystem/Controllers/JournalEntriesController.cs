@@ -165,13 +165,19 @@ namespace AccountingSystem.Controllers
                 query = query.Where(j => j.Lines.Sum(l => l.DebitAmount) == amountFilter);
             }
 
-            var linesCountValue = Request.Query[$"columns[7][search][value]"].ToString();
+            var totalCreditColumnValue = Request.Query[$"columns[7][search][value]"].ToString();
+            if (!string.IsNullOrWhiteSpace(totalCreditColumnValue) && decimal.TryParse(totalCreditColumnValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var totalCreditFilter))
+            {
+                query = query.Where(j => j.Lines.Sum(l => l.CreditAmount) == totalCreditFilter);
+            }
+
+            var linesCountValue = Request.Query[$"columns[8][search][value]"].ToString();
             if (!string.IsNullOrWhiteSpace(linesCountValue) && int.TryParse(linesCountValue, out var linesFilter))
             {
                 query = query.Where(j => j.Lines.Count == linesFilter);
             }
 
-            var statusColumnValue = Request.Query[$"columns[8][search][value]"].ToString();
+            var statusColumnValue = Request.Query[$"columns[9][search][value]"].ToString();
             if (!string.IsNullOrWhiteSpace(statusColumnValue) && Enum.TryParse<JournalEntryStatus>(statusColumnValue, out var statusColumn))
             {
                 query = query.Where(j => j.Status == statusColumn);
@@ -831,8 +837,9 @@ namespace AccountingSystem.Controllers
                     : query.OrderByDescending(j =>
                         (j.CreatedBy.FirstName ?? string.Empty) + " " + (j.CreatedBy.LastName ?? string.Empty) + " " + (j.CreatedBy.UserName ?? string.Empty)),
                 6 => ascending ? query.OrderBy(j => j.Lines.Sum(l => l.DebitAmount)) : query.OrderByDescending(j => j.Lines.Sum(l => l.DebitAmount)),
-                7 => ascending ? query.OrderBy(j => j.Lines.Count) : query.OrderByDescending(j => j.Lines.Count),
-                8 => ascending ? query.OrderBy(j => j.Status) : query.OrderByDescending(j => j.Status),
+                7 => ascending ? query.OrderBy(j => j.Lines.Sum(l => l.CreditAmount)) : query.OrderByDescending(j => j.Lines.Sum(l => l.CreditAmount)),
+                8 => ascending ? query.OrderBy(j => j.Lines.Count) : query.OrderByDescending(j => j.Lines.Count),
+                9 => ascending ? query.OrderBy(j => j.Status) : query.OrderByDescending(j => j.Status),
                 _ => ascending ? query.OrderBy(j => j.Date) : query.OrderByDescending(j => j.Date)
             };
         }
