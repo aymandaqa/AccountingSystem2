@@ -1,6 +1,9 @@
 @model IEnumerable<AccountingSystem.Models.CashBoxClosure>
+@using System.Linq
 @{
     ViewData["Title"] = "طلبات إغلاق الصندوق";
+    var breakdowns = ViewBag.CashClosureBreakdowns as Dictionary<int, Dictionary<int, int>> ?? new();
+    var unitNames = ViewBag.CashClosureUnitNames as Dictionary<int, string> ?? new();
 }
 
 <div class="container mt-4">
@@ -18,6 +21,7 @@
                             <th>الحساب</th>
                             <th>الفرع</th>
                             <th>المبلغ المعدود</th>
+                            <th>تفاصيل الفئات</th>
                             <th>الرصيد</th>
                             <th>الفرق</th>
                             <th>الإجراءات</th>
@@ -32,6 +36,22 @@
                                 <td>@item.Account?.NameAr</td>
                                 <td>@item.Branch?.NameAr</td>
                                 <td>@item.CountedAmount.ToString("N2")</td>
+                                <td>
+                                    @if (breakdowns.TryGetValue(item.Id, out var units) && units.Any())
+                                    {
+                                        <ul class="mb-0 small">
+                                            @foreach (var entry in units.OrderByDescending(kvp => kvp.Key))
+                                            {
+                                                var label = unitNames.TryGetValue(entry.Key, out var name) ? name : $"فئة رقم {entry.Key}";
+                                                <li>@label: @entry.Value</li>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
                                 <td>@item.Account.CurrentBalance.ToString("N2")</td>
                                 <td class="@(diff == 0 ? "text-success" : "text-danger")">@diff.ToString("N2")</td>
                                 <td>

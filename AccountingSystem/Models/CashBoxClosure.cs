@@ -29,6 +29,8 @@ namespace AccountingSystem.Models
         [StringLength(500)]
         public string? Notes { get; set; }
 
+        public string? CurrencyBreakdownJson { get; set; }
+
         [Display(Name = "الحالة")]
         public CashBoxClosureStatus Status { get; set; } = CashBoxClosureStatus.Pending;
 

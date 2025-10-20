@@ -33,6 +33,8 @@ namespace AccountingSystem.ViewModels
 
         public Dictionary<int, List<CurrencyUnitOption>> CurrencyUnits { get; set; } = new();
 
+        public List<CurrencyUnitCountInput> CurrencyUnitCounts { get; set; } = new();
+
         public class SenderAccountOption
         {
             public int AccountId { get; set; }
@@ -50,8 +52,46 @@ namespace AccountingSystem.ViewModels
 
         public class CurrencyUnitOption
         {
+            public int CurrencyUnitId { get; set; }
             public string Name { get; set; } = string.Empty;
             public decimal ValueInBaseUnit { get; set; }
         }
+
+        public class CurrencyUnitCountInput
+        {
+            public int CurrencyUnitId { get; set; }
+            public int Count { get; set; }
+        }
+    }
+
+    public class TransferEditViewModel
+    {
+        public int Id { get; set; }
+
+        [Required(ErrorMessage = "الرجاء اختيار المستلم")]
+        public string? ReceiverId { get; set; }
+
+        [Display(Name = "المبلغ")]
+        [Range(typeof(decimal), "0.01", "79228162514264337593543950335", ErrorMessage = "المبلغ يجب أن يكون أكبر من صفر")]
+        public decimal Amount { get; set; }
+
+        [Display(Name = "ملاحظات")]
+        public string? Notes { get; set; }
+
+        public string SenderBranch { get; set; } = string.Empty;
+
+        public IEnumerable<SelectListItem> Receivers { get; set; } = new List<SelectListItem>();
+
+        public Dictionary<string, string> ReceiverBranches { get; set; } = new();
+
+        public Dictionary<string, List<TransferCreateViewModel.ReceiverAccountOption>> ReceiverAccounts { get; set; } = new();
+
+        public List<TransferCreateViewModel.CurrencyUnitOption> CurrencyUnits { get; set; } = new();
+
+        public List<TransferCreateViewModel.CurrencyUnitCountInput> CurrencyUnitCounts { get; set; } = new();
+
+        public int CurrencyId { get; set; }
+
+        public string CurrencyCode { get; set; } = string.Empty;
     }
 }

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System;
 using System.Linq;
+using System.Text.Json;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
@@ -140,17 +141,69 @@ namespace AccountingSystem.Controllers
                 return View(model);
             }
 
+            var breakdownMap = model.CurrencyUnitCounts?
+                .Where(c => c.CurrencyUnitId > 0 && c.Count > 0)
+                .GroupBy(c => c.CurrencyUnitId)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Count))
+                ?? new Dictionary<int, int>();
+
+            decimal finalCountedAmount = model.CountedAmount;
+            string? breakdownJson = null;
+
+            if (breakdownMap.Any())
+            {
+                var units = await _context.CurrencyUnits
+                    .Where(u => breakdownMap.Keys.Contains(u.Id))
+                    .Select(u => new { u.Id, u.CurrencyId, u.ValueInBaseUnit })
+                    .ToListAsync();
+
+                if (units.Count != breakdownMap.Count || units.Any(u => account == null || u.CurrencyId != account.CurrencyId))
+                {
+                    ModelState.AddModelError(string.Empty, "بيانات الفئات غير صحيحة.");
+                    if (account != null)
+                    {
+                        model.CurrencyId = account.CurrencyId;
+                        model.CurrencyCode = account.Currency?.Code ?? string.Empty;
+                    }
+                    await PopulateAccountDataAsync(model, accounts, account);
+                    return View(model);
+                }
+
+                decimal amountFromUnits = 0m;
+                foreach (var unit in units)
+                {
+                    amountFromUnits += unit.ValueInBaseUnit * breakdownMap[unit.Id];
+                }
+
+                if (amountFromUnits <= 0)
+                {
+                    ModelState.AddModelError(string.Empty, "المبلغ الناتج عن الفئات يجب أن يكون أكبر من صفر.");
+                    if (account != null)
+                    {
+                        model.CurrencyId = account.CurrencyId;
+                        model.CurrencyCode = account.Currency?.Code ?? string.Empty;
+                    }
+                    await PopulateAccountDataAsync(model, accounts, account);
+                    return View(model);
+                }
+
+                finalCountedAmount = Math.Round(amountFromUnits, 2, MidpointRounding.AwayFromZero);
+                model.CountedAmount = finalCountedAmount;
+                breakdownJson = JsonSerializer.Serialize(breakdownMap);
+            }
+
             var closure = new CashBoxClosure
             {
                 UserId = user.Id,
                 AccountId = account!.Id,
                 BranchId = user.PaymentBranchId.Value,
-                CountedAmount = model.CountedAmount,
+                CountedAmount = finalCountedAmount,
                 OpeningBalance = openingBalance,
                 ClosingBalance = account.CurrentBalance,
                 Notes = model.Notes,
                 Status = CashBoxClosureStatus.Pending,
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.Now,
+                CurrencyBreakdownJson = breakdownJson
             };
 
             _context.CashBoxClosures.Add(closure);
@@ -212,6 +265,7 @@ namespace AccountingSystem.Controllers
                 .OrderBy(u => u.ValueInBaseUnit)
                 .Select(u => new
                 {
+                    u.Id,
                     u.CurrencyId,
                     u.Name,
                     u.ValueInBaseUnit
@@ -224,6 +278,7 @@ namespace AccountingSystem.Controllers
                     g => g.Key,
                     g => g.Select(u => new CashBoxClosureCreateViewModel.CurrencyUnitOption
                     {
+                        CurrencyUnitId = u.Id,
                         Name = u.Name,
                         ValueInBaseUnit = u.ValueInBaseUnit
                     }).ToList()
@@ -240,6 +295,36 @@ namespace AccountingSystem.Controllers
                 .Where(c => c.UserId == userId)
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync();
+            var breakdowns = new Dictionary<int, Dictionary<int, int>>();
+            var unitIds = new HashSet<int>();
+
+            foreach (var closure in closures)
+            {
+                if (string.IsNullOrEmpty(closure.CurrencyBreakdownJson))
+                    continue;
+
+                var parsed = JsonSerializer.Deserialize<Dictionary<int, int>>(closure.CurrencyBreakdownJson);
+                if (parsed == null || parsed.Count == 0)
+                    continue;
+
+                breakdowns[closure.Id] = parsed;
+                foreach (var unitId in parsed.Keys)
+                {
+                    unitIds.Add(unitId);
+                }
+            }
+
+            Dictionary<int, string> unitNames = new();
+            if (unitIds.Count > 0)
+            {
+                unitNames = await _context.CurrencyUnits
+                    .Where(u => unitIds.Contains(u.Id))
+                    .OrderByDescending(u => u.ValueInBaseUnit)
+                    .ToDictionaryAsync(u => u.Id, u => $"{u.Name} ({u.ValueInBaseUnit:N2})");
+            }
+
+            ViewBag.CashClosureBreakdowns = breakdowns;
+            ViewBag.CashClosureUnitNames = unitNames;
             return View(closures);
         }
 
@@ -253,6 +338,36 @@ namespace AccountingSystem.Controllers
                 .Where(c => c.Status == CashBoxClosureStatus.Pending)
                 .OrderBy(c => c.CreatedAt)
                 .ToListAsync();
+            var breakdowns = new Dictionary<int, Dictionary<int, int>>();
+            var unitIds = new HashSet<int>();
+
+            foreach (var closure in closures)
+            {
+                if (string.IsNullOrEmpty(closure.CurrencyBreakdownJson))
+                    continue;
+
+                var parsed = JsonSerializer.Deserialize<Dictionary<int, int>>(closure.CurrencyBreakdownJson);
+                if (parsed == null || parsed.Count == 0)
+                    continue;
+
+                breakdowns[closure.Id] = parsed;
+                foreach (var unitId in parsed.Keys)
+                {
+                    unitIds.Add(unitId);
+                }
+            }
+
+            Dictionary<int, string> unitNames = new();
+            if (unitIds.Count > 0)
+            {
+                unitNames = await _context.CurrencyUnits
+                    .Where(u => unitIds.Contains(u.Id))
+                    .OrderByDescending(u => u.ValueInBaseUnit)
+                    .ToDictionaryAsync(u => u.Id, u => $"{u.Name} ({u.ValueInBaseUnit:N2})");
+            }
+
+            ViewBag.CashClosureBreakdowns = breakdowns;
+            ViewBag.CashClosureUnitNames = unitNames;
             return View(closures);
         }
 

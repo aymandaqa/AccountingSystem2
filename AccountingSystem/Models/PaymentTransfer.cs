@@ -28,6 +28,8 @@ namespace AccountingSystem.Models
         [StringLength(500)]
         public string? Notes { get; set; }
 
+        public string? CurrencyBreakdownJson { get; set; }
+
         public TransferStatus Status { get; set; } = TransferStatus.Pending;
 
         public int? JournalEntryId { get; set; }

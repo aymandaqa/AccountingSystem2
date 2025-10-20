@@ -1,43 +1,190 @@
-@model AccountingSystem.Models.PaymentTransfer
+@model AccountingSystem.ViewModels.TransferEditViewModel
+@using System.Text.Json
+
 @{
     ViewData["Title"] = "تعديل حوالة";
+    var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    var branchesJson = JsonSerializer.Serialize(Model.ReceiverBranches, jsonOptions);
+    var accountsJson = JsonSerializer.Serialize(Model.ReceiverAccounts, jsonOptions);
+    var currencyUnitsJson = JsonSerializer.Serialize(new Dictionary<int, List<AccountingSystem.ViewModels.TransferCreateViewModel.CurrencyUnitOption>>
+    {
+        { Model.CurrencyId, Model.CurrencyUnits }
+    }, jsonOptions);
+    var currencyUnitCountsJson = JsonSerializer.Serialize(Model.CurrencyUnitCounts, jsonOptions);
 }
 
 <h2>تعديل حوالة</h2>
 
 <form asp-action="Edit" method="post">
-    <input type="hidden" name="id" value="@Model.Id" />
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <div asp-validation-summary="All" class="text-danger"></div>
+
     <div class="form-group">
-        <label>المستلم</label>
-        <select id="receiverSelect" name="receiverId" class="form-control" asp-items="ViewBag.Users"></select>
+        <label asp-for="ReceiverId"></label>
+        <select asp-for="ReceiverId" class="form-control" id="receiverSelect">
+            <option value="">اختر المستلم</option>
+            @foreach (var receiver in Model.Receivers)
+            {
+                <option value="@receiver.Value" selected="@receiver.Selected">@receiver.Text</option>
+            }
+        </select>
+        <span asp-validation-for="ReceiverId" class="text-danger"></span>
     </div>
+
     <div class="form-group">
         <label>فرع الإرسال</label>
-        <input type="text" class="form-control" value="@ViewBag.SenderBranch" disabled />
+        <input type="text" class="form-control" value="@Model.SenderBranch" disabled />
     </div>
     <div class="form-group">
         <label>فرع الاستقبال</label>
-        <input type="text" id="receiverBranch" class="form-control" value="@Model.ToBranch?.NameAr" disabled />
+        <input type="text" id="receiverBranch" class="form-control" disabled />
     </div>
     <div class="form-group">
-        <label>المبلغ</label>
-        <input type="number" step="0.01" name="amount" class="form-control" value="@Model.Amount" />
+        <label>حساب المستلم</label>
+        <input type="text" id="receiverAccountDisplay" class="form-control" disabled />
     </div>
+
+    <div class="form-group d-none" id="currencyUnitsSection">
+        <label class="d-block">تفاصيل الفئات <span id="currencyUnitsCurrencyCode" class="text-muted"></span></label>
+        <div id="currencyUnitsInputs" class="row g-2"></div>
+        <div id="currencyUnitsEmptyMessage" class="text-muted small d-none">لا توجد فئات معرفة لهذه العملة.</div>
+    </div>
+
     <div class="form-group">
-        <label>ملاحظات</label>
-        <textarea name="notes" class="form-control">@Model.Notes</textarea>
+        <label asp-for="Amount"></label>
+        <input asp-for="Amount" class="form-control" />
+        <span asp-validation-for="Amount" class="text-danger"></span>
     </div>
+
+    <div class="form-group">
+        <label asp-for="Notes"></label>
+        <textarea asp-for="Notes" class="form-control"></textarea>
+        <span asp-validation-for="Notes" class="text-danger"></span>
+    </div>
+
     <button type="submit" class="btn btn-primary">حفظ</button>
 </form>
 
 @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
     <script>
-        const branches = @Html.Raw(ViewBag.UserBranches ?? "{}");
-        const select = document.getElementById('receiverSelect');
+        const branches = @Html.Raw(branchesJson);
+        const receiverAccounts = @Html.Raw(accountsJson);
+        const currencyUnits = @Html.Raw(currencyUnitsJson);
+        let initialUnitCounts = @Html.Raw(currencyUnitCountsJson);
         const branchInput = document.getElementById('receiverBranch');
-        function updateBranch() {
-            branchInput.value = branches[select.value] || branchInput.value;
+        const accountDisplay = document.getElementById('receiverAccountDisplay');
+        const receiverSelect = document.getElementById('receiverSelect');
+        const amountInput = document.getElementById('Amount');
+        const currencyUnitsSection = document.getElementById('currencyUnitsSection');
+        const currencyUnitsInputs = document.getElementById('currencyUnitsInputs');
+        const currencyUnitsEmptyMessage = document.getElementById('currencyUnitsEmptyMessage');
+        const currencyUnitsCurrencyCode = document.getElementById('currencyUnitsCurrencyCode');
+        const currencyId = @Model.CurrencyId;
+        const currencyCode = '@Model.CurrencyCode';
+
+        if (currencyUnitsCurrencyCode && currencyCode) {
+            currencyUnitsCurrencyCode.textContent = `(${currencyCode})`;
         }
-        select.addEventListener('change', updateBranch);
+
+        function updateReceiverInfo() {
+            const receiverId = receiverSelect.value;
+            branchInput.value = branches[receiverId] || '';
+
+            const accounts = receiverAccounts[receiverId] || [];
+            const matchingAccount = accounts.find(a => a.currencyId === currencyId);
+            if (matchingAccount) {
+                accountDisplay.value = matchingAccount.displayName;
+            } else if (receiverId) {
+                accountDisplay.value = 'لا يوجد حساب متاح بنفس العملة';
+            } else {
+                accountDisplay.value = '';
+            }
+        }
+
+        function updateAmountFromUnits() {
+            const unitInputs = currencyUnitsInputs.querySelectorAll('.currency-unit-input');
+            if (!unitInputs.length) {
+                amountInput.readOnly = false;
+                return;
+            }
+
+            let total = 0;
+            unitInputs.forEach(input => {
+                const count = Number(input.value);
+                const unitValue = Number(input.dataset.value);
+                if (!Number.isNaN(count) && !Number.isNaN(unitValue)) {
+                    total += count * unitValue;
+                }
+            });
+
+            amountInput.value = total.toFixed(2);
+            amountInput.readOnly = true;
+        }
+
+        function renderCurrencyUnits() {
+            if (!currencyUnitsSection || !currencyUnitsInputs) {
+                return;
+            }
+
+            currencyUnitsInputs.innerHTML = '';
+            const units = currencyUnits[currencyId] || [];
+
+            if (!units.length) {
+                currencyUnitsSection.classList.remove('d-none');
+                currencyUnitsEmptyMessage.classList.remove('d-none');
+                amountInput.readOnly = false;
+                initialUnitCounts = [];
+                return;
+            }
+
+            const countMap = new Map((initialUnitCounts || []).map(c => [c.currencyUnitId, c.count]));
+            currencyUnitsEmptyMessage.classList.add('d-none');
+            currencyUnitsSection.classList.remove('d-none');
+            amountInput.readOnly = true;
+
+            units.forEach((unit, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'col-md-4';
+
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'input-group';
+
+                const span = document.createElement('span');
+                span.className = 'input-group-text';
+                span.textContent = unit.name;
+
+                const hiddenIdInput = document.createElement('input');
+                hiddenIdInput.type = 'hidden';
+                hiddenIdInput.name = `CurrencyUnitCounts[${index}].CurrencyUnitId`;
+                hiddenIdInput.value = unit.currencyUnitId;
+
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.min = '0';
+                input.step = '1';
+                input.className = 'form-control currency-unit-input';
+                input.placeholder = 'عدد الوحدات';
+                input.name = `CurrencyUnitCounts[${index}].Count`;
+                input.dataset.value = unit.valueInBaseUnit;
+                const existingCount = countMap.has(unit.currencyUnitId) ? countMap.get(unit.currencyUnitId) : '';
+                input.value = existingCount !== '' ? existingCount : 0;
+                input.addEventListener('input', updateAmountFromUnits);
+
+                inputGroup.appendChild(span);
+                inputGroup.appendChild(hiddenIdInput);
+                inputGroup.appendChild(input);
+                wrapper.appendChild(inputGroup);
+                currencyUnitsInputs.appendChild(wrapper);
+            });
+
+            initialUnitCounts = [];
+            updateAmountFromUnits();
+        }
+
+        receiverSelect.addEventListener('change', updateReceiverInfo);
+        updateReceiverInfo();
+        renderCurrencyUnits();
     </script>
 }

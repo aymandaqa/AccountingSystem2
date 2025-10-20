@@ -54,6 +54,36 @@ namespace AccountingSystem.Controllers
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
 
+            var breakdowns = new Dictionary<int, Dictionary<int, int>>();
+            var unitIds = new HashSet<int>();
+
+            foreach (var transfer in transfers)
+            {
+                if (string.IsNullOrEmpty(transfer.CurrencyBreakdownJson))
+                    continue;
+
+                var parsed = JsonSerializer.Deserialize<Dictionary<int, int>>(transfer.CurrencyBreakdownJson);
+                if (parsed == null || parsed.Count == 0)
+                    continue;
+
+                breakdowns[transfer.Id] = parsed;
+                foreach (var unitId in parsed.Keys)
+                {
+                    unitIds.Add(unitId);
+                }
+            }
+
+            Dictionary<int, string> unitNames = new();
+            if (unitIds.Count > 0)
+            {
+                unitNames = await _context.CurrencyUnits
+                    .Where(u => unitIds.Contains(u.Id))
+                    .OrderByDescending(u => u.ValueInBaseUnit)
+                    .ToDictionaryAsync(u => u.Id, u => $"{u.Name} ({u.ValueInBaseUnit:N2})");
+            }
+
+            ViewBag.TransferCurrencyBreakdowns = breakdowns;
+            ViewBag.CurrencyUnitNames = unitNames;
             ViewBag.CurrentUserId = user.Id;
             return View(transfers);
         }
@@ -122,7 +152,48 @@ namespace AccountingSystem.Controllers
                 return View(model);
             }
 
-            if (senderAccount.Account != null && senderAccount.Account.Nature == AccountNature.Debit && model.Amount > senderAccount.Account.CurrentBalance)
+            var breakdownMap = model.CurrencyUnitCounts?
+                .Where(c => c.CurrencyUnitId > 0 && c.Count > 0)
+                .GroupBy(c => c.CurrencyUnitId)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Count))
+                ?? new Dictionary<int, int>();
+
+            decimal finalAmount = model.Amount;
+            string? breakdownJson = null;
+
+            if (breakdownMap.Any())
+            {
+                var units = await _context.CurrencyUnits
+                    .Where(u => breakdownMap.Keys.Contains(u.Id))
+                    .Select(u => new { u.Id, u.CurrencyId, u.ValueInBaseUnit })
+                    .ToListAsync();
+
+                if (units.Count != breakdownMap.Count || units.Any(u => senderAccount.Account == null || u.CurrencyId != senderAccount.Account.CurrencyId))
+                {
+                    ModelState.AddModelError(string.Empty, "بيانات الفئات غير صحيحة.");
+                    await PopulateCreateViewModelAsync(model, sender.Id);
+                    return View(model);
+                }
+
+                decimal amountFromUnits = 0m;
+                foreach (var unit in units)
+                {
+                    amountFromUnits += unit.ValueInBaseUnit * breakdownMap[unit.Id];
+                }
+
+                if (amountFromUnits <= 0)
+                {
+                    ModelState.AddModelError(string.Empty, "المبلغ الناتج عن الفئات يجب أن يكون أكبر من صفر.");
+                    await PopulateCreateViewModelAsync(model, sender.Id);
+                    return View(model);
+                }
+
+                finalAmount = Math.Round(amountFromUnits, 2, MidpointRounding.AwayFromZero);
+                model.Amount = finalAmount;
+                breakdownJson = JsonSerializer.Serialize(breakdownMap);
+            }
+
+            if (senderAccount.Account != null && senderAccount.Account.Nature == AccountNature.Debit && finalAmount > senderAccount.Account.CurrentBalance)
             {
                 ModelState.AddModelError(nameof(model.Amount), "الرصيد المتاح في حساب الإرسال لا يكفي لإتمام العملية.");
                 await PopulateCreateViewModelAsync(model, sender.Id);
@@ -137,10 +208,11 @@ namespace AccountingSystem.Controllers
                 ToPaymentAccountId = receiverAccount.AccountId,
                 FromBranchId = sender.PaymentBranchId,
                 ToBranchId = receiver.PaymentBranchId,
-                Amount = model.Amount,
+                Amount = finalAmount,
                 Notes = model.Notes,
                 Status = TransferStatus.Pending,
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.Now,
+                CurrencyBreakdownJson = breakdownJson
             };
 
             _context.PaymentTransfers.Add(transfer);
@@ -215,54 +287,61 @@ namespace AccountingSystem.Controllers
             if (transfer == null || transfer.SenderId != userId || transfer.Status != TransferStatus.Pending)
                 return NotFound();
 
-            var users = _context.Users
-                .Where(u => u.Id != userId)
-                .Include(u => u.PaymentBranch)
-                .ToList();
-            ViewData["Users"] = new SelectList(users, "Id", "FullName", transfer.ReceiverId);
-            ViewBag.UserBranches = JsonSerializer.Serialize(users.ToDictionary(u => u.Id, u => u.PaymentBranch?.NameAr ?? ""));
-            ViewBag.SenderBranch = transfer.FromBranch?.NameAr;
-            return View(transfer);
+            var model = new TransferEditViewModel
+            {
+                Id = transfer.Id,
+                ReceiverId = transfer.ReceiverId,
+                Amount = transfer.Amount,
+                Notes = transfer.Notes
+            };
+
+            if (!await PopulateEditViewModelAsync(model, transfer))
+                return NotFound();
+
+            ViewBag.UserBranches = JsonSerializer.Serialize(model.ReceiverBranches);
+            return View(model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = "transfers.create")]
-        public async Task<IActionResult> Edit(int id, string receiverId, decimal amount, string? notes)
+        public async Task<IActionResult> Edit(TransferEditViewModel model)
         {
             var userId = _userManager.GetUserId(User);
             var transfer = await _context.PaymentTransfers
                 .Include(t => t.FromBranch)
-                .FirstOrDefaultAsync(t => t.Id == id);
+                .FirstOrDefaultAsync(t => t.Id == model.Id);
             if (transfer == null || transfer.SenderId != userId || transfer.Status != TransferStatus.Pending)
                 return NotFound();
 
-            var receiver = await _context.Users.Include(u => u.PaymentBranch).FirstOrDefaultAsync(u => u.Id == receiverId);
-            if (receiver == null || receiver.Id == userId)
+            if (!ModelState.IsValid)
             {
-                ModelState.AddModelError("receiverId", receiver == null ? "المستلم غير موجود" : "لا يمكن إرسال حوالة لنفسك");
-                var users = _context.Users
-                    .Where(u => u.Id != userId)
-                    .Include(u => u.PaymentBranch)
-                    .ToList();
-                ViewData["Users"] = new SelectList(users, "Id", "FullName", receiverId);
-                ViewBag.UserBranches = JsonSerializer.Serialize(users.ToDictionary(u => u.Id, u => u.PaymentBranch?.NameAr ?? ""));
-                ViewBag.SenderBranch = transfer.FromBranch?.NameAr;
-                return View(transfer);
+                if (!await PopulateEditViewModelAsync(model, transfer))
+                    return NotFound();
+                ViewBag.UserBranches = JsonSerializer.Serialize(model.ReceiverBranches);
+                return View(model);
             }
 
-            var fromAccount = await _context.Accounts.FindAsync(transfer.FromPaymentAccountId);
+            var receiver = await _context.Users.Include(u => u.PaymentBranch).FirstOrDefaultAsync(u => u.Id == model.ReceiverId);
+            if (receiver == null || receiver.Id == userId)
+            {
+                ModelState.AddModelError(nameof(model.ReceiverId), receiver == null ? "المستلم غير موجود" : "لا يمكن إرسال حوالة لنفسك");
+                if (!await PopulateEditViewModelAsync(model, transfer))
+                    return NotFound();
+                ViewBag.UserBranches = JsonSerializer.Serialize(model.ReceiverBranches);
+                return View(model);
+            }
+
+            var fromAccount = await _context.Accounts
+                .Include(a => a.Currency)
+                .FirstOrDefaultAsync(a => a.Id == transfer.FromPaymentAccountId);
             if (fromAccount == null)
             {
                 ModelState.AddModelError(string.Empty, "حساب الإرسال غير موجود");
-                var users = _context.Users
-                    .Where(u => u.Id != userId)
-                    .Include(u => u.PaymentBranch)
-                    .ToList();
-                ViewData["Users"] = new SelectList(users, "Id", "FullName", receiverId);
-                ViewBag.UserBranches = JsonSerializer.Serialize(users.ToDictionary(u => u.Id, u => u.PaymentBranch?.NameAr ?? ""));
-                ViewBag.SenderBranch = transfer.FromBranch?.NameAr;
-                return View(transfer);
+                if (!await PopulateEditViewModelAsync(model, transfer))
+                    return NotFound();
+                ViewBag.UserBranches = JsonSerializer.Serialize(model.ReceiverBranches);
+                return View(model);
             }
 
             var receiverAccount = await _context.UserPaymentAccounts
@@ -270,22 +349,73 @@ namespace AccountingSystem.Controllers
                 .FirstOrDefaultAsync(u => u.UserId == receiver.Id && u.CurrencyId == fromAccount.CurrencyId);
             if (receiverAccount == null)
             {
-                ModelState.AddModelError("receiverId", "لا يوجد للمستلم حساب بنفس عملة الحساب المرسل");
-                var users = _context.Users
-                    .Where(u => u.Id != userId)
-                    .Include(u => u.PaymentBranch)
-                    .ToList();
-                ViewData["Users"] = new SelectList(users, "Id", "FullName", receiverId);
-                ViewBag.UserBranches = JsonSerializer.Serialize(users.ToDictionary(u => u.Id, u => u.PaymentBranch?.NameAr ?? ""));
-                ViewBag.SenderBranch = transfer.FromBranch?.NameAr;
-                return View(transfer);
+                ModelState.AddModelError(nameof(model.ReceiverId), "لا يوجد للمستلم حساب بنفس عملة الحساب المرسل");
+                if (!await PopulateEditViewModelAsync(model, transfer))
+                    return NotFound();
+                ViewBag.UserBranches = JsonSerializer.Serialize(model.ReceiverBranches);
+                return View(model);
+            }
+
+            var breakdownMap = model.CurrencyUnitCounts?
+                .Where(c => c.CurrencyUnitId > 0 && c.Count > 0)
+                .GroupBy(c => c.CurrencyUnitId)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Count))
+                ?? new Dictionary<int, int>();
+
+            decimal finalAmount = model.Amount;
+            string? breakdownJson = null;
+
+            if (breakdownMap.Any())
+            {
+                var units = await _context.CurrencyUnits
+                    .Where(u => breakdownMap.Keys.Contains(u.Id))
+                    .Select(u => new { u.Id, u.CurrencyId, u.ValueInBaseUnit })
+                    .ToListAsync();
+
+                if (units.Count != breakdownMap.Count || units.Any(u => u.CurrencyId != fromAccount.CurrencyId))
+                {
+                    ModelState.AddModelError(string.Empty, "بيانات الفئات غير صحيحة.");
+                    if (!await PopulateEditViewModelAsync(model, transfer))
+                        return NotFound();
+                    ViewBag.UserBranches = JsonSerializer.Serialize(model.ReceiverBranches);
+                    return View(model);
+                }
+
+                decimal amountFromUnits = 0m;
+                foreach (var unit in units)
+                {
+                    amountFromUnits += unit.ValueInBaseUnit * breakdownMap[unit.Id];
+                }
+
+                if (amountFromUnits <= 0)
+                {
+                    ModelState.AddModelError(string.Empty, "المبلغ الناتج عن الفئات يجب أن يكون أكبر من صفر.");
+                    if (!await PopulateEditViewModelAsync(model, transfer))
+                        return NotFound();
+                    ViewBag.UserBranches = JsonSerializer.Serialize(model.ReceiverBranches);
+                    return View(model);
+                }
+
+                finalAmount = Math.Round(amountFromUnits, 2, MidpointRounding.AwayFromZero);
+                model.Amount = finalAmount;
+                breakdownJson = JsonSerializer.Serialize(breakdownMap);
+            }
+
+            if (fromAccount.Nature == AccountNature.Debit && finalAmount > fromAccount.CurrentBalance)
+            {
+                ModelState.AddModelError(nameof(model.Amount), "الرصيد المتاح في حساب الإرسال لا يكفي لإتمام العملية.");
+                if (!await PopulateEditViewModelAsync(model, transfer))
+                    return NotFound();
+                ViewBag.UserBranches = JsonSerializer.Serialize(model.ReceiverBranches);
+                return View(model);
             }
 
             transfer.ReceiverId = receiver.Id;
             transfer.ToPaymentAccountId = receiverAccount.AccountId;
             transfer.ToBranchId = receiver.PaymentBranchId;
-            transfer.Amount = amount;
-            transfer.Notes = notes;
+            transfer.Amount = finalAmount;
+            transfer.Notes = model.Notes;
+            transfer.CurrencyBreakdownJson = breakdownJson;
 
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
@@ -367,6 +497,7 @@ namespace AccountingSystem.Controllers
                         g => g.Key,
                         g => g.Select(u => new TransferCreateViewModel.CurrencyUnitOption
                         {
+                            CurrencyUnitId = u.Id,
                             Name = u.Name,
                             ValueInBaseUnit = u.ValueInBaseUnit
                         }).ToList()
@@ -409,6 +540,88 @@ namespace AccountingSystem.Controllers
                         DisplayName = $"{up.Account.Code} - {up.Account.NameAr} ({up.Account.Currency.Code})"
                     }).ToList()
                 );
+        }
+
+        private async Task<bool> PopulateEditViewModelAsync(TransferEditViewModel model, PaymentTransfer transfer)
+        {
+            var senderAccount = await _context.Accounts
+                .Include(a => a.Currency)
+                .FirstOrDefaultAsync(a => a.Id == transfer.FromPaymentAccountId);
+            if (senderAccount == null)
+                return false;
+
+            var users = await _context.Users
+                .Where(u => u.Id != transfer.SenderId)
+                .Include(u => u.PaymentBranch)
+                .ToListAsync();
+
+            model.Receivers = users
+                .Select(u => new SelectListItem
+                {
+                    Value = u.Id,
+                    Text = u.FullName ?? $"{u.FirstName} {u.LastName}",
+                    Selected = u.Id == model.ReceiverId
+                })
+                .ToList();
+
+            model.ReceiverBranches = users.ToDictionary(u => u.Id, u => u.PaymentBranch?.NameAr ?? string.Empty);
+
+            var receiverIds = users.Select(u => u.Id).ToList();
+            var receiverAccounts = await _context.UserPaymentAccounts
+                .Where(up => receiverIds.Contains(up.UserId))
+                .Include(up => up.Account).ThenInclude(a => a.Currency)
+                .ToListAsync();
+
+            model.ReceiverAccounts = receiverAccounts
+                .GroupBy(up => up.UserId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(up => new TransferCreateViewModel.ReceiverAccountOption
+                    {
+                        AccountId = up.AccountId,
+                        CurrencyId = up.CurrencyId,
+                        DisplayName = $"{up.Account.Code} - {up.Account.NameAr} ({up.Account.Currency.Code})"
+                    }).ToList()
+                );
+
+            var unitList = await _context.CurrencyUnits
+                .Where(u => u.CurrencyId == senderAccount.CurrencyId)
+                .OrderBy(u => u.ValueInBaseUnit)
+                .Select(u => new TransferCreateViewModel.CurrencyUnitOption
+                {
+                    CurrencyUnitId = u.Id,
+                    Name = u.Name,
+                    ValueInBaseUnit = u.ValueInBaseUnit
+                })
+                .ToListAsync();
+
+            var existingCounts = new Dictionary<int, int>();
+            if (model.CurrencyUnitCounts != null && model.CurrencyUnitCounts.Count > 0)
+            {
+                existingCounts = model.CurrencyUnitCounts
+                    .GroupBy(c => c.CurrencyUnitId)
+                    .ToDictionary(g => g.Key, g => g.Sum(x => x.Count));
+            }
+            else if (!string.IsNullOrEmpty(transfer.CurrencyBreakdownJson))
+            {
+                var parsed = JsonSerializer.Deserialize<Dictionary<int, int>>(transfer.CurrencyBreakdownJson);
+                if (parsed != null)
+                    existingCounts = parsed;
+            }
+
+            model.CurrencyUnits = unitList;
+            model.CurrencyUnitCounts = unitList
+                .Select(u => new TransferCreateViewModel.CurrencyUnitCountInput
+                {
+                    CurrencyUnitId = u.CurrencyUnitId,
+                    Count = existingCounts.TryGetValue(u.CurrencyUnitId, out var count) ? count : 0
+                }).ToList();
+
+            model.CurrencyId = senderAccount.CurrencyId;
+            model.CurrencyCode = senderAccount.Currency?.Code ?? string.Empty;
+            model.SenderBranch = transfer.FromBranch?.NameAr ?? string.Empty;
+
+            return true;
         }
 
         private async Task UpdateAccountBalances(JournalEntry entry)

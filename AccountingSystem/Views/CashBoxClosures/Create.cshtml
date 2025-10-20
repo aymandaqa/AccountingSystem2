@@ -4,6 +4,7 @@
     ViewData["Title"] = "إغلاق الصندوق";
     var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     var currencyUnitsJson = JsonSerializer.Serialize(Model.CurrencyUnits, jsonOptions);
+    var currencyUnitCountsJson = JsonSerializer.Serialize(Model.CurrencyUnitCounts, jsonOptions);
 }
 
 <div class="container mt-4">
@@ -78,6 +79,7 @@
         const diffInput = document.getElementById('difference');
         const expected = @Model.TodayTransactions;
         const currencyUnits = @Html.Raw(currencyUnitsJson);
+        let initialUnitCounts = @Html.Raw(currencyUnitCountsJson);
         const currencyUnitsSection = document.getElementById('currencyUnitsSection');
         const currencyUnitsInputs = document.getElementById('currencyUnitsInputs');
         const currencyUnitsEmptyMessage = document.getElementById('currencyUnitsEmptyMessage');
@@ -91,6 +93,7 @@
         function updateAmountFromUnits() {
             const unitInputs = currencyUnitsInputs ? currencyUnitsInputs.querySelectorAll('.currency-unit-input') : [];
             if (!unitInputs.length) {
+                countedInput.readOnly = false;
                 return;
             }
 
@@ -120,13 +123,16 @@
                 currencyUnitsSection.classList.remove('d-none');
                 currencyUnitsEmptyMessage.classList.remove('d-none');
                 countedInput.readOnly = false;
+                initialUnitCounts = [];
                 return;
             }
 
+            const countMap = new Map((initialUnitCounts || []).map(c => [c.currencyUnitId, c.count]));
             currencyUnitsEmptyMessage.classList.add('d-none');
             currencyUnitsSection.classList.remove('d-none');
             countedInput.readOnly = true;
 
+            let index = 0;
             units.forEach(unit => {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'col-md-4';
@@ -145,14 +151,24 @@
                 input.className = 'form-control currency-unit-input';
                 input.placeholder = 'عدد الوحدات';
                 input.dataset.value = unit.valueInBaseUnit;
+                input.name = `CurrencyUnitCounts[${index}].Count`;
+                const hiddenIdInput = document.createElement('input');
+                hiddenIdInput.type = 'hidden';
+                hiddenIdInput.name = `CurrencyUnitCounts[${index}].CurrencyUnitId`;
+                hiddenIdInput.value = unit.currencyUnitId;
+                const existingCount = countMap.has(unit.currencyUnitId) ? countMap.get(unit.currencyUnitId) : '';
+                input.value = existingCount !== '' ? existingCount : 0;
                 input.addEventListener('input', updateAmountFromUnits);
 
                 inputGroup.appendChild(span);
+                inputGroup.appendChild(hiddenIdInput);
                 inputGroup.appendChild(input);
                 wrapper.appendChild(inputGroup);
                 currencyUnitsInputs.appendChild(wrapper);
+                index += 1;
             });
 
+            initialUnitCounts = [];
             updateAmountFromUnits();
         }
 

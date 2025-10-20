@@ -39,6 +39,8 @@ namespace AccountingSystem.ViewModels
 
         public Dictionary<int, List<CurrencyUnitOption>> CurrencyUnits { get; set; } = new();
 
+        public List<CurrencyUnitCountInput> CurrencyUnitCounts { get; set; } = new();
+
         public class AccountOption
         {
             public int AccountId { get; set; }
@@ -50,8 +52,15 @@ namespace AccountingSystem.ViewModels
 
         public class CurrencyUnitOption
         {
+            public int CurrencyUnitId { get; set; }
             public string Name { get; set; } = string.Empty;
             public decimal ValueInBaseUnit { get; set; }
+        }
+
+        public class CurrencyUnitCountInput
+        {
+            public int CurrencyUnitId { get; set; }
+            public int Count { get; set; }
         }
     }
 

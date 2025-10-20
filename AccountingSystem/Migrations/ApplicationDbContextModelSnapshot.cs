@@ -407,6 +407,9 @@ namespace AccountingSystem.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("CurrencyBreakdownJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<decimal>("OpeningBalance")
                         .HasColumnType("decimal(18,2)");
 
@@ -1310,6 +1313,9 @@ namespace AccountingSystem.Migrations
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("CurrencyBreakdownJson")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ReceiverId")
                         .IsRequired()
