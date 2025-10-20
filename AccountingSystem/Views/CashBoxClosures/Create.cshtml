@@ -22,7 +22,7 @@
                             <option value="@account.AccountId"
                                     data-currency-id="@account.CurrencyId"
                                     data-currency-code="@account.CurrencyCode"
-                                    selected="@account.Selected">@account.DisplayName</option>
+                                    @(account.Selected ? "selected=\"selected\"" : string.Empty)>@account.DisplayName</option>
                         }
                     </select>
                     <span asp-validation-for="AccountId" class="text-danger"></span>
