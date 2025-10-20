@@ -1,4 +1,5 @@
 @model AccountingSystem.ViewModels.CreateCurrencyViewModel
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
 
 @{
     ViewData["Title"] = "إضافة عملة جديدة";
@@ -54,6 +55,19 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group mb-3">
+                                    <label class="form-label">وحدات العملة</label>
+                                    @{
+                                        var unitsViewData = new ViewDataDictionary(ViewData);
+                                        unitsViewData.TemplateInfo.HtmlFieldPrefix = "Units";
+                                    }
+                                    @await Html.PartialAsync("_CurrencyUnitsEditor", Model.Units, unitsViewData)
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="card-footer">
                         <button type="submit" class="btn btn-primary">
@@ -73,4 +87,107 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    <script>
+        let unitIndex = @Model.Units.Count;
+
+        function initializeUnitRows() {
+            const rows = document.querySelectorAll('#currency-units-body tr');
+            rows.forEach(row => {
+                row.querySelectorAll('input').forEach(input => {
+                    const name = input.getAttribute('name');
+                    if (!name)
+                        return;
+                    const match = name.match(/Units\[(\d+)\]\.(.+)/);
+                    if (match) {
+                        input.dataset.field = match[2];
+                        input.id = `Units_${match[1]}__${match[2]}`;
+                    }
+                });
+                row.querySelectorAll('span[data-valmsg-for]').forEach(span => {
+                    const valFor = span.getAttribute('data-valmsg-for');
+                    const match = valFor ? valFor.match(/Units\[(\d+)\]\.(.+)/) : null;
+                    if (match) {
+                        span.dataset.fieldMsg = match[2];
+                    }
+                });
+            });
+            unitIndex = rows.length;
+        }
+
+        function refreshValidation() {
+            if (window.jQuery && window.jQuery.validator && window.jQuery.validator.unobtrusive) {
+                const form = jQuery('form');
+                form.removeData('validator');
+                form.removeData('unobtrusiveValidation');
+                jQuery.validator.unobtrusive.parse(form);
+            }
+        }
+
+        function renumberUnitRows() {
+            const rows = document.querySelectorAll('#currency-units-body tr');
+            rows.forEach((row, index) => {
+                row.querySelectorAll('[data-field]').forEach(input => {
+                    const field = input.dataset.field;
+                    input.name = `Units[${index}].${field}`;
+                    input.id = `Units_${index}__${field}`;
+                });
+                row.querySelectorAll('[data-field-msg]').forEach(span => {
+                    const field = span.dataset.fieldMsg;
+                    span.setAttribute('data-valmsg-for', `Units[${index}].${field}`);
+                });
+            });
+            unitIndex = rows.length;
+            refreshValidation();
+        }
+
+        function addUnitRow() {
+            const template = document.getElementById('currency-unit-row-template');
+            if (!template)
+                return;
+
+            const fragment = template.content.cloneNode(true);
+            const row = fragment.querySelector('tr');
+            row.querySelectorAll('[data-field]').forEach(input => {
+                const field = input.dataset.field;
+                input.name = `Units[${unitIndex}].${field}`;
+                input.id = `Units_${unitIndex}__${field}`;
+                if (field === 'Id') {
+                    input.value = '';
+                } else if (field === 'ValueInBaseUnit') {
+                    input.value = '';
+                } else {
+                    input.value = '';
+                }
+            });
+            row.querySelectorAll('[data-field-msg]').forEach(span => {
+                const field = span.dataset.fieldMsg;
+                span.setAttribute('data-valmsg-for', `Units[${unitIndex}].${field}`);
+                span.dataset.fieldMsg = field;
+            });
+
+            document.getElementById('currency-units-body').appendChild(row);
+            unitIndex++;
+            refreshValidation();
+        }
+
+        function removeUnitRow(button) {
+            const row = button.closest('tr');
+            if (!row)
+                return;
+
+            const tbody = document.getElementById('currency-units-body');
+            if (tbody.children.length <= 1) {
+                alert('يجب أن تحتوي العملة على وحدة واحدة على الأقل.');
+                return;
+            }
+
+            row.remove();
+            renumberUnitRows();
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initializeUnitRows();
+            refreshValidation();
+        });
+    </script>
 }

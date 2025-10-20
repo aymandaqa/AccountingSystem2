@@ -1,0 +1,59 @@
+@model IList<AccountingSystem.ViewModels.CurrencyUnitInputModel>
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+
+<table class="table table-bordered" id="currency-units-table">
+    <thead class="table-light">
+        <tr>
+            <th style="width: 45%;">اسم الوحدة</th>
+            <th style="width: 35%;">القيمة بالنسبة للوحدة الأساسية</th>
+            <th style="width: 20%;">إجراءات</th>
+        </tr>
+    </thead>
+    <tbody id="currency-units-body">
+        @for (var i = 0; i < Model.Count; i++)
+        {
+            <tr>
+                <td>
+                    @Html.HiddenFor(m => m[i].Id, new { @class = "unit-id" })
+                    @Html.TextBoxFor(m => m[i].Name, new { @class = "form-control unit-name", placeholder = "اسم الوحدة" })
+                    @Html.ValidationMessageFor(m => m[i].Name, null, new { @class = "text-danger" })
+                </td>
+                <td>
+                    @Html.TextBoxFor(m => m[i].ValueInBaseUnit, new { @class = "form-control unit-value", type = "number", step = "0.000001", min = "0" })
+                    @Html.ValidationMessageFor(m => m[i].ValueInBaseUnit, null, new { @class = "text-danger" })
+                </td>
+                <td class="text-center align-middle">
+                    <button type="button" class="btn btn-danger btn-sm" onclick="removeUnitRow(this)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+<div class="d-flex justify-content-between align-items-center mt-2">
+    <span class="text-muted">أضف وحدات مثل أجزاء العملة أو مضاعفاتها وربطها بالقيمة الأساسية (1.00).</span>
+    <button type="button" class="btn btn-outline-primary" onclick="addUnitRow()">
+        <i class="fas fa-plus"></i> إضافة وحدة
+    </button>
+</div>
+<div class="text-danger mt-2" data-valmsg-for="Units" data-valmsg-replace="true"></div>
+
+<template id="currency-unit-row-template">
+    <tr>
+        <td>
+            <input type="hidden" class="unit-id" data-field="Id" />
+            <input class="form-control unit-name" placeholder="اسم الوحدة" data-field="Name" data-val="true" data-val-required="الرجاء إدخال اسم الوحدة" data-val-length="اسم الوحدة يجب ألا يتجاوز 100 حرف" data-val-length-max="100" />
+            <span class="text-danger field-validation-valid" data-valmsg-for="Name" data-valmsg-replace="true" data-field-msg="Name"></span>
+        </td>
+        <td>
+            <input class="form-control unit-value" type="number" step="0.000001" min="0" data-field="ValueInBaseUnit" data-val="true" data-val-number="القيمة يجب أن تكون رقمية" data-val-required="الرجاء إدخال قيمة الوحدة بالنسبة للوحدة الأساسية" data-val-range="القيمة يجب أن تكون أكبر من صفر" data-val-range-max="79228162514264337593543950335" data-val-range-min="0.000001" />
+            <span class="text-danger field-validation-valid" data-valmsg-for="ValueInBaseUnit" data-valmsg-replace="true" data-field-msg="ValueInBaseUnit"></span>
+        </td>
+        <td class="text-center align-middle">
+            <button type="button" class="btn btn-danger btn-sm" onclick="removeUnitRow(this)">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    </tr>
+</template>

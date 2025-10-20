@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
+using System;
+using System.Collections.Generic;
 
 namespace AccountingSystem.Controllers
 {
@@ -22,6 +24,7 @@ namespace AccountingSystem.Controllers
         public async Task<IActionResult> Index()
         {
             var currencies = await _context.Currencies
+                .Include(c => c.Units)
                 .OrderBy(c => c.Code)
                 .ToListAsync();
 
@@ -31,7 +34,15 @@ namespace AccountingSystem.Controllers
                 Name = c.Name,
                 Code = c.Code,
                 ExchangeRate = c.ExchangeRate,
-                IsBase = c.IsBase
+                IsBase = c.IsBase,
+                Units = c.Units
+                    .OrderBy(u => u.ValueInBaseUnit)
+                    .Select(u => new CurrencyUnitInputModel
+                    {
+                        Id = u.Id,
+                        Name = u.Name,
+                        ValueInBaseUnit = u.ValueInBaseUnit
+                    }).ToList()
             }).ToList();
 
             return View(viewModels);
@@ -48,6 +59,21 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "currencies.create")]
         public async Task<IActionResult> Create(CreateCurrencyViewModel model)
         {
+            model.Units = model.Units?
+                .Where(u => !string.IsNullOrWhiteSpace(u.Name))
+                .Select(u =>
+                {
+                    u.Name = u.Name.Trim();
+                    return u;
+                })
+                .ToList() ?? new List<CurrencyUnitInputModel>();
+
+            if (!model.Units.Any())
+                ModelState.AddModelError("Units", "يجب إضافة وحدة واحدة على الأقل.");
+
+            if (!model.Units.Any(u => Math.Abs(u.ValueInBaseUnit - 1m) < 0.000001m))
+                ModelState.AddModelError("Units", "يجب تحديد وحدة أساسية بقيمة 1.");
+
             if (ModelState.IsValid)
             {
                 if (await _context.Currencies.AnyAsync(c => c.Code == model.Code))
@@ -73,6 +99,18 @@ namespace AccountingSystem.Controllers
 
                 _context.Currencies.Add(currency);
                 await _context.SaveChangesAsync();
+
+                foreach (var unit in model.Units)
+                {
+                    _context.CurrencyUnits.Add(new CurrencyUnit
+                    {
+                        CurrencyId = currency.Id,
+                        Name = unit.Name,
+                        ValueInBaseUnit = unit.ValueInBaseUnit
+                    });
+                }
+
+                await _context.SaveChangesAsync();
                 _logger.LogInformation("Currency {Code} created successfully", model.Code);
                 return RedirectToAction(nameof(Index));
             }
@@ -82,7 +120,9 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "currencies.edit")]
         public async Task<IActionResult> Edit(int id)
         {
-            var currency = await _context.Currencies.FindAsync(id);
+            var currency = await _context.Currencies
+                .Include(c => c.Units)
+                .FirstOrDefaultAsync(c => c.Id == id);
             if (currency == null)
                 return NotFound();
 
@@ -92,8 +132,24 @@ namespace AccountingSystem.Controllers
                 Name = currency.Name,
                 Code = currency.Code,
                 ExchangeRate = currency.ExchangeRate,
-                IsBase = currency.IsBase
+                IsBase = currency.IsBase,
+                Units = currency.Units
+                    .OrderBy(u => u.ValueInBaseUnit)
+                    .Select(u => new CurrencyUnitInputModel
+                    {
+                        Id = u.Id,
+                        Name = u.Name,
+                        ValueInBaseUnit = u.ValueInBaseUnit
+                    }).ToList()
             };
+
+            if (!model.Units.Any())
+            {
+                model.Units.Add(new CurrencyUnitInputModel
+                {
+                    ValueInBaseUnit = 1m
+                });
+            }
             return View(model);
         }
 
@@ -102,6 +158,21 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "currencies.edit")]
         public async Task<IActionResult> Edit(EditCurrencyViewModel model)
         {
+            model.Units = model.Units?
+                .Where(u => !string.IsNullOrWhiteSpace(u.Name))
+                .Select(u =>
+                {
+                    u.Name = u.Name.Trim();
+                    return u;
+                })
+                .ToList() ?? new List<CurrencyUnitInputModel>();
+
+            if (!model.Units.Any())
+                ModelState.AddModelError("Units", "يجب إضافة وحدة واحدة على الأقل.");
+
+            if (!model.Units.Any(u => Math.Abs(u.ValueInBaseUnit - 1m) < 0.000001m))
+                ModelState.AddModelError("Units", "يجب تحديد وحدة أساسية بقيمة 1.");
+
             if (ModelState.IsValid)
             {
                 if (await _context.Currencies.AnyAsync(c => c.Code == model.Code && c.Id != model.Id))
@@ -110,7 +181,9 @@ namespace AccountingSystem.Controllers
                     return View(model);
                 }
 
-                var currency = await _context.Currencies.FindAsync(model.Id);
+                var currency = await _context.Currencies
+                    .Include(c => c.Units)
+                    .FirstOrDefaultAsync(c => c.Id == model.Id);
                 if (currency == null)
                     return NotFound();
 
@@ -125,6 +198,32 @@ namespace AccountingSystem.Controllers
                 currency.Code = model.Code;
                 currency.ExchangeRate = model.ExchangeRate;
                 currency.IsBase = model.IsBase;
+
+                var existingUnits = currency.Units.ToDictionary(u => u.Id);
+
+                // Remove deleted units
+                var postedUnitIds = model.Units.Where(u => u.Id.HasValue).Select(u => u.Id!.Value).ToHashSet();
+                var unitsToRemove = currency.Units.Where(u => !postedUnitIds.Contains(u.Id)).ToList();
+                if (unitsToRemove.Any())
+                    _context.CurrencyUnits.RemoveRange(unitsToRemove);
+
+                foreach (var unitModel in model.Units)
+                {
+                    if (unitModel.Id.HasValue && existingUnits.TryGetValue(unitModel.Id.Value, out var existingUnit))
+                    {
+                        existingUnit.Name = unitModel.Name;
+                        existingUnit.ValueInBaseUnit = unitModel.ValueInBaseUnit;
+                    }
+                    else
+                    {
+                        _context.CurrencyUnits.Add(new CurrencyUnit
+                        {
+                            CurrencyId = currency.Id,
+                            Name = unitModel.Name,
+                            ValueInBaseUnit = unitModel.ValueInBaseUnit
+                        });
+                    }
+                }
 
                 await _context.SaveChangesAsync();
                 _logger.LogInformation("Currency {Code} updated successfully", model.Code);

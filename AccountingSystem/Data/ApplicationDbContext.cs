@@ -42,6 +42,7 @@ namespace AccountingSystem.Data
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<CashBoxClosure> CashBoxClosures { get; set; }
         public DbSet<Currency> Currencies { get; set; }
+        public DbSet<CurrencyUnit> CurrencyUnits { get; set; }
         public DbSet<ReceiptVoucher> ReceiptVouchers { get; set; }
         public DbSet<DisbursementVoucher> DisbursementVouchers { get; set; }
         public DbSet<PaymentVoucher> PaymentVouchers { get; set; }
@@ -186,6 +187,18 @@ namespace AccountingSystem.Data
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(50);
                 entity.Property(e => e.Code).IsRequired().HasMaxLength(3);
                 entity.Property(e => e.ExchangeRate).HasColumnType("decimal(18,6)");
+            });
+
+            builder.Entity<CurrencyUnit>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.ValueInBaseUnit).HasColumnType("decimal(18,6)");
+
+                entity.HasOne(e => e.Currency)
+                    .WithMany(c => c.Units)
+                    .HasForeignKey(e => e.CurrencyId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             builder.Entity<Agent>(entity =>

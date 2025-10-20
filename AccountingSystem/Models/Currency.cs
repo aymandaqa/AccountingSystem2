@@ -23,5 +23,7 @@ namespace AccountingSystem.Models
 
         // Navigation properties
         public virtual ICollection<Account> Accounts { get; set; } = new List<Account>();
+
+        public virtual ICollection<CurrencyUnit> Units { get; set; } = new List<CurrencyUnit>();
     }
 }
