@@ -142,6 +142,16 @@ namespace AccountingSystem.Controllers
                 query = query.Where(j => j.Branch.NameAr.Contains(branchFilterValue));
             }
 
+            var createdByFilterValue = GetColumnSearchValue(5);
+            if (!string.IsNullOrWhiteSpace(createdByFilterValue))
+            {
+                var normalizedCreatedBy = createdByFilterValue.Trim().ToLower();
+                query = query.Where(j => j.CreatedBy != null &&
+                    ((j.CreatedBy.FirstName != null && j.CreatedBy.FirstName.ToLower().Contains(normalizedCreatedBy)) ||
+                     (j.CreatedBy.LastName != null && j.CreatedBy.LastName.ToLower().Contains(normalizedCreatedBy)) ||
+                     (j.CreatedBy.UserName != null && j.CreatedBy.UserName.ToLower().Contains(normalizedCreatedBy))));
+            }
+
             var dateColumnValue = Request.Query[$"columns[1][search][value]"].ToString();
             if (!string.IsNullOrWhiteSpace(dateColumnValue) && DateTime.TryParse(dateColumnValue, out var columnDate))
             {
@@ -149,19 +159,19 @@ namespace AccountingSystem.Controllers
                 query = query.Where(j => j.Date.Date == dateOnly);
             }
 
-            var amountColumnValue = Request.Query[$"columns[5][search][value]"].ToString();
+            var amountColumnValue = Request.Query[$"columns[6][search][value]"].ToString();
             if (!string.IsNullOrWhiteSpace(amountColumnValue) && decimal.TryParse(amountColumnValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var amountFilter))
             {
                 query = query.Where(j => j.Lines.Sum(l => l.DebitAmount) == amountFilter);
             }
 
-            var linesCountValue = Request.Query[$"columns[6][search][value]"].ToString();
+            var linesCountValue = Request.Query[$"columns[7][search][value]"].ToString();
             if (!string.IsNullOrWhiteSpace(linesCountValue) && int.TryParse(linesCountValue, out var linesFilter))
             {
                 query = query.Where(j => j.Lines.Count == linesFilter);
             }
 
-            var statusColumnValue = Request.Query[$"columns[7][search][value]"].ToString();
+            var statusColumnValue = Request.Query[$"columns[8][search][value]"].ToString();
             if (!string.IsNullOrWhiteSpace(statusColumnValue) && Enum.TryParse<JournalEntryStatus>(statusColumnValue, out var statusColumn))
             {
                 query = query.Where(j => j.Status == statusColumn);
@@ -815,9 +825,14 @@ namespace AccountingSystem.Controllers
                 2 => ascending ? query.OrderBy(j => j.Description) : query.OrderByDescending(j => j.Description),
                 3 => ascending ? query.OrderBy(j => j.Reference) : query.OrderByDescending(j => j.Reference),
                 4 => ascending ? query.OrderBy(j => j.Branch.NameAr) : query.OrderByDescending(j => j.Branch.NameAr),
-                5 => ascending ? query.OrderBy(j => j.Lines.Sum(l => l.DebitAmount)) : query.OrderByDescending(j => j.Lines.Sum(l => l.DebitAmount)),
-                6 => ascending ? query.OrderBy(j => j.Lines.Count) : query.OrderByDescending(j => j.Lines.Count),
-                7 => ascending ? query.OrderBy(j => j.Status) : query.OrderByDescending(j => j.Status),
+                5 => ascending
+                    ? query.OrderBy(j =>
+                        (j.CreatedBy.FirstName ?? string.Empty) + " " + (j.CreatedBy.LastName ?? string.Empty) + " " + (j.CreatedBy.UserName ?? string.Empty))
+                    : query.OrderByDescending(j =>
+                        (j.CreatedBy.FirstName ?? string.Empty) + " " + (j.CreatedBy.LastName ?? string.Empty) + " " + (j.CreatedBy.UserName ?? string.Empty)),
+                6 => ascending ? query.OrderBy(j => j.Lines.Sum(l => l.DebitAmount)) : query.OrderByDescending(j => j.Lines.Sum(l => l.DebitAmount)),
+                7 => ascending ? query.OrderBy(j => j.Lines.Count) : query.OrderByDescending(j => j.Lines.Count),
+                8 => ascending ? query.OrderBy(j => j.Status) : query.OrderByDescending(j => j.Status),
                 _ => ascending ? query.OrderBy(j => j.Date) : query.OrderByDescending(j => j.Date)
             };
         }
