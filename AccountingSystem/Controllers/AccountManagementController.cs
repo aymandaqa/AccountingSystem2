@@ -1164,13 +1164,16 @@ namespace Roadfn.Controllers
 
                     var area = await _context.Areas.FirstOrDefaultAsync(t => t.Id == sh.ClientAreaId);
 
-                    var agent = await _accontext.Agents.FirstOrDefaultAsync(s => s.Id == user.AgentId);
-
-
-
-
-
-                    var agentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Id == agent.AccountId);
+                    Agent? agent = null;
+                    Account? agentAccount = null;
+                    if (user.AgentId.HasValue)
+                    {
+                        agent = await _accontext.Agents.FirstOrDefaultAsync(s => s.Id == user.AgentId.Value);
+                        if (agent?.AccountId != null)
+                        {
+                            agentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Id == agent.AccountId);
+                        }
+                    }
 
                     var customerUser = await _context.Users.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(sh.BusinessUserId));
                     if (customerUser == null)
@@ -1245,7 +1248,7 @@ namespace Roadfn.Controllers
 
 
 
-                    if (area?.CommissionBranch > 0 && agent != null)
+                    if (area?.CommissionBranch > 0)
                     {
                         var rev = Convert.ToDecimal((Paytxn.ShipmentTotal - Paytxn.ShipmentPrice) - area.CommissionBranch);
 
@@ -1272,25 +1275,28 @@ namespace Roadfn.Controllers
                         #endregion
 
 
-                        #region agent Accounttxn txn
-
-                        var agentAccounttxn = new JournalEntryLine();
-                        agentAccounttxn.AccountId = agentAccount.Id;
-                        agentAccounttxn.DebitAmount = 0;
-                        agentAccounttxn.CreditAmount = 0;
-                        if (AgenAmt <= 0)
+                        if (agentAccount != null)
                         {
-                            agentAccounttxn.DebitAmount = AgenAmt * -1;
-                        }
-                        else
-                        {
-                            agentAccounttxn.CreditAmount = AgenAmt;
-                        }
-                        agentAccounttxn.Reference = driverPaymentHeader.Id.ToString();
-                        agentAccounttxn.Description = $"عمولة وكيل  {sh.ShipmentTrackingNo}";
-                        lines.Add(agentAccounttxn);
+                            #region agent Accounttxn txn
 
-                        #endregion
+                            var agentAccounttxn = new JournalEntryLine();
+                            agentAccounttxn.AccountId = agentAccount.Id;
+                            agentAccounttxn.DebitAmount = 0;
+                            agentAccounttxn.CreditAmount = 0;
+                            if (AgenAmt <= 0)
+                            {
+                                agentAccounttxn.DebitAmount = AgenAmt * -1;
+                            }
+                            else
+                            {
+                                agentAccounttxn.CreditAmount = AgenAmt;
+                            }
+                            agentAccounttxn.Reference = driverPaymentHeader.Id.ToString();
+                            agentAccounttxn.Description = $"عمولة وكيل  {sh.ShipmentTrackingNo}";
+                            lines.Add(agentAccounttxn);
+
+                            #endregion
+                        }
 
                     }
 
