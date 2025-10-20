@@ -570,7 +570,8 @@ namespace AccountingSystem.Controllers
                     DisplayName = p.DisplayName,
                     Category = p.Category,
                     IsGranted = directPermissionIds.Contains(p.Id) || inheritedPermissionIds.Contains(p.Id),
-                    IsInherited = inheritedPermissionIds.Contains(p.Id)
+                    IsInherited = inheritedPermissionIds.Contains(p.Id),
+                    HasDirectGrant = directPermissionIds.Contains(p.Id)
                 }).ToList(),
                 Groups = groups.Select(g => new PermissionGroupSelectionViewModel
                 {
