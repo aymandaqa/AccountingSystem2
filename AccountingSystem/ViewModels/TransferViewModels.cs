@@ -31,6 +31,8 @@ namespace AccountingSystem.ViewModels
 
         public Dictionary<string, List<ReceiverAccountOption>> ReceiverAccounts { get; set; } = new();
 
+        public Dictionary<int, List<CurrencyUnitOption>> CurrencyUnits { get; set; } = new();
+
         public class SenderAccountOption
         {
             public int AccountId { get; set; }
@@ -44,6 +46,12 @@ namespace AccountingSystem.ViewModels
             public int AccountId { get; set; }
             public int CurrencyId { get; set; }
             public string DisplayName { get; set; } = string.Empty;
+        }
+
+        public class CurrencyUnitOption
+        {
+            public string Name { get; set; } = string.Empty;
+            public decimal ValueInBaseUnit { get; set; }
         }
     }
 }

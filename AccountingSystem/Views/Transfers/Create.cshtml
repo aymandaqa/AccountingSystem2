@@ -6,6 +6,7 @@
     var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     var branchesJson = JsonSerializer.Serialize(Model.ReceiverBranches, jsonOptions);
     var accountsJson = JsonSerializer.Serialize(Model.ReceiverAccounts, jsonOptions);
+    var currencyUnitsJson = JsonSerializer.Serialize(Model.CurrencyUnits, jsonOptions);
 }
 
 <h2>إنشاء حوالة</h2>
@@ -56,6 +57,12 @@
         <input type="text" id="receiverAccountDisplay" class="form-control" disabled />
     </div>
 
+    <div class="form-group d-none" id="currencyUnitsSection">
+        <label class="d-block">تفاصيل الفئات <span id="currencyUnitsCurrencyCode" class="text-muted"></span></label>
+        <div id="currencyUnitsInputs" class="row g-2"></div>
+        <div id="currencyUnitsEmptyMessage" class="text-muted small d-none">لا توجد فئات معرفة لهذه العملة.</div>
+    </div>
+
     <div class="form-group">
         <label asp-for="Amount"></label>
         <input asp-for="Amount" class="form-control" />
@@ -76,10 +83,16 @@
     <script>
         const branches = @Html.Raw(branchesJson);
         const receiverAccounts = @Html.Raw(accountsJson);
+        const currencyUnits = @Html.Raw(currencyUnitsJson);
         const branchInput = document.getElementById('receiverBranch');
         const accountDisplay = document.getElementById('receiverAccountDisplay');
         const receiverSelect = document.getElementById('receiverSelect');
         const senderAccountSelect = document.getElementById('senderAccountSelect');
+        const amountInput = document.getElementById('Amount');
+        const currencyUnitsSection = document.getElementById('currencyUnitsSection');
+        const currencyUnitsInputs = document.getElementById('currencyUnitsInputs');
+        const currencyUnitsEmptyMessage = document.getElementById('currencyUnitsEmptyMessage');
+        const currencyUnitsCurrencyCode = document.getElementById('currencyUnitsCurrencyCode');
 
         function updateReceiverInfo() {
             const receiverId = receiverSelect.value;
@@ -100,8 +113,93 @@
             }
         }
 
+        function updateAmountFromUnits() {
+            const unitInputs = currencyUnitsInputs.querySelectorAll('.currency-unit-input');
+            if (unitInputs.length === 0) {
+                return;
+            }
+
+            let total = 0;
+            unitInputs.forEach(input => {
+                const count = Number(input.value);
+                const unitValue = Number(input.dataset.value);
+                if (!Number.isNaN(count) && !Number.isNaN(unitValue)) {
+                    total += count * unitValue;
+                }
+            });
+
+            amountInput.value = total.toFixed(2);
+        }
+
+        function renderCurrencyUnits(currencyId) {
+            currencyUnitsInputs.innerHTML = '';
+
+            const units = currencyUnits[currencyId] || [];
+
+            if (!units.length) {
+                currencyUnitsSection.classList.remove('d-none');
+                currencyUnitsEmptyMessage.classList.remove('d-none');
+                amountInput.readOnly = false;
+                amountInput.value = '';
+                return;
+            }
+
+            currencyUnitsEmptyMessage.classList.add('d-none');
+            currencyUnitsSection.classList.remove('d-none');
+            amountInput.readOnly = true;
+
+            units.forEach(unit => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'col-md-4';
+
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'input-group';
+
+                const span = document.createElement('span');
+                span.className = 'input-group-text';
+                span.textContent = unit.name;
+
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.min = '0';
+                input.step = '1';
+                input.className = 'form-control currency-unit-input';
+                input.placeholder = 'عدد الوحدات';
+                input.dataset.value = unit.valueInBaseUnit;
+                input.addEventListener('input', updateAmountFromUnits);
+
+                inputGroup.appendChild(span);
+                inputGroup.appendChild(input);
+                wrapper.appendChild(inputGroup);
+                currencyUnitsInputs.appendChild(wrapper);
+            });
+
+            updateAmountFromUnits();
+        }
+
+        function handleSenderAccountChange() {
+            updateReceiverInfo();
+            const selectedOption = senderAccountSelect.options[senderAccountSelect.selectedIndex];
+            if (currencyUnitsCurrencyCode) {
+                const code = selectedOption && selectedOption.dataset.currencyCode ? selectedOption.dataset.currencyCode : '';
+                currencyUnitsCurrencyCode.textContent = code ? `(${code})` : '';
+            }
+            const currencyIdValue = selectedOption ? Number(selectedOption.dataset.currencyId) : null;
+            if (Number.isFinite(currencyIdValue)) {
+                renderCurrencyUnits(currencyIdValue);
+            } else {
+                currencyUnitsSection.classList.add('d-none');
+                currencyUnitsInputs.innerHTML = '';
+                currencyUnitsEmptyMessage.classList.add('d-none');
+                amountInput.readOnly = false;
+                if (currencyUnitsCurrencyCode) {
+                    currencyUnitsCurrencyCode.textContent = '';
+                }
+            }
+        }
+
         receiverSelect.addEventListener('change', updateReceiverInfo);
-        senderAccountSelect.addEventListener('change', updateReceiverInfo);
-        updateReceiverInfo();
+        senderAccountSelect.addEventListener('change', handleSenderAccountChange);
+        handleSenderAccountChange();
     </script>
 }

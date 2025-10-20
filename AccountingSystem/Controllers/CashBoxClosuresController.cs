@@ -7,6 +7,7 @@ using ClosedXML.Excel;
 using System.Collections.Generic;
 using System.IO;
 using System;
+using System.Linq;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
@@ -35,11 +36,18 @@ namespace AccountingSystem.Controllers
             if (user == null)
                 return NotFound();
 
-            var accounts = await _context.UserPaymentAccounts
+            var userAccounts = await _context.UserPaymentAccounts
                 .Where(u => u.UserId == user.Id)
                 .Include(u => u.Account).ThenInclude(a => a.Branch)
-                .Select(u => u.Account)
+                .Include(u => u.Account).ThenInclude(a => a.Currency)
                 .ToListAsync();
+
+            var accounts = userAccounts
+                .Select(u => u.Account)
+                .Where(a => a != null)
+                .GroupBy(a => a!.Id)
+                .Select(g => g.First()!)
+                .ToList();
 
             if (accounts.Count == 0)
                 return NotFound();
@@ -61,17 +69,14 @@ namespace AccountingSystem.Controllers
             var model = new CashBoxClosureCreateViewModel
             {
                 AccountId = selectedAccount.Id,
-                Accounts = accounts.Select(a => new SelectListItem
-                {
-                    Value = a.Id.ToString(),
-                    Text = $"{a.Code} - {a.NameAr}"
-                }).ToList(),
                 AccountName = selectedAccount.NameAr,
                 BranchName = selectedAccount.Branch?.NameAr ?? string.Empty,
                 OpeningBalance = openingBalance,
                 TodayTransactions = todayTransactions,
                 CumulativeBalance = selectedAccount.CurrentBalance
             };
+
+            await PopulateAccountDataAsync(model, accounts, selectedAccount);
 
             return View(model);
         }
@@ -85,11 +90,18 @@ namespace AccountingSystem.Controllers
             if (user == null || user.PaymentBranchId == null)
                 return NotFound();
 
-            var accounts = await _context.UserPaymentAccounts
+            var userAccounts = await _context.UserPaymentAccounts
                 .Where(u => u.UserId == user.Id)
                 .Include(u => u.Account).ThenInclude(a => a.Branch)
-                .Select(u => u.Account)
+                .Include(u => u.Account).ThenInclude(a => a.Currency)
                 .ToListAsync();
+
+            var accounts = userAccounts
+                .Select(u => u.Account)
+                .Where(a => a != null)
+                .GroupBy(a => a!.Id)
+                .Select(g => g.First()!)
+                .ToList();
 
             var account = accounts.FirstOrDefault(a => a.Id == model.AccountId);
             if (account == null)
@@ -113,12 +125,6 @@ namespace AccountingSystem.Controllers
 
             if (!ModelState.IsValid)
             {
-                model.Accounts = accounts.Select(a => new SelectListItem
-                {
-                    Value = a.Id.ToString(),
-                    Text = $"{a.Code} - {a.NameAr}"
-                }).ToList();
-
                 if (account != null)
                 {
                     model.AccountName = account.NameAr;
@@ -126,8 +132,11 @@ namespace AccountingSystem.Controllers
                     model.OpeningBalance = openingBalance;
                     model.TodayTransactions = todayTransactions;
                     model.CumulativeBalance = account.CurrentBalance;
+                    model.CurrencyId = account.CurrencyId;
+                    model.CurrencyCode = account.Currency?.Code ?? string.Empty;
                 }
 
+                await PopulateAccountDataAsync(model, accounts, account);
                 return View(model);
             }
 
@@ -148,6 +157,77 @@ namespace AccountingSystem.Controllers
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(MyClosures));
+        }
+
+        private async Task PopulateAccountDataAsync(CashBoxClosureCreateViewModel model, List<Account> accounts, Account? selectedAccount)
+        {
+            if (accounts == null || accounts.Count == 0)
+            {
+                model.Accounts = new List<SelectListItem>();
+                model.AccountOptions = new List<CashBoxClosureCreateViewModel.AccountOption>();
+                model.CurrencyUnits = new Dictionary<int, List<CashBoxClosureCreateViewModel.CurrencyUnitOption>>();
+                model.CurrencyId = 0;
+                model.CurrencyCode = string.Empty;
+                return;
+            }
+
+            var selected = selectedAccount ?? accounts.FirstOrDefault(a => a.Id == model.AccountId) ?? accounts.First();
+
+            model.Accounts = accounts
+                .Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = $"{a.Code} - {a.NameAr}",
+                    Selected = a.Id == selected.Id
+                })
+                .ToList();
+
+            model.AccountOptions = accounts
+                .Select(a => new CashBoxClosureCreateViewModel.AccountOption
+                {
+                    AccountId = a.Id,
+                    DisplayName = $"{a.Code} - {a.NameAr}",
+                    CurrencyId = a.CurrencyId,
+                    CurrencyCode = a.Currency?.Code ?? string.Empty,
+                    Selected = a.Id == selected.Id
+                })
+                .ToList();
+
+            model.CurrencyId = selected.CurrencyId;
+            model.CurrencyCode = selected.Currency?.Code ?? string.Empty;
+
+            var currencyIds = accounts
+                .Select(a => a.CurrencyId)
+                .Distinct()
+                .ToList();
+
+            if (currencyIds.Count == 0)
+            {
+                model.CurrencyUnits = new Dictionary<int, List<CashBoxClosureCreateViewModel.CurrencyUnitOption>>();
+                return;
+            }
+
+            var currencyUnits = await _context.CurrencyUnits
+                .Where(u => currencyIds.Contains(u.CurrencyId))
+                .OrderBy(u => u.ValueInBaseUnit)
+                .Select(u => new
+                {
+                    u.CurrencyId,
+                    u.Name,
+                    u.ValueInBaseUnit
+                })
+                .ToListAsync();
+
+            model.CurrencyUnits = currencyUnits
+                .GroupBy(u => u.CurrencyId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(u => new CashBoxClosureCreateViewModel.CurrencyUnitOption
+                    {
+                        Name = u.Name,
+                        ValueInBaseUnit = u.ValueInBaseUnit
+                    }).ToList()
+                );
         }
 
         [Authorize(Policy = "cashclosures.view")]

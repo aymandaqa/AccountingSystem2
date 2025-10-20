@@ -343,6 +343,40 @@ namespace AccountingSystem.Controllers
 
             model.SenderAccounts = accountOptions;
 
+            var currencyIds = senderAccounts
+                .Select(up => up.Account.CurrencyId)
+                .Distinct()
+                .ToList();
+
+            if (currencyIds.Any())
+            {
+                var currencyUnits = await _context.CurrencyUnits
+                    .Where(u => currencyIds.Contains(u.CurrencyId))
+                    .OrderBy(u => u.ValueInBaseUnit)
+                    .Select(u => new
+                    {
+                        u.CurrencyId,
+                        u.Name,
+                        u.ValueInBaseUnit
+                    })
+                    .ToListAsync();
+
+                model.CurrencyUnits = currencyUnits
+                    .GroupBy(u => u.CurrencyId)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.Select(u => new TransferCreateViewModel.CurrencyUnitOption
+                        {
+                            Name = u.Name,
+                            ValueInBaseUnit = u.ValueInBaseUnit
+                        }).ToList()
+                    );
+            }
+            else
+            {
+                model.CurrencyUnits = new Dictionary<int, List<TransferCreateViewModel.CurrencyUnitOption>>();
+            }
+
             if (!model.FromPaymentAccountId.HasValue && accountOptions.Any())
                 model.FromPaymentAccountId = accountOptions.First().AccountId;
 

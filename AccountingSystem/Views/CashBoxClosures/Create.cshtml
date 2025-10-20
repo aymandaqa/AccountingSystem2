@@ -1,6 +1,9 @@
 @model AccountingSystem.ViewModels.CashBoxClosureCreateViewModel
+@using System.Text.Json
 @{
     ViewData["Title"] = "إغلاق الصندوق";
+    var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    var currencyUnitsJson = JsonSerializer.Serialize(Model.CurrencyUnits, jsonOptions);
 }
 
 <div class="container mt-4">
@@ -12,7 +15,16 @@
             <form method="get" asp-action="Create">
                 <div class="mb-3">
                     <label class="form-label">الحساب</label>
-                    <select asp-for="AccountId" asp-items="Model.Accounts" class="form-select" onchange="this.form.submit()"></select>
+                    <select asp-for="AccountId" class="form-select" id="accountSelect" onchange="this.form.submit()">
+                        @foreach (var account in Model.AccountOptions)
+                        {
+                            <option value="@account.AccountId"
+                                    data-currency-id="@account.CurrencyId"
+                                    data-currency-code="@account.CurrencyCode"
+                                    @(account.Selected ? "selected" : string.Empty)>@account.DisplayName</option>
+                        }
+                    </select>
+                    <span asp-validation-for="AccountId" class="text-danger"></span>
                 </div>
             </form>
             <div class="mb-3">
@@ -33,6 +45,11 @@
             </div>
             <form asp-action="Create" method="post">
                 <input type="hidden" asp-for="AccountId" />
+                <div class="mb-3 d-none" id="currencyUnitsSection">
+                    <label class="form-label">تفاصيل الفئات <span class="text-muted">@(!string.IsNullOrEmpty(Model.CurrencyCode) ? $"({Model.CurrencyCode})" : string.Empty)</span></label>
+                    <div id="currencyUnitsInputs" class="row g-2"></div>
+                    <div id="currencyUnitsEmptyMessage" class="text-muted small d-none">لا توجد فئات معرفة لهذه العملة.</div>
+                </div>
                 <div class="mb-3">
                     <label asp-for="CountedAmount" class="form-label"></label>
                     <input asp-for="CountedAmount" class="form-control" />
@@ -57,14 +74,92 @@
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
     <script>
-        const countedInput = document.getElementById("CountedAmount");
-        const diffInput = document.getElementById("difference");
+        const countedInput = document.getElementById('CountedAmount');
+        const diffInput = document.getElementById('difference');
         const expected = @Model.TodayTransactions;
+        const currencyUnits = @Html.Raw(currencyUnitsJson);
+        const currencyUnitsSection = document.getElementById('currencyUnitsSection');
+        const currencyUnitsInputs = document.getElementById('currencyUnitsInputs');
+        const currencyUnitsEmptyMessage = document.getElementById('currencyUnitsEmptyMessage');
+        const selectedCurrencyId = @Model.CurrencyId;
+
         function updateDiff() {
             const counted = parseFloat(countedInput.value) || 0;
             diffInput.value = (counted - expected).toFixed(2);
         }
-        countedInput.addEventListener("input", updateDiff);
+
+        function updateAmountFromUnits() {
+            const unitInputs = currencyUnitsInputs ? currencyUnitsInputs.querySelectorAll('.currency-unit-input') : [];
+            if (!unitInputs.length) {
+                return;
+            }
+
+            let total = 0;
+            unitInputs.forEach(input => {
+                const count = Number(input.value);
+                const unitValue = Number(input.dataset.value);
+                if (!Number.isNaN(count) && !Number.isNaN(unitValue)) {
+                    total += count * unitValue;
+                }
+            });
+
+            countedInput.value = total.toFixed(2);
+            updateDiff();
+        }
+
+        function renderCurrencyUnits(currencyId) {
+            if (!currencyUnitsSection || !currencyUnitsInputs) {
+                return;
+            }
+
+            currencyUnitsInputs.innerHTML = '';
+
+            const units = currencyUnits[currencyId] || [];
+
+            if (!units.length) {
+                currencyUnitsSection.classList.remove('d-none');
+                currencyUnitsEmptyMessage.classList.remove('d-none');
+                countedInput.readOnly = false;
+                return;
+            }
+
+            currencyUnitsEmptyMessage.classList.add('d-none');
+            currencyUnitsSection.classList.remove('d-none');
+            countedInput.readOnly = true;
+
+            units.forEach(unit => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'col-md-4';
+
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'input-group';
+
+                const span = document.createElement('span');
+                span.className = 'input-group-text';
+                span.textContent = unit.name;
+
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.min = '0';
+                input.step = '1';
+                input.className = 'form-control currency-unit-input';
+                input.placeholder = 'عدد الوحدات';
+                input.dataset.value = unit.valueInBaseUnit;
+                input.addEventListener('input', updateAmountFromUnits);
+
+                inputGroup.appendChild(span);
+                inputGroup.appendChild(input);
+                wrapper.appendChild(inputGroup);
+                currencyUnitsInputs.appendChild(wrapper);
+            });
+
+            updateAmountFromUnits();
+        }
+
+        countedInput.addEventListener('input', updateDiff);
+        if (currencyUnitsSection) {
+            renderCurrencyUnits(selectedCurrencyId);
+        }
         updateDiff();
     </script>
 }
