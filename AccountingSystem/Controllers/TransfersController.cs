@@ -485,6 +485,7 @@ namespace AccountingSystem.Controllers
                     .OrderBy(u => u.ValueInBaseUnit)
                     .Select(u => new
                     {
+                        u.Id,
                         u.CurrencyId,
                         u.Name,
                         u.ValueInBaseUnit
