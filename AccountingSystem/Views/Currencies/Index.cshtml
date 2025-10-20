@@ -24,6 +24,7 @@
                                         <th>الاسم</th>
                                         <th>الكود</th>
                                         <th>سعر الصرف</th>
+                                        <th>الوحدات</th>
                                         <th>أساسية</th>
                                         <th>الإجراءات</th>
                                     </tr>
@@ -35,6 +36,21 @@
                                             <td>@currency.Name</td>
                                             <td>@currency.Code</td>
                                             <td>@currency.ExchangeRate</td>
+                                            <td>
+                                                @if (currency.Units.Any())
+                                                {
+                                                    <ul class="list-unstyled mb-0">
+                                                        @foreach (var unit in currency.Units)
+                                                        {
+                                                            <li><strong>@unit.Name</strong> = @unit.ValueInBaseUnit.ToString("N6")</li>
+                                                        }
+                                                    </ul>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">لا توجد وحدات</span>
+                                                }
+                                            </td>
                                             <td>
                                                 @if (currency.IsBase)
                                                 {
