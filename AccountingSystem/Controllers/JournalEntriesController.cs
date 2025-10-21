@@ -324,6 +324,10 @@ namespace AccountingSystem.Controllers
                 );
             }
 
+            query = query
+                .OrderByDescending(entry => entry.Date)
+                .ThenByDescending(entry => entry.Id);
+
             var dataSource = query
                 .Select(entry => new
                 {
