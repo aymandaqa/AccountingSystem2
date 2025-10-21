@@ -57,11 +57,11 @@
             margin-bottom: 30px;
         }
 
-        .header h1 {
-            margin: 0;
-            font-size: 30px;
-            color: #15803d;
-        }
+            .header h1 {
+                margin: 0;
+                font-size: 30px;
+                color: #15803d;
+            }
 
         .meta-grid {
             display: grid;
@@ -77,17 +77,17 @@
             padding: 16px 18px;
         }
 
-        .meta-card h3 {
-            margin: 0 0 6px;
-            font-size: 14px;
-            color: #475569;
-        }
+            .meta-card h3 {
+                margin: 0 0 6px;
+                font-size: 14px;
+                color: #475569;
+            }
 
-        .meta-card p {
-            margin: 0;
-            font-size: 16px;
-            font-weight: 600;
-        }
+            .meta-card p {
+                margin: 0;
+                font-size: 16px;
+                font-weight: 600;
+            }
 
         .amount-box {
             background: linear-gradient(135deg, rgba(22, 163, 74, 0.12), rgba(34, 197, 94, 0.08));
@@ -100,15 +100,15 @@
             align-items: center;
         }
 
-        .amount-box strong {
-            font-size: 36px;
-            color: #1e293b;
-        }
+            .amount-box strong {
+                font-size: 36px;
+                color: #1e293b;
+            }
 
-        .amount-box span {
-            font-size: 18px;
-            color: #15803d;
-        }
+            .amount-box span {
+                font-size: 18px;
+                color: #15803d;
+            }
 
         .section-title {
             font-size: 18px;
@@ -122,17 +122,17 @@
             border: 1px solid rgba(148, 163, 184, 0.35);
         }
 
-        table.breakdown th,
-        table.breakdown td {
-            border: 1px solid rgba(148, 163, 184, 0.35);
-            padding: 10px 12px;
-            text-align: center;
-        }
+            table.breakdown th,
+            table.breakdown td {
+                border: 1px solid rgba(148, 163, 184, 0.35);
+                padding: 10px 12px;
+                text-align: center;
+            }
 
-        table.breakdown th {
-            background: rgba(22, 163, 74, 0.08);
-            color: #15803d;
-        }
+            table.breakdown th {
+                background: rgba(22, 163, 74, 0.08);
+                color: #15803d;
+            }
 
         .notes-box {
             margin-top: 28px;
@@ -165,28 +165,28 @@
             justify-content: center;
         }
 
-        .actions a,
-        .actions button {
-            padding: 10px 24px;
-            border-radius: 999px;
-            border: none;
-            font-size: 15px;
-            cursor: pointer;
-        }
+            .actions a,
+            .actions button {
+                padding: 10px 24px;
+                border-radius: 999px;
+                border: none;
+                font-size: 15px;
+                cursor: pointer;
+            }
 
-        .actions button {
-            background: #16a34a;
-            color: white;
-        }
+            .actions button {
+                background: #16a34a;
+                color: white;
+            }
 
-        .actions a {
-            background: transparent;
-            border: 1px solid #bbf7d0;
-            color: #15803d;
-            text-decoration: none;
-        }
+            .actions a {
+                background: transparent;
+                border: 1px solid #bbf7d0;
+                color: #15803d;
+                text-decoration: none;
+            }
 
-        @media print {
+        @@media print {
             body {
                 background: white;
                 padding: 0;
@@ -204,94 +204,94 @@
     </style>
 </head>
 <body>
-<div class="print-wrapper">
-    <div class="header">
-        <h1>سند استلام حوالة</h1>
-        <div class="text-muted">رقم القيد: @journalNumber</div>
-    </div>
+    <div class="print-wrapper">
+        <div class="header">
+            <h1>سند استلام حوالة</h1>
+            <div class="text-muted">رقم القيد: @journalNumber</div>
+        </div>
 
-    <div class="meta-grid">
-        <div class="meta-card">
-            <h3>تاريخ الاستلام</h3>
-            <p>@receiveDate.ToString("yyyy/MM/dd HH:mm")</p>
+        <div class="meta-grid">
+            <div class="meta-card">
+                <h3>تاريخ الاستلام</h3>
+                <p>@receiveDate.ToString("yyyy/MM/dd HH:mm")</p>
+            </div>
+            <div class="meta-card">
+                <h3>المرسل</h3>
+                <p>@senderName</p>
+            </div>
+            <div class="meta-card">
+                <h3>المستلم</h3>
+                <p>@receiverName</p>
+            </div>
+            <div class="meta-card">
+                <h3>فرع الاستقبال</h3>
+                <p>@receivingBranch</p>
+            </div>
+            <div class="meta-card">
+                <h3>الحساب المستقبل</h3>
+                <p>@toAccountDisplay</p>
+            </div>
+            <div class="meta-card">
+                <h3>الحساب الوسيط</h3>
+                <p>@(string.IsNullOrWhiteSpace(intermediaryDisplay) ? "-" : intermediaryDisplay)</p>
+            </div>
         </div>
-        <div class="meta-card">
-            <h3>المرسل</h3>
-            <p>@senderName</p>
-        </div>
-        <div class="meta-card">
-            <h3>المستلم</h3>
-            <p>@receiverName</p>
-        </div>
-        <div class="meta-card">
-            <h3>فرع الاستقبال</h3>
-            <p>@receivingBranch</p>
-        </div>
-        <div class="meta-card">
-            <h3>الحساب المستقبل</h3>
-            <p>@toAccountDisplay</p>
-        </div>
-        <div class="meta-card">
-            <h3>الحساب الوسيط</h3>
-            <p>@(string.IsNullOrWhiteSpace(intermediaryDisplay) ? "-" : intermediaryDisplay)</p>
-        </div>
-    </div>
 
-    <div class="amount-box">
-        <div>
-            <div class="text-sm text-slate-500">المبلغ المستلم</div>
-            <strong>@transfer.Amount.ToString("N2")</strong>
+        <div class="amount-box">
+            <div>
+                <div class="text-sm text-slate-500">المبلغ المستلم</div>
+                <strong>@transfer.Amount.ToString("N2")</strong>
+            </div>
+            <span>@currencyCode</span>
         </div>
-        <span>@currencyCode</span>
-    </div>
 
-    <h2 class="section-title">تفاصيل الفئات المستلمة</h2>
-    @if (Model.CurrencyBreakdown.Any())
-    {
-        <table class="breakdown">
-            <thead>
-                <tr>
-                    <th>الفئة</th>
-                    <th>الكمية</th>
-                </tr>
-            </thead>
-            <tbody>
-            @foreach (var unit in Model.CurrencyBreakdown.OrderByDescending(x => x.Key))
-            {
-                var label = Model.CurrencyUnitNames.TryGetValue(unit.Key, out var name)
-                    ? name
-                    : $"فئة رقم {unit.Key}";
-                <tr>
-                    <td>@label</td>
-                    <td>@unit.Value</td>
-                </tr>
-            }
-            </tbody>
-        </table>
-    }
-    else
-    {
-        <div class="text-muted">لا توجد تفاصيل فئات مدخلة لهذه الحوالة.</div>
-    }
-
-    <h2 class="section-title">ملاحظات</h2>
-    <div class="notes-box">
-        @(string.IsNullOrWhiteSpace(transfer.Notes) ? "لا توجد ملاحظات" : transfer.Notes)
-    </div>
-
-    <div class="signatures">
-        <div class="signature-line">توقيع المستلم</div>
-        <div class="signature-line">توقيع المحاسب</div>
-        <div class="signature-line">توقيع المدير المالي</div>
-    </div>
-
-    <div class="actions">
-        <button type="button" onclick="window.print()">طباعة</button>
-        @if (!string.IsNullOrEmpty(Model.ReturnUrl) && Url.IsLocalUrl(Model.ReturnUrl))
+        <h2 class="section-title">تفاصيل الفئات المستلمة</h2>
+        @if (Model.CurrencyBreakdown.Any())
         {
-            <a href="@Model.ReturnUrl">العودة</a>
+            <table class="breakdown">
+                <thead>
+                    <tr>
+                        <th>الفئة</th>
+                        <th>الكمية</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var unit in Model.CurrencyBreakdown.OrderByDescending(x => x.Key))
+                    {
+                        var label = Model.CurrencyUnitNames.TryGetValue(unit.Key, out var name)
+                        ? name
+                        : $"فئة رقم {unit.Key}";
+                        <tr>
+                            <td>@label</td>
+                            <td>@unit.Value</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         }
+        else
+        {
+            <div class="text-muted">لا توجد تفاصيل فئات مدخلة لهذه الحوالة.</div>
+        }
+
+        <h2 class="section-title">ملاحظات</h2>
+        <div class="notes-box">
+            @(string.IsNullOrWhiteSpace(transfer.Notes) ? "لا توجد ملاحظات" : transfer.Notes)
+        </div>
+
+        <div class="signatures">
+            <div class="signature-line">توقيع المستلم</div>
+            <div class="signature-line">توقيع المحاسب</div>
+            <div class="signature-line">توقيع المدير المالي</div>
+        </div>
+
+        <div class="actions">
+            <button type="button" onclick="window.print()">طباعة</button>
+            @if (!string.IsNullOrEmpty(Model.ReturnUrl) && Url.IsLocalUrl(Model.ReturnUrl))
+            {
+                <a href="@Model.ReturnUrl">العودة</a>
+            }
+        </div>
     </div>
-</div>
 </body>
 </html>
