@@ -574,7 +574,8 @@ namespace AccountingSystem.Controllers
             if (hasChildren)
                 return Json(new { success = false, message = "لا يمكن حذف الحساب لوجود حسابات فرعية" });
 
-            var hasTransactions = await _context.JournalEntryLines.AnyAsync(l => l.AccountId == id);
+            var hasTransactions = await _context.JournalEntryLines
+                .AnyAsync(l => l.AccountId == id && l.JournalEntry.Status != JournalEntryStatus.Cancelled);
             if (hasTransactions)
                 return Json(new { success = false, message = "لا يمكن حذف الحساب لوجود حركات مالية" });
 

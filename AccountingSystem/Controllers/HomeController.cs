@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
+using AccountingSystem.Extensions;
 
 namespace AccountingSystem.Controllers;
 
@@ -51,6 +52,7 @@ public class HomeController : Controller
         }
 
         var lineData = await _context.JournalEntryLines
+            .ExcludeCancelled()
             .Where(l => l.JournalEntry.Date >= startDate && l.JournalEntry.Date <= endDate)
             .Select(l => new
             {

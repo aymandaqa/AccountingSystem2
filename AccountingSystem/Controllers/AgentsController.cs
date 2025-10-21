@@ -139,6 +139,7 @@ namespace AccountingSystem.Controllers
             var agent = await _context.Agents
                 .Include(a => a.Account)
                     .ThenInclude(a => a.JournalEntryLines)
+                        .ThenInclude(line => line.JournalEntry)
                 .FirstOrDefaultAsync(a => a.Id == id);
 
             if (agent == null)
@@ -146,7 +147,7 @@ namespace AccountingSystem.Controllers
                 return NotFound();
             }
 
-            if (agent.Account != null && agent.Account.JournalEntryLines.Any())
+            if (agent.Account != null && agent.Account.JournalEntryLines.Any(line => line.JournalEntry.Status != JournalEntryStatus.Cancelled))
             {
                 TempData["Error"] = "لا يمكن حذف الوكيل لوجود معاملات مرتبطة بالحساب.";
                 return RedirectToAction(nameof(Index));

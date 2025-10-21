@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
+using System.Linq;
 
 namespace AccountingSystem.Controllers
 {
@@ -23,6 +24,7 @@ namespace AccountingSystem.Controllers
         {
             var costCenters = await _context.CostCenters
                 .Include(cc => cc.JournalEntryLines)
+                    .ThenInclude(line => line.JournalEntry)
                 .OrderBy(cc => cc.Code)
                 .ToListAsync();
 
@@ -35,7 +37,7 @@ namespace AccountingSystem.Controllers
                 Description = cc.Description,
                 IsActive = cc.IsActive,
                 CreatedAt = cc.CreatedAt,
-                TransactionCount = cc.JournalEntryLines.Count
+                TransactionCount = cc.JournalEntryLines.Count(line => line.JournalEntry.Status != JournalEntryStatus.Cancelled)
             }).ToList();
 
             return View(viewModels);
@@ -65,10 +67,15 @@ namespace AccountingSystem.Controllers
                 IsActive = costCenter.IsActive,
                 CreatedAt = costCenter.CreatedAt,
                 UpdatedAt = costCenter.UpdatedAt,
-                TotalDebit = costCenter.JournalEntryLines.Sum(jel => jel.DebitAmount),
-                TotalCredit = costCenter.JournalEntryLines.Sum(jel => jel.CreditAmount),
-                TransactionCount = costCenter.JournalEntryLines.Count,
+                TotalDebit = costCenter.JournalEntryLines
+                    .Where(jel => jel.JournalEntry.Status != JournalEntryStatus.Cancelled)
+                    .Sum(jel => jel.DebitAmount),
+                TotalCredit = costCenter.JournalEntryLines
+                    .Where(jel => jel.JournalEntry.Status != JournalEntryStatus.Cancelled)
+                    .Sum(jel => jel.CreditAmount),
+                TransactionCount = costCenter.JournalEntryLines.Count(jel => jel.JournalEntry.Status != JournalEntryStatus.Cancelled),
                 RecentTransactions = costCenter.JournalEntryLines
+                    .Where(jel => jel.JournalEntry.Status != JournalEntryStatus.Cancelled)
                     .OrderByDescending(jel => jel.JournalEntry.Date)
                     .Take(10)
                     .Select(jel => new CostCenterTransactionViewModel
@@ -197,7 +204,7 @@ namespace AccountingSystem.Controllers
             }
 
             // Check if cost center has related transactions
-            if (costCenter.JournalEntryLines.Any())
+            if (costCenter.JournalEntryLines.Any(line => line.JournalEntry.Status != JournalEntryStatus.Cancelled))
             {
                 TempData["Error"] = "لا يمكن حذف مركز التكلفة لوجود معاملات مرتبطة به";
                 return RedirectToAction(nameof(Index));
@@ -226,7 +233,9 @@ namespace AccountingSystem.Controllers
                 return NotFound();
             }
 
-            var query = costCenter.JournalEntryLines.AsQueryable();
+            var query = costCenter.JournalEntryLines
+                .Where(jel => jel.JournalEntry.Status != JournalEntryStatus.Cancelled)
+                .AsQueryable();
 
             if (fromDate.HasValue)
             {
