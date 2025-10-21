@@ -9,8 +9,29 @@
 @section Styles {
     <style>
         .journal-entries-wrapper {
-            padding-inline: clamp(0.5rem, 1vw, 1.5rem);
+            padding-inline: clamp(0.25rem, 0.8vw, 1.5rem);
         }
+
+        .journal-entries-card {
+            min-height: calc(100vh - 6rem);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .journal-entries-card .card-body {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .journal-entries-grid {
+            flex: 1 1 auto;
+            min-height: 24rem;
+        }
+
+            .journal-entries-grid .e-grid {
+                height: 100%;
+            }
 
         .table-actions .btn {
             min-width: 2.25rem;
@@ -68,7 +89,7 @@
 <div class="container-fluid journal-entries-wrapper">
     <div class="row">
         <div class="col-12">
-            <div class="card shadow-sm">
+            <div class="card shadow-sm journal-entries-card h-100">
                 <div class="card-header">
                     <div class="d-flex flex-column flex-xl-row align-items-xl-center gap-3">
                         <h3 class="card-title mb-0 d-flex align-items-center gap-2">
@@ -90,8 +111,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="card-body filters-card">
-                    <form id="filtersForm" class="row g-3 align-items-end mb-3">
+                <div class="card-body filters-card d-flex flex-column">
+                    <form id="filtersForm" class="row g-3 align-items-end">
                         <div class="col-sm-6 col-lg-3">
                             <label for="fromDate" class="form-label">من تاريخ</label>
                             <input type="date" id="fromDate" class="form-control" />
@@ -141,47 +162,49 @@
                         </div>
                     </form>
 
-                    <ejs-grid id="journalEntriesGrid"
-                              allowPaging="true"
-                              allowSorting="true"
-                              allowFiltering="true"
-                              allowGrouping="true"
-                              allowExcelExport="true"
-                              allowTextWrap="true"
-                              allowResizing="true"
-                              allowReordering="true"
-                              enableStickyHeader="true"
-                              enableRtl="true"
-                              allowSelection="false"
-                              height="100%"
-                              gridLines="Both"
-                              toolbar="@toolbarItems">
-                        <e-data-manager url="@Url.Action("UrlDatasourceJournalEntries", "JournalEntries")" adaptor="UrlAdaptor"></e-data-manager>
-                        <e-grid-filterSettings type="Excel"></e-grid-filterSettings>
-                        <e-grid-aggregates>
-                            <e-grid-aggregate>
-                                <e-aggregate-columns>
-                                    <e-aggregate-column field="TotalDebit" type="Sum" format="N2" footerTemplate="<div class='text-end fw-semibold'>إجمالي المدين: ${Sum}</div>" groupCaptionTemplate="<span class='fw-semibold text-primary'>إجمالي المدين: ${Sum}</span>"></e-aggregate-column>
-                                    <e-aggregate-column field="TotalCredit" type="Sum" format="N2" footerTemplate="<div class='text-end fw-semibold'>إجمالي الدائن: ${Sum}</div>" groupCaptionTemplate="<span class='fw-semibold text-primary'>إجمالي الدائن: ${Sum}</span>"></e-aggregate-column>
-                                </e-aggregate-columns>
-                            </e-grid-aggregate>
-                        </e-grid-aggregates>
-                        <e-grid-columns>
-                            <e-grid-column field="Number" headerText="رقم القيد" width="140"></e-grid-column>
-                            <e-grid-column field="Date" headerText="التاريخ" format="dd/MM/yyyy HH:mm" type="date" textAlign="Center" width="140"></e-grid-column>
-                            <e-grid-column field="Description" headerText="الوصف" width="220"></e-grid-column>
-                            <e-grid-column field="Reference" headerText="المرجع" width="180"></e-grid-column>
-                            <e-grid-column field="BranchName" headerText="الفرع" width="180"></e-grid-column>
-                            <e-grid-column field="CreatedByName" headerText="مدخل القيد" width="200"></e-grid-column>
-                            <e-grid-column field="TotalDebit" headerText="إجمالي المدين" format="N2" type="number" textAlign="Right" width="160"></e-grid-column>
-                            <e-grid-column field="TotalCredit" headerText="إجمالي الدائن" format="N2" type="number" textAlign="Right" width="160"></e-grid-column>
-                            <e-grid-column field="LinesCount" headerText="عدد البنود" textAlign="Center" width="130"></e-grid-column>
-                            <e-grid-column field="StatusDisplay" headerText="الحالة" template="#statusTemplate" textAlign="Center" width="140"></e-grid-column>
-                            <e-grid-column field="DateGroup" headerText="الشهر" visible="false"></e-grid-column>
-                            <e-grid-column field="IsBalanced" visible="false"></e-grid-column>
-                            <e-grid-column field="Id" headerText="الإجراءات" template="#actionsTemplate" textAlign="Center" width="210" allowSorting="false" allowFiltering="false"></e-grid-column>
-                        </e-grid-columns>
-                    </ejs-grid>
+                    <div class="journal-entries-grid">
+                        <ejs-grid id="journalEntriesGrid"
+                                  allowPaging="true"
+                                  allowSorting="true"
+                                  allowFiltering="true"
+                                  allowGrouping="true"
+                                  allowExcelExport="true"
+                                  allowTextWrap="true"
+                                  allowResizing="true"
+                                  allowReordering="true"
+                                  enableStickyHeader="true"
+                                  enableRtl="true"
+                                  allowSelection="false"
+                                  height="100%"
+                                  gridLines="Both"
+                                  toolbar="@toolbarItems">
+                            <e-data-manager url="@Url.Action("UrlDatasourceJournalEntries", "JournalEntries")" adaptor="UrlAdaptor"></e-data-manager>
+                            <e-grid-filterSettings type="Excel"></e-grid-filterSettings>
+                            <e-grid-aggregates>
+                                <e-grid-aggregate>
+                                    <e-aggregate-columns>
+                                        <e-aggregate-column field="TotalDebit" type="Sum" format="N2" footerTemplate="<div class='text-end fw-semibold'>إجمالي المدين: ${Sum}</div>" groupCaptionTemplate="<span class='fw-semibold text-primary'>إجمالي المدين: ${Sum}</span>"></e-aggregate-column>
+                                        <e-aggregate-column field="TotalCredit" type="Sum" format="N2" footerTemplate="<div class='text-end fw-semibold'>إجمالي الدائن: ${Sum}</div>" groupCaptionTemplate="<span class='fw-semibold text-primary'>إجمالي الدائن: ${Sum}</span>"></e-aggregate-column>
+                                    </e-aggregate-columns>
+                                </e-grid-aggregate>
+                            </e-grid-aggregates>
+                            <e-grid-columns>
+                                <e-grid-column field="Number" headerText="رقم القيد" width="140"></e-grid-column>
+                                <e-grid-column field="Date" headerText="التاريخ" format="dd/MM/yyyy HH:mm" type="date" textAlign="Center" width="140"></e-grid-column>
+                                <e-grid-column field="Description" headerText="الوصف" width="220"></e-grid-column>
+                                <e-grid-column field="Reference" headerText="المرجع" width="180"></e-grid-column>
+                                <e-grid-column field="BranchName" headerText="الفرع" width="180"></e-grid-column>
+                                <e-grid-column field="CreatedByName" headerText="مدخل القيد" width="200"></e-grid-column>
+                                <e-grid-column field="TotalDebit" headerText="إجمالي المدين" format="N2" type="number" textAlign="Right" width="160"></e-grid-column>
+                                <e-grid-column field="TotalCredit" headerText="إجمالي الدائن" format="N2" type="number" textAlign="Right" width="160"></e-grid-column>
+                                <e-grid-column field="LinesCount" headerText="عدد البنود" textAlign="Center" width="130"></e-grid-column>
+                                <e-grid-column field="StatusDisplay" headerText="الحالة" template="#statusTemplate" textAlign="Center" width="140"></e-grid-column>
+                                <e-grid-column field="DateGroup" headerText="الشهر" visible="false"></e-grid-column>
+                                <e-grid-column field="IsBalanced" visible="false"></e-grid-column>
+                                <e-grid-column field="Id" headerText="الإجراءات" template="#actionsTemplate" textAlign="Center" width="210" allowSorting="false" allowFiltering="false"></e-grid-column>
+                            </e-grid-columns>
+                        </ejs-grid>
+                    </div>
 
                     <form id="antiForgeryForm" asp-action="Post" method="post" class="d-none">
                         @Html.AntiForgeryToken()
@@ -254,10 +277,29 @@
             grid.pageSettings = { pageSize: 25, pageSizes: [10, 25, 50, 100, 'All'] };
             grid.groupSettings = { showDropArea: false };
             grid.searchSettings = { fields: ['Number', 'Description', 'Reference', 'BranchName', 'CreatedByName', 'StatusDisplay', 'TotalDebitFormatted', 'TotalCreditFormatted'], operator: 'contains', key: '', ignoreCase: true };
+            grid.sortSettings = { columns: [{ field: 'Date', direction: 'Descending' }] };
+
+            function buildQuery(searchValue) {
+                var query = new ej.data.Query();
+                var fromDate = document.getElementById('fromDate').value;
+                var toDate = document.getElementById('toDate').value;
+                var branchId = document.getElementById('branchFilter').value;
+                var status = document.getElementById('statusFilter').value;
+                var showUnbalancedOnly = unbalancedToggle && unbalancedToggle.checked;
+
+                if (fromDate) query = query.addParams('fromDate', fromDate);
+                if (toDate) query = query.addParams('toDate', toDate);
+                if (branchId) query = query.addParams('branchId', branchId);
+                if (status) query = query.addParams('status', status);
+                if (showUnbalancedOnly) query = query.addParams('showUnbalancedOnly', 'true');
+                if (searchValue) query = query.addParams('searchTerm', searchValue);
+
+                return query;
+            }
 
             function updateGridHeight() {
-                var headerRect = gridElement.getBoundingClientRect();
-                var availableHeight = window.innerHeight - headerRect.top - 180;
+                var gridRect = gridElement.getBoundingClientRect();
+                var availableHeight = window.innerHeight - gridRect.top - 48;
                 grid.height = Math.max(availableHeight, 420);
             }
 
@@ -300,38 +342,17 @@
                 return searchInput ? searchInput.value.trim() : '';
             }
 
-            function buildDataUrl(searchValue) {
-                var params = new URLSearchParams();
-                var fromDate = document.getElementById('fromDate').value;
-                var toDate = document.getElementById('toDate').value;
-                var branchId = document.getElementById('branchFilter').value;
-                var status = document.getElementById('statusFilter').value;
-                var showUnbalancedOnly = unbalancedToggle && unbalancedToggle.checked;
-
-                if (fromDate) params.append('fromDate', fromDate);
-                if (toDate) params.append('toDate', toDate);
-                if (branchId) params.append('branchId', branchId);
-                if (status) params.append('status', status);
-                if (showUnbalancedOnly) params.append('showUnbalancedOnly', 'true');
-                if (searchValue) params.append('searchTerm', searchValue);
-
-                var query = params.toString();
-                return query ? dataUrl + '?' + query : dataUrl;
-            }
-
             function reloadGrid() {
                 showLoading();
                 var searchValue = getQuickSearchValue();
-                grid.dataSource = new ej.data.DataManager({
-                    url: buildDataUrl(searchValue),
-                    adaptor: new ej.data.UrlAdaptor()
-                });
+                grid.query = buildQuery(searchValue);
                 grid.searchSettings.key = searchValue;
                 grid.refresh();
             }
 
+            grid.query = buildQuery(getQuickSearchValue());
             grid.dataSource = new ej.data.DataManager({
-                url: buildDataUrl(getQuickSearchValue()),
+                url: dataUrl,
                 adaptor: new ej.data.UrlAdaptor()
             });
 
