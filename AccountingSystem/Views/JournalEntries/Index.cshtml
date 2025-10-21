@@ -237,7 +237,7 @@
                 <i class="fas fa-print"></i>
             </a>
             ${if(CanDelete)}
-            <button type="button" class="btn btn-sm btn-outline-danger btn-delete-entry" data-id="${Id}" data-number="${Number}" title="حذف" asp-require-permission="journal.delete">
+            <button type="button" class="btn btn-sm btn-outline-danger btn-delete-entry" data-id="${Id}" data-number="${Number}" title="إلغاء" asp-require-permission="journal.delete">
                 <i class="fas fa-trash"></i>
             </button>
             ${/if}
@@ -512,7 +512,7 @@
                     return;
                 }
 
-                if (!confirm('هل تريد حذف القيد رقم ' + deleteNumber + '?')) {
+                if (!confirm('هل تريد إلغاء القيد رقم ' + deleteNumber + '?')) {
                     return;
                 }
 
@@ -524,14 +524,14 @@
                         hideLoading();
                         grid.refresh();
                         if (window.swal) {
-                            swal({ title: 'تم الحذف بنجاح', icon: 'success', button: 'حسناً' });
+                            swal({ title: 'تم الإلغاء بنجاح', icon: 'success', button: 'حسناً' });
                         } else {
-                            alert('تم حذف القيد بنجاح');
+                            alert('تم إلغاء القيد بنجاح');
                         }
                     },
                     error: function (xhr) {
                         hideLoading();
-                        var message = xhr.responseText || 'تعذر حذف القيد.';
+                        var message = xhr.responseText || 'تعذر إلغاء القيد.';
                         if (window.swal) {
                             swal({ title: 'خطأ', text: message, icon: 'error', button: 'إغلاق' });
                         } else {
