@@ -3,6 +3,7 @@ using AccountingSystem.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace AccountingSystem.Controllers
 {
@@ -172,13 +173,14 @@ namespace AccountingSystem.Controllers
             var supplier = await _context.Suppliers
                 .Include(s => s.Account)
                     .ThenInclude(a => a.JournalEntryLines)
+                        .ThenInclude(line => line.JournalEntry)
                 .FirstOrDefaultAsync(s => s.Id == id);
             if (supplier == null)
             {
                 return NotFound();
             }
 
-            if (supplier.Account != null && supplier.Account.JournalEntryLines.Any())
+            if (supplier.Account != null && supplier.Account.JournalEntryLines.Any(line => line.JournalEntry.Status != JournalEntryStatus.Cancelled))
             {
                 TempData["Error"] = "لا يمكن حذف المورد لوجود معاملات مرتبطة به";
                 return RedirectToAction(nameof(Index));

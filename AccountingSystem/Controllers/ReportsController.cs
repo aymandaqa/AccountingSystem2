@@ -10,6 +10,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 using QuestPDF.Helpers;
 using AccountingSystem.Services;
+using AccountingSystem.Extensions;
 using System;
 using System.Security.Claims;
 using System.Globalization;
@@ -297,6 +298,7 @@ namespace AccountingSystem.Controllers
             var previousYearEnd = yearEnd.AddYears(-1);
 
             var linesRaw = await _context.JournalEntryLines
+                .ExcludeCancelled()
                 .AsNoTracking()
                 .Where(l => l.JournalEntry.Date >= previousYearStart && l.JournalEntry.Date < yearEnd)
                 .Select(l => new
@@ -1239,6 +1241,7 @@ namespace AccountingSystem.Controllers
             {
                 case DynamicReportType.JournalEntries:
                     var journalData = await _context.JournalEntryLines
+                        .ExcludeCancelled()
                         .AsNoTracking()
                         .Include(l => l.JournalEntry).ThenInclude(e => e.Branch)
                         .Include(l => l.Account).ThenInclude(a => a.Branch)
@@ -2037,6 +2040,7 @@ namespace AccountingSystem.Controllers
 
             var pending = includePending
                 ? await _context.JournalEntryLines
+                    .ExcludeCancelled()
                     .Include(l => l.JournalEntry)
                     .Where(l => l.JournalEntry.Status != JournalEntryStatus.Posted)
                     .Where(l => l.JournalEntry.Date >= from && l.JournalEntry.Date <= to)
@@ -2264,6 +2268,7 @@ namespace AccountingSystem.Controllers
         public async Task<IActionResult> PendingTransactions(int? branchId, DateTime? fromDate, DateTime? toDate)
         {
             var query = _context.JournalEntryLines
+                .ExcludeCancelled()
                 .Include(l => l.JournalEntry)
                 .Include(l => l.Account)
                 .Where(l => l.JournalEntry.Status != JournalEntryStatus.Posted)
@@ -2572,6 +2577,7 @@ namespace AccountingSystem.Controllers
             var baseCurrency = await _context.Currencies.AsNoTracking().FirstAsync(c => c.IsBase);
 
             var lines = await _context.JournalEntryLines
+                .ExcludeCancelled()
                 .AsNoTracking()
                 .Include(l => l.JournalEntry)
                     .ThenInclude(j => j.Branch)
@@ -2664,6 +2670,7 @@ namespace AccountingSystem.Controllers
             var baseCurrency = await _context.Currencies.AsNoTracking().FirstAsync(c => c.IsBase);
 
             var lines = await _context.JournalEntryLines
+                .ExcludeCancelled()
                 .AsNoTracking()
                 .Include(l => l.JournalEntry)
                     .ThenInclude(j => j.Branch)
@@ -3394,6 +3401,7 @@ namespace AccountingSystem.Controllers
             var to = toDate ?? DateTime.Now;
 
             var lines = await _context.JournalEntryLines
+                .ExcludeCancelled()
                 .Include(l => l.JournalEntry)
                 .Include(l => l.Account)
                 .Where(l => includePending || l.JournalEntry.Status == JournalEntryStatus.Posted)
@@ -3501,6 +3509,7 @@ namespace AccountingSystem.Controllers
                     viewModel.CurrencyCode = account.Currency.Code;
 
                     var priorLinesQuery = _context.JournalEntryLines
+                        .ExcludeCancelled()
                         .AsNoTracking()
                         .Where(l => l.AccountId == accountId.Value)
                         .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
@@ -3524,6 +3533,7 @@ namespace AccountingSystem.Controllers
                     var openingBalanceBase = runningBase;
 
                     var lines = await _context.JournalEntryLines
+                        .ExcludeCancelled()
                         .AsNoTracking()
                         .Include(l => l.JournalEntry)
                             .ThenInclude(j => j.Branch)

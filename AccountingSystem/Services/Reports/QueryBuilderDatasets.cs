@@ -1,4 +1,5 @@
 using AccountingSystem.Data;
+using AccountingSystem.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace AccountingSystem.Services;
@@ -31,6 +32,7 @@ public static class QueryBuilderDatasets
                 new("Credit", "دائن", QueryFieldType.Decimal, "القيم"),
             },
             context => context.JournalEntryLines
+                .ExcludeCancelled()
                 .AsNoTracking()
                 .Include(l => l.JournalEntry).ThenInclude(e => e.Branch)
                 .Include(l => l.Account).ThenInclude(a => a.Branch)

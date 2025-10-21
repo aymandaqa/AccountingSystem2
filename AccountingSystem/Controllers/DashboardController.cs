@@ -305,6 +305,7 @@ namespace AccountingSystem.Controllers
             var accountBalances = accounts.ToDictionary(a => a.Id, a =>
             {
                 var journalLines = a.JournalEntryLines
+                    .Where(l => l.JournalEntry.Status != JournalEntryStatus.Cancelled)
                     .Where(l => l.JournalEntry.Date >= startDate && l.JournalEntry.Date <= endDate);
 
                 if (hasBranchFilter)

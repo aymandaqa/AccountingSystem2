@@ -616,7 +616,7 @@ namespace AccountingSystem.Controllers
             if (asset.AccountId.HasValue)
             {
                 var hasTransactions = await _context.JournalEntryLines
-                    .AnyAsync(line => line.AccountId == asset.AccountId.Value);
+                    .AnyAsync(line => line.AccountId == asset.AccountId.Value && line.JournalEntry.Status != JournalEntryStatus.Cancelled);
 
                 if (hasTransactions)
                 {
