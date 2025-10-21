@@ -7,9 +7,11 @@ using AccountingSystem.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System;
 using System.Collections.Generic;
+using System.Collections;
 using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
+using System.Text.Json;
 using Syncfusion.EJ2.Base;
 
 namespace AccountingSystem.Controllers
@@ -249,6 +251,19 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "journal.view")]
         public IActionResult UrlDatasourceJournalEntries([FromBody] DataManagerRequest dm, DateTime? fromDate, DateTime? toDate, int? branchId, string? status, bool showUnbalancedOnly = false, string? searchTerm = null)
         {
+            fromDate ??= ParseDateParameter(dm, "fromDate");
+            toDate ??= ParseDateParameter(dm, "toDate");
+            branchId ??= ParseIntParameter(dm, "branchId");
+            status ??= GetStringParameter(dm, "status");
+
+            var unbalancedParameter = ParseBoolParameter(dm, "showUnbalancedOnly");
+            if (unbalancedParameter.HasValue)
+            {
+                showUnbalancedOnly = unbalancedParameter.Value;
+            }
+
+            searchTerm ??= GetStringParameter(dm, "searchTerm");
+
             var query = _context.JournalEntries
                 .AsNoTracking()
                 .Include(j => j.Branch)
@@ -412,6 +427,128 @@ namespace AccountingSystem.Controllers
             }
 
             return dm.RequiresCounts ? Json(new { result = dataSource, count }) : Json(dataSource);
+        }
+
+        private static string? GetStringParameter(DataManagerRequest request, string key)
+        {
+            if (request?.Params == null)
+            {
+                return null;
+            }
+
+            object? rawValue = null;
+
+            if (request.Params is IDictionary<string, object> genericDictionary && genericDictionary.TryGetValue(key, out var genericValue))
+            {
+                rawValue = genericValue;
+            }
+            else if (request.Params is IDictionary dictionary && dictionary.Contains(key))
+            {
+                rawValue = dictionary[key];
+            }
+
+            if (rawValue == null)
+            {
+                return null;
+            }
+
+            if (rawValue is string stringValue)
+            {
+                return string.IsNullOrWhiteSpace(stringValue) ? null : stringValue;
+            }
+
+            if (rawValue is JsonElement jsonElement)
+            {
+                switch (jsonElement.ValueKind)
+                {
+                    case JsonValueKind.String:
+                        var stringResult = jsonElement.GetString();
+                        return string.IsNullOrWhiteSpace(stringResult) ? null : stringResult;
+                    case JsonValueKind.Number:
+                    case JsonValueKind.True:
+                    case JsonValueKind.False:
+                        var jsonValue = jsonElement.ToString();
+                        return string.IsNullOrWhiteSpace(jsonValue) ? null : jsonValue;
+                    default:
+                        return null;
+                }
+            }
+
+            var converted = rawValue.ToString();
+            return string.IsNullOrWhiteSpace(converted) ? null : converted;
+        }
+
+        private static DateTime? ParseDateParameter(DataManagerRequest request, string key)
+        {
+            var value = GetStringParameter(request, key);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            if (DateTime.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var isoResult))
+            {
+                return isoResult;
+            }
+
+            if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var invariantResult))
+            {
+                return invariantResult;
+            }
+
+            if (DateTime.TryParse(value, CultureInfo.CurrentCulture, DateTimeStyles.AssumeLocal, out var cultureResult))
+            {
+                return cultureResult;
+            }
+
+            return null;
+        }
+
+        private static int? ParseIntParameter(DataManagerRequest request, string key)
+        {
+            var value = GetStringParameter(request, key);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var invariantResult))
+            {
+                return invariantResult;
+            }
+
+            if (int.TryParse(value, NumberStyles.Integer, CultureInfo.CurrentCulture, out var cultureResult))
+            {
+                return cultureResult;
+            }
+
+            return null;
+        }
+
+        private static bool? ParseBoolParameter(DataManagerRequest request, string key)
+        {
+            var value = GetStringParameter(request, key);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            if (bool.TryParse(value, out var boolResult))
+            {
+                return boolResult;
+            }
+
+            if (string.Equals(value, "1", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (string.Equals(value, "0", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return null;
         }
 
         // GET: JournalEntries/Create
