@@ -2175,8 +2175,43 @@ namespace AccountingSystem.Controllers
                 account.CreditBalanceBase = Math.Round(account.CreditBalanceBase, 2, MidpointRounding.AwayFromZero);
             }
 
+            var visibleChildrenCache = new Dictionary<int, bool>();
+
+            bool HasVisibleChildrenWithinLevel(int accountId)
+            {
+                if (visibleChildrenCache.TryGetValue(accountId, out var cachedValue))
+                {
+                    return cachedValue;
+                }
+
+                if (!childrenLookup.TryGetValue(accountId, out var childAccounts) || !childAccounts.Any())
+                {
+                    visibleChildrenCache[accountId] = false;
+                    return false;
+                }
+
+                foreach (var child in childAccounts)
+                {
+                    if (child.Level <= normalizedLevel)
+                    {
+                        visibleChildrenCache[accountId] = true;
+                        return true;
+                    }
+
+                    if (HasVisibleChildrenWithinLevel(child.Id))
+                    {
+                        visibleChildrenCache[accountId] = true;
+                        return true;
+                    }
+                }
+
+                visibleChildrenCache[accountId] = false;
+                return false;
+            }
+
             var totalsScope = reportAccounts
-                .Where(a => a.Level == normalizedLevel)
+                .Where(a => a.Level <= normalizedLevel)
+                .Where(a => !HasVisibleChildrenWithinLevel(a.AccountId))
                 .ToList();
 
             var viewModel = new TrialBalanceViewModel
