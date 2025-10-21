@@ -108,6 +108,7 @@ namespace AccountingSystem.Data
                 new Permission { Name = "transfers.view", DisplayName = "عرض الحوالات", Category = "الحوالات" },
                 new Permission { Name = "transfers.create", DisplayName = "إنشاء الحوالات", Category = "الحوالات" },
                 new Permission { Name = "transfers.approve", DisplayName = "اعتماد الحوالات", Category = "الحوالات" },
+                new Permission { Name = "transfers.manage", DisplayName = "إدارة الحوالات", Category = "الحوالات" },
                 new Permission { Name = "cashclosures.view", DisplayName = "عرض إغلاقات الصندوق", Category = "الصندوق" },
                 new Permission { Name = "cashclosures.create", DisplayName = "إنشاء إغلاق صندوق", Category = "الصندوق" },
                 new Permission { Name = "cashclosures.approve", DisplayName = "اعتماد إغلاق الصندوق", Category = "الصندوق" },
@@ -371,6 +372,11 @@ namespace AccountingSystem.Data
             if (!context.SystemSettings.Any(s => s.Key == "DashboardParentAccountId"))
             {
                 context.SystemSettings.Add(new SystemSetting { Key = "DashboardParentAccountId", Value = null });
+            }
+
+            if (!context.SystemSettings.Any(s => s.Key == "TransferIntermediaryAccountId"))
+            {
+                context.SystemSettings.Add(new SystemSetting { Key = "TransferIntermediaryAccountId", Value = null });
             }
 
             await context.SaveChangesAsync();

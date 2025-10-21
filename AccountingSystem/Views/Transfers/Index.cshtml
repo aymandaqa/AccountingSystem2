@@ -1,4 +1,7 @@
 @model IEnumerable<AccountingSystem.Models.PaymentTransfer>
+@{
+    var canManageTransfers = ViewBag.CanManageTransfers as bool? ?? false;
+}
 
 <h2>الحوالات</h2>
 @{
@@ -30,4 +33,10 @@
     </div>
 </div>
 
-<a asp-action="Create" class="btn btn-primary" asp-require-permission="transfers.create">إنشاء حوالة</a>
+<div class="mt-3 d-flex gap-2">
+    <a asp-action="Create" class="btn btn-primary" asp-require-permission="transfers.create">إنشاء حوالة</a>
+    @if (canManageTransfers)
+    {
+        <a asp-action="Manage" class="btn btn-outline-secondary" asp-require-permission="transfers.manage">إدارة الحوالات</a>
+    }
+</div>

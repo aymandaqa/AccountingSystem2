@@ -656,6 +656,11 @@ namespace AccountingSystem.Data
                     .WithMany()
                     .HasForeignKey(e => e.JournalEntryId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.SenderJournalEntry)
+                    .WithMany()
+                    .HasForeignKey(e => e.SenderJournalEntryId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             // ReceiptVoucher configuration
@@ -1096,6 +1101,7 @@ namespace AccountingSystem.Data
                 new Permission { Id = 33, Name = "transfers.view", DisplayName = "عرض الحوالات", Category = "الحوالات", CreatedAt = createdAt },
                 new Permission { Id = 34, Name = "transfers.create", DisplayName = "إنشاء الحوالات", Category = "الحوالات", CreatedAt = createdAt },
                 new Permission { Id = 35, Name = "transfers.approve", DisplayName = "اعتماد الحوالات", Category = "الحوالات", CreatedAt = createdAt },
+                new Permission { Id = 113, Name = "transfers.manage", DisplayName = "إدارة الحوالات", Category = "الحوالات", CreatedAt = createdAt },
                 new Permission { Id = 36, Name = "currencies.view", DisplayName = "عرض العملات", Category = "العملات", CreatedAt = createdAt },
                 new Permission { Id = 37, Name = "currencies.create", DisplayName = "إنشاء العملات", Category = "العملات", CreatedAt = createdAt },
                 new Permission { Id = 38, Name = "currencies.edit", DisplayName = "تعديل العملات", Category = "العملات", CreatedAt = createdAt },

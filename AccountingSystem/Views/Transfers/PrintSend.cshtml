@@ -1,0 +1,296 @@
+@using System.Linq
+@model AccountingSystem.ViewModels.TransferPrintViewModel
+@{
+    Layout = null;
+    var transfer = Model.Transfer;
+    var currencyCode = transfer.FromPaymentAccount?.Currency?.Code ?? transfer.ToPaymentAccount?.Currency?.Code ?? string.Empty;
+    var senderName = !string.IsNullOrWhiteSpace(transfer.Sender?.FullName)
+        ? transfer.Sender!.FullName
+        : transfer.Sender?.UserName ?? transfer.SenderId;
+    var receiverName = !string.IsNullOrWhiteSpace(transfer.Receiver?.FullName)
+        ? transfer.Receiver!.FullName
+        : transfer.Receiver?.UserName ?? transfer.ReceiverId;
+    var branchLabel = transfer.FromBranch?.NameAr ?? transfer.FromBranch?.NameEn ?? transfer.Sender?.PaymentBranch?.NameAr ?? string.Empty;
+    var intermediaryDisplay = Model.IntermediaryAccount != null
+        ? $"{Model.IntermediaryAccount.Code} - {Model.IntermediaryAccount.NameAr ?? Model.IntermediaryAccount.NameEn ?? Model.IntermediaryAccount.Code}"
+        : string.Empty;
+    var fromAccountDisplay = transfer.FromPaymentAccount != null
+        ? $"{transfer.FromPaymentAccount.Code} - {transfer.FromPaymentAccount.NameAr ?? transfer.FromPaymentAccount.NameEn ?? transfer.FromPaymentAccount.Code}"
+        : transfer.FromPaymentAccountId.ToString();
+    var journalNumber = transfer.SenderJournalEntry?.Number ?? "-";
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <title>سند إرسال حوالة</title>
+    <style>
+        :root {
+            color-scheme: only light;
+        }
+
+        body {
+            font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 32px;
+            background: #f5f7fb;
+            color: #1f2937;
+        }
+
+        .print-wrapper {
+            max-width: 960px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 16px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            box-shadow: 0 25px 45px -20px rgba(15, 23, 42, 0.35);
+            padding: 48px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 30px;
+            color: #1d4ed8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .meta-card {
+            background: #f8fafc;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            border-radius: 12px;
+            padding: 16px 18px;
+        }
+
+        .meta-card h3 {
+            margin: 0 0 6px;
+            font-size: 14px;
+            color: #475569;
+        }
+
+        .meta-card p {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .amount-box {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(59, 130, 246, 0.08));
+            border: 1px solid rgba(37, 99, 235, 0.35);
+            border-radius: 16px;
+            padding: 24px 28px;
+            margin-bottom: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .amount-box strong {
+            font-size: 36px;
+            color: #1e293b;
+        }
+
+        .amount-box span {
+            font-size: 18px;
+            color: #2563eb;
+        }
+
+        .section-title {
+            font-size: 18px;
+            margin: 24px 0 12px;
+            color: #1f2937;
+        }
+
+        table.breakdown {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+        }
+
+        table.breakdown th,
+        table.breakdown td {
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            padding: 10px 12px;
+            text-align: center;
+        }
+
+        table.breakdown th {
+            background: rgba(37, 99, 235, 0.08);
+            color: #2563eb;
+        }
+
+        .notes-box {
+            margin-top: 28px;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px dashed rgba(148, 163, 184, 0.45);
+            background: #fdfdfd;
+            min-height: 70px;
+        }
+
+        .signatures {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            margin-top: 36px;
+        }
+
+        .signature-line {
+            border-top: 2px solid rgba(15, 23, 42, 0.35);
+            padding-top: 10px;
+            text-align: center;
+            font-size: 15px;
+            color: #475569;
+        }
+
+        .actions {
+            margin-top: 32px;
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+        }
+
+        .actions a,
+        .actions button {
+            padding: 10px 24px;
+            border-radius: 999px;
+            border: none;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        .actions button {
+            background: #2563eb;
+            color: white;
+        }
+
+        .actions a {
+            background: transparent;
+            border: 1px solid #cbd5f5;
+            color: #1d4ed8;
+            text-decoration: none;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .print-wrapper {
+                box-shadow: none;
+                border: none;
+            }
+
+            .actions {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="print-wrapper">
+    <div class="header">
+        <h1>سند إرسال حوالة</h1>
+        <div class="text-muted">رقم القيد: @journalNumber</div>
+    </div>
+
+    <div class="meta-grid">
+        <div class="meta-card">
+            <h3>تاريخ الحوالة</h3>
+            <p>@transfer.CreatedAt.ToString("yyyy/MM/dd HH:mm")</p>
+        </div>
+        <div class="meta-card">
+            <h3>اسم المرسل</h3>
+            <p>@senderName</p>
+        </div>
+        <div class="meta-card">
+            <h3>اسم المستلم</h3>
+            <p>@receiverName</p>
+        </div>
+        <div class="meta-card">
+            <h3>فرع الإرسال</h3>
+            <p>@branchLabel</p>
+        </div>
+        <div class="meta-card">
+            <h3>الحساب المرسل</h3>
+            <p>@fromAccountDisplay</p>
+        </div>
+        <div class="meta-card">
+            <h3>الحساب الوسيط</h3>
+            <p>@(string.IsNullOrWhiteSpace(intermediaryDisplay) ? "-" : intermediaryDisplay)</p>
+        </div>
+    </div>
+
+    <div class="amount-box">
+        <div>
+            <div class="text-sm text-slate-500">المبلغ الإجمالي</div>
+            <strong>@transfer.Amount.ToString("N2")</strong>
+        </div>
+        <span>@currencyCode</span>
+    </div>
+
+    <h2 class="section-title">تفاصيل الفئات</h2>
+    @if (Model.CurrencyBreakdown.Any())
+    {
+        <table class="breakdown">
+            <thead>
+                <tr>
+                    <th>الفئة</th>
+                    <th>الكمية</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var unit in Model.CurrencyBreakdown.OrderByDescending(x => x.Key))
+            {
+                var label = Model.CurrencyUnitNames.TryGetValue(unit.Key, out var name)
+                    ? name
+                    : $"فئة رقم {unit.Key}";
+                <tr>
+                    <td>@label</td>
+                    <td>@unit.Value</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="text-muted">لا توجد تفاصيل فئات مدخلة لهذه الحوالة.</div>
+    }
+
+    <h2 class="section-title">ملاحظات</h2>
+    <div class="notes-box">
+        @(string.IsNullOrWhiteSpace(transfer.Notes) ? "لا توجد ملاحظات" : transfer.Notes)
+    </div>
+
+    <div class="signatures">
+        <div class="signature-line">توقيع المرسل</div>
+        <div class="signature-line">توقيع المحاسب</div>
+        <div class="signature-line">توقيع المدير المالي</div>
+    </div>
+
+    <div class="actions">
+        <button type="button" onclick="window.print()">طباعة</button>
+        @if (!string.IsNullOrEmpty(Model.ReturnUrl) && Url.IsLocalUrl(Model.ReturnUrl))
+        {
+            <a href="@Model.ReturnUrl">العودة</a>
+        }
+    </div>
+</div>
+</body>
+</html>

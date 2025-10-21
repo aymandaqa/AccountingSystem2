@@ -61,8 +61,9 @@
         var canCashClosuresCreate = (await AuthorizationService.AuthorizeAsync(User, "cashclosures.create")).Succeeded;
         var canCashClosuresApprove = (await AuthorizationService.AuthorizeAsync(User, "cashclosures.approve")).Succeeded;
         var canCashClosuresReport = (await AuthorizationService.AuthorizeAsync(User, "cashclosures.report")).Succeeded;
-        var canTransfersView = (await AuthorizationService.AuthorizeAsync(User, "transfers.view")).Succeeded;
-        var showOperations = canCashClosuresView || canCashClosuresCreate || canCashClosuresApprove || canCashClosuresReport || canTransfersView;
+    var canTransfersView = (await AuthorizationService.AuthorizeAsync(User, "transfers.view")).Succeeded;
+    var canTransfersManage = (await AuthorizationService.AuthorizeAsync(User, "transfers.manage")).Succeeded;
+    var showOperations = canCashClosuresView || canCashClosuresCreate || canCashClosuresApprove || canCashClosuresReport || canTransfersView || canTransfersManage;
 
         var canJournalView = (await AuthorizationService.AuthorizeAsync(User, "journal.view")).Succeeded;
         var canJournalCreate = (await AuthorizationService.AuthorizeAsync(User, "journal.create")).Succeeded;
@@ -282,7 +283,18 @@
                                            asp-controller="Transfers"
                                            asp-action="Index"
                                            asp-require-permission="transfers.view">
-                                            <i class="fa-solid fa-right-left"></i><span>الحوالات</span>
+                                            <i class="fa-solid fa-right-left"></i><span>حوالاتي</span>
+                                        </a>
+                                    </li>
+                                }
+                                @if (canTransfersManage)
+                                {
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="Transfers"
+                                           asp-action="Manage"
+                                           asp-require-permission="transfers.manage">
+                                            <i class="fa-solid fa-sitemap"></i><span>إدارة الحوالات</span>
                                         </a>
                                     </li>
                                 }

@@ -18,11 +18,14 @@ namespace AccountingSystem.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<User> _userManager;
+        private readonly IAuthorizationService _authorizationService;
+        private const string IntermediaryAccountSettingKey = "TransferIntermediaryAccountId";
 
-        public TransfersController(ApplicationDbContext context, UserManager<User> userManager)
+        public TransfersController(ApplicationDbContext context, UserManager<User> userManager, IAuthorizationService authorizationService)
         {
             _context = context;
             _userManager = userManager;
+            _authorizationService = authorizationService;
         }
 
         public async Task<IActionResult> Index()
@@ -54,37 +57,33 @@ namespace AccountingSystem.Controllers
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
 
-            var breakdowns = new Dictionary<int, Dictionary<int, int>>();
-            var unitIds = new HashSet<int>();
+            await PrepareTransferViewBagsAsync(transfers);
 
-            foreach (var transfer in transfers)
-            {
-                if (string.IsNullOrEmpty(transfer.CurrencyBreakdownJson))
-                    continue;
-
-                var parsed = JsonSerializer.Deserialize<Dictionary<int, int>>(transfer.CurrencyBreakdownJson);
-                if (parsed == null || parsed.Count == 0)
-                    continue;
-
-                breakdowns[transfer.Id] = parsed;
-                foreach (var unitId in parsed.Keys)
-                {
-                    unitIds.Add(unitId);
-                }
-            }
-
-            Dictionary<int, string> unitNames = new();
-            if (unitIds.Count > 0)
-            {
-                unitNames = await _context.CurrencyUnits
-                    .Where(u => unitIds.Contains(u.Id))
-                    .OrderByDescending(u => u.ValueInBaseUnit)
-                    .ToDictionaryAsync(u => u.Id, u => $"{u.Name} ({u.ValueInBaseUnit:N2})");
-            }
-
-            ViewBag.TransferCurrencyBreakdowns = breakdowns;
-            ViewBag.CurrencyUnitNames = unitNames;
             ViewBag.CurrentUserId = user.Id;
+            ViewBag.CanManageTransfers = await HasManagePermissionAsync();
+            ViewBag.IsManageView = false;
+            return View(transfers);
+        }
+
+        [Authorize(Policy = "transfers.manage")]
+        public async Task<IActionResult> Manage()
+        {
+            var transfersQuery = _context.PaymentTransfers
+                .Include(t => t.Sender)
+                .Include(t => t.Receiver)
+                .Include(t => t.FromBranch)
+                .Include(t => t.ToBranch)
+                .AsQueryable();
+
+            var transfers = await transfersQuery
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+
+            await PrepareTransferViewBagsAsync(transfers);
+
+            ViewBag.CurrentUserId = _userManager.GetUserId(User);
+            ViewBag.CanManageTransfers = true;
+            ViewBag.IsManageView = true;
             return View(transfers);
         }
 
@@ -123,11 +122,33 @@ namespace AccountingSystem.Controllers
             }
 
             var senderAccount = await _context.UserPaymentAccounts
-                .Include(u => u.Account)
+                .Include(u => u.Account).ThenInclude(a => a.Currency)
                 .FirstOrDefaultAsync(u => u.UserId == sender.Id && u.AccountId == model.FromPaymentAccountId.Value);
             if (senderAccount == null)
             {
                 ModelState.AddModelError(nameof(model.FromPaymentAccountId), "الحساب المحدد غير متاح للمستخدم");
+                await PopulateCreateViewModelAsync(model, sender.Id);
+                return View(model);
+            }
+
+            var (intermediaryAccount, intermediaryError) = await GetIntermediaryAccountAsync();
+            if (intermediaryAccount == null)
+            {
+                ModelState.AddModelError(string.Empty, intermediaryError ?? "لم يتم إعداد حساب الوسيط للحوالات.");
+                await PopulateCreateViewModelAsync(model, sender.Id);
+                return View(model);
+            }
+
+            if (senderAccount.Account == null)
+            {
+                ModelState.AddModelError(string.Empty, "تعذر تحميل حساب الإرسال المحدد.");
+                await PopulateCreateViewModelAsync(model, sender.Id);
+                return View(model);
+            }
+
+            if (intermediaryAccount.CurrencyId != senderAccount.Account.CurrencyId)
+            {
+                ModelState.AddModelError(string.Empty, "عملة حساب الوسيط يجب أن تطابق عملة حساب الإرسال.");
                 await PopulateCreateViewModelAsync(model, sender.Id);
                 return View(model);
             }
@@ -168,7 +189,7 @@ namespace AccountingSystem.Controllers
                     .Select(u => new { u.Id, u.CurrencyId, u.ValueInBaseUnit })
                     .ToListAsync();
 
-                if (units.Count != breakdownMap.Count || units.Any(u => senderAccount.Account == null || u.CurrencyId != senderAccount.Account.CurrencyId))
+                if (units.Count != breakdownMap.Count || units.Any(u => u.CurrencyId != senderAccount.Account.CurrencyId))
                 {
                     ModelState.AddModelError(string.Empty, "بيانات الفئات غير صحيحة.");
                     await PopulateCreateViewModelAsync(model, sender.Id);
@@ -193,7 +214,7 @@ namespace AccountingSystem.Controllers
                 breakdownJson = JsonSerializer.Serialize(breakdownMap);
             }
 
-            if (senderAccount.Account != null && senderAccount.Account.Nature == AccountNature.Debit && finalAmount > senderAccount.Account.CurrentBalance)
+            if (senderAccount.Account.Nature == AccountNature.Debit && finalAmount > senderAccount.Account.CurrentBalance)
             {
                 ModelState.AddModelError(nameof(model.Amount), "الرصيد المتاح في حساب الإرسال لا يكفي لإتمام العملية.");
                 await PopulateCreateViewModelAsync(model, sender.Id);
@@ -215,76 +236,119 @@ namespace AccountingSystem.Controllers
                 CurrencyBreakdownJson = breakdownJson
             };
 
-            _context.PaymentTransfers.Add(transfer);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                _context.PaymentTransfers.Add(transfer);
+
+                var senderEntryDescription = BuildSenderEntryDescription(receiver, transfer.Notes);
+                var senderEntry = await CreateSenderJournalEntryAsync(transfer, intermediaryAccount, sender.Id, senderEntryDescription);
+
+                transfer.SenderJournalEntry = senderEntry;
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+
+            return RedirectToAction(nameof(PrintSend), new { id = transfer.Id, returnUrl = Url.Action(nameof(Index)) });
         }
 
-        [Authorize(Policy = "transfers.approve")]
-        public async Task<IActionResult> Approve(int id, bool accept)
+        [Authorize]
+        public async Task<IActionResult> Approve(int id, bool accept, string? returnUrl)
         {
-            var userId = _userManager.GetUserId(User);
+            var approvePermission = await _authorizationService.AuthorizeAsync(User, "transfers.approve");
+            var canManage = await HasManagePermissionAsync();
+            if (!approvePermission.Succeeded && !canManage)
+                return Forbid();
+
+            var currentUserId = _userManager.GetUserId(User);
             var transfer = await _context.PaymentTransfers
                 .Include(t => t.FromBranch)
+                .Include(t => t.ToBranch)
+                .Include(t => t.Sender)
+                .Include(t => t.Receiver)
+                .Include(t => t.SenderJournalEntry).ThenInclude(e => e!.Lines)
                 .FirstOrDefaultAsync(t => t.Id == id);
-            if (transfer == null || transfer.ReceiverId != userId || transfer.Status != TransferStatus.Pending)
+            if (transfer == null || transfer.Status != TransferStatus.Pending)
                 return NotFound();
+
+            if (!canManage && transfer.ReceiverId != currentUserId)
+                return NotFound();
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
 
             if (accept)
             {
-                var fromAccount = await _context.Accounts.FindAsync(transfer.FromPaymentAccountId);
-                if (fromAccount != null && fromAccount.Nature == AccountNature.Debit && transfer.Amount > fromAccount.CurrentBalance)
+                var receiverAccount = await _context.Accounts
+                    .Include(a => a.Currency)
+                    .FirstOrDefaultAsync(a => a.Id == transfer.ToPaymentAccountId);
+                if (receiverAccount == null)
                 {
-                    TempData["ErrorMessage"] = "الرصيد المتاح في حساب المرسل لا يكفي لإتمام التحويل.";
-                    return RedirectToAction(nameof(Index));
+                    TempData["ErrorMessage"] = "حساب المستلم غير موجود.";
+                    await transaction.RollbackAsync();
+                    return RedirectAfterAction(returnUrl);
                 }
 
-                var number = await GenerateJournalEntryNumber();
-                var entry = new JournalEntry
+                var (intermediaryAccount, intermediaryError) = await GetIntermediaryAccountAsync();
+                if (intermediaryAccount == null)
                 {
-                    Number = number,
-                    Date = DateTime.Now,
-                    Description = transfer.Notes ?? "تحويل",
-                    BranchId = transfer.FromBranchId ?? transfer.ToBranchId ?? 0,
-                    CreatedById = userId,
-                    TotalDebit = transfer.Amount,
-                    TotalCredit = transfer.Amount,
-                    Status = JournalEntryStatus.Posted
-                };
-                entry.Lines.Add(new JournalEntryLine
-                {
-                    AccountId = transfer.ToPaymentAccountId,
-                    DebitAmount = transfer.Amount,
-                    Description = transfer.Notes ?? "تحويل",
-                });
-                entry.Lines.Add(new JournalEntryLine
-                {
-                    AccountId = transfer.FromPaymentAccountId,
-                    CreditAmount = transfer.Amount,
-                    Description = transfer.Notes ?? "تحويل",
+                    TempData["ErrorMessage"] = intermediaryError ?? "لم يتم إعداد حساب الوسيط للحوالات.";
+                    await transaction.RollbackAsync();
+                    return RedirectAfterAction(returnUrl);
+                }
 
-                });
+                if (intermediaryAccount.CurrencyId != receiverAccount.CurrencyId)
+                {
+                    TempData["ErrorMessage"] = "عملة حساب الوسيط يجب أن تطابق عملة حساب المستلم.";
+                    await transaction.RollbackAsync();
+                    return RedirectAfterAction(returnUrl);
+                }
 
-                _context.JournalEntries.Add(entry);
-                await UpdateAccountBalances(entry);
+                var receiverDescription = BuildReceiverEntryDescription(transfer.Sender, transfer.Notes);
+                var createdBy = currentUserId ?? transfer.ReceiverId;
+                var entry = await CreateReceiverJournalEntryAsync(transfer, intermediaryAccount, createdBy, receiverDescription);
+
+                transfer.JournalEntry = entry;
+                transfer.Status = TransferStatus.Accepted;
+
                 await _context.SaveChangesAsync();
-                transfer.JournalEntryId = entry.Id;
+                await transaction.CommitAsync();
+                return RedirectToAction(nameof(PrintReceive), new { id = transfer.Id, returnUrl });
             }
 
-            transfer.Status = accept ? TransferStatus.Accepted : TransferStatus.Rejected;
+            if (transfer.SenderJournalEntryId.HasValue && transfer.SenderJournalEntry != null)
+            {
+                await ReverseAccountBalances(transfer.SenderJournalEntry);
+                _context.JournalEntryLines.RemoveRange(transfer.SenderJournalEntry.Lines);
+                _context.JournalEntries.Remove(transfer.SenderJournalEntry);
+                transfer.SenderJournalEntryId = null;
+            }
+
+            transfer.Status = TransferStatus.Rejected;
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            await transaction.CommitAsync();
+            return RedirectAfterAction(returnUrl);
         }
 
-        [Authorize(Policy = "transfers.create")]
-        public async Task<IActionResult> Edit(int id)
+        [Authorize]
+        public async Task<IActionResult> Edit(int id, string? returnUrl)
         {
+            var canManage = await HasManagePermissionAsync();
+            var canCreate = (await _authorizationService.AuthorizeAsync(User, "transfers.create")).Succeeded;
+            if (!canManage && !canCreate)
+                return Forbid();
+
             var userId = _userManager.GetUserId(User);
             var transfer = await _context.PaymentTransfers
                 .Include(t => t.FromBranch)
                 .Include(t => t.ToBranch)
                 .FirstOrDefaultAsync(t => t.Id == id);
-            if (transfer == null || transfer.SenderId != userId || transfer.Status != TransferStatus.Pending)
+            if (transfer == null || transfer.Status != TransferStatus.Pending || (!canManage && transfer.SenderId != userId))
                 return NotFound();
 
             var model = new TransferEditViewModel
@@ -292,7 +356,8 @@ namespace AccountingSystem.Controllers
                 Id = transfer.Id,
                 ReceiverId = transfer.ReceiverId,
                 Amount = transfer.Amount,
-                Notes = transfer.Notes
+                Notes = transfer.Notes,
+                ReturnUrl = returnUrl
             };
 
             if (!await PopulateEditViewModelAsync(model, transfer))
@@ -304,14 +369,20 @@ namespace AccountingSystem.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "transfers.create")]
+        [Authorize]
         public async Task<IActionResult> Edit(TransferEditViewModel model)
         {
+            var canManage = await HasManagePermissionAsync();
+            var canCreate = (await _authorizationService.AuthorizeAsync(User, "transfers.create")).Succeeded;
+            if (!canManage && !canCreate)
+                return Forbid();
+
             var userId = _userManager.GetUserId(User);
             var transfer = await _context.PaymentTransfers
                 .Include(t => t.FromBranch)
+                .Include(t => t.Sender)
                 .FirstOrDefaultAsync(t => t.Id == model.Id);
-            if (transfer == null || transfer.SenderId != userId || transfer.Status != TransferStatus.Pending)
+            if (transfer == null || transfer.Status != TransferStatus.Pending || (!canManage && transfer.SenderId != userId))
                 return NotFound();
 
             if (!ModelState.IsValid)
@@ -323,7 +394,7 @@ namespace AccountingSystem.Controllers
             }
 
             var receiver = await _context.Users.Include(u => u.PaymentBranch).FirstOrDefaultAsync(u => u.Id == model.ReceiverId);
-            if (receiver == null || receiver.Id == userId)
+            if (receiver == null || receiver.Id == transfer.SenderId)
             {
                 ModelState.AddModelError(nameof(model.ReceiverId), receiver == null ? "المستلم غير موجود" : "لا يمكن إرسال حوالة لنفسك");
                 if (!await PopulateEditViewModelAsync(model, transfer))
@@ -410,6 +481,8 @@ namespace AccountingSystem.Controllers
                 return View(model);
             }
 
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
             transfer.ReceiverId = receiver.Id;
             transfer.ToPaymentAccountId = receiverAccount.AccountId;
             transfer.ToBranchId = receiver.PaymentBranchId;
@@ -417,23 +490,120 @@ namespace AccountingSystem.Controllers
             transfer.Notes = model.Notes;
             transfer.CurrencyBreakdownJson = breakdownJson;
 
+            await UpdateSenderJournalEntryAsync(transfer, receiver, finalAmount, model.Notes ?? string.Empty);
+
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
+                return Redirect(model.ReturnUrl);
+
             return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "transfers.create")]
-        public async Task<IActionResult> Delete(int id)
+        [Authorize]
+        public async Task<IActionResult> Delete(int id, string? returnUrl)
         {
+            var canManage = await HasManagePermissionAsync();
+            var canCreate = (await _authorizationService.AuthorizeAsync(User, "transfers.create")).Succeeded;
+            if (!canManage && !canCreate)
+                return Forbid();
+
             var userId = _userManager.GetUserId(User);
-            var transfer = await _context.PaymentTransfers.FindAsync(id);
-            if (transfer == null || transfer.SenderId != userId || transfer.Status != TransferStatus.Pending)
+            var transfer = await _context.PaymentTransfers
+                .Include(t => t.SenderJournalEntry).ThenInclude(e => e!.Lines)
+                .FirstOrDefaultAsync(t => t.Id == id);
+            if (transfer == null || transfer.Status != TransferStatus.Pending || (!canManage && transfer.SenderId != userId))
                 return NotFound();
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            if (transfer.SenderJournalEntry != null)
+            {
+                await ReverseAccountBalances(transfer.SenderJournalEntry);
+                _context.JournalEntryLines.RemoveRange(transfer.SenderJournalEntry.Lines);
+                _context.JournalEntries.Remove(transfer.SenderJournalEntry);
+            }
 
             _context.PaymentTransfers.Remove(transfer);
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            await transaction.CommitAsync();
+
+            return RedirectAfterAction(returnUrl);
+        }
+
+        [Authorize]
+        public async Task<IActionResult> PrintSend(int id, string? returnUrl)
+        {
+            var transfer = await _context.PaymentTransfers
+                .Include(t => t.Sender).ThenInclude(u => u.PaymentBranch)
+                .Include(t => t.Receiver).ThenInclude(u => u.PaymentBranch)
+                .Include(t => t.FromPaymentAccount).ThenInclude(a => a.Currency)
+                .Include(t => t.ToPaymentAccount).ThenInclude(a => a.Currency)
+                .Include(t => t.FromBranch)
+                .Include(t => t.ToBranch)
+                .Include(t => t.SenderJournalEntry)
+                .FirstOrDefaultAsync(t => t.Id == id);
+            if (transfer == null)
+                return NotFound();
+
+            if (!await CanAccessTransferAsync(transfer))
+                return Forbid();
+
+            var breakdown = ParseBreakdown(transfer.CurrencyBreakdownJson);
+            var unitNames = await LoadCurrencyUnitNamesAsync(breakdown);
+            var (intermediaryAccount, _) = await GetIntermediaryAccountAsync();
+
+            var model = new TransferPrintViewModel
+            {
+                Transfer = transfer,
+                CurrencyBreakdown = breakdown,
+                CurrencyUnitNames = unitNames,
+                IntermediaryAccount = intermediaryAccount,
+                ReturnUrl = returnUrl
+            };
+
+            return View("PrintSend", model);
+        }
+
+        [Authorize]
+        public async Task<IActionResult> PrintReceive(int id, string? returnUrl)
+        {
+            var transfer = await _context.PaymentTransfers
+                .Include(t => t.Sender).ThenInclude(u => u.PaymentBranch)
+                .Include(t => t.Receiver).ThenInclude(u => u.PaymentBranch)
+                .Include(t => t.FromPaymentAccount).ThenInclude(a => a.Currency)
+                .Include(t => t.ToPaymentAccount).ThenInclude(a => a.Currency)
+                .Include(t => t.FromBranch)
+                .Include(t => t.ToBranch)
+                .Include(t => t.SenderJournalEntry)
+                .Include(t => t.JournalEntry)
+                .FirstOrDefaultAsync(t => t.Id == id);
+            if (transfer == null)
+                return NotFound();
+
+            if (transfer.Status != TransferStatus.Accepted)
+                return NotFound();
+
+            if (!await CanAccessTransferAsync(transfer))
+                return Forbid();
+
+            var breakdown = ParseBreakdown(transfer.CurrencyBreakdownJson);
+            var unitNames = await LoadCurrencyUnitNamesAsync(breakdown);
+            var (intermediaryAccount, _) = await GetIntermediaryAccountAsync();
+
+            var model = new TransferPrintViewModel
+            {
+                Transfer = transfer,
+                CurrencyBreakdown = breakdown,
+                CurrencyUnitNames = unitNames,
+                IntermediaryAccount = intermediaryAccount,
+                ReturnUrl = returnUrl
+            };
+
+            return View("PrintReceive", model);
         }
 
         private async Task PopulateCreateViewModelAsync(TransferCreateViewModel model, string senderId)
@@ -623,6 +793,266 @@ namespace AccountingSystem.Controllers
             model.SenderBranch = transfer.FromBranch?.NameAr ?? string.Empty;
 
             return true;
+        }
+
+        private async Task PrepareTransferViewBagsAsync(List<PaymentTransfer> transfers)
+        {
+            var breakdowns = new Dictionary<int, Dictionary<int, int>>();
+            var unitIds = new HashSet<int>();
+
+            foreach (var transfer in transfers)
+            {
+                if (string.IsNullOrEmpty(transfer.CurrencyBreakdownJson))
+                    continue;
+
+                var parsed = JsonSerializer.Deserialize<Dictionary<int, int>>(transfer.CurrencyBreakdownJson);
+                if (parsed == null || parsed.Count == 0)
+                    continue;
+
+                breakdowns[transfer.Id] = parsed;
+                foreach (var unitId in parsed.Keys)
+                {
+                    unitIds.Add(unitId);
+                }
+            }
+
+            Dictionary<int, string> unitNames = new();
+            if (unitIds.Count > 0)
+            {
+                unitNames = await _context.CurrencyUnits
+                    .Where(u => unitIds.Contains(u.Id))
+                    .OrderByDescending(u => u.ValueInBaseUnit)
+                    .ToDictionaryAsync(u => u.Id, u => $"{u.Name} ({u.ValueInBaseUnit:N2})");
+            }
+
+            ViewBag.TransferCurrencyBreakdowns = breakdowns;
+            ViewBag.CurrencyUnitNames = unitNames;
+        }
+
+        private async Task<(Account? Account, string? ErrorMessage)> GetIntermediaryAccountAsync()
+        {
+            var setting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == IntermediaryAccountSettingKey);
+            if (setting == null || string.IsNullOrWhiteSpace(setting.Value))
+                return (null, "لم يتم إعداد حساب الوسيط للحوالات.");
+
+            if (!int.TryParse(setting.Value, out var accountId))
+                return (null, "قيمة حساب الوسيط للحوالات غير صحيحة في الإعدادات.");
+
+            var account = await _context.Accounts
+                .Include(a => a.Currency)
+                .FirstOrDefaultAsync(a => a.Id == accountId);
+            if (account == null)
+                return (null, "حساب الوسيط المحدد في الإعدادات غير موجود.");
+
+            return (account, null);
+        }
+
+        private async Task<bool> HasManagePermissionAsync()
+        {
+            var result = await _authorizationService.AuthorizeAsync(User, "transfers.manage");
+            return result.Succeeded;
+        }
+
+        private string BuildSenderEntryDescription(User receiver, string? notes)
+        {
+            if (!string.IsNullOrWhiteSpace(notes))
+                return notes!;
+
+            var receiverName = !string.IsNullOrWhiteSpace(receiver.FullName)
+                ? receiver.FullName
+                : $"{receiver.FirstName} {receiver.LastName}".Trim();
+
+            return string.IsNullOrWhiteSpace(receiverName) ? "حوالة صادرة" : $"حوالة صادرة إلى {receiverName}";
+        }
+
+        private string BuildReceiverEntryDescription(User? sender, string? notes)
+        {
+            if (!string.IsNullOrWhiteSpace(notes))
+                return notes!;
+
+            if (sender == null)
+                return "حوالة مستلمة";
+
+            var senderName = !string.IsNullOrWhiteSpace(sender.FullName)
+                ? sender.FullName
+                : $"{sender.FirstName} {sender.LastName}".Trim();
+
+            return string.IsNullOrWhiteSpace(senderName) ? "حوالة مستلمة" : $"حوالة مستلمة من {senderName}";
+        }
+
+        private async Task<JournalEntry> CreateSenderJournalEntryAsync(PaymentTransfer transfer, Account intermediaryAccount, string createdById, string description)
+        {
+            var entry = new JournalEntry
+            {
+                Number = await GenerateJournalEntryNumber(),
+                Date = DateTime.Now,
+                Description = description,
+                BranchId = transfer.FromBranchId ?? transfer.ToBranchId ?? 0,
+                CreatedById = createdById,
+                TotalDebit = transfer.Amount,
+                TotalCredit = transfer.Amount,
+                Status = JournalEntryStatus.Posted
+            };
+
+            entry.Lines.Add(new JournalEntryLine
+            {
+                AccountId = intermediaryAccount.Id,
+                DebitAmount = transfer.Amount,
+                Description = description
+            });
+
+            entry.Lines.Add(new JournalEntryLine
+            {
+                AccountId = transfer.FromPaymentAccountId,
+                CreditAmount = transfer.Amount,
+                Description = description
+            });
+
+            _context.JournalEntries.Add(entry);
+            await UpdateAccountBalances(entry);
+            return entry;
+        }
+
+        private async Task<JournalEntry> CreateReceiverJournalEntryAsync(PaymentTransfer transfer, Account intermediaryAccount, string createdById, string description)
+        {
+            var entry = new JournalEntry
+            {
+                Number = await GenerateJournalEntryNumber(),
+                Date = DateTime.Now,
+                Description = description,
+                BranchId = transfer.ToBranchId ?? transfer.FromBranchId ?? 0,
+                CreatedById = createdById,
+                TotalDebit = transfer.Amount,
+                TotalCredit = transfer.Amount,
+                Status = JournalEntryStatus.Posted
+            };
+
+            entry.Lines.Add(new JournalEntryLine
+            {
+                AccountId = transfer.ToPaymentAccountId,
+                DebitAmount = transfer.Amount,
+                Description = description
+            });
+
+            entry.Lines.Add(new JournalEntryLine
+            {
+                AccountId = intermediaryAccount.Id,
+                CreditAmount = transfer.Amount,
+                Description = description
+            });
+
+            _context.JournalEntries.Add(entry);
+            await UpdateAccountBalances(entry);
+            return entry;
+        }
+
+        private async Task ReverseAccountBalances(JournalEntry entry)
+        {
+            foreach (var line in entry.Lines)
+            {
+                var account = await _context.Accounts.FindAsync(line.AccountId);
+                if (account == null) continue;
+
+                var netAmount = account.Nature == AccountNature.Debit
+                    ? line.DebitAmount - line.CreditAmount
+                    : line.CreditAmount - line.DebitAmount;
+
+                account.CurrentBalance -= netAmount;
+                account.UpdatedAt = DateTime.Now;
+            }
+        }
+
+        private async Task UpdateSenderJournalEntryAsync(PaymentTransfer transfer, User receiver, decimal amount, string notes)
+        {
+            var (intermediaryAccount, intermediaryError) = await GetIntermediaryAccountAsync();
+            if (intermediaryAccount == null)
+                throw new InvalidOperationException(intermediaryError ?? "لم يتم إعداد حساب الوسيط للحوالات.");
+
+            JournalEntry? entry = null;
+            if (transfer.SenderJournalEntryId.HasValue)
+            {
+                entry = await _context.JournalEntries
+                    .Include(e => e.Lines)
+                    .FirstOrDefaultAsync(e => e.Id == transfer.SenderJournalEntryId.Value);
+            }
+
+            var description = string.IsNullOrWhiteSpace(notes)
+                ? BuildSenderEntryDescription(receiver, transfer.Notes)
+                : notes;
+
+            if (entry == null)
+            {
+                var createdEntry = await CreateSenderJournalEntryAsync(transfer, intermediaryAccount, transfer.SenderId, description);
+                transfer.SenderJournalEntry = createdEntry;
+                transfer.SenderJournalEntryId = createdEntry.Id;
+                return;
+            }
+
+            await ReverseAccountBalances(entry);
+            _context.JournalEntryLines.RemoveRange(entry.Lines);
+            entry.Lines.Clear();
+
+            entry.Description = description;
+            entry.TotalDebit = amount;
+            entry.TotalCredit = amount;
+            entry.BranchId = transfer.FromBranchId ?? transfer.ToBranchId ?? 0;
+            entry.Date = DateTime.Now;
+            entry.UpdatedAt = DateTime.Now;
+
+            entry.Lines.Add(new JournalEntryLine
+            {
+                AccountId = intermediaryAccount.Id,
+                DebitAmount = amount,
+                Description = description
+            });
+
+            entry.Lines.Add(new JournalEntryLine
+            {
+                AccountId = transfer.FromPaymentAccountId,
+                CreditAmount = amount,
+                Description = description
+            });
+
+            await UpdateAccountBalances(entry);
+            transfer.SenderJournalEntry = entry;
+        }
+
+        private IActionResult RedirectAfterAction(string? returnUrl)
+        {
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                return Redirect(returnUrl);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        private async Task<bool> CanAccessTransferAsync(PaymentTransfer transfer)
+        {
+            if (await HasManagePermissionAsync())
+                return true;
+
+            var userId = _userManager.GetUserId(User);
+            return userId != null && (transfer.SenderId == userId || transfer.ReceiverId == userId);
+        }
+
+        private Dictionary<int, int> ParseBreakdown(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+                return new Dictionary<int, int>();
+
+            var parsed = JsonSerializer.Deserialize<Dictionary<int, int>>(json);
+            return parsed ?? new Dictionary<int, int>();
+        }
+
+        private async Task<Dictionary<int, string>> LoadCurrencyUnitNamesAsync(Dictionary<int, int> breakdown)
+        {
+            if (breakdown.Count == 0)
+                return new Dictionary<int, string>();
+
+            var unitIds = breakdown.Keys.ToList();
+            return await _context.CurrencyUnits
+                .Where(u => unitIds.Contains(u.Id))
+                .OrderByDescending(u => u.ValueInBaseUnit)
+                .ToDictionaryAsync(u => u.Id, u => $"{u.Name} ({u.ValueInBaseUnit:N2})");
         }
 
         private async Task UpdateAccountBalances(JournalEntry entry)

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using AccountingSystem.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace AccountingSystem.ViewModels
@@ -93,5 +94,20 @@ namespace AccountingSystem.ViewModels
         public int CurrencyId { get; set; }
 
         public string CurrencyCode { get; set; } = string.Empty;
+
+        public string? ReturnUrl { get; set; }
+    }
+
+    public class TransferPrintViewModel
+    {
+        public PaymentTransfer Transfer { get; set; } = null!;
+
+        public Dictionary<int, int> CurrencyBreakdown { get; set; } = new();
+
+        public Dictionary<int, string> CurrencyUnitNames { get; set; } = new();
+
+        public Account? IntermediaryAccount { get; set; }
+
+        public string? ReturnUrl { get; set; }
     }
 }
