@@ -75,7 +75,7 @@
                 <div class="d-flex flex-column gap-1">
                     @if (item.Status == TransferStatus.Pending)
                     {
-                        var canApprove = canManageTransfers || item.ReceiverId == currentUserId;
+                        var canApprove = isManageView ? canManageTransfers : item.ReceiverId == currentUserId;
                         var canEdit = canManageTransfers || item.SenderId == currentUserId;
 
                         if (canApprove)
@@ -99,12 +99,12 @@
 
                     @if (item.SenderJournalEntryId.HasValue)
                     {
-                        <a asp-action="PrintSend" asp-route-id="@item.Id" asp-route-returnUrl="@returnUrl" asp-require-permission="@printPermission">طباعة سند إرسال</a>
+                        <a asp-action="PrintSend" asp-route-id="@item.Id" asp-route-returnUrl="@returnUrl" asp-require-permission="@printPermission" target="_blank" rel="noopener">طباعة سند إرسال</a>
                     }
 
                     @if (item.Status == TransferStatus.Accepted && item.JournalEntryId.HasValue)
                     {
-                        <a asp-action="PrintReceive" asp-route-id="@item.Id" asp-route-returnUrl="@returnUrl" asp-require-permission="@printPermission">طباعة سند استلام</a>
+                        <a asp-action="PrintReceive" asp-route-id="@item.Id" asp-route-returnUrl="@returnUrl" asp-require-permission="@printPermission" target="_blank" rel="noopener">طباعة سند استلام</a>
                     }
                 </div>
             </td>
