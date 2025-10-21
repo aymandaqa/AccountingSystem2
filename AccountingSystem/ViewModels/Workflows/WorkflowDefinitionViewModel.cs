@@ -28,5 +28,7 @@ namespace AccountingSystem.ViewModels.Workflows
         public string? ApproverUserId { get; set; }
         public int? BranchId { get; set; }
         public string? RequiredPermission { get; set; }
+        public decimal? MinAmount { get; set; }
+        public decimal? MaxAmount { get; set; }
     }
 }

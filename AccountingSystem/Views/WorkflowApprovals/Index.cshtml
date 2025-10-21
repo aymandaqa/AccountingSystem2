@@ -38,6 +38,27 @@ else
                 </div>
             </div>
             <div class="card-body">
+                @if (request.Amount != 0 || request.AmountInBase != 0)
+                {
+                    <div class="mb-3">
+                        <div class="fw-bold">المبلغ المطلوب</div>
+                        <div>
+                            @if (!string.IsNullOrEmpty(request.CurrencyCode))
+                            {
+                                @request.Amount.ToString("N2") @request.CurrencyCode
+                            }
+                            else
+                            {
+                                @request.Amount.ToString("N2")
+                            }
+
+                            @if (request.AmountInBase != 0)
+                            {
+                                <span class="text-muted">(ما يعادل @request.AmountInBase.ToString("N2") بالعملة الأساسية)</span>
+                            }
+                        </div>
+                    </div>
+                }
                 <p>@request.Description</p>
                 @if (request.PaymentVoucher != null)
                 {
@@ -45,10 +66,6 @@ else
                         <div class="col-md-4">
                             <div class="fw-bold">المورد</div>
                             <div>@request.PaymentVoucher.Supplier.NameAr</div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="fw-bold">المبلغ</div>
-                            <div>@request.PaymentVoucher.Amount.ToString("N2") @request.PaymentVoucher.Currency.Code</div>
                         </div>
                         <div class="col-md-4">
                             <div class="fw-bold">أنشئ بواسطة</div>
@@ -68,10 +85,6 @@ else
                             <div>@request.DynamicEntry.Screen.DisplayName</div>
                         </div>
                         <div class="col-md-4">
-                            <div class="fw-bold">المبلغ</div>
-                            <div>@request.DynamicEntry.Amount.ToString("N2")</div>
-                        </div>
-                        <div class="col-md-4">
                             <div class="fw-bold">أنشئ بواسطة</div>
                             <div>@(request.DynamicEntry.CreatedBy?.FullName ?? request.DynamicEntry.CreatedById)</div>
                         </div>
@@ -82,6 +95,56 @@ else
                         <div class="col-md-6">
                             <div class="fw-bold">الوصف</div>
                             <div>@(string.IsNullOrWhiteSpace(request.DynamicEntry.Description) ? "-" : request.DynamicEntry.Description)</div>
+                        </div>
+                    </div>
+                }
+                else if (request.ReceiptVoucher != null)
+                {
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="fw-bold">المورد</div>
+                            <div>@(request.ReceiptVoucher.Supplier?.NameAr ?? "-")</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="fw-bold">حساب المورد</div>
+                            <div>@request.ReceiptVoucher.Account.NameAr</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="fw-bold">حساب الدفع</div>
+                            <div>@request.ReceiptVoucher.PaymentAccount.NameAr</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="fw-bold">العملة</div>
+                            <div>@request.ReceiptVoucher.Currency.Code</div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="fw-bold">أنشئ بواسطة</div>
+                            <div>@(request.ReceiptVoucher.CreatedBy?.FullName ?? request.ReceiptVoucher.CreatedById)</div>
+                        </div>
+                        <div class="col-12">
+                            <div class="fw-bold">ملاحظات</div>
+                            <div>@(string.IsNullOrWhiteSpace(request.ReceiptVoucher.Notes) ? "لا يوجد" : request.ReceiptVoucher.Notes)</div>
+                        </div>
+                    </div>
+                }
+                else if (request.DisbursementVoucher != null)
+                {
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="fw-bold">المورد</div>
+                            <div>@request.DisbursementVoucher.Supplier.NameAr</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="fw-bold">العملة</div>
+                            <div>@request.DisbursementVoucher.Currency.Code</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="fw-bold">أنشئ بواسطة</div>
+                            <div>@(request.DisbursementVoucher.CreatedBy?.FullName ?? request.DisbursementVoucher.CreatedById)</div>
+                        </div>
+                        <div class="col-12">
+                            <div class="fw-bold">ملاحظات</div>
+                            <div>@(string.IsNullOrWhiteSpace(request.DisbursementVoucher.Notes) ? "لا يوجد" : request.DisbursementVoucher.Notes)</div>
                         </div>
                     </div>
                 }

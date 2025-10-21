@@ -112,7 +112,9 @@ namespace AccountingSystem.Controllers
                         StepType = s.StepType,
                         ApproverUserId = s.ApproverUserId,
                         BranchId = s.BranchId,
-                        RequiredPermission = s.RequiredPermission
+                        RequiredPermission = s.RequiredPermission,
+                        MinAmount = s.MinAmount,
+                        MaxAmount = s.MaxAmount
                     }).ToList()
             };
 
@@ -233,7 +235,9 @@ namespace AccountingSystem.Controllers
                 StepType = step.StepType,
                 ApproverUserId = step.StepType == WorkflowStepType.SpecificUser ? step.ApproverUserId : null,
                 BranchId = step.StepType == WorkflowStepType.Branch ? step.BranchId : null,
-                RequiredPermission = step.StepType == WorkflowStepType.Permission ? step.RequiredPermission : null
+                RequiredPermission = step.StepType == WorkflowStepType.Permission ? step.RequiredPermission : null,
+                MinAmount = step.MinAmount,
+                MaxAmount = step.MaxAmount
             }).ToList();
 
             await _context.WorkflowSteps.AddRangeAsync(workflowSteps);

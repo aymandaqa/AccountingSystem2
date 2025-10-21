@@ -218,6 +218,30 @@ namespace AccountingSystem.Data
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
+            builder.Entity<ReceiptVoucher>(entity =>
+            {
+                entity.HasOne(v => v.WorkflowInstance)
+                    .WithMany()
+                    .HasForeignKey(v => v.WorkflowInstanceId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            builder.Entity<DisbursementVoucher>(entity =>
+            {
+                entity.HasOne(v => v.WorkflowInstance)
+                    .WithMany()
+                    .HasForeignKey(v => v.WorkflowInstanceId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            builder.Entity<WorkflowInstance>(entity =>
+            {
+                entity.HasOne(i => i.DocumentCurrency)
+                    .WithMany()
+                    .HasForeignKey(i => i.DocumentCurrencyId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
             builder.Entity<PaymentVoucher>(entity =>
             {
                 entity.HasOne(e => e.Supplier)

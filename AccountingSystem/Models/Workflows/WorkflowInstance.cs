@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using AccountingSystem.Models;
 
 namespace AccountingSystem.Models.Workflows
@@ -13,6 +14,14 @@ namespace AccountingSystem.Models.Workflows
 
         public int DocumentId { get; set; }
 
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal DocumentAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal DocumentAmountInBase { get; set; }
+
+        public int? DocumentCurrencyId { get; set; }
+
         public WorkflowInstanceStatus Status { get; set; } = WorkflowInstanceStatus.InProgress;
 
         public int CurrentStepOrder { get; set; } = 1;
@@ -25,6 +34,8 @@ namespace AccountingSystem.Models.Workflows
         public DateTime? CompletedAt { get; set; }
 
         public virtual WorkflowDefinition WorkflowDefinition { get; set; } = null!;
+
+        public virtual Currency? DocumentCurrency { get; set; }
 
         public virtual ICollection<WorkflowAction> Actions { get; set; } = new List<WorkflowAction>();
 

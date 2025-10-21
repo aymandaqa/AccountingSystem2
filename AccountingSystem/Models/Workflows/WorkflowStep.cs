@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using AccountingSystem.Models;
 
 namespace AccountingSystem.Models.Workflows
@@ -20,6 +21,12 @@ namespace AccountingSystem.Models.Workflows
 
         [StringLength(200)]
         public string? RequiredPermission { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? MinAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? MaxAmount { get; set; }
 
         public virtual WorkflowDefinition WorkflowDefinition { get; set; } = null!;
 

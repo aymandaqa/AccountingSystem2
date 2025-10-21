@@ -15,5 +15,10 @@ namespace AccountingSystem.ViewModels.Workflows
         public DateTime CreatedAt { get; set; }
         public PaymentVoucher? PaymentVoucher { get; set; }
         public DynamicScreenEntry? DynamicEntry { get; set; }
+        public ReceiptVoucher? ReceiptVoucher { get; set; }
+        public DisbursementVoucher? DisbursementVoucher { get; set; }
+        public decimal Amount { get; set; }
+        public decimal AmountInBase { get; set; }
+        public string? CurrencyCode { get; set; }
     }
 }

@@ -43,7 +43,7 @@
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
                         <div class="row g-2 align-items-end">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label">نوع الخطوة</label>
                                 <select class="form-select step-type">
                                     <option value="1">مستخدم محدد</option>
@@ -51,23 +51,31 @@
                                     <option value="3">مسؤولو الفرع</option>
                                 </select>
                             </div>
-                            <div class="col-md-4 step-user-container">
+                            <div class="col-md-3 step-user-container">
                                 <label class="form-label">المستخدم</label>
                                 <select class="form-select step-user">
                                     <option value="">اختر المستخدم</option>
                                 </select>
                             </div>
-                            <div class="col-md-4 step-permission-container">
+                            <div class="col-md-3 step-permission-container">
                                 <label class="form-label">الصلاحية</label>
                                 <select class="form-select step-permission">
                                     <option value="">اختر الصلاحية</option>
                                 </select>
                             </div>
-                            <div class="col-md-4 step-branch-container">
+                            <div class="col-md-3 step-branch-container">
                                 <label class="form-label">الفرع</label>
                                 <select class="form-select step-branch">
                                     <option value="">اختر الفرع</option>
                                 </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">الحد الأدنى للمبلغ</label>
+                                <input type="number" class="form-control step-min-amount" step="0.01" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">الحد الأقصى للمبلغ</label>
+                                <input type="number" class="form-control step-max-amount" step="0.01" />
                             </div>
                         </div>
                     </div>
@@ -80,6 +88,8 @@
             const userSelect = container.querySelector('.step-user');
             const permissionSelect = container.querySelector('.step-permission');
             const branchSelect = container.querySelector('.step-branch');
+            const minAmountInput = container.querySelector('.step-min-amount');
+            const maxAmountInput = container.querySelector('.step-max-amount');
 
             users.forEach(user => userSelect.appendChild(createOption(user.id ?? user.Id, user.name ?? user.Name)));
             permissions.forEach(permission => permissionSelect.appendChild(createOption(permission.name ?? permission.Name, permission.displayName ?? permission.DisplayName)));
@@ -94,6 +104,14 @@
             }
             if (step.branchId || step.BranchId) {
                 branchSelect.value = step.branchId || step.BranchId;
+            }
+            const initialMin = step.minAmount ?? step.MinAmount;
+            const initialMax = step.maxAmount ?? step.MaxAmount;
+            if (initialMin !== undefined && initialMin !== null) {
+                minAmountInput.value = initialMin;
+            }
+            if (initialMax !== undefined && initialMax !== null) {
+                maxAmountInput.value = initialMax;
             }
 
             function updateVisibility() {
@@ -152,6 +170,11 @@
                     const branchValue = element.querySelector('.step-branch').value;
                     step.BranchId = branchValue ? parseInt(branchValue) : null;
                 }
+
+                const minAmountValue = element.querySelector('.step-min-amount').value;
+                const maxAmountValue = element.querySelector('.step-max-amount').value;
+                step.MinAmount = minAmountValue !== '' ? parseFloat(minAmountValue) : null;
+                step.MaxAmount = maxAmountValue !== '' ? parseFloat(maxAmountValue) : null;
 
                 steps.push(step);
             });
