@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.Services;
+using AccountingSystem.Models.Workflows;
 using ClosedXML.Excel;
 using System.Collections.Generic;
 using System.IO;
@@ -17,13 +18,19 @@ namespace AccountingSystem.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<User> _userManager;
-        private readonly IJournalEntryService _journalEntryService;
+        private readonly IWorkflowService _workflowService;
+        private readonly IReceiptVoucherProcessor _receiptVoucherProcessor;
 
-        public ReceiptVouchersController(ApplicationDbContext context, UserManager<User> userManager, IJournalEntryService journalEntryService)
+        public ReceiptVouchersController(
+            ApplicationDbContext context,
+            UserManager<User> userManager,
+            IWorkflowService workflowService,
+            IReceiptVoucherProcessor receiptVoucherProcessor)
         {
             _context = context;
             _userManager = userManager;
-            _journalEntryService = journalEntryService;
+            _workflowService = workflowService;
+            _receiptVoucherProcessor = receiptVoucherProcessor;
         }
 
         public async Task<IActionResult> Index(DateTime? fromDate = null, DateTime? toDate = null)
@@ -185,25 +192,43 @@ namespace AccountingSystem.Controllers
                 model.ExchangeRate = currency?.ExchangeRate ?? 1m;
 
             model.CreatedById = user.Id;
+            var definition = await _workflowService.GetActiveDefinitionAsync(WorkflowDocumentType.ReceiptVoucher, user.PaymentBranchId);
+            model.Status = definition != null ? ReceiptVoucherStatus.PendingApproval : ReceiptVoucherStatus.Approved;
+
             _context.ReceiptVouchers.Add(model);
             await _context.SaveChangesAsync();
 
-            var lines = new List<JournalEntryLine>
+            var baseAmount = model.Amount * model.ExchangeRate;
+
+            if (definition != null)
             {
-                new JournalEntryLine { AccountId = model.PaymentAccountId, DebitAmount = model.Amount },
-                new JournalEntryLine { AccountId = model.AccountId, CreditAmount = model.Amount }
-            };
+                var instance = await _workflowService.StartWorkflowAsync(
+                    definition,
+                    WorkflowDocumentType.ReceiptVoucher,
+                    model.Id,
+                    user.Id,
+                    user.PaymentBranchId,
+                    model.Amount,
+                    baseAmount,
+                    model.CurrencyId);
 
-            var reference = $"RCV:{model.Id}";
-
-            await _journalEntryService.CreateJournalEntryAsync(
-                model.Date,
-                model.Notes ?? "سند قبض",
-                user.PaymentBranchId.Value,
-                user.Id,
-                lines,
-                JournalEntryStatus.Posted,
-                reference: reference);
+                if (instance != null)
+                {
+                    model.WorkflowInstanceId = instance.Id;
+                    await _context.SaveChangesAsync();
+                    TempData["InfoMessage"] = "تم إرسال سند القبض لاعتمادات الموافقة";
+                }
+                else
+                {
+                    await _receiptVoucherProcessor.FinalizeAsync(model, user.Id);
+                    TempData["SuccessMessage"] = "تم إنشاء سند القبض واعتماده فوراً";
+                }
+            }
+            else
+            {
+                await _receiptVoucherProcessor.FinalizeAsync(model, user.Id);
+                TempData["SuccessMessage"] = "تم إنشاء سند القبض واعتماده فوراً";
+            }
 
             return RedirectToAction(nameof(Index));
         }
@@ -234,7 +259,9 @@ namespace AccountingSystem.Controllers
             worksheet.Cell(1, 5).Value = "العملة";
             worksheet.Cell(1, 6).Value = "سعر الصرف";
             worksheet.Cell(1, 7).Value = "المبلغ";
-            worksheet.Cell(1, 8).Value = "الفرع";
+            worksheet.Cell(1, 8).Value = "المبلغ بالعملة الأساسية";
+            worksheet.Cell(1, 9).Value = "الحالة";
+            worksheet.Cell(1, 10).Value = "الفرع";
             worksheet.Row(1).Style.Font.Bold = true;
 
             var row = 2;
@@ -248,7 +275,9 @@ namespace AccountingSystem.Controllers
                 worksheet.Cell(row, 5).Value = voucher.Currency?.Code ?? string.Empty;
                 worksheet.Cell(row, 6).Value = voucher.ExchangeRate;
                 worksheet.Cell(row, 7).Value = voucher.Amount;
-                worksheet.Cell(row, 8).Value = voucher.CreatedBy?.PaymentBranch?.NameAr ?? string.Empty;
+                worksheet.Cell(row, 8).Value = voucher.Amount * voucher.ExchangeRate;
+                worksheet.Cell(row, 9).Value = voucher.Status.ToString();
+                worksheet.Cell(row, 10).Value = voucher.CreatedBy?.PaymentBranch?.NameAr ?? string.Empty;
                 row++;
             }
 
@@ -276,6 +305,8 @@ namespace AccountingSystem.Controllers
             var voucher = await _context.ReceiptVouchers
                 .Include(v => v.CreatedBy)
                     .ThenInclude(u => u.PaymentBranch)
+                .Include(v => v.WorkflowInstance)
+                    .ThenInclude(i => i!.Actions)
                 .FirstOrDefaultAsync(v => v.Id == id);
 
             if (voucher == null)
@@ -289,28 +320,38 @@ namespace AccountingSystem.Controllers
             if (!CanAccessVoucher(user, voucher.CreatedBy, userBranchIds))
                 return Forbid();
 
-            var journalEntries = await _context.JournalEntries
-                .Include(j => j.Lines)
-                    .ThenInclude(l => l.Account)
-                .Where(j => j.Reference == $"RCV:{voucher.Id}")
-                .ToListAsync();
-
-            foreach (var entry in journalEntries.Where(e => e.Status == JournalEntryStatus.Posted))
+            if (voucher.Status == ReceiptVoucherStatus.Approved)
             {
-                foreach (var line in entry.Lines)
-                {
-                    var account = line.Account;
-                    var netAmount = account.Nature == AccountNature.Debit
-                        ? line.DebitAmount - line.CreditAmount
-                        : line.CreditAmount - line.DebitAmount;
+                var journalEntries = await _context.JournalEntries
+                    .Include(j => j.Lines)
+                        .ThenInclude(l => l.Account)
+                    .Where(j => j.Reference == $"RCV:{voucher.Id}")
+                    .ToListAsync();
 
-                    account.CurrentBalance -= netAmount;
-                    account.UpdatedAt = DateTime.Now;
+                foreach (var entry in journalEntries.Where(e => e.Status == JournalEntryStatus.Posted))
+                {
+                    foreach (var line in entry.Lines)
+                    {
+                        var account = line.Account;
+                        var netAmount = account.Nature == AccountNature.Debit
+                            ? line.DebitAmount - line.CreditAmount
+                            : line.CreditAmount - line.DebitAmount;
+
+                        account.CurrentBalance -= netAmount;
+                        account.UpdatedAt = DateTime.Now;
+                    }
                 }
+
+                _context.JournalEntryLines.RemoveRange(journalEntries.SelectMany(j => j.Lines));
+                _context.JournalEntries.RemoveRange(journalEntries);
             }
 
-            _context.JournalEntryLines.RemoveRange(journalEntries.SelectMany(j => j.Lines));
-            _context.JournalEntries.RemoveRange(journalEntries);
+            if (voucher.WorkflowInstance != null)
+            {
+                _context.WorkflowActions.RemoveRange(voucher.WorkflowInstance.Actions);
+                _context.WorkflowInstances.Remove(voucher.WorkflowInstance);
+            }
+
             _context.ReceiptVouchers.Remove(voucher);
 
             await _context.SaveChangesAsync();

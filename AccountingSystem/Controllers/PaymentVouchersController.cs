@@ -430,7 +430,16 @@ namespace AccountingSystem.Controllers
 
             if (definition != null)
             {
-                var instance = await _workflowService.StartWorkflowAsync(definition, WorkflowDocumentType.PaymentVoucher, model.Id, user.Id, user.PaymentBranchId);
+                var baseAmount = model.Amount * model.ExchangeRate;
+                var instance = await _workflowService.StartWorkflowAsync(
+                    definition,
+                    WorkflowDocumentType.PaymentVoucher,
+                    model.Id,
+                    user.Id,
+                    user.PaymentBranchId,
+                    model.Amount,
+                    baseAmount,
+                    model.CurrencyId);
                 if (instance != null)
                 {
                     model.WorkflowInstanceId = instance.Id;

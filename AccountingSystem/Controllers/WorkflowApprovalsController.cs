@@ -50,6 +50,18 @@ namespace AccountingSystem.Controllers
                 .Distinct()
                 .ToList();
 
+            var receiptVoucherIds = actions
+                .Where(a => a.WorkflowInstance.DocumentType == WorkflowDocumentType.ReceiptVoucher)
+                .Select(a => a.WorkflowInstance.DocumentId)
+                .Distinct()
+                .ToList();
+
+            var disbursementVoucherIds = actions
+                .Where(a => a.WorkflowInstance.DocumentType == WorkflowDocumentType.DisbursementVoucher)
+                .Select(a => a.WorkflowInstance.DocumentId)
+                .Distinct()
+                .ToList();
+
             var vouchers = await _context.PaymentVouchers
                 .Include(v => v.Supplier)
                 .Include(v => v.Currency)
@@ -64,6 +76,22 @@ namespace AccountingSystem.Controllers
                 .Where(e => dynamicEntryIds.Contains(e.Id))
                 .ToDictionaryAsync(e => e.Id);
 
+            var receiptVouchers = await _context.ReceiptVouchers
+                .Include(v => v.Supplier)
+                .Include(v => v.Currency)
+                .Include(v => v.Account)
+                .Include(v => v.PaymentAccount)
+                .Include(v => v.CreatedBy)
+                .Where(v => receiptVoucherIds.Contains(v.Id))
+                .ToDictionaryAsync(v => v.Id);
+
+            var disbursementVouchers = await _context.DisbursementVouchers
+                .Include(v => v.Supplier)
+                .Include(v => v.Currency)
+                .Include(v => v.CreatedBy)
+                .Where(v => disbursementVoucherIds.Contains(v.Id))
+                .ToDictionaryAsync(v => v.Id);
+
             foreach (var action in actions)
             {
                 var model = new WorkflowApprovalViewModel
@@ -73,7 +101,10 @@ namespace AccountingSystem.Controllers
                     DocumentType = action.WorkflowInstance.DocumentType,
                     CreatedAt = action.WorkflowInstance.CreatedAt,
                     Title = GetTitle(action.WorkflowInstance),
-                    Description = GetDescription(action.WorkflowInstance)
+                    Description = GetDescription(action.WorkflowInstance),
+                    Amount = action.WorkflowInstance.DocumentAmount,
+                    AmountInBase = action.WorkflowInstance.DocumentAmountInBase,
+                    CurrencyCode = action.WorkflowInstance.DocumentCurrency?.Code
                 };
 
                 if (action.WorkflowInstance.DocumentType == WorkflowDocumentType.PaymentVoucher && vouchers.TryGetValue(action.WorkflowInstance.DocumentId, out var voucher))
@@ -83,6 +114,22 @@ namespace AccountingSystem.Controllers
                 else if (action.WorkflowInstance.DocumentType == WorkflowDocumentType.DynamicScreenEntry && dynamicEntries.TryGetValue(action.WorkflowInstance.DocumentId, out var entry))
                 {
                     model.DynamicEntry = entry;
+                }
+                else if (action.WorkflowInstance.DocumentType == WorkflowDocumentType.ReceiptVoucher && receiptVouchers.TryGetValue(action.WorkflowInstance.DocumentId, out var receipt))
+                {
+                    model.ReceiptVoucher = receipt;
+                    if (string.IsNullOrEmpty(model.CurrencyCode))
+                    {
+                        model.CurrencyCode = receipt.Currency?.Code;
+                    }
+                }
+                else if (action.WorkflowInstance.DocumentType == WorkflowDocumentType.DisbursementVoucher && disbursementVouchers.TryGetValue(action.WorkflowInstance.DocumentId, out var disbursement))
+                {
+                    model.DisbursementVoucher = disbursement;
+                    if (string.IsNullOrEmpty(model.CurrencyCode))
+                    {
+                        model.CurrencyCode = disbursement.Currency?.Code;
+                    }
                 }
 
                 viewModels.Add(model);
@@ -124,6 +171,8 @@ namespace AccountingSystem.Controllers
             return instance.DocumentType switch
             {
                 WorkflowDocumentType.PaymentVoucher => $"سند دفع رقم {instance.DocumentId}",
+                WorkflowDocumentType.ReceiptVoucher => $"سند قبض رقم {instance.DocumentId}",
+                WorkflowDocumentType.DisbursementVoucher => $"سند صرف رقم {instance.DocumentId}",
                 WorkflowDocumentType.DynamicScreenEntry => $"حركة شاشة ديناميكية رقم {instance.DocumentId}",
                 _ => $"مستند رقم {instance.DocumentId}"
             };
@@ -134,6 +183,8 @@ namespace AccountingSystem.Controllers
             return instance.DocumentType switch
             {
                 WorkflowDocumentType.PaymentVoucher => "يرجى مراجعة بيانات سند الدفع واعتمادها",
+                WorkflowDocumentType.ReceiptVoucher => "يرجى مراجعة بيانات سند القبض واعتمادها",
+                WorkflowDocumentType.DisbursementVoucher => "يرجى مراجعة بيانات سند الصرف واعتمادها",
                 WorkflowDocumentType.DynamicScreenEntry => "يرجى مراجعة بيانات الحركة الديناميكية واتخاذ القرار",
                 _ => "يرجى مراجعة المستند واعتماد القرار"
             };

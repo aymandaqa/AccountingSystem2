@@ -236,7 +236,10 @@ namespace AccountingSystem.Controllers
                         WorkflowDocumentType.DynamicScreenEntry,
                         entry.Id,
                         user.Id,
-                        entry.BranchId);
+                        entry.BranchId,
+                        entry.Amount,
+                        entry.Amount,
+                        null);
 
                     if (instance != null)
                     {

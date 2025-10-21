@@ -16,15 +16,21 @@ namespace AccountingSystem.Services
         private readonly ApplicationDbContext _context;
         private readonly INotificationService _notificationService;
         private readonly IPaymentVoucherProcessor _paymentVoucherProcessor;
+        private readonly IReceiptVoucherProcessor _receiptVoucherProcessor;
+        private readonly IDisbursementVoucherProcessor _disbursementVoucherProcessor;
 
         public WorkflowService(
             ApplicationDbContext context,
             INotificationService notificationService,
-            IPaymentVoucherProcessor paymentVoucherProcessor)
+            IPaymentVoucherProcessor paymentVoucherProcessor,
+            IReceiptVoucherProcessor receiptVoucherProcessor,
+            IDisbursementVoucherProcessor disbursementVoucherProcessor)
         {
             _context = context;
             _notificationService = notificationService;
             _paymentVoucherProcessor = paymentVoucherProcessor;
+            _receiptVoucherProcessor = receiptVoucherProcessor;
+            _disbursementVoucherProcessor = disbursementVoucherProcessor;
         }
 
         public async Task<WorkflowDefinition?> GetActiveDefinitionAsync(WorkflowDocumentType documentType, int? branchId, CancellationToken cancellationToken = default)
@@ -37,12 +43,25 @@ namespace AccountingSystem.Services
                 .FirstOrDefaultAsync(d => !d.BranchId.HasValue || d.BranchId == branchId, cancellationToken);
         }
 
-        public async Task<WorkflowInstance?> StartWorkflowAsync(WorkflowDefinition definition, WorkflowDocumentType documentType, int documentId, string initiatorId, int? branchId, CancellationToken cancellationToken = default)
+        public async Task<WorkflowInstance?> StartWorkflowAsync(
+            WorkflowDefinition definition,
+            WorkflowDocumentType documentType,
+            int documentId,
+            string initiatorId,
+            int? branchId,
+            decimal documentAmount,
+            decimal documentAmountInBase,
+            int? documentCurrencyId,
+            CancellationToken cancellationToken = default)
         {
             await _context.Entry(definition).Collection(d => d.Steps).LoadAsync(cancellationToken);
-            var orderedSteps = definition.Steps.OrderBy(s => s.Order).ToList();
+            var applicableSteps = definition.Steps
+                .Where(s => (!s.MinAmount.HasValue || documentAmountInBase >= s.MinAmount.Value)
+                            && (!s.MaxAmount.HasValue || documentAmountInBase <= s.MaxAmount.Value))
+                .OrderBy(s => s.Order)
+                .ToList();
 
-            if (!orderedSteps.Any())
+            if (!applicableSteps.Any())
             {
                 return null;
             }
@@ -52,8 +71,11 @@ namespace AccountingSystem.Services
                 WorkflowDefinitionId = definition.Id,
                 DocumentType = documentType,
                 DocumentId = documentId,
+                DocumentAmount = documentAmount,
+                DocumentAmountInBase = documentAmountInBase,
+                DocumentCurrencyId = documentCurrencyId,
                 Status = WorkflowInstanceStatus.InProgress,
-                CurrentStepOrder = orderedSteps.First().Order,
+                CurrentStepOrder = applicableSteps.First().Order,
                 InitiatorId = initiatorId
             };
 
@@ -61,7 +83,7 @@ namespace AccountingSystem.Services
             await _context.SaveChangesAsync(cancellationToken);
 
             var actions = new List<WorkflowAction>();
-            foreach (var step in orderedSteps)
+            foreach (var step in applicableSteps)
             {
                 actions.Add(new WorkflowAction
                 {
@@ -74,10 +96,11 @@ namespace AccountingSystem.Services
             await _context.WorkflowActions.AddRangeAsync(actions, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
 
-            var firstAction = actions.FirstOrDefault(a => a.WorkflowStepId == orderedSteps.First().Id);
+            var firstStep = applicableSteps.First();
+            var firstAction = actions.FirstOrDefault(a => a.WorkflowStepId == firstStep.Id);
             if (firstAction != null)
             {
-                await NotifyApproversAsync(instance, orderedSteps.First(), firstAction, branchId, cancellationToken);
+                await NotifyApproversAsync(instance, firstStep, firstAction, branchId, cancellationToken);
             }
 
             return instance;
@@ -106,6 +129,7 @@ namespace AccountingSystem.Services
             var actions = await _context.WorkflowActions
                 .Include(a => a.WorkflowStep)
                 .Include(a => a.WorkflowInstance).ThenInclude(i => i.WorkflowDefinition)
+                .Include(a => a.WorkflowInstance).ThenInclude(i => i.DocumentCurrency)
                 .Where(a => a.Status == WorkflowActionStatus.Pending && a.WorkflowInstance.Status == WorkflowInstanceStatus.InProgress)
                 .ToListAsync(cancellationToken);
 
@@ -121,6 +145,9 @@ namespace AccountingSystem.Services
                 .Include(a => a.WorkflowInstance)
                     .ThenInclude(i => i.WorkflowDefinition)
                         .ThenInclude(d => d.Steps)
+                .Include(a => a.WorkflowInstance)
+                    .ThenInclude(i => i.Actions)
+                        .ThenInclude(a => a.WorkflowStep)
                 .FirstOrDefaultAsync(a => a.Id == actionId, cancellationToken);
 
             if (action == null)
@@ -154,27 +181,29 @@ namespace AccountingSystem.Services
                 return;
             }
 
-            var orderedSteps = action.WorkflowInstance.WorkflowDefinition.Steps.OrderBy(s => s.Order).ToList();
-            var currentIndex = orderedSteps.FindIndex(s => s.Id == action.WorkflowStepId);
-            var nextStep = currentIndex >= 0 && currentIndex + 1 < orderedSteps.Count
-                ? orderedSteps[currentIndex + 1]
-                : null;
+            var orderedActions = action.WorkflowInstance.Actions
+                .OrderBy(a => a.WorkflowStep.Order)
+                .ToList();
+            var currentIndex = orderedActions.FindIndex(a => a.Id == action.Id);
+            WorkflowAction? nextAction = null;
+            for (var i = currentIndex + 1; i < orderedActions.Count; i++)
+            {
+                if (orderedActions[i].Status == WorkflowActionStatus.Pending)
+                {
+                    nextAction = orderedActions[i];
+                    break;
+                }
+            }
 
-            if (nextStep == null)
+            if (nextAction == null)
             {
                 await CompleteWorkflowAsync(action.WorkflowInstance, userId, cancellationToken);
             }
             else
             {
-                action.WorkflowInstance.CurrentStepOrder = nextStep.Order;
-                var nextAction = await _context.WorkflowActions
-                    .FirstOrDefaultAsync(a => a.WorkflowInstanceId == action.WorkflowInstanceId && a.WorkflowStepId == nextStep.Id, cancellationToken);
-                if (nextAction != null)
-                {
-                    var branchContext = await ResolveDocumentBranchIdAsync(action.WorkflowInstance, cancellationToken);
-                    await NotifyApproversAsync(action.WorkflowInstance, nextStep, nextAction, branchContext, cancellationToken);
-                }
-
+                action.WorkflowInstance.CurrentStepOrder = nextAction.WorkflowStep.Order;
+                var branchContext = await ResolveDocumentBranchIdAsync(action.WorkflowInstance, cancellationToken);
+                await NotifyApproversAsync(action.WorkflowInstance, nextAction.WorkflowStep, nextAction, branchContext, cancellationToken);
                 await _context.SaveChangesAsync(cancellationToken);
             }
         }
@@ -228,11 +257,18 @@ namespace AccountingSystem.Services
             if (!approvers.Any())
                 throw new InvalidOperationException("لم يتم العثور على مستخدمين للخطوة المحددة");
 
+            if (instance.DocumentCurrencyId.HasValue && instance.DocumentCurrency == null)
+            {
+                instance.DocumentCurrency = await _context.Currencies.FirstOrDefaultAsync(c => c.Id == instance.DocumentCurrencyId, cancellationToken);
+            }
+
+            var message = GetNotificationMessage(instance);
+
             var notifications = approvers.Select(userId => new Notification
             {
                 UserId = userId,
                 Title = GetNotificationTitle(instance.DocumentType),
-                Message = GetNotificationMessage(instance),
+                Message = message,
                 Link = "/WorkflowApprovals",
                 WorkflowActionId = action.Id,
                 CreatedAt = DateTime.UtcNow
@@ -246,6 +282,8 @@ namespace AccountingSystem.Services
             return documentType switch
             {
                 WorkflowDocumentType.PaymentVoucher => "طلب موافقة سند دفع",
+                WorkflowDocumentType.ReceiptVoucher => "طلب موافقة سند قبض",
+                WorkflowDocumentType.DisbursementVoucher => "طلب موافقة سند صرف",
                 WorkflowDocumentType.DynamicScreenEntry => "طلب موافقة حركة ديناميكية",
                 _ => "طلب موافقة"
             };
@@ -253,12 +291,35 @@ namespace AccountingSystem.Services
 
         private string GetNotificationMessage(WorkflowInstance instance)
         {
+            var amountSuffix = GetAmountDescription(instance);
             return instance.DocumentType switch
             {
-                WorkflowDocumentType.PaymentVoucher => $"يوجد سند دفع رقم {instance.DocumentId} بانتظار الموافقة",
-                WorkflowDocumentType.DynamicScreenEntry => $"يوجد طلب على شاشة ديناميكية رقم {instance.DocumentId} بانتظار الموافقة",
-                _ => $"هناك مستند رقم {instance.DocumentId} بانتظار الموافقة"
+                WorkflowDocumentType.PaymentVoucher => $"يوجد سند دفع رقم {instance.DocumentId} بانتظار الموافقة{amountSuffix}",
+                WorkflowDocumentType.ReceiptVoucher => $"يوجد سند قبض رقم {instance.DocumentId} بانتظار الموافقة{amountSuffix}",
+                WorkflowDocumentType.DisbursementVoucher => $"يوجد سند صرف رقم {instance.DocumentId} بانتظار الموافقة{amountSuffix}",
+                WorkflowDocumentType.DynamicScreenEntry => $"يوجد طلب على شاشة ديناميكية رقم {instance.DocumentId} بانتظار الموافقة{amountSuffix}",
+                _ => $"هناك مستند رقم {instance.DocumentId} بانتظار الموافقة{amountSuffix}"
             };
+        }
+
+        private string GetAmountDescription(WorkflowInstance instance)
+        {
+            var parts = new List<string>();
+
+            if (instance.DocumentAmount != 0)
+            {
+                var currencyCode = instance.DocumentCurrency?.Code;
+                parts.Add(!string.IsNullOrWhiteSpace(currencyCode)
+                    ? $"{instance.DocumentAmount:N2} {currencyCode}"
+                    : instance.DocumentAmount.ToString("N2"));
+            }
+
+            if (instance.DocumentAmountInBase != 0)
+            {
+                parts.Add($"ما يعادل {instance.DocumentAmountInBase:N2} بالعملة الأساسية");
+            }
+
+            return parts.Count > 0 ? $" ({string.Join(" - ", parts)})" : string.Empty;
         }
 
         private async Task<IEnumerable<string>> ResolveApproverUserIdsAsync(WorkflowStep step, int? documentBranchId, CancellationToken cancellationToken)
@@ -331,6 +392,26 @@ namespace AccountingSystem.Services
                         voucher.WorkflowInstanceId = action.WorkflowInstance.Id;
                     }
                     break;
+                case WorkflowDocumentType.ReceiptVoucher:
+                    var receipt = await _context.ReceiptVouchers.FirstOrDefaultAsync(v => v.Id == action.WorkflowInstance.DocumentId, cancellationToken);
+                    if (receipt != null)
+                    {
+                        receipt.Status = ReceiptVoucherStatus.Rejected;
+                        receipt.ApprovedAt = null;
+                        receipt.ApprovedById = null;
+                        receipt.WorkflowInstanceId = action.WorkflowInstance.Id;
+                    }
+                    break;
+                case WorkflowDocumentType.DisbursementVoucher:
+                    var disbursement = await _context.DisbursementVouchers.FirstOrDefaultAsync(v => v.Id == action.WorkflowInstance.DocumentId, cancellationToken);
+                    if (disbursement != null)
+                    {
+                        disbursement.Status = DisbursementVoucherStatus.Rejected;
+                        disbursement.ApprovedAt = null;
+                        disbursement.ApprovedById = null;
+                        disbursement.WorkflowInstanceId = action.WorkflowInstance.Id;
+                    }
+                    break;
                 case WorkflowDocumentType.DynamicScreenEntry:
                     var entry = await _context.DynamicScreenEntries.FirstOrDefaultAsync(e => e.Id == action.WorkflowInstance.DocumentId, cancellationToken);
                     if (entry != null)
@@ -361,6 +442,22 @@ namespace AccountingSystem.Services
                         await _paymentVoucherProcessor.FinalizeVoucherAsync(voucher, approvedById, cancellationToken);
                     }
                     break;
+                case WorkflowDocumentType.ReceiptVoucher:
+                    var receipt = await _context.ReceiptVouchers.FirstOrDefaultAsync(v => v.Id == instance.DocumentId, cancellationToken);
+                    if (receipt != null)
+                    {
+                        receipt.WorkflowInstanceId = instance.Id;
+                        await _receiptVoucherProcessor.FinalizeAsync(receipt, approvedById, cancellationToken);
+                    }
+                    break;
+                case WorkflowDocumentType.DisbursementVoucher:
+                    var disbursement = await _context.DisbursementVouchers.FirstOrDefaultAsync(v => v.Id == instance.DocumentId, cancellationToken);
+                    if (disbursement != null)
+                    {
+                        disbursement.WorkflowInstanceId = instance.Id;
+                        await _disbursementVoucherProcessor.FinalizeAsync(disbursement, approvedById, cancellationToken);
+                    }
+                    break;
                 case WorkflowDocumentType.DynamicScreenEntry:
                     var entry = await _context.DynamicScreenEntries.FirstOrDefaultAsync(e => e.Id == instance.DocumentId, cancellationToken);
                     if (entry != null)
@@ -381,6 +478,14 @@ namespace AccountingSystem.Services
             return instance.DocumentType switch
             {
                 WorkflowDocumentType.PaymentVoucher => await _context.PaymentVouchers
+                    .Where(v => v.Id == instance.DocumentId)
+                    .Select(v => v.CreatedBy.PaymentBranchId)
+                    .FirstOrDefaultAsync(cancellationToken),
+                WorkflowDocumentType.ReceiptVoucher => await _context.ReceiptVouchers
+                    .Where(v => v.Id == instance.DocumentId)
+                    .Select(v => v.CreatedBy.PaymentBranchId)
+                    .FirstOrDefaultAsync(cancellationToken),
+                WorkflowDocumentType.DisbursementVoucher => await _context.DisbursementVouchers
                     .Where(v => v.Id == instance.DocumentId)
                     .Select(v => v.CreatedBy.PaymentBranchId)
                     .FirstOrDefaultAsync(cancellationToken),

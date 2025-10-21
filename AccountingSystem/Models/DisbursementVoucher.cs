@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using AccountingSystem.Models.Workflows;
 
 namespace AccountingSystem.Models
 {
@@ -29,9 +30,19 @@ namespace AccountingSystem.Models
 
         public string CreatedById { get; set; } = string.Empty;
 
+        public DisbursementVoucherStatus Status { get; set; } = DisbursementVoucherStatus.PendingApproval;
+
+        public DateTime? ApprovedAt { get; set; }
+
+        public string? ApprovedById { get; set; }
+
+        public int? WorkflowInstanceId { get; set; }
+
         public virtual Supplier Supplier { get; set; } = null!;
         public virtual Account Account { get; set; } = null!;
         public virtual Currency Currency { get; set; } = null!;
         public virtual User CreatedBy { get; set; } = null!;
+        public virtual User? ApprovedBy { get; set; }
+        public virtual WorkflowInstance? WorkflowInstance { get; set; }
     }
 }
