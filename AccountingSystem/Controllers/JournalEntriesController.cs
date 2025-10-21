@@ -738,7 +738,7 @@ namespace AccountingSystem.Controllers
 
             if (entry.Status != JournalEntryStatus.Draft && entry.Status != JournalEntryStatus.Posted)
             {
-                return BadRequest("لا يمكن حذف هذا القيد في حالته الحالية.");
+                return BadRequest("لا يمكن إلغاء هذا القيد في حالته الحالية.");
             }
 
             var relatedEntities = new List<string>();
@@ -771,7 +771,7 @@ namespace AccountingSystem.Controllers
             if (relatedEntities.Count > 0)
             {
                 var relatedText = string.Join("، ", relatedEntities);
-                return BadRequest($"لا يمكن حذف هذا القيد لأنه مرتبط بـ: {relatedText}. يرجى حذف السجلات المرتبطة أولاً.");
+                return BadRequest($"لا يمكن إلغاء هذا القيد لأنه مرتبط بـ: {relatedText}. يرجى حذف السجلات المرتبطة أولاً.");
             }
 
             if (entry.Status == JournalEntryStatus.Posted)
@@ -788,8 +788,8 @@ namespace AccountingSystem.Controllers
                 }
             }
 
-            _context.JournalEntryLines.RemoveRange(entry.Lines);
-            _context.JournalEntries.Remove(entry);
+            entry.Status = JournalEntryStatus.Cancelled;
+            entry.UpdatedAt = DateTime.Now;
             await _context.SaveChangesAsync();
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
