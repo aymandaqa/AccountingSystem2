@@ -1,8 +1,24 @@
+@using AccountingSystem.Models
 @model IEnumerable<AccountingSystem.Models.PaymentTransfer>
+@using System.Collections.Generic
 @using System.Linq
 @{
     var breakdowns = ViewBag.TransferCurrencyBreakdowns as Dictionary<int, Dictionary<int, int>> ?? new();
     var unitNames = ViewBag.CurrencyUnitNames as Dictionary<int, string> ?? new();
+    var canManageTransfers = ViewBag.CanManageTransfers as bool? ?? false;
+    var currentUserId = ViewBag.CurrentUserId as string ?? string.Empty;
+    var isManageView = ViewBag.IsManageView as bool? ?? false;
+    var returnUrl = isManageView ? Url.Action("Manage", "Transfers") : null;
+    var approvePermission = canManageTransfers ? "transfers.manage" : "transfers.approve";
+    var editPermission = canManageTransfers ? "transfers.manage" : "transfers.create";
+    var deletePermission = canManageTransfers ? "transfers.manage" : "transfers.create";
+    var printPermission = canManageTransfers ? "transfers.manage" : "transfers.view";
+    var statusStyles = new Dictionary<TransferStatus, (string Label, string CssClass)>
+    {
+        [TransferStatus.Pending] = ("قيد الانتظار", "bg-warning text-dark"),
+        [TransferStatus.Accepted] = ("مقبولة", "bg-success"),
+        [TransferStatus.Rejected] = ("مرفوضة", "bg-danger")
+    };
 }
 
 <table class="table">
@@ -44,26 +60,53 @@
                     <span class="text-muted">-</span>
                 }
             </td>
-            <td>@item.Status</td>
+            <td>
+                @if (statusStyles.TryGetValue(item.Status, out var style))
+                {
+                    <span class="badge @style.CssClass">@style.Label</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">@item.Status</span>
+                }
+            </td>
             <td>@item.CreatedAt.ToString("dd/MM/yyyy")</td>
             <td>
-            @if (item.Status == AccountingSystem.Models.TransferStatus.Pending)
-            {
-                if (item.ReceiverId == ViewBag.CurrentUserId)
-                {
-                    <a asp-action="Approve" asp-route-id="@item.Id" asp-route-accept="true" asp-require-permission="transfers.approve">استلام</a>
-                    <span class="mx-1">|</span>
-                    <a asp-action="Approve" asp-route-id="@item.Id" asp-route-accept="false" asp-require-permission="transfers.approve">رفض</a>
-                }
-                else if (item.SenderId == ViewBag.CurrentUserId)
-                {
-                    <a asp-action="Edit" asp-route-id="@item.Id" asp-require-permission="transfers.create">تعديل</a>
-                    <span class="mx-1">|</span>
-                    <form asp-action="Delete" asp-route-id="@item.Id" method="post" style="display:inline" asp-require-permission="transfers.create">
-                        <button type="submit" class="btn btn-link p-0 m-0 align-baseline">حذف</button>
-                    </form>
-                }
-            }
+                <div class="d-flex flex-column gap-1">
+                    @if (item.Status == TransferStatus.Pending)
+                    {
+                        var canApprove = canManageTransfers || item.ReceiverId == currentUserId;
+                        var canEdit = canManageTransfers || item.SenderId == currentUserId;
+
+                        if (canApprove)
+                        {
+                            <div class="d-flex flex-wrap gap-2">
+                                <a class="text-success" asp-action="Approve" asp-route-id="@item.Id" asp-route-accept="true" asp-route-returnUrl="@returnUrl" asp-require-permission="@approvePermission">استلام</a>
+                                <a class="text-danger" asp-action="Approve" asp-route-id="@item.Id" asp-route-accept="false" asp-route-returnUrl="@returnUrl" asp-require-permission="@approvePermission">رفض</a>
+                            </div>
+                        }
+
+                        if (canEdit)
+                        {
+                            <div class="d-flex flex-wrap gap-2">
+                                <a asp-action="Edit" asp-route-id="@item.Id" asp-route-returnUrl="@returnUrl" asp-require-permission="@editPermission">تعديل</a>
+                                <form asp-action="Delete" asp-route-id="@item.Id" asp-route-returnUrl="@returnUrl" method="post" class="d-inline" asp-require-permission="@deletePermission">
+                                    <button type="submit" class="btn btn-link p-0 m-0 align-baseline text-danger">حذف</button>
+                                </form>
+                            </div>
+                        }
+                    }
+
+                    @if (item.SenderJournalEntryId.HasValue)
+                    {
+                        <a asp-action="PrintSend" asp-route-id="@item.Id" asp-route-returnUrl="@returnUrl" asp-require-permission="@printPermission">طباعة سند إرسال</a>
+                    }
+
+                    @if (item.Status == TransferStatus.Accepted && item.JournalEntryId.HasValue)
+                    {
+                        <a asp-action="PrintReceive" asp-route-id="@item.Id" asp-route-returnUrl="@returnUrl" asp-require-permission="@printPermission">طباعة سند استلام</a>
+                    }
+                </div>
             </td>
         </tr>
     }

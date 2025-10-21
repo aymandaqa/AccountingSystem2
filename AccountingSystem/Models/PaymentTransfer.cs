@@ -33,6 +33,7 @@ namespace AccountingSystem.Models
         public TransferStatus Status { get; set; } = TransferStatus.Pending;
 
         public int? JournalEntryId { get; set; }
+        public int? SenderJournalEntryId { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
@@ -44,6 +45,7 @@ namespace AccountingSystem.Models
         public virtual Branch? FromBranch { get; set; }
         public virtual Branch? ToBranch { get; set; }
         public virtual JournalEntry? JournalEntry { get; set; }
+        public virtual JournalEntry? SenderJournalEntry { get; set; }
     }
 
     public enum TransferStatus

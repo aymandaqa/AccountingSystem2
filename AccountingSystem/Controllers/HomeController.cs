@@ -339,6 +339,14 @@ public class HomeController : Controller
             permission: "transfers.view",
             url: "/Transfers/Index"),
         new SystemAppDefinition(
+            name: "إدارة الحوالات",
+            description: "مراجعة كافة الحوالات وتحديث حالتها",
+            category: "الخزينة",
+            icon: "🛡️",
+            accentColor: "#4e73df",
+            permission: "transfers.manage",
+            url: "/Transfers/Manage"),
+        new SystemAppDefinition(
             name: "المصاريف",
             description: "تسجيل المصاريف واعتمادها ومتابعة حدود الصرف",
             category: "المالية",
