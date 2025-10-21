@@ -1,24 +1,41 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace AccountingSystem.Migrations
 {
-    public partial class AddSenderJournalEntryToTransfers : Migration
+    /// <inheritdoc />
+    public partial class aupdb8343423 : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+
+
             migrationBuilder.AddColumn<int>(
                 name: "SenderJournalEntryId",
                 table: "PaymentTransfers",
                 type: "int",
                 nullable: true);
 
+
+
+            migrationBuilder.InsertData(
+                table: "Permissions",
+                columns: new[] { "Id", "Category", "CreatedAt", "Description", "DisplayName", "IsActive", "Name" },
+                values: new object[,]
+                {
+                     { 1131, "الحوالات", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "إدارة الحوالات", true, "transfers.manage" }
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_PaymentTransfers_SenderJournalEntryId",
                 table: "PaymentTransfers",
                 column: "SenderJournalEntryId");
+
 
             migrationBuilder.AddForeignKey(
                 name: "FK_PaymentTransfers_JournalEntries_SenderJournalEntryId",
@@ -27,33 +44,35 @@ namespace AccountingSystem.Migrations
                 principalTable: "JournalEntries",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Restrict);
-
-            var createdAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-
-            migrationBuilder.InsertData(
-                table: "Permissions",
-                columns: new[] { "Id", "Category", "CreatedAt", "DisplayName", "IsActive", "Name", "UpdatedAt" },
-                values: new object[] { 113, "الحوالات", createdAt, "إدارة الحوالات", true, "transfers.manage", null });
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DeleteData(
-                table: "Permissions",
-                keyColumn: "Id",
-                keyValue: 113);
-
             migrationBuilder.DropForeignKey(
                 name: "FK_PaymentTransfers_JournalEntries_SenderJournalEntryId",
                 table: "PaymentTransfers");
+
 
             migrationBuilder.DropIndex(
                 name: "IX_PaymentTransfers_SenderJournalEntryId",
                 table: "PaymentTransfers");
 
+            migrationBuilder.DeleteData(
+                table: "Permissions",
+                keyColumn: "Id",
+                keyValue: 112);
+
+            migrationBuilder.DeleteData(
+                table: "Permissions",
+                keyColumn: "Id",
+                keyValue: 113);
+
+
             migrationBuilder.DropColumn(
                 name: "SenderJournalEntryId",
                 table: "PaymentTransfers");
+
         }
     }
 }

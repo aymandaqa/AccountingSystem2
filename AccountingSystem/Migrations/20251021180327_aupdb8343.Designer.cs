@@ -12,9 +12,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AccountingSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260305090000_AddSenderJournalEntryToTransfers")]
-    partial class AddSenderJournalEntryToTransfers
+    [Migration("20251021180327_aupdb8343")]
+    partial class aupdb8343
     {
+        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
@@ -405,12 +406,12 @@ namespace AccountingSystem.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CurrencyBreakdownJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("CurrencyBreakdownJson")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("OpeningBalance")
                         .HasColumnType("decimal(18,2)");
@@ -1049,9 +1050,6 @@ namespace AccountingSystem.Migrations
                     b.Property<int?>("JournalEntryId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("SenderJournalEntryId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -1306,6 +1304,9 @@ namespace AccountingSystem.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CurrencyBreakdownJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int?>("FromBranchId")
                         .HasColumnType("int");
 
@@ -1319,12 +1320,6 @@ namespace AccountingSystem.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("CurrencyBreakdownJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("SenderJournalEntryId")
-                        .HasColumnType("int");
-
                     b.Property<string>("ReceiverId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -1332,6 +1327,9 @@ namespace AccountingSystem.Migrations
                     b.Property<string>("SenderId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("SenderJournalEntryId")
+                        .HasColumnType("int");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -1350,11 +1348,11 @@ namespace AccountingSystem.Migrations
 
                     b.HasIndex("JournalEntryId");
 
-                    b.HasIndex("SenderJournalEntryId");
-
                     b.HasIndex("ReceiverId");
 
                     b.HasIndex("SenderId");
+
+                    b.HasIndex("SenderJournalEntryId");
 
                     b.HasIndex("ToBranchId");
 
@@ -3924,11 +3922,6 @@ namespace AccountingSystem.Migrations
                         .HasForeignKey("JournalEntryId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("AccountingSystem.Models.JournalEntry", "SenderJournalEntry")
-                        .WithMany()
-                        .HasForeignKey("SenderJournalEntryId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("AccountingSystem.Models.User", "Receiver")
                         .WithMany()
                         .HasForeignKey("ReceiverId")
@@ -3940,6 +3933,11 @@ namespace AccountingSystem.Migrations
                         .HasForeignKey("SenderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("AccountingSystem.Models.JournalEntry", "SenderJournalEntry")
+                        .WithMany()
+                        .HasForeignKey("SenderJournalEntryId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("AccountingSystem.Models.Branch", "ToBranch")
                         .WithMany()
@@ -3958,11 +3956,11 @@ namespace AccountingSystem.Migrations
 
                     b.Navigation("JournalEntry");
 
-                    b.Navigation("SenderJournalEntry");
-
                     b.Navigation("Receiver");
 
                     b.Navigation("Sender");
+
+                    b.Navigation("SenderJournalEntry");
 
                     b.Navigation("ToBranch");
 
