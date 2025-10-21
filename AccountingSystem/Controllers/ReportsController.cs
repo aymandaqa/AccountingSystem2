@@ -465,7 +465,18 @@ namespace AccountingSystem.Controllers
                 CreateMetric("هامش الربح التشغيلي التراكمي", operatingProfitMarginYearToDate, operatingProfitMarginYearToDateTarget, true)
             };
 
-            var culture = CultureInfo.CreateSpecificCulture("ar-SA");
+            var culture = (CultureInfo)CultureInfo.CreateSpecificCulture("ar-SA").Clone();
+            GregorianCalendar? gregorianCalendar = null;
+            foreach (var calendar in culture.OptionalCalendars)
+            {
+                if (calendar is GregorianCalendar gc)
+                {
+                    gregorianCalendar = gc;
+                    break;
+                }
+            }
+
+            culture.DateTimeFormat.Calendar = gregorianCalendar ?? new GregorianCalendar(GregorianCalendarTypes.Localized);
             var monthlyTrend = Enumerable.Range(1, selectedMonth)
                 .Select(m =>
                 {
