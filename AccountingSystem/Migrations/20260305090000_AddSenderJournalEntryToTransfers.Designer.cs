@@ -1322,6 +1322,9 @@ namespace AccountingSystem.Migrations
                     b.Property<string>("CurrencyBreakdownJson")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("SenderJournalEntryId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ReceiverId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
