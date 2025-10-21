@@ -2041,6 +2041,29 @@ namespace AccountingSystem.Controllers
             var postingBalanceCache = new Dictionary<int, (decimal DebitSelected, decimal CreditSelected, decimal DebitBase, decimal CreditBase)>();
             var aggregatedBalanceCache = new Dictionary<int, (decimal DebitSelected, decimal CreditSelected, decimal DebitBase, decimal CreditBase)>();
 
+            (decimal DebitSelected, decimal CreditSelected, decimal DebitBase, decimal CreditBase) SplitBalance(decimal amountSelected, decimal amountBase, AccountNature nature)
+            {
+                static (decimal Debit, decimal Credit) Split(decimal amount, AccountNature accountNature)
+                {
+                    if (amount >= 0)
+                    {
+                        return accountNature == AccountNature.Debit
+                            ? (amount, 0m)
+                            : (0m, amount);
+                    }
+
+                    var absolute = Math.Abs(amount);
+                    return accountNature == AccountNature.Debit
+                        ? (0m, absolute)
+                        : (absolute, 0m);
+                }
+
+                var (debitSelected, creditSelected) = Split(amountSelected, nature);
+                var (debitBase, creditBase) = Split(amountBase, nature);
+
+                return (debitSelected, creditSelected, debitBase, creditBase);
+            }
+
             (decimal DebitSelected, decimal CreditSelected, decimal DebitBase, decimal CreditBase) CalculatePostingBalance(Account account)
             {
                 if (postingBalanceCache.TryGetValue(account.Id, out var cached))
@@ -2054,44 +2077,7 @@ namespace AccountingSystem.Controllers
                 var balanceSelected = _currencyService.Convert(balance, account.Currency, selectedCurrency);
                 var balanceBase = _currencyService.Convert(balance, account.Currency, baseCurrency);
 
-                decimal debitSelected;
-                decimal creditSelected;
-                decimal debitBase;
-                decimal creditBase;
-
-                if (account.AccountType == AccountType.Liabilities)
-                {
-                    if (balanceSelected < 0)
-                    {
-                        debitSelected = Math.Abs(balanceSelected);
-                        creditSelected = 0;
-                    }
-                    else
-                    {
-                        debitSelected = 0;
-                        creditSelected = balanceSelected;
-                    }
-
-                    if (balanceBase < 0)
-                    {
-                        debitBase = Math.Abs(balanceBase);
-                        creditBase = 0;
-                    }
-                    else
-                    {
-                        debitBase = 0;
-                        creditBase = balanceBase;
-                    }
-                }
-                else
-                {
-                    debitSelected = account.Nature == AccountNature.Debit ? balanceSelected : 0;
-                    creditSelected = account.Nature == AccountNature.Credit ? balanceSelected : 0;
-                    debitBase = account.Nature == AccountNature.Debit ? balanceBase : 0;
-                    creditBase = account.Nature == AccountNature.Credit ? balanceBase : 0;
-                }
-
-                var result = (debitSelected, creditSelected, debitBase, creditBase);
+                var result = SplitBalance(balanceSelected, balanceBase, account.Nature);
                 postingBalanceCache[account.Id] = result;
                 return result;
             }
@@ -2181,6 +2167,14 @@ namespace AccountingSystem.Controllers
                 BuildReportAccounts(orphanAccount);
             }
 
+            foreach (var account in reportAccounts)
+            {
+                account.DebitBalance = Math.Round(account.DebitBalance, 2, MidpointRounding.AwayFromZero);
+                account.CreditBalance = Math.Round(account.CreditBalance, 2, MidpointRounding.AwayFromZero);
+                account.DebitBalanceBase = Math.Round(account.DebitBalanceBase, 2, MidpointRounding.AwayFromZero);
+                account.CreditBalanceBase = Math.Round(account.CreditBalanceBase, 2, MidpointRounding.AwayFromZero);
+            }
+
             var totalsScope = reportAccounts
                 .Where(a => a.Level == normalizedLevel)
                 .ToList();
@@ -2208,11 +2202,13 @@ namespace AccountingSystem.Controllers
                     .ToList()
             };
 
-            viewModel.TotalDebits = totalsScope.Sum(a => a.DebitBalance);
-            viewModel.TotalCredits = totalsScope.Sum(a => a.CreditBalance);
-            viewModel.TotalDebitsBase = totalsScope.Sum(a => a.DebitBalanceBase);
-            viewModel.TotalCreditsBase = totalsScope.Sum(a => a.CreditBalanceBase);
-            viewModel.IsBalanced = viewModel.TotalDebits == viewModel.TotalCredits;
+            viewModel.TotalDebits = Math.Round(totalsScope.Sum(a => a.DebitBalance), 2, MidpointRounding.AwayFromZero);
+            viewModel.TotalCredits = Math.Round(totalsScope.Sum(a => a.CreditBalance), 2, MidpointRounding.AwayFromZero);
+            viewModel.TotalDebitsBase = Math.Round(totalsScope.Sum(a => a.DebitBalanceBase), 2, MidpointRounding.AwayFromZero);
+            viewModel.TotalCreditsBase = Math.Round(totalsScope.Sum(a => a.CreditBalanceBase), 2, MidpointRounding.AwayFromZero);
+
+            var balanceDifference = Math.Abs(viewModel.TotalDebits - viewModel.TotalCredits);
+            viewModel.IsBalanced = balanceDifference <= 0.05m;
 
             return viewModel;
         }
