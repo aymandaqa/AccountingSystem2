@@ -65,7 +65,7 @@ else
                     <div class="row g-3">
                         <div class="col-md-4">
                             <div class="fw-bold">المورد</div>
-                            <div>@request.PaymentVoucher.Supplier.NameAr</div>
+                            <div>@(request.PaymentVoucher.Supplier?.NameAr ?? "-")</div>
                         </div>
                         <div class="col-md-4">
                             <div class="fw-bold">أنشئ بواسطة</div>
@@ -132,7 +132,7 @@ else
                     <div class="row g-3">
                         <div class="col-md-4">
                             <div class="fw-bold">المورد</div>
-                            <div>@request.DisbursementVoucher.Supplier.NameAr</div>
+                            <div>@(request.DisbursementVoucher.Supplier?.NameAr ?? "-")</div>
                         </div>
                         <div class="col-md-4">
                             <div class="fw-bold">العملة</div>
