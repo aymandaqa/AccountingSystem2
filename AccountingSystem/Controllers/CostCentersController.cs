@@ -194,9 +194,7 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "costcenters.delete")]
         public async Task<IActionResult> Delete(int id)
         {
-            var costCenter = await _context.CostCenters
-                .Include(cc => cc.JournalEntryLines)
-                .FirstOrDefaultAsync(cc => cc.Id == id);
+            var costCenter = await _context.CostCenters.FindAsync(id);
 
             if (costCenter == null)
             {
@@ -204,7 +202,11 @@ namespace AccountingSystem.Controllers
             }
 
             // Check if cost center has related transactions
-            if (costCenter.JournalEntryLines.Any(line => line.JournalEntry.Status != JournalEntryStatus.Cancelled))
+            var hasActiveTransactions = await _context.JournalEntryLines
+                .Where(line => line.CostCenterId == id)
+                .AnyAsync(line => line.JournalEntry != null && line.JournalEntry.Status != JournalEntryStatus.Cancelled);
+
+            if (hasActiveTransactions)
             {
                 TempData["Error"] = "لا يمكن حذف مركز التكلفة لوجود معاملات مرتبطة به";
                 return RedirectToAction(nameof(Index));
