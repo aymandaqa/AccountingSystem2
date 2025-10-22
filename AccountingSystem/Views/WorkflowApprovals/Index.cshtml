@@ -148,6 +148,39 @@ else
                         </div>
                     </div>
                 }
+                else if (request.AssetExpense != null)
+                {
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="fw-bold">الأصل</div>
+                            <div>@request.AssetExpense.Asset.Name</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="fw-bold">الفرع</div>
+                            <div>@(request.AssetExpense.Asset.Branch?.NameAr ?? "-")</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="fw-bold">الحساب</div>
+                            <div>@request.AssetExpense.ExpenseAccount.NameAr</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="fw-bold">المورد</div>
+                            <div>@request.AssetExpense.Supplier.NameAr</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="fw-bold">نوع الدفع</div>
+                            <div>@(request.AssetExpense.IsCash ? "نقدي" : "غير نقدي")</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="fw-bold">أنشئ بواسطة</div>
+                            <div>@(request.AssetExpense.CreatedBy?.FullName ?? request.AssetExpense.CreatedById)</div>
+                        </div>
+                        <div class="col-12">
+                            <div class="fw-bold">ملاحظات</div>
+                            <div>@(string.IsNullOrWhiteSpace(request.AssetExpense.Notes) ? "لا يوجد" : request.AssetExpense.Notes)</div>
+                        </div>
+                    </div>
+                }
             </div>
             <div class="collapse" id="reject-@request.ActionId">
                 <div class="card-body border-top">

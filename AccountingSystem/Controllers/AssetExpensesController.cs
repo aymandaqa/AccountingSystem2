@@ -4,6 +4,7 @@ using System.Linq;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.Services;
+using AccountingSystem.Models.Workflows;
 using AccountingSystem.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -18,16 +19,19 @@ namespace AccountingSystem.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<User> _userManager;
-        private readonly IJournalEntryService _journalEntryService;
+        private readonly IWorkflowService _workflowService;
+        private readonly IAssetExpenseProcessor _assetExpenseProcessor;
 
         public AssetExpensesController(
             ApplicationDbContext context,
             UserManager<User> userManager,
-            IJournalEntryService journalEntryService)
+            IWorkflowService workflowService,
+            IAssetExpenseProcessor assetExpenseProcessor)
         {
             _context = context;
             _userManager = userManager;
-            _journalEntryService = journalEntryService;
+            _workflowService = workflowService;
+            _assetExpenseProcessor = assetExpenseProcessor;
         }
 
         public async Task<IActionResult> Index()
@@ -38,6 +42,16 @@ namespace AccountingSystem.Controllers
                 .Include(e => e.Supplier)
                 .OrderByDescending(e => e.Date)
                 .ToListAsync();
+
+            var expenseIds = expenses.Select(e => e.Id).ToList();
+            var workflowInstances = await _context.WorkflowInstances
+                .Where(i => i.DocumentType == WorkflowDocumentType.AssetExpense && expenseIds.Contains(i.DocumentId))
+                .OrderByDescending(i => i.CreatedAt)
+                .ToListAsync();
+
+            var workflowLookup = workflowInstances
+                .GroupBy(i => i.DocumentId)
+                .ToDictionary(g => g.Key, g => g.First());
 
             var references = expenses
                 .Select(e => $"ASSETEXP:{e.Id}")
@@ -63,6 +77,8 @@ namespace AccountingSystem.Controllers
                     journalEntryNumber = entryInfo.Number;
                 }
 
+                workflowLookup.TryGetValue(e.Id, out var instance);
+
                 return new AssetExpenseListViewModel
                 {
                     Id = e.Id,
@@ -75,7 +91,8 @@ namespace AccountingSystem.Controllers
                     Date = e.Date,
                     Notes = e.Notes,
                     JournalEntryId = journalEntryId,
-                    JournalEntryNumber = journalEntryNumber
+                    JournalEntryNumber = journalEntryNumber,
+                    WorkflowStatus = instance?.Status
                 };
             }).ToList();
 
@@ -192,7 +209,6 @@ namespace AccountingSystem.Controllers
             {
                 AssetId = model.AssetId,
                 ExpenseAccountId = model.ExpenseAccountId,
-                AccountId = null,
                 SupplierId = model.SupplierId!.Value,
                 CurrencyId = model.CurrencyId,
                 Amount = model.Amount,
@@ -203,36 +219,37 @@ namespace AccountingSystem.Controllers
                 CreatedById = user.Id
             };
 
+            if (assetExpense.IsCash)
+            {
+                assetExpense.AccountId = user.PaymentAccountId;
+            }
+
             _context.AssetExpenses.Add(assetExpense);
             await _context.SaveChangesAsync();
 
-            var lines = new List<JournalEntryLine>
-            {
-                new JournalEntryLine { AccountId = assetExpense.ExpenseAccountId, DebitAmount = assetExpense.Amount }
-            };
+            var branchId = asset.BranchId;
+            var definition = await _workflowService.GetActiveDefinitionAsync(WorkflowDocumentType.AssetExpense, branchId);
 
-            if (supplier?.AccountId != null)
+            if (definition != null)
             {
-                lines.Add(new JournalEntryLine { AccountId = supplier.AccountId.Value, CreditAmount = assetExpense.Amount });
+                var baseAmount = assetExpense.Amount * assetExpense.ExchangeRate;
+                await _workflowService.StartWorkflowAsync(
+                    definition,
+                    WorkflowDocumentType.AssetExpense,
+                    assetExpense.Id,
+                    user.Id,
+                    branchId,
+                    assetExpense.Amount,
+                    baseAmount,
+                    assetExpense.CurrencyId);
 
-                if (assetExpense.IsCash)
-                {
-                    lines.Add(new JournalEntryLine { AccountId = supplier.AccountId.Value, DebitAmount = assetExpense.Amount, Description = "دفع لمصورف اصل ثابت" });
-                    lines.Add(new JournalEntryLine { AccountId = user.PaymentAccountId!.Value, CreditAmount = assetExpense.Amount, Description = "دفع لمصورف اصل ثابت" });
-                }
+                TempData["InfoMessage"] = "تم إرسال مصروف الأصل لاعتمادات الموافقة";
             }
-
-            var reference = $"ASSETEXP:{assetExpense.Id}";
-
-            var ass = await _context.Assets.FirstOrDefaultAsync(t => t.Id == model.AssetId);
-            await _journalEntryService.CreateJournalEntryAsync(
-                assetExpense.Date,
-                assetExpense.Notes == null ? "مصروف أصل" : "مصروف أصل" + Environment.NewLine + ass?.Name + Environment.NewLine + assetExpense.Notes,
-                asset!.BranchId,
-                user.Id,
-                lines,
-                JournalEntryStatus.Posted,
-                reference: reference);
+            else
+            {
+                await _assetExpenseProcessor.FinalizeAsync(assetExpense, user.Id);
+                TempData["SuccessMessage"] = "تم إنشاء مصروف الأصل واعتماده فوراً";
+            }
 
             return RedirectToAction(nameof(Index));
         }

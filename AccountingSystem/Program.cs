@@ -72,6 +72,7 @@ builder.Services.AddScoped<IWorkflowService, WorkflowService>();
 builder.Services.AddScoped<IPaymentVoucherProcessor, PaymentVoucherProcessor>();
 builder.Services.AddScoped<IReceiptVoucherProcessor, ReceiptVoucherProcessor>();
 builder.Services.AddScoped<IDisbursementVoucherProcessor, DisbursementVoucherProcessor>();
+builder.Services.AddScoped<IAssetExpenseProcessor, AssetExpenseProcessor>();
 
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();

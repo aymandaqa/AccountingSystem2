@@ -18,19 +18,22 @@ namespace AccountingSystem.Services
         private readonly IPaymentVoucherProcessor _paymentVoucherProcessor;
         private readonly IReceiptVoucherProcessor _receiptVoucherProcessor;
         private readonly IDisbursementVoucherProcessor _disbursementVoucherProcessor;
+        private readonly IAssetExpenseProcessor _assetExpenseProcessor;
 
         public WorkflowService(
             ApplicationDbContext context,
             INotificationService notificationService,
             IPaymentVoucherProcessor paymentVoucherProcessor,
             IReceiptVoucherProcessor receiptVoucherProcessor,
-            IDisbursementVoucherProcessor disbursementVoucherProcessor)
+            IDisbursementVoucherProcessor disbursementVoucherProcessor,
+            IAssetExpenseProcessor assetExpenseProcessor)
         {
             _context = context;
             _notificationService = notificationService;
             _paymentVoucherProcessor = paymentVoucherProcessor;
             _receiptVoucherProcessor = receiptVoucherProcessor;
             _disbursementVoucherProcessor = disbursementVoucherProcessor;
+            _assetExpenseProcessor = assetExpenseProcessor;
         }
 
         public async Task<WorkflowDefinition?> GetActiveDefinitionAsync(WorkflowDocumentType documentType, int? branchId, CancellationToken cancellationToken = default)
@@ -285,6 +288,7 @@ namespace AccountingSystem.Services
                 WorkflowDocumentType.ReceiptVoucher => "طلب موافقة سند قبض",
                 WorkflowDocumentType.DisbursementVoucher => "طلب موافقة سند صرف",
                 WorkflowDocumentType.DynamicScreenEntry => "طلب موافقة حركة ديناميكية",
+                WorkflowDocumentType.AssetExpense => "طلب موافقة مصروف أصل",
                 _ => "طلب موافقة"
             };
         }
@@ -298,6 +302,7 @@ namespace AccountingSystem.Services
                 WorkflowDocumentType.ReceiptVoucher => $"يوجد سند قبض رقم {instance.DocumentId} بانتظار الموافقة{amountSuffix}",
                 WorkflowDocumentType.DisbursementVoucher => $"يوجد سند صرف رقم {instance.DocumentId} بانتظار الموافقة{amountSuffix}",
                 WorkflowDocumentType.DynamicScreenEntry => $"يوجد طلب على شاشة ديناميكية رقم {instance.DocumentId} بانتظار الموافقة{amountSuffix}",
+                WorkflowDocumentType.AssetExpense => $"يوجد مصروف أصل رقم {instance.DocumentId} بانتظار الموافقة{amountSuffix}",
                 _ => $"هناك مستند رقم {instance.DocumentId} بانتظار الموافقة{amountSuffix}"
             };
         }
@@ -422,6 +427,9 @@ namespace AccountingSystem.Services
                         entry.WorkflowInstanceId = action.WorkflowInstance.Id;
                     }
                     break;
+                case WorkflowDocumentType.AssetExpense:
+                    // No persisted state change is required for asset expenses on rejection.
+                    break;
             }
 
             await _context.SaveChangesAsync(cancellationToken);
@@ -468,6 +476,13 @@ namespace AccountingSystem.Services
                         entry.ApprovedById = approvedById;
                     }
                     break;
+                case WorkflowDocumentType.AssetExpense:
+                    var assetExpense = await _context.AssetExpenses.FirstOrDefaultAsync(e => e.Id == instance.DocumentId, cancellationToken);
+                    if (assetExpense != null)
+                    {
+                        await _assetExpenseProcessor.FinalizeAsync(assetExpense, approvedById, cancellationToken);
+                    }
+                    break;
             }
 
             await _context.SaveChangesAsync(cancellationToken);
@@ -492,6 +507,10 @@ namespace AccountingSystem.Services
                 WorkflowDocumentType.DynamicScreenEntry => await _context.DynamicScreenEntries
                     .Where(e => e.Id == instance.DocumentId)
                     .Select(e => e.BranchId)
+                    .FirstOrDefaultAsync(cancellationToken),
+                WorkflowDocumentType.AssetExpense => await _context.AssetExpenses
+                    .Where(e => e.Id == instance.DocumentId)
+                    .Select(e => e.Asset.BranchId)
                     .FirstOrDefaultAsync(cancellationToken),
                 _ => null
             };
