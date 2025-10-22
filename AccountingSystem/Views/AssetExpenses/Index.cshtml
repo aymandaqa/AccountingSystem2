@@ -1,3 +1,4 @@
+@using AccountingSystem.Models.Workflows
 @model IEnumerable<AccountingSystem.ViewModels.AssetExpenseListViewModel>
 
 @{
@@ -27,6 +28,7 @@
                                 <th>نوع الدفع</th>
                                 <th>التاريخ</th>
                                 <th>ملاحظات</th>
+                                <th>الحالة</th>
                                 <th class="text-center">القيد المحاسبي</th>
                             </tr>
                         </thead>
@@ -42,6 +44,26 @@
                                     <td>@(item.IsCash ? "نقدي" : "غير نقدي")</td>
                                     <td>@item.Date.ToString("dd/MM/yyyy")</td>
                                     <td>@item.Notes</td>
+                                    <td>
+                                        @switch (item.WorkflowStatus)
+                                        {
+                                            case WorkflowInstanceStatus.InProgress:
+                                                <span class="badge bg-warning text-dark">قيد الاعتماد</span>
+                                                break;
+                                            case WorkflowInstanceStatus.Rejected:
+                                                <span class="badge bg-danger">مرفوض</span>
+                                                break;
+                                            case WorkflowInstanceStatus.Approved:
+                                                <span class="badge bg-success">معتمد</span>
+                                                break;
+                                            case WorkflowInstanceStatus.Cancelled:
+                                                <span class="badge bg-secondary">ملغي</span>
+                                                break;
+                                            default:
+                                                <span class="badge bg-success">معتمد</span>
+                                                break;
+                                        }
+                                    </td>
                                     <td class="text-center">
                                         @if (item.JournalEntryId.HasValue)
                                         {

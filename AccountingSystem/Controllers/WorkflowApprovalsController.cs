@@ -62,6 +62,12 @@ namespace AccountingSystem.Controllers
                 .Distinct()
                 .ToList();
 
+            var assetExpenseIds = actions
+                .Where(a => a.WorkflowInstance.DocumentType == WorkflowDocumentType.AssetExpense)
+                .Select(a => a.WorkflowInstance.DocumentId)
+                .Distinct()
+                .ToList();
+
             var vouchers = await _context.PaymentVouchers
                 .Include(v => v.Supplier)
                 .Include(v => v.Currency)
@@ -91,6 +97,15 @@ namespace AccountingSystem.Controllers
                 .Include(v => v.CreatedBy)
                 .Where(v => disbursementVoucherIds.Contains(v.Id))
                 .ToDictionaryAsync(v => v.Id);
+
+            var assetExpenses = await _context.AssetExpenses
+                .Include(e => e.Asset).ThenInclude(a => a.Branch)
+                .Include(e => e.ExpenseAccount)
+                .Include(e => e.Supplier)
+                .Include(e => e.Currency)
+                .Include(e => e.CreatedBy)
+                .Where(e => assetExpenseIds.Contains(e.Id))
+                .ToDictionaryAsync(e => e.Id);
 
             foreach (var action in actions)
             {
@@ -129,6 +144,14 @@ namespace AccountingSystem.Controllers
                     if (string.IsNullOrEmpty(model.CurrencyCode))
                     {
                         model.CurrencyCode = disbursement.Currency?.Code;
+                    }
+                }
+                else if (action.WorkflowInstance.DocumentType == WorkflowDocumentType.AssetExpense && assetExpenses.TryGetValue(action.WorkflowInstance.DocumentId, out var assetExpense))
+                {
+                    model.AssetExpense = assetExpense;
+                    if (string.IsNullOrEmpty(model.CurrencyCode))
+                    {
+                        model.CurrencyCode = assetExpense.Currency?.Code;
                     }
                 }
 
@@ -174,6 +197,7 @@ namespace AccountingSystem.Controllers
                 WorkflowDocumentType.ReceiptVoucher => $"سند قبض رقم {instance.DocumentId}",
                 WorkflowDocumentType.DisbursementVoucher => $"سند صرف رقم {instance.DocumentId}",
                 WorkflowDocumentType.DynamicScreenEntry => $"حركة شاشة ديناميكية رقم {instance.DocumentId}",
+                WorkflowDocumentType.AssetExpense => $"مصروف أصل رقم {instance.DocumentId}",
                 _ => $"مستند رقم {instance.DocumentId}"
             };
         }
@@ -186,6 +210,7 @@ namespace AccountingSystem.Controllers
                 WorkflowDocumentType.ReceiptVoucher => "يرجى مراجعة بيانات سند القبض واعتمادها",
                 WorkflowDocumentType.DisbursementVoucher => "يرجى مراجعة بيانات سند الصرف واعتمادها",
                 WorkflowDocumentType.DynamicScreenEntry => "يرجى مراجعة بيانات الحركة الديناميكية واتخاذ القرار",
+                WorkflowDocumentType.AssetExpense => "يرجى مراجعة بيانات مصروف الأصل واعتمادها",
                 _ => "يرجى مراجعة المستند واعتماد القرار"
             };
         }

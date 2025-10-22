@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using AccountingSystem.Models.Workflows;
 using System.Linq;
 
 namespace AccountingSystem.ViewModels
@@ -77,6 +78,7 @@ namespace AccountingSystem.ViewModels
         public string? Notes { get; set; }
         public int? JournalEntryId { get; set; }
         public string? JournalEntryNumber { get; set; }
+        public WorkflowInstanceStatus? WorkflowStatus { get; set; }
     }
 
     public class CreateAssetExpenseViewModel
