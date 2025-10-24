@@ -18,6 +18,8 @@ namespace AccountingSystem.ViewModels
     {
         public int BatchId { get; set; }
         public decimal TotalAmount { get; set; }
+        public decimal TotalGrossAmount { get; set; }
+        public decimal TotalDeductionAmount { get; set; }
         public int EmployeeCount { get; set; }
         public int Year { get; set; }
         public int Month { get; set; }
@@ -30,6 +32,8 @@ namespace AccountingSystem.ViewModels
         public string BranchName { get; set; } = string.Empty;
         public int EmployeeCount { get; set; }
         public decimal TotalAmount { get; set; }
+        public decimal TotalGrossAmount { get; set; }
+        public decimal TotalDeductionAmount { get; set; }
     }
 
     public class PayrollBatchHistoryViewModel
@@ -47,12 +51,18 @@ namespace AccountingSystem.ViewModels
         public string? ReferenceNumber { get; set; }
     }
 
+    public class PayrollEmployeeSelection
+    {
+        public int EmployeeId { get; set; }
+        public decimal DeductionAmount { get; set; }
+    }
+
     public class CreatePayrollBatchRequest
     {
         public int BranchId { get; set; }
         public int Year { get; set; }
         public int Month { get; set; }
-        public List<int> EmployeeIds { get; set; } = new();
+        public List<PayrollEmployeeSelection> Employees { get; set; } = new();
     }
 
     public class ConfirmPayrollBatchRequest

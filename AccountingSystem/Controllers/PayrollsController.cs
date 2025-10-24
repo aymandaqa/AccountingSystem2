@@ -70,7 +70,7 @@ namespace AccountingSystem.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Employees(int branchId)
+        public async Task<IActionResult> Employees(int branchId, int? year, int? month)
         {
             var employeesQuery = _context.Employees
                 .AsNoTracking()
@@ -80,6 +80,24 @@ namespace AccountingSystem.Controllers
             if (branchId > 0)
             {
                 employeesQuery = employeesQuery.Where(e => e.BranchId == branchId);
+            }
+
+            if (branchId > 0 && year.HasValue && month.HasValue && year.Value > 0 && month.Value > 0)
+            {
+                var processedEmployeeIds = await _context.PayrollBatchLines
+                    .AsNoTracking()
+                    .Where(l => l.BranchId == branchId
+                        && l.PayrollBatch.Year == year.Value
+                        && l.PayrollBatch.Month == month.Value
+                        && l.PayrollBatch.Status != PayrollBatchStatus.Cancelled)
+                    .Select(l => l.EmployeeId)
+                    .Distinct()
+                    .ToListAsync();
+
+                if (processedEmployeeIds.Count > 0)
+                {
+                    employeesQuery = employeesQuery.Where(e => !processedEmployeeIds.Contains(e.Id));
+                }
             }
 
             var employees = await employeesQuery
@@ -104,7 +122,22 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "payroll.process")]
         public async Task<IActionResult> CreateBatch([FromBody] CreatePayrollBatchRequest request)
         {
-            if (request == null || request.EmployeeIds == null || !request.EmployeeIds.Any())
+            if (request == null || request.Employees == null || !request.Employees.Any())
+            {
+                return BadRequest(new { message = "الرجاء اختيار موظف واحد على الأقل" });
+            }
+
+            var requestedEmployees = request.Employees
+                .Where(e => e != null && e.EmployeeId > 0)
+                .GroupBy(e => e.EmployeeId)
+                .Select(g => new PayrollEmployeeSelection
+                {
+                    EmployeeId = g.Key,
+                    DeductionAmount = g.Last().DeductionAmount
+                })
+                .ToList();
+
+            if (requestedEmployees.Count == 0)
             {
                 return BadRequest(new { message = "الرجاء اختيار موظف واحد على الأقل" });
             }
@@ -118,6 +151,8 @@ namespace AccountingSystem.Controllers
             {
                 return BadRequest(new { message = "السنة المحددة غير صالحة" });
             }
+
+            var employeeIds = requestedEmployees.Select(e => e.EmployeeId).ToList();
 
             var branch = await _context.Branches
                 .Include(b => b.EmployeeParentAccount)
@@ -142,14 +177,6 @@ namespace AccountingSystem.Controllers
                 return BadRequest(new { message = "تعذر العثور على حساب الرواتب المرتبط بالفرع" });
             }
 
-            var alreadyProcessed = await _context.PayrollBatches
-                .AnyAsync(b => b.BranchId == branch.Id && b.Month == request.Month && b.Year == request.Year && b.Status != PayrollBatchStatus.Cancelled);
-
-            if (alreadyProcessed)
-            {
-                return BadRequest(new { message = "تم تنزيل رواتب هذا الشهر لهذا الفرع مسبقاً" });
-            }
-
             var payrollExpenseSetting = await _context.SystemSettings
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.Key == "PayrollExpenseAccountId");
@@ -172,7 +199,7 @@ namespace AccountingSystem.Controllers
 
             var employees = await _context.Employees
                 .Include(e => e.Account)
-                .Where(e => request.EmployeeIds.Contains(e.Id) && e.IsActive)
+                .Where(e => employeeIds.Contains(e.Id) && e.IsActive)
                 .ToListAsync();
 
             if (employees.Count == 0)
@@ -183,6 +210,34 @@ namespace AccountingSystem.Controllers
             if (employees.Any(e => e.BranchId != branch.Id))
             {
                 return BadRequest(new { message = "يمكن تنزيل رواتب موظفي فرع واحد فقط في كل دفعة" });
+            }
+
+            var processedEmployeeIds = await _context.PayrollBatchLines
+                .AsNoTracking()
+                .Where(l => employeeIds.Contains(l.EmployeeId)
+                    && l.BranchId == branch.Id
+                    && l.PayrollBatch.Year == request.Year
+                    && l.PayrollBatch.Month == request.Month
+                    && l.PayrollBatch.Status != PayrollBatchStatus.Cancelled)
+                .Select(l => l.EmployeeId)
+                .Distinct()
+                .ToListAsync();
+
+            if (processedEmployeeIds.Count > 0)
+            {
+                var processedNames = employees
+                    .Where(e => processedEmployeeIds.Contains(e.Id))
+                    .Select(e => e.Name)
+                    .ToList();
+
+                var message = processedNames.Count switch
+                {
+                    0 => "تم تنزيل رواتب بعض الموظفين المحددين لهذا الشهر مسبقاً.",
+                    1 => $"تم تنزيل راتب الموظف {processedNames[0]} لهذا الشهر مسبقاً.",
+                    _ => $"تم تنزيل رواتب الموظفين التاليين لهذا الشهر مسبقاً: {string.Join(", ", processedNames)}"
+                };
+
+                return BadRequest(new { message });
             }
 
             var currencies = employees
@@ -197,8 +252,6 @@ namespace AccountingSystem.Controllers
                 return BadRequest(new { message = "يجب أن تكون حسابات الموظفين، والدفع، ومصروف الرواتب بنفس العملة." });
             }
 
-            var total = employees.Sum(e => e.Salary);
-
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
 
             var batch = new PayrollBatch
@@ -207,20 +260,58 @@ namespace AccountingSystem.Controllers
                 PaymentAccountId = paymentAccount.Id,
                 Year = request.Year,
                 Month = request.Month,
-                TotalAmount = total,
+                TotalAmount = 0m,
                 CreatedById = userId,
                 Status = PayrollBatchStatus.Draft
             };
 
+            var deductionMap = requestedEmployees.ToDictionary(
+                e => e.EmployeeId,
+                e => e.DeductionAmount < 0 ? 0m : e.DeductionAmount);
+
+            decimal totalGross = 0m;
+            decimal totalDeduction = 0m;
+            decimal totalNet = 0m;
+
             foreach (var employee in employees)
             {
+                var gross = employee.Salary;
+                var deduction = deductionMap.TryGetValue(employee.Id, out var requestedDeduction)
+                    ? requestedDeduction
+                    : 0m;
+
+                if (deduction < 0)
+                {
+                    deduction = 0m;
+                }
+
+                if (deduction > gross)
+                {
+                    deduction = gross;
+                }
+
+                deduction = Math.Round(deduction, 2, MidpointRounding.AwayFromZero);
+                var net = Math.Round(gross - deduction, 2, MidpointRounding.AwayFromZero);
+
+                totalGross += gross;
+                totalDeduction += deduction;
+                totalNet += net;
+
                 batch.Lines.Add(new PayrollBatchLine
                 {
                     EmployeeId = employee.Id,
                     BranchId = employee.BranchId,
-                    Amount = employee.Salary
+                    GrossAmount = gross,
+                    DeductionAmount = deduction,
+                    Amount = net
                 });
             }
+
+            totalGross = Math.Round(totalGross, 2, MidpointRounding.AwayFromZero);
+            totalDeduction = Math.Round(totalDeduction, 2, MidpointRounding.AwayFromZero);
+            totalNet = Math.Round(totalNet, 2, MidpointRounding.AwayFromZero);
+
+            batch.TotalAmount = totalNet;
 
             _context.PayrollBatches.Add(batch);
             await _context.SaveChangesAsync();
@@ -228,7 +319,9 @@ namespace AccountingSystem.Controllers
             var summary = new PayrollBatchSummaryViewModel
             {
                 BatchId = batch.Id,
-                TotalAmount = total,
+                TotalAmount = totalNet,
+                TotalGrossAmount = totalGross,
+                TotalDeductionAmount = totalDeduction,
                 EmployeeCount = batch.Lines.Count,
                 Year = batch.Year,
                 Month = batch.Month,
@@ -239,7 +332,9 @@ namespace AccountingSystem.Controllers
                         BranchId = branch.Id,
                         BranchName = branch.NameAr,
                         EmployeeCount = batch.Lines.Count,
-                        TotalAmount = total
+                        TotalAmount = totalNet,
+                        TotalGrossAmount = totalGross,
+                        TotalDeductionAmount = totalDeduction
                     }
                 }
             };
@@ -378,10 +473,16 @@ namespace AccountingSystem.Controllers
                 return NotFound();
             }
 
+            var totalGross = batch.Lines.Sum(l => l.GrossAmount);
+            var totalDeduction = batch.Lines.Sum(l => l.DeductionAmount);
+            var totalNet = batch.Lines.Sum(l => l.Amount);
+
             var summary = new PayrollBatchSummaryViewModel
             {
                 BatchId = batch.Id,
-                TotalAmount = batch.TotalAmount,
+                TotalAmount = totalNet,
+                TotalGrossAmount = totalGross,
+                TotalDeductionAmount = totalDeduction,
                 EmployeeCount = batch.Lines.Count,
                 Year = batch.Year,
                 Month = batch.Month,
@@ -392,7 +493,9 @@ namespace AccountingSystem.Controllers
                         BranchId = batch.BranchId,
                         BranchName = batch.Branch.NameAr,
                         EmployeeCount = batch.Lines.Count,
-                        TotalAmount = batch.TotalAmount
+                        TotalAmount = totalNet,
+                        TotalGrossAmount = totalGross,
+                        TotalDeductionAmount = totalDeduction
                     }
                 }
             };
@@ -403,6 +506,8 @@ namespace AccountingSystem.Controllers
                     l.EmployeeId,
                     l.Employee.Name,
                     l.Amount,
+                    l.GrossAmount,
+                    l.DeductionAmount,
                     l.Employee.JobTitle
                 });
 
@@ -425,13 +530,6 @@ namespace AccountingSystem.Controllers
                 return Json(Array.Empty<PayrollMonthOptionViewModel>());
             }
 
-            var processed = await _context.PayrollBatches
-                .AsNoTracking()
-                .Where(b => b.BranchId == branchId && b.Status != PayrollBatchStatus.Cancelled)
-                .Select(b => new { b.Year, b.Month })
-                .ToListAsync();
-
-            var processedSet = new HashSet<string>(processed.Select(p => $"{p.Year}-{p.Month}"));
             var culture = new CultureInfo("ar");
             var start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
             var months = Enumerable.Range(0, 12)
@@ -442,7 +540,6 @@ namespace AccountingSystem.Controllers
                     Month = date.Month,
                     Name = date.ToString("MMMM yyyy", culture)
                 })
-                .Where(option => !processedSet.Contains($"{option.Year}-{option.Month}"))
                 .OrderByDescending(option => option.Year)
                 .ThenByDescending(option => option.Month)
                 .ToList();

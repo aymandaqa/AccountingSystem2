@@ -17,6 +17,15 @@ namespace AccountingSystem.Models
         public int BranchId { get; set; }
 
         [Range(0, double.MaxValue)]
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal GrossAmount { get; set; }
+
+        [Range(0, double.MaxValue)]
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal DeductionAmount { get; set; }
+
+        [Range(0, double.MaxValue)]
+        [Column(TypeName = "decimal(18,2)")]
         public decimal Amount { get; set; }
 
         public virtual PayrollBatch PayrollBatch { get; set; } = null!;
