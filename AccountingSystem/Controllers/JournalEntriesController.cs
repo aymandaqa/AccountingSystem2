@@ -66,6 +66,15 @@ namespace AccountingSystem.Controllers
                     }
                 }
 
+                if (request.HasFormContentType && request.Form.TryGetValue(key, out var formValues))
+                {
+                    var formValue = formValues.ToString();
+                    if (!string.IsNullOrWhiteSpace(formValue))
+                    {
+                        return formValue;
+                    }
+                }
+
                 if (dm == null)
                 {
                     return null;
