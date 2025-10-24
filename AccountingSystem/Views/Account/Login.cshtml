@@ -528,24 +528,25 @@
                     setButtonLoading($btn, true);
 
                     captureLocation()
-                        .then(function () {
-                            submitLogin($form, $btn);
-                        })
                         .catch(function (error) {
-                            setButtonLoading($btn, false);
-                            let message = 'حدث خطأ أثناء محاولة تحديد الموقع. حاول مرة أخرى.';
+                            let message = null;
 
                             if (error === 'UNSUPPORTED') {
-                                message = 'المتصفح لا يدعم تحديد الموقع الجغرافي، ولا يمكن متابعة تسجيل الدخول.';
+                                message = 'المتصفح لا يدعم تحديد الموقع الجغرافي. سيتم المتابعة بدون مشاركة موقعك.';
                             } else if (error && (error.code === 1)) {
-                                message = 'يجب السماح بالوصول إلى الموقع لإتمام تسجيل الدخول.';
+                                message = 'لم يتم منح صلاحية الوصول إلى الموقع. سيتم المتابعة بدون مشاركة موقعك.';
                             } else if (error && (error.code === 2)) {
-                                message = 'تعذر الحصول على موقعك الحالي. تأكد من تفعيل خدمات الموقع وحاول مرة أخرى.';
+                                message = 'تعذر الحصول على موقعك الحالي. سيتم المتابعة بدون مشاركة موقعك.';
                             } else if (error && (error.code === 3)) {
-                                message = 'انتهت مهلة الحصول على الموقع. حاول مرة أخرى.';
+                                message = 'انتهت مهلة الحصول على الموقع. سيتم المتابعة بدون مشاركة موقعك.';
                             }
 
-                            showToast(message, 'danger');
+                            if (message) {
+                                showToast(message, 'warning');
+                            }
+                        })
+                        .then(function () {
+                            submitLogin($form, $btn);
                         });
                 });
     </script>

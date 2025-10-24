@@ -30,6 +30,11 @@
         return accuracy.HasValue ? $"±{Math.Round(accuracy.Value):0} متر" : "±غير محدد";
     }
 
+    string BuildGoogleMapsLink(double latitude, double longitude)
+    {
+        return $"https://www.google.com/maps?q={latitude.ToString("0.000000", CultureInfo.InvariantCulture)},{longitude.ToString("0.000000", CultureInfo.InvariantCulture)}";
+    }
+
     var sessionLocations = Model.ActiveSessions
         .Concat(Model.RecentSessions)
         .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
@@ -89,7 +94,12 @@
                                         <div><i class="@ResolveBrowserIcon(session.BrowserIcon) me-1"></i>المتصفح: @(session.BrowserName ?? "غير معروف")</div>
                                         @if (session.Latitude.HasValue && session.Longitude.HasValue)
                                         {
-                                            <div><i class="fa-solid fa-location-dot me-1"></i>الموقع: @FormatCoordinate(session.Latitude), @FormatCoordinate(session.Longitude) (@FormatAccuracy(session.LocationAccuracy))</div>
+                                        <div><i class="fa-solid fa-location-dot me-1"></i>الموقع: @FormatCoordinate(session.Latitude), @FormatCoordinate(session.Longitude) (@FormatAccuracy(session.LocationAccuracy))</div>
+                                        <div class="mt-2">
+                                            <a class="btn btn-outline-primary btn-sm" href="@BuildGoogleMapsLink(session.Latitude!.Value, session.Longitude!.Value)" target="_blank" rel="noopener">
+                                                <i class="fa-brands fa-google me-1"></i>عرض على خرائط جوجل
+                                            </a>
+                                        </div>
                                             if (session.LocationCapturedAt.HasValue)
                                             {
                                                 <div><i class="fa-solid fa-bullseye me-1"></i>وقت الالتقاط: @session.LocationCapturedAt.Value.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</div>
@@ -178,6 +188,12 @@
                                         {
                                             <small class="text-muted d-block">تم الالتقاط: @session.LocationCapturedAt.Value.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</small>
                                         }
+
+                                        <div class="mt-2">
+                                            <a class="btn btn-outline-primary btn-sm" href="@BuildGoogleMapsLink(session.Latitude!.Value, session.Longitude!.Value)" target="_blank" rel="noopener">
+                                                <i class="fa-brands fa-google me-1"></i>عرض على خرائط جوجل
+                                            </a>
+                                        </div>
                                     }
                                     else
                                     {
@@ -283,7 +299,12 @@
                     <div><i class="fa-solid fa-clock me-1"></i>البداية: ${createdAt}</div>
                     <div><i class="fa-solid fa-bolt me-1"></i>آخر نشاط: ${lastActivity}</div>
                     ${capturedAt ? `<div><i class="fa-solid fa-bullseye me-1"></i>وقت الموقع: ${capturedAt}</div>` : ''}
-                    <div class="mt-2">${statusBadge}</div>`;
+                    <div class="mt-2">${statusBadge}</div>
+                    <div class="mt-2">
+                        <a class="btn btn-outline-primary btn-sm" href="https://www.google.com/maps?q=${session.latitude.toFixed(6)},${session.longitude.toFixed(6)}" target="_blank" rel="noopener">
+                            <i class="fa-brands fa-google me-1"></i>عرض على خرائط جوجل
+                        </a>
+                    </div>`;
 
                 L.marker(coords).addTo(map).bindPopup(popupHtml);
             });
