@@ -13,7 +13,8 @@ namespace AccountingSystem.Services
             string createdById,
             IEnumerable<JournalEntryLine> lines,
             JournalEntryStatus status,
-            string? reference = null);
+            string? reference = null,
+            string? number = null);
     }
 }
 
