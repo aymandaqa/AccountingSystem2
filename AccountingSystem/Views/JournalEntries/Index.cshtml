@@ -1,9 +1,31 @@
-@using System.Collections.Generic
+@using Microsoft.AspNetCore.Authorization
+@using System.Text.Json
 @model AccountingSystem.ViewModels.JournalEntriesIndexViewModel
+
+@inject IAuthorizationService AuthorizationService
 
 @{
     ViewData["Title"] = "القيود المالية";
-    var toolbarItems = new List<string> { "ColumnChooser", "ExcelExport", "Print" };
+    var canEdit = (await AuthorizationService.AuthorizeAsync(User, "journal.edit")).Succeeded;
+    var canApprove = (await AuthorizationService.AuthorizeAsync(User, "journal.approve")).Succeeded;
+    var canDelete = (await AuthorizationService.AuthorizeAsync(User, "journal.delete")).Succeeded;
+    var endpoints = new
+    {
+        data = Url.Action("UrlDatasourceJournalEntries", "JournalEntries"),
+        summary = Url.Action("Summary", "JournalEntries"),
+        post = Url.Action("Post", "JournalEntries"),
+        delete = Url.Action("Delete", "JournalEntries"),
+        details = Url.Action("Details", "JournalEntries"),
+        edit = Url.Action("Edit", "JournalEntries"),
+        print = Url.Action("Print", "JournalEntries")
+    };
+    var endpointsJson = JsonSerializer.Serialize(endpoints);
+    var permissionsJson = JsonSerializer.Serialize(new
+    {
+        canEdit,
+        canApprove,
+        canDelete
+    });
 }
 
 @section Styles {
@@ -250,19 +272,19 @@
             background-color: #fff;
             border: 1px solid rgba(15, 67, 130, 0.08);
             border-radius: 0.85rem;
-            padding: 0.5rem;
+            padding: 0.75rem;
             min-height: 24rem;
             position: relative;
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 0.75rem;
         }
 
         .grid-caption {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.35rem 0.75rem 0;
+            padding: 0 0.5rem;
             gap: 0.75rem;
             flex-wrap: wrap;
         }
@@ -276,8 +298,67 @@
             font-size: 0.75rem;
         }
 
-        .grid-wrapper .e-grid {
-            height: calc(100% - 2.25rem);
+        .grid-caption .form-select {
+            min-width: 6rem;
+        }
+
+        .result-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .grid-table {
+            position: relative;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            border: 1px solid rgba(15, 67, 130, 0.08);
+        }
+
+        .grid-table table {
+            margin-bottom: 0;
+        }
+
+        .grid-table thead th {
+            background-color: #f8f9ff;
+            font-weight: 700;
+            vertical-align: middle;
+            border-bottom-width: 1px;
+        }
+
+        .grid-table tbody tr.unbalanced-entry {
+            background-color: #fdeaea;
+        }
+
+        .grid-table tbody tr.unbalanced-entry td {
+            color: #b71c1c;
+        }
+
+        .grid-table tbody tr:hover {
+            background-color: #f6f9ff;
+        }
+
+        .sortable {
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        .sortable .sort-indicator {
+            display: inline-flex;
+            align-items: center;
+            margin-inline-start: 0.35rem;
+            color: #6c757d;
+            font-size: 0.8rem;
+        }
+
+        .sortable.active {
+            color: #0b4d94;
+        }
+
+        .table-actions {
+            min-width: 12rem;
         }
 
         .table-actions .btn {
@@ -289,12 +370,33 @@
             pointer-events: none;
         }
 
-        .unbalanced-entry {
-            background-color: #fdeaea;
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background-color: rgba(255, 255, 255, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 2;
+            font-weight: 600;
+            color: #0b4d94;
         }
 
-        .unbalanced-entry .e-rowcell {
-            color: #b71c1c;
+        .empty-state {
+            padding: 2rem 1rem;
+            text-align: center;
+            border: 1px dashed rgba(13, 110, 253, 0.2);
+            border-radius: 0.75rem;
+            color: #4f5d75;
+            background-color: #f8faff;
+        }
+
+        .group-header-row td {
+            background-color: #eef4ff;
+            color: #0b4d94;
+            font-weight: 700;
         }
 
         @media (max-width: 767.98px) {
@@ -312,7 +414,7 @@
             }
 
             .grid-wrapper {
-                padding: 0.35rem;
+                padding: 0.5rem;
             }
         }
     </style>
@@ -454,58 +556,94 @@
 
             <div class="grid-wrapper">
                 <div class="grid-caption">
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="result-meta">
                         <i class="fas fa-database text-primary"></i>
                         <span class="result-info" id="gridResultInfo">لا توجد بيانات بعد</span>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="result-meta">
                         <span class="badge bg-light text-dark" id="groupingInfo" hidden>العرض مجمع</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <label for="pageSize" class="form-label mb-0 small text-muted">عناصر في الصفحة</label>
+                            <select id="pageSize" class="form-select form-select-sm w-auto">
+                                <option value="10">10</option>
+                                <option value="25" selected>25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
-                <ejs-grid id="journalEntriesGrid"
-                          allowPaging="true"
-                          allowSorting="true"
-                          allowFiltering="true"
-                          allowGrouping="true"
-                          allowExcelExport="true"
-                          allowTextWrap="true"
-                          allowResizing="true"
-                          allowReordering="true"
-                          allowSelection="false"
-                          showColumnChooser="true"
-                          enableStickyHeader="true"
-                          enableRtl="true"
-                          width="100%"
-                          height="100%"
-                          gridLines="Both"
-                          toolbar="@toolbarItems">
-                    <e-data-manager url="@Url.Action("UrlDatasourceJournalEntries", "JournalEntries")" adaptor="UrlAdaptor"></e-data-manager>
-                    <e-grid-filterSettings type="Excel"></e-grid-filterSettings>
-                    <e-grid-pageSettings pageSize="25" pageSizes="@(new object[] { 10, 25, 50, 100, "All" })"></e-grid-pageSettings>
-                    <e-grid-aggregates>
-                        <e-grid-aggregate>
-                            <e-aggregate-columns>
-                                <e-aggregate-column field="TotalDebit" type="Sum" format="N2" footerTemplate="<div class='text-end fw-semibold'>إجمالي المدين: ${Sum}</div>" groupCaptionTemplate="<span class='fw-semibold text-primary'>إجمالي المدين: ${Sum}</span>"></e-aggregate-column>
-                                <e-aggregate-column field="TotalCredit" type="Sum" format="N2" footerTemplate="<div class='text-end fw-semibold'>إجمالي الدائن: ${Sum}</div>" groupCaptionTemplate="<span class='fw-semibold text-primary'>إجمالي الدائن: ${Sum}</span>"></e-aggregate-column>
-                            </e-aggregate-columns>
-                        </e-grid-aggregate>
-                    </e-grid-aggregates>
-                    <e-grid-columns>
-                        <e-grid-column field="Number" headerText="رقم القيد" width="140"></e-grid-column>
-                        <e-grid-column field="Date" headerText="التاريخ" format="dd/MM/yyyy HH:mm" type="date" textAlign="Center" width="160"></e-grid-column>
-                        <e-grid-column field="Description" headerText="الوصف" width="260"></e-grid-column>
-                        <e-grid-column field="Reference" headerText="المرجع" width="200"></e-grid-column>
-                        <e-grid-column field="BranchName" headerText="الفرع" width="200"></e-grid-column>
-                        <e-grid-column field="CreatedByName" headerText="مدخل القيد" width="200"></e-grid-column>
-                        <e-grid-column field="TotalDebit" headerText="إجمالي المدين" format="N2" type="number" textAlign="Right" width="180"></e-grid-column>
-                        <e-grid-column field="TotalCredit" headerText="إجمالي الدائن" format="N2" type="number" textAlign="Right" width="180"></e-grid-column>
-                        <e-grid-column field="LinesCount" headerText="عدد البنود" textAlign="Center" width="140"></e-grid-column>
-                        <e-grid-column field="StatusDisplay" headerText="الحالة" template="#statusTemplate" textAlign="Center" width="150"></e-grid-column>
-                        <e-grid-column field="DateGroup" headerText="الشهر" visible="false"></e-grid-column>
-                        <e-grid-column field="IsBalanced" visible="false"></e-grid-column>
-                        <e-grid-column field="Id" headerText="الإجراءات" template="#actionsTemplate" textAlign="Center" width="230" allowSorting="false" allowFiltering="false"></e-grid-column>
-                    </e-grid-columns>
-                </ejs-grid>
+                <div class="grid-table">
+                    <div id="tableLoadingOverlay" class="loading-overlay" hidden>
+                        <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+                        <span>جاري تحميل البيانات...</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="journalEntriesTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col" class="sortable" data-sort="Number" tabindex="0" aria-sort="none" title="ترتيب">
+                                        رقم القيد
+                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                    </th>
+                                    <th scope="col" class="sortable" data-sort="Date" tabindex="0" aria-sort="none" title="ترتيب">
+                                        التاريخ
+                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                    </th>
+                                    <th scope="col" class="sortable" data-sort="Description" tabindex="0" aria-sort="none" title="ترتيب">
+                                        الوصف
+                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                    </th>
+                                    <th scope="col" class="sortable" data-sort="Reference" tabindex="0" aria-sort="none" title="ترتيب">
+                                        المرجع
+                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                    </th>
+                                    <th scope="col" class="sortable" data-sort="BranchName" tabindex="0" aria-sort="none" title="ترتيب">
+                                        الفرع
+                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                    </th>
+                                    <th scope="col" class="sortable" data-sort="CreatedByName" tabindex="0" aria-sort="none" title="ترتيب">
+                                        مدخل القيد
+                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                    </th>
+                                    <th scope="col" class="text-end sortable" data-sort="TotalDebit" tabindex="0" aria-sort="none" title="ترتيب">
+                                        إجمالي المدين
+                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                    </th>
+                                    <th scope="col" class="text-end sortable" data-sort="TotalCredit" tabindex="0" aria-sort="none" title="ترتيب">
+                                        إجمالي الدائن
+                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                    </th>
+                                    <th scope="col" class="text-center sortable" data-sort="LinesCount" tabindex="0" aria-sort="none" title="ترتيب">
+                                        عدد البنود
+                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                    </th>
+                                    <th scope="col" class="text-center sortable" data-sort="StatusDisplay" tabindex="0" aria-sort="none" title="ترتيب">
+                                        الحالة
+                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                    </th>
+                                    <th scope="col" class="text-center">
+                                        الإجراءات
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="journalEntriesBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="emptyState" class="empty-state" hidden>
+                    <i class="fas fa-folder-open fa-2x mb-2 text-primary" aria-hidden="true"></i>
+                    <p class="mb-0">لا توجد قيود مطابقة للمعايير الحالية.</p>
+                </div>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2 small text-muted">
+                        <i class="fas fa-info-circle"></i>
+                        <span>استخدم رؤوس الأعمدة للترتيب أو شريط البحث للتصفية السريعة.</span>
+                    </div>
+                    <nav id="paginationNav" aria-label="صفحات القيود" class="d-none">
+                        <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+                    </nav>
+                </div>
             </div>
 
             <form id="antiForgeryForm" asp-action="Post" method="post" class="d-none">
@@ -516,58 +654,48 @@
 </div>
 
 @section Scripts {
-    <script id="statusTemplate" type="text/x-template">
-        <span class="badge ${StatusClass}">${StatusDisplay}</span>
-    </script>
-
-    <script id="actionsTemplate" type="text/x-template">
-        <div class="d-flex justify-content-center flex-wrap gap-2 table-actions" role="group">
-            <a href="@Url.Action("Details", "JournalEntries")/${Id}" class="btn btn-sm btn-outline-info" title="عرض" asp-require-permission="journal.view">
-                <i class="fas fa-eye"></i>
-            </a>
-            ${if(IsDraft)}
-            <a href="@Url.Action("Edit", "JournalEntries")/${Id}" class="btn btn-sm btn-outline-warning" title="تعديل" asp-require-permission="journal.edit">
-                <i class="fas fa-edit"></i>
-            </a>
-            <button type="button" class="btn btn-sm btn-outline-success btn-post-entry" data-id="${Id}" data-number="${Number}" title="ترحيل" asp-require-permission="journal.approve">
-                <i class="fas fa-share"></i>
-            </button>
-            ${/if}
-            <a href="@Url.Action("Print", "JournalEntries")/${Id}" target="_blank" class="btn btn-sm btn-outline-secondary" title="طباعة">
-                <i class="fas fa-print"></i>
-            </a>
-            ${if(CanDelete)}
-            <button type="button" class="btn btn-sm btn-outline-danger btn-delete-entry" data-id="${Id}" data-number="${Number}" title="إلغاء" asp-require-permission="journal.delete">
-                <i class="fas fa-trash"></i>
-            </button>
-            ${/if}
-        </div>
-    </script>
-
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            var dataUrl = '@Url.Action("UrlDatasourceJournalEntries", "JournalEntries")';
-            var summaryUrl = '@Url.Action("Summary", "JournalEntries")';
-            var postUrlBase = '@Url.Action("Post", "JournalEntries")';
-            var deleteUrlBase = '@Url.Action("Delete", "JournalEntries")';
-            var storageKey = 'journalEntries.index.filters.v2';
+            const endpoints = @Html.Raw(endpointsJson);
+            const permissions = Object.assign({ canEdit: false, canApprove: false, canDelete: false }, @Html.Raw(permissionsJson));
+            const storageKey = 'journalEntries.index.filters.v3';
 
-            var gridElement = document.getElementById('journalEntriesGrid');
-            var searchInput = document.getElementById('quickSearch');
-            var clearSearchButton = document.getElementById('clearQuickSearch');
-            var refreshButton = document.getElementById('refreshGrid');
-            var unbalancedToggle = document.getElementById('showUnbalancedOnly');
-            var activeFiltersContainer = document.getElementById('activeFilters');
-            var activeFiltersCount = document.getElementById('activeFiltersCount');
-            var resultInfo = document.getElementById('gridResultInfo');
-            var groupingInfo = document.getElementById('groupingInfo');
-            var lastRefreshAt = document.getElementById('lastRefreshAt');
-            var summaryInsight = document.getElementById('summaryInsight');
-            var insightsPanel = document.getElementById('insightsPanel');
-            var smartSuggestions = document.getElementById('smartSuggestions');
-            var groupSelect = document.getElementById('groupBy');
+            const dataUrl = endpoints.data;
+            const summaryUrl = endpoints.summary;
+            const postUrlBase = endpoints.post;
+            const deleteUrlBase = endpoints.delete;
+            const routes = {
+                details: endpoints.details,
+                edit: endpoints.edit,
+                print: endpoints.print
+            };
 
-            var summaryFields = {
+            const searchInput = document.getElementById('quickSearch');
+            const clearSearchButton = document.getElementById('clearQuickSearch');
+            const refreshButton = document.getElementById('refreshGrid');
+            const unbalancedToggle = document.getElementById('showUnbalancedOnly');
+            const activeFiltersContainer = document.getElementById('activeFilters');
+            const activeFiltersCount = document.getElementById('activeFiltersCount');
+            const resultInfo = document.getElementById('gridResultInfo');
+            const groupingInfo = document.getElementById('groupingInfo');
+            const lastRefreshAt = document.getElementById('lastRefreshAt');
+            const summaryInsight = document.getElementById('summaryInsight');
+            const insightsPanel = document.getElementById('insightsPanel');
+            const smartSuggestions = document.getElementById('smartSuggestions');
+            const groupSelect = document.getElementById('groupBy');
+            const pageSizeSelect = document.getElementById('pageSize');
+            const pagination = document.getElementById('pagination');
+            const paginationNav = document.getElementById('paginationNav');
+            const table = document.getElementById('journalEntriesTable');
+            const tableBody = document.getElementById('journalEntriesBody');
+            const emptyState = document.getElementById('emptyState');
+            const loadingOverlay = document.getElementById('tableLoadingOverlay');
+            const resetFiltersButton = document.getElementById('resetFilters');
+
+            const antiForgeryInput = document.querySelector('#antiForgeryForm input[name="__RequestVerificationToken"]');
+            const antiForgeryToken = antiForgeryInput ? antiForgeryInput.value : null;
+
+            const summaryFields = {
                 total: document.getElementById('summaryTotal'),
                 totalStatus: document.getElementById('summaryTotalStatus'),
                 unbalanced: document.getElementById('summaryUnbalanced'),
@@ -576,7 +704,7 @@
                 ratio: document.getElementById('summaryBalanceRatio')
             };
 
-            var filterControls = {
+            const filterControls = {
                 fromDate: document.getElementById('fromDate'),
                 toDate: document.getElementById('toDate'),
                 branchId: document.getElementById('branchFilter'),
@@ -585,24 +713,26 @@
                 searchTerm: searchInput
             };
 
-            var lastKnownCount = 0;
+            const groupLabels = {
+                BranchName: 'حسب الفرع',
+                StatusDisplay: 'حسب الحالة',
+                DateGroup: 'حسب الشهر',
+                Reference: 'حسب المرجع'
+            };
 
-            if (!gridElement || !gridElement.ej2_instances || !gridElement.ej2_instances.length) {
-                return;
-            }
-
-            var grid = gridElement.ej2_instances[0];
-            var trackedRequestTypes = ['paging', 'sorting', 'filtering', 'searching', 'grouping', 'ungrouping', 'refresh'];
-            var antiForgeryInput = document.querySelector('#antiForgeryForm input[name="__RequestVerificationToken"]');
-            var antiForgeryToken = antiForgeryInput ? antiForgeryInput.value : null;
-
-            if (!antiForgeryToken) {
-                console.warn('Anti-forgery token was not found. Requests may be rejected.');
-            }
+            const state = {
+                page: 1,
+                pageSize: 25,
+                sortField: 'Date',
+                sortDir: 'Descending',
+                groupBy: '',
+                totalCount: 0,
+                data: []
+            };
 
             function loadPersistedFilters() {
                 try {
-                    var stored = localStorage.getItem(storageKey);
+                    const stored = localStorage.getItem(storageKey);
                     return stored ? JSON.parse(stored) : null;
                 } catch (error) {
                     console.warn('Failed to parse stored filters.', error);
@@ -626,9 +756,29 @@
                 }
             }
 
+            function setSelectValue(selectElement, value) {
+                if (!selectElement) {
+                    return;
+                }
+                const exists = Array.prototype.some.call(selectElement.options, function (option) {
+                    return option.value === value;
+                });
+                if (exists) {
+                    selectElement.value = value;
+                } else {
+                    selectElement.selectedIndex = 0;
+                }
+            }
+
             function applyStoredFilters() {
-                var stored = loadPersistedFilters();
+                const stored = loadPersistedFilters();
                 if (!stored) {
+                    if (pageSizeSelect) {
+                        const defaultSize = parseInt(pageSizeSelect.value, 10);
+                        if (!Number.isNaN(defaultSize)) {
+                            state.pageSize = defaultSize;
+                        }
+                    }
                     return;
                 }
 
@@ -644,8 +794,11 @@
                 if (filterControls.status && typeof stored.status === 'string') {
                     setSelectValue(filterControls.status, stored.status);
                 }
-                if (filterControls.groupBy && typeof stored.groupBy === 'string') {
-                    setSelectValue(filterControls.groupBy, stored.groupBy);
+                if (typeof stored.groupBy === 'string' && stored.groupBy) {
+                    state.groupBy = stored.groupBy;
+                    if (groupSelect) {
+                        setSelectValue(groupSelect, stored.groupBy);
+                    }
                 }
                 if (unbalancedToggle && stored.showUnbalancedOnly === true) {
                     unbalancedToggle.checked = true;
@@ -653,20 +806,35 @@
                 if (filterControls.searchTerm && typeof stored.searchTerm === 'string') {
                     filterControls.searchTerm.value = stored.searchTerm;
                 }
+                if (typeof stored.pageSize === 'number' && !Number.isNaN(stored.pageSize)) {
+                    state.pageSize = stored.pageSize;
+                    if (pageSizeSelect) {
+                        pageSizeSelect.value = String(stored.pageSize);
+                    }
+                } else if (pageSizeSelect) {
+                    const parsed = parseInt(pageSizeSelect.value, 10);
+                    if (!Number.isNaN(parsed)) {
+                        state.pageSize = parsed;
+                    }
+                }
+                if (typeof stored.sortField === 'string' && stored.sortField) {
+                    state.sortField = stored.sortField;
+                }
+                if (typeof stored.sortDir === 'string' && stored.sortDir) {
+                    state.sortDir = stored.sortDir;
+                }
             }
 
-            function setSelectValue(selectElement, value) {
-                if (!selectElement) {
+            function getQuickSearchValue() {
+                return searchInput ? searchInput.value.trim() : '';
+            }
+
+            function updateSearchClearState(value) {
+                if (!clearSearchButton) {
                     return;
                 }
-                var found = Array.prototype.some.call(selectElement.options, function (option) {
-                    return option.value === value;
-                });
-                if (found) {
-                    selectElement.value = value;
-                } else {
-                    selectElement.selectedIndex = 0;
-                }
+                const hasValue = value && value.length > 0;
+                clearSearchButton.disabled = !hasValue;
             }
 
             function gatherFilterParameters(searchValue) {
@@ -675,27 +843,16 @@
                     toDate: filterControls.toDate ? filterControls.toDate.value : '',
                     branchId: filterControls.branchId ? filterControls.branchId.value : '',
                     status: filterControls.status ? filterControls.status.value : '',
-                    groupBy: filterControls.groupBy ? filterControls.groupBy.value : '',
+                    groupBy: state.groupBy || '',
                     showUnbalancedOnly: unbalancedToggle && unbalancedToggle.checked ? 'true' : '',
                     searchTerm: (searchValue || (filterControls.searchTerm ? filterControls.searchTerm.value : '') || '').trim()
                 };
             }
 
-            function buildQuery(searchValue) {
-                var query = new ej.data.Query();
-                var params = gatherFilterParameters(searchValue);
-                Object.keys(params).forEach(function (key) {
-                    if (params[key]) {
-                        query = query.addParams(key, params[key]);
-                    }
-                });
-                return query;
-            }
-
             function buildQueryString(params) {
-                var query = new URLSearchParams();
+                const query = new URLSearchParams();
                 Object.keys(params).forEach(function (key) {
-                    var value = params[key];
+                    const value = params[key];
                     if (value !== undefined && value !== null && value !== '') {
                         query.append(key, value);
                     }
@@ -704,58 +861,23 @@
             }
 
             function formatNumber(value) {
-                var number = Number(value || 0);
+                const number = Number(value || 0);
                 return number.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
             }
 
             function formatPercentage(value) {
-                var number = Number(value || 0);
+                const number = Number(value || 0);
                 return number.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + '%';
             }
 
-            function updateSummary(searchValue) {
-                if (!summaryUrl) {
+            function renderInsightMessage(total, unbalanced, ratio) {
+                if (!summaryInsight) {
                     return;
                 }
-
-                var params = gatherFilterParameters(searchValue);
-                var queryString = buildQueryString(params);
-                var url = summaryUrl + (queryString ? ('?' + queryString) : '');
-
-                fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                    .then(function (response) {
-                        if (!response.ok) {
-                            throw new Error('فشل في تحميل الملخص');
-                        }
-                        return response.json();
-                    })
-                    .then(function (data) {
-                        var totalEntries = Number(data.totalEntries || 0);
-                        var unbalancedEntries = Number(data.unbalancedEntries || 0);
-                        var balancedRatio = totalEntries > 0 ? ((totalEntries - unbalancedEntries) / totalEntries) * 100 : 0;
-
-                        summaryFields.total.textContent = formatNumber(totalEntries);
-                        summaryFields.totalStatus.textContent = data.statusSummary || '—';
-                        summaryFields.unbalanced.textContent = formatNumber(unbalancedEntries);
-                        summaryFields.debit.textContent = formatNumber(data.totalDebit);
-                        summaryFields.credit.textContent = formatNumber(data.totalCredit);
-                        summaryFields.ratio.textContent = formatPercentage(balancedRatio);
-
-                        renderInsightMessage(totalEntries, unbalancedEntries, balancedRatio);
-                        renderSmartSuggestions(totalEntries, unbalancedEntries, data.totalDebit, data.totalCredit);
-                    })
-                    .catch(function (error) {
-                        console.warn(error);
-                        summaryInsight.textContent = 'تعذر تحديث الملخص في الوقت الحالي.';
-                    });
-            }
-
-            function renderInsightMessage(total, unbalanced, ratio) {
                 if (total === 0) {
                     summaryInsight.textContent = 'ابدأ بإضافة القيود لعرض الإحصائيات والتقارير.';
                     return;
                 }
-
                 if (unbalanced > 0) {
                     summaryInsight.textContent = 'هناك ' + unbalanced + ' قيود تحتاج إلى مراجعة لتحقيق التوازن.';
                 } else if (ratio >= 99) {
@@ -766,14 +888,11 @@
             }
 
             function renderSmartSuggestions(total, unbalanced, totalDebit, totalCredit) {
-                if (!smartSuggestions) {
+                if (!smartSuggestions || !insightsPanel) {
                     return;
                 }
-
                 smartSuggestions.innerHTML = '';
-
-                var suggestions = [];
-
+                const suggestions = [];
                 if (total === 0) {
                     suggestions.push('استخدم زر "إضافة قيد جديد" لبدء إنشاء أول قيد.');
                 } else {
@@ -785,10 +904,9 @@
                     }
                     suggestions.push('جرّب تجميع النتائج حسب الفرع أو الحالة للحصول على رؤى أكثر دقة.');
                 }
-
                 if (suggestions.length > 0) {
                     suggestions.forEach(function (tip) {
-                        var li = document.createElement('li');
+                        const li = document.createElement('li');
                         li.textContent = tip;
                         smartSuggestions.appendChild(li);
                     });
@@ -798,26 +916,325 @@
                 }
             }
 
-            function buildRequestOptions(options) {
-                var headers = Object.assign({}, options.headers);
-                if (antiForgeryToken) {
-                    headers['RequestVerificationToken'] = antiForgeryToken;
+            function updateSummary(searchValue) {
+                if (!summaryUrl) {
+                    return;
                 }
-                return Object.assign({}, options, { headers: headers });
+                const params = gatherFilterParameters(searchValue);
+                const queryString = buildQueryString(params);
+                const url = summaryUrl + (queryString ? '?' + queryString : '');
+                fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (response) {
+                        if (!response.ok) {
+                            throw new Error('فشل في تحميل الملخص');
+                        }
+                        return response.json();
+                    })
+                    .then(function (data) {
+                        const totalEntries = Number(data.totalEntries || 0);
+                        const unbalancedEntries = Number(data.unbalancedEntries || 0);
+                        const balancedRatio = totalEntries > 0 ? ((totalEntries - unbalancedEntries) / totalEntries) * 100 : 0;
+                        summaryFields.total.textContent = formatNumber(totalEntries);
+                        summaryFields.totalStatus.textContent = data.statusSummary || '—';
+                        summaryFields.unbalanced.textContent = formatNumber(unbalancedEntries);
+                        summaryFields.debit.textContent = formatNumber(data.totalDebit);
+                        summaryFields.credit.textContent = formatNumber(data.totalCredit);
+                        summaryFields.ratio.textContent = formatPercentage(balancedRatio);
+                        renderInsightMessage(totalEntries, unbalancedEntries, balancedRatio);
+                        renderSmartSuggestions(totalEntries, unbalancedEntries, data.totalDebit, data.totalCredit);
+                    })
+                    .catch(function (error) {
+                        console.warn(error);
+                        if (summaryInsight) {
+                            summaryInsight.textContent = 'تعذر تحديث الملخص في الوقت الحالي.';
+                        }
+                    });
             }
 
-            function getQuickSearchValue() {
-                return searchInput ? searchInput.value.trim() : '';
+            function persistCurrentFilters(searchValue) {
+                const params = gatherFilterParameters(searchValue);
+                persistFilters({
+                    fromDate: params.fromDate || '',
+                    toDate: params.toDate || '',
+                    branchId: params.branchId || '',
+                    status: params.status || '',
+                    groupBy: state.groupBy || '',
+                    showUnbalancedOnly: params.showUnbalancedOnly === 'true',
+                    searchTerm: params.searchTerm || '',
+                    pageSize: state.pageSize,
+                    sortField: state.sortField,
+                    sortDir: state.sortDir
+                });
+            }
+
+            function authorizedFetch(url, options) {
+                const settings = Object.assign({}, options);
+                settings.headers = Object.assign({ 'X-Requested-With': 'XMLHttpRequest' }, settings.headers || {});
+                if (antiForgeryToken && !settings.headers['RequestVerificationToken']) {
+                    settings.headers['RequestVerificationToken'] = antiForgeryToken;
+                }
+                return fetch(url, settings);
+            }
+
+            function buildDataRequest(params) {
+                const skip = (state.page - 1) * state.pageSize;
+                const payload = {
+                    skip: skip,
+                    take: state.pageSize,
+                    requiresCounts: true,
+                    params: params,
+                    Params: params
+                };
+                if (state.sortField) {
+                    payload.sorted = [{
+                        name: state.sortField,
+                        field: state.sortField,
+                        direction: state.sortDir
+                    }];
+                }
+                return payload;
+            }
+
+            function showTableLoading() {
+                if (loadingOverlay) {
+                    loadingOverlay.hidden = false;
+                }
+            }
+
+            function hideTableLoading() {
+                if (loadingOverlay) {
+                    loadingOverlay.hidden = true;
+                }
+            }
+
+            function escapeHtml(value) {
+                if (value === null || value === undefined) {
+                    return '';
+                }
+                return String(value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            function escapeAttr(value) {
+                return escapeHtml(value);
+            }
+
+            function getGroupDescriptor(entry) {
+                const key = state.groupBy;
+                if (!key) {
+                    return { value: '', label: '' };
+                }
+                const rawValue = entry && entry[key] ? entry[key] : '';
+                switch (key) {
+                    case 'BranchName':
+                        return { value: rawValue || 'غير محدد', label: rawValue || 'فرع غير محدد' };
+                    case 'StatusDisplay':
+                        return { value: rawValue || 'غير محدد', label: rawValue || 'حالة غير محددة' };
+                    case 'DateGroup':
+                        if (!rawValue) {
+                            return { value: 'غير محدد', label: 'بدون تاريخ' };
+                        }
+                        const [year, month] = String(rawValue).split('-');
+                        if (year && month) {
+                            const date = new Date(Number(year), Number(month) - 1, 1);
+                            const label = date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+                            return { value: rawValue, label: label };
+                        }
+                        return { value: rawValue, label: rawValue };
+                    case 'Reference':
+                        return { value: rawValue || 'بدون مرجع', label: rawValue || 'بدون مرجع' };
+                    default:
+                        return { value: rawValue || 'غير محدد', label: rawValue || 'غير محدد' };
+                }
+            }
+
+            function buildActions(entry) {
+                const id = encodeURIComponent(entry.Id);
+                const numberAttr = escapeAttr(entry.Number || '');
+                let html = '<div class="d-flex justify-content-center flex-wrap gap-2 table-actions" role="group">';
+                html += '<a href="' + routes.details + '/' + id + '" class="btn btn-sm btn-outline-info" title="عرض"><i class="fas fa-eye"></i></a>';
+                if (entry.IsDraft && permissions.canEdit) {
+                    html += '<a href="' + routes.edit + '/' + id + '" class="btn btn-sm btn-outline-warning" title="تعديل"><i class="fas fa-edit"></i></a>';
+                }
+                if (entry.IsDraft && permissions.canApprove) {
+                    html += '<button type="button" class="btn btn-sm btn-outline-success btn-post-entry" data-id="' + id + '" data-number="' + numberAttr + '" title="ترحيل"><i class="fas fa-share"></i></button>';
+                }
+                html += '<a href="' + routes.print + '/' + id + '" target="_blank" class="btn btn-sm btn-outline-secondary" title="طباعة"><i class="fas fa-print"></i></a>';
+                if (entry.CanDelete && permissions.canDelete) {
+                    html += '<button type="button" class="btn btn-sm btn-outline-danger btn-delete-entry" data-id="' + id + '" data-number="' + numberAttr + '" title="إلغاء"><i class="fas fa-trash"></i></button>';
+                }
+                html += '</div>';
+                return html;
+            }
+
+            function buildRow(entry) {
+                const cells = [];
+                cells.push('<td>' + escapeHtml(entry.Number || '') + '</td>');
+                cells.push('<td>' + escapeHtml(entry.DateFormatted || entry.Date || '') + '</td>');
+                cells.push('<td>' + escapeHtml(entry.Description || '') + '</td>');
+                cells.push('<td>' + escapeHtml(entry.Reference || '') + '</td>');
+                cells.push('<td>' + escapeHtml(entry.BranchName || '') + '</td>');
+                cells.push('<td>' + escapeHtml(entry.CreatedByName || '') + '</td>');
+                cells.push('<td class="text-end">' + escapeHtml(entry.TotalDebitFormatted || entry.TotalDebit || '') + '</td>');
+                cells.push('<td class="text-end">' + escapeHtml(entry.TotalCreditFormatted || entry.TotalCredit || '') + '</td>');
+                cells.push('<td class="text-center">' + escapeHtml(entry.LinesCount != null ? entry.LinesCount : '') + '</td>');
+                cells.push('<td class="text-center"><span class="badge ' + escapeHtml(entry.StatusClass || 'bg-secondary') + '">' + escapeHtml(entry.StatusDisplay || '') + '</span></td>');
+                cells.push('<td class="text-center">' + buildActions(entry) + '</td>');
+                const rowClass = entry.IsBalanced === false ? ' class="unbalanced-entry"' : '';
+                return '<tr' + rowClass + '>' + cells.join('') + '</tr>';
+            }
+
+            function renderTable(records) {
+                if (!tableBody) {
+                    return;
+                }
+                if (!records || records.length === 0) {
+                    tableBody.innerHTML = '';
+                    if (emptyState) {
+                        emptyState.hidden = false;
+                    }
+                    return;
+                }
+                if (emptyState) {
+                    emptyState.hidden = true;
+                }
+                const rows = [];
+                if (state.groupBy) {
+                    const groups = new Map();
+                    records.forEach(function (entry) {
+                        const descriptor = getGroupDescriptor(entry);
+                        if (!groups.has(descriptor.value)) {
+                            groups.set(descriptor.value, { label: descriptor.label, items: [] });
+                        }
+                        groups.get(descriptor.value).items.push(entry);
+                    });
+                    groups.forEach(function (group) {
+                        rows.push('<tr class="group-header-row"><td colspan="11">' + escapeHtml(group.label) + '</td></tr>');
+                        group.items.forEach(function (entry) {
+                            rows.push(buildRow(entry));
+                        });
+                    });
+                } else {
+                    records.forEach(function (entry) {
+                        rows.push(buildRow(entry));
+                    });
+                }
+                tableBody.innerHTML = rows.join('');
+            }
+
+            function updateResultsInfo(visibleCount) {
+                if (!resultInfo) {
+                    return;
+                }
+                const total = state.totalCount || 0;
+                if (total === 0) {
+                    resultInfo.textContent = 'لا توجد بيانات مطابقة للمرشحات الحالية';
+                    return;
+                }
+                const start = ((state.page - 1) * state.pageSize) + 1;
+                const end = start + Math.max(visibleCount - 1, 0);
+                resultInfo.textContent = 'عرض ' + start + ' - ' + end + ' من ' + total + ' قيد';
+            }
+
+            function updateGroupingInfo() {
+                if (!groupingInfo) {
+                    return;
+                }
+                if (state.groupBy) {
+                    const label = groupLabels[state.groupBy] || state.groupBy;
+                    groupingInfo.hidden = false;
+                    groupingInfo.textContent = 'مجموعة حسب: ' + label;
+                } else {
+                    groupingInfo.hidden = true;
+                }
+            }
+
+            function updateSortIndicators() {
+                if (!table) {
+                    return;
+                }
+                const headers = table.querySelectorAll('thead th.sortable');
+                headers.forEach(function (th) {
+                    const sortField = th.getAttribute('data-sort');
+                    const indicator = th.querySelector('.sort-indicator i');
+                    if (!indicator) {
+                        return;
+                    }
+                    if (sortField === state.sortField) {
+                        th.classList.add('active');
+                        const dir = state.sortDir === 'Ascending' ? 'ascending' : 'descending';
+                        th.setAttribute('aria-sort', dir);
+                        indicator.className = 'fas ' + (state.sortDir === 'Ascending' ? 'fa-sort-up' : 'fa-sort-down');
+                    } else {
+                        th.classList.remove('active');
+                        th.setAttribute('aria-sort', 'none');
+                        indicator.className = 'fas fa-sort';
+                    }
+                });
+            }
+
+            function renderPagination() {
+                if (!pagination) {
+                    return;
+                }
+                const total = state.totalCount || 0;
+                if (!total || total <= state.pageSize) {
+                    pagination.innerHTML = '';
+                    if (paginationNav) {
+                        paginationNav.classList.add('d-none');
+                    }
+                    return;
+                }
+                const totalPages = Math.ceil(total / state.pageSize);
+                if (paginationNav) {
+                    paginationNav.classList.toggle('d-none', totalPages <= 1);
+                }
+                const current = Math.min(state.page, totalPages);
+                const maxVisible = 5;
+                let start = Math.max(1, current - Math.floor(maxVisible / 2));
+                let end = Math.min(totalPages, start + maxVisible - 1);
+                start = Math.max(1, end - maxVisible + 1);
+                const items = [];
+                items.push(createPageControl(current <= 1, current - 1, '<span aria-hidden="true">&laquo;</span>', 'الصفحة السابقة'));
+                for (let page = start; page <= end; page++) {
+                    const isActive = page === current;
+                    items.push('<li class="page-item' + (isActive ? ' active' : '') + '"><button type="button" class="page-link" data-page="' + page + '" aria-label="الصفحة ' + page + '">' + page + '</button></li>');
+                }
+                items.push(createPageControl(current >= totalPages, current + 1, '<span aria-hidden="true">&raquo;</span>', 'الصفحة التالية'));
+                pagination.innerHTML = items.join('');
+            }
+
+            function createPageControl(disabled, targetPage, labelHtml, ariaLabel) {
+                const classes = ['page-item'];
+                if (disabled) {
+                    classes.push('disabled');
+                }
+                const attributes = ['type="button"', 'class="page-link"'];
+                if (!disabled) {
+                    attributes.push('data-page="' + targetPage + '"');
+                }
+                if (ariaLabel) {
+                    attributes.push('aria-label="' + ariaLabel + '"');
+                }
+                if (disabled) {
+                    attributes.push('tabindex="-1"', 'aria-disabled="true"');
+                }
+                if (disabled) {
+                    attributes.push('disabled');
+                }
+                return '<li class="' + classes.join(' ') + '"><button ' + attributes.join(' ') + '>' + labelHtml + '</button></li>';
             }
 
             function updateFilterChips(searchValue) {
                 if (!activeFiltersContainer || !activeFiltersCount) {
                     return;
                 }
-
-                var params = gatherFilterParameters(searchValue);
-                var chips = [];
-
+                const params = gatherFilterParameters(searchValue);
+                const chips = [];
                 if (params.fromDate) {
                     chips.push({ key: 'fromDate', label: 'من: ' + params.fromDate });
                 }
@@ -825,14 +1242,17 @@
                     chips.push({ key: 'toDate', label: 'إلى: ' + params.toDate });
                 }
                 if (params.branchId) {
-                    var branchSelect = filterControls.branchId;
-                    var branchText = branchSelect && branchSelect.options[branchSelect.selectedIndex] ? branchSelect.options[branchSelect.selectedIndex].text : params.branchId;
+                    const branchSelect = filterControls.branchId;
+                    const branchText = branchSelect && branchSelect.options[branchSelect.selectedIndex] ? branchSelect.options[branchSelect.selectedIndex].text : params.branchId;
                     chips.push({ key: 'branchFilter', label: 'الفرع: ' + branchText });
                 }
                 if (params.status) {
-                    var statusSelect = filterControls.status;
-                    var statusText = statusSelect && statusSelect.options[statusSelect.selectedIndex] ? statusSelect.options[statusSelect.selectedIndex].text : params.status;
+                    const statusSelect = filterControls.status;
+                    const statusText = statusSelect && statusSelect.options[statusSelect.selectedIndex] ? statusSelect.options[statusSelect.selectedIndex].text : params.status;
                     chips.push({ key: 'statusFilter', label: 'الحالة: ' + statusText });
+                }
+                if (state.groupBy) {
+                    chips.push({ key: 'groupBy', label: 'التجميع: ' + (groupLabels[state.groupBy] || state.groupBy) });
                 }
                 if (params.showUnbalancedOnly === 'true') {
                     chips.push({ key: 'showUnbalancedOnly', label: 'غير متوازنة فقط' });
@@ -840,259 +1260,197 @@
                 if (params.searchTerm) {
                     chips.push({ key: 'searchTerm', label: 'بحث: ' + params.searchTerm });
                 }
-
                 activeFiltersContainer.innerHTML = '';
                 chips.forEach(function (chip) {
-                    var chipElement = document.createElement('span');
-                    chipElement.className = 'filter-chip';
-                    chipElement.dataset.key = chip.key;
-                    chipElement.innerHTML = '<span>' + chip.label + '</span><button type="button" aria-label="إزالة الفلتر"><i class="fas fa-times"></i></button>';
-                    activeFiltersContainer.appendChild(chipElement);
+                    const span = document.createElement('span');
+                    span.className = 'filter-chip';
+                    span.dataset.key = chip.key;
+                    span.innerHTML = '<span>' + chip.label + '</span><button type="button" aria-label="إزالة الفلتر"><i class="fas fa-times"></i></button>';
+                    activeFiltersContainer.appendChild(span);
                 });
-
                 activeFiltersCount.textContent = chips.length;
                 activeFiltersCount.classList.toggle('d-none', chips.length === 0);
             }
 
-            function updateResultsInfo(args) {
-                if (!resultInfo) {
-                    return;
-                }
-
-                var pageInfo = grid.pageSettings;
-                var totalRecords = (args && typeof args.count === 'number') ? args.count : lastKnownCount;
-                if (!totalRecords) {
-                    totalRecords = grid.currentViewData.length;
-                }
-                var currentPage = pageInfo.currentPage || 1;
-                var pageSize = pageInfo.pageSize || 25;
-                var start = ((currentPage - 1) * pageSize) + 1;
-                var end = Math.min(currentPage * pageSize, totalRecords);
-
-                if (totalRecords === 0) {
-                    resultInfo.textContent = 'لا توجد بيانات مطابقة للمرشحات الحالية';
-                } else {
-                    resultInfo.textContent = 'عرض ' + start + ' - ' + end + ' من ' + totalRecords + ' قيد';
-                }
-
-                if (totalRecords) {
-                    lastKnownCount = totalRecords;
-                }
+            function debounce(fn, delay) {
+                let timer;
+                return function () {
+                    const args = arguments;
+                    clearTimeout(timer);
+                    timer = setTimeout(function () {
+                        fn.apply(null, args);
+                    }, delay);
+                };
             }
 
-            function updateGroupingInfo() {
-                if (!groupingInfo) {
-                    return;
+            function loadEntries(options) {
+                options = options || {};
+                if (options.resetPage) {
+                    state.page = 1;
                 }
-
-                var groupedColumns = grid.groupSettings && grid.groupSettings.columns ? grid.groupSettings.columns : [];
-                if (groupedColumns.length > 0) {
-                    groupingInfo.hidden = false;
-                    groupingInfo.textContent = 'مجموعة حسب: ' + groupedColumns.join(', ');
-                } else {
-                    groupingInfo.hidden = true;
-                }
-            }
-
-            function persistCurrentFilters(searchValue) {
-                var params = gatherFilterParameters(searchValue);
-                persistFilters({
-                    fromDate: params.fromDate || '',
-                    toDate: params.toDate || '',
-                    branchId: params.branchId || '',
-                    status: params.status || '',
-                    groupBy: params.groupBy || '',
-                    showUnbalancedOnly: params.showUnbalancedOnly === 'true',
-                    searchTerm: params.searchTerm || ''
-                });
-            }
-
-            function reloadGrid() {
-                showLoading();
-                var searchValue = getQuickSearchValue();
-                grid.query = buildQuery(searchValue);
-                var normalizedSearch = (searchValue || '').trim();
-                if (grid.searchSettings.key !== normalizedSearch) {
-                    grid.searchSettings.key = normalizedSearch;
-                }
-                persistCurrentFilters(searchValue);
+                const searchValue = getQuickSearchValue();
+                updateSearchClearState(searchValue);
+                const params = gatherFilterParameters(searchValue);
                 updateFilterChips(searchValue);
+                updateGroupingInfo();
+                updateSortIndicators();
                 updateSummary(searchValue);
-                grid.refresh();
+                persistCurrentFilters(searchValue);
+                showTableLoading();
+                showLoading();
+                const requestPayload = buildDataRequest(params);
+                authorizedFetch(dataUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestPayload)
+                })
+                    .then(function (response) {
+                        if (!response.ok) {
+                            return response.text().then(function (message) {
+                                throw new Error(message || 'تعذر تحميل البيانات');
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(function (data) {
+                        const records = Array.isArray(data.result) ? data.result : (Array.isArray(data) ? data : []);
+                        const totalCount = typeof data.count === 'number' ? data.count : records.length;
+                        state.totalCount = totalCount;
+                        const totalPages = Math.max(1, Math.ceil((totalCount || 0) / state.pageSize));
+                        if (totalCount > 0 && state.page > totalPages) {
+                            state.page = totalPages;
+                            return loadEntries();
+                        }
+                        state.data = records;
+                        renderTable(records);
+                        renderPagination();
+                        updateResultsInfo(records.length);
+                        if (lastRefreshAt) {
+                            lastRefreshAt.textContent = new Date().toLocaleString();
+                        }
+                    })
+                    .catch(function (error) {
+                        console.error(error);
+                        state.totalCount = 0;
+                        state.data = [];
+                        renderTable([]);
+                        renderPagination();
+                        updateResultsInfo(0);
+                    })
+                    .finally(function () {
+                        hideTableLoading();
+                        hideLoading();
+                    });
             }
 
-            function applyStoredGrouping() {
-                var stored = loadPersistedFilters();
-                if (!stored || !stored.groupBy) {
-                    return;
-                }
-                grid.clearGrouping();
-                grid.groupColumn(stored.groupBy);
-            }
-
-            function resetFilterByKey(key) {
-                switch (key) {
-                    case 'fromDate':
-                        if (filterControls.fromDate) {
-                            filterControls.fromDate.value = '';
-                        }
-                        break;
-                    case 'toDate':
-                        if (filterControls.toDate) {
-                            filterControls.toDate.value = '';
-                        }
-                        break;
-                    case 'branchFilter':
-                        if (filterControls.branchId) {
-                            filterControls.branchId.selectedIndex = 0;
-                        }
-                        break;
-                    case 'statusFilter':
-                        if (filterControls.status) {
-                            filterControls.status.selectedIndex = 0;
-                        }
-                        break;
-                    case 'showUnbalancedOnly':
-                        if (unbalancedToggle) {
-                            unbalancedToggle.checked = false;
-                        }
-                        break;
-                    case 'searchTerm':
-                        if (searchInput) {
-                            searchInput.value = '';
-                        }
-                        break;
-                }
-            }
-
-            function updateGridHeight() {
-                if (!gridElement) {
-                    return;
-                }
-
-                var gridRect = gridElement.getBoundingClientRect();
-                var viewportHeight = window.visualViewport && typeof window.visualViewport.height === 'number'
-                    ? window.visualViewport.height
-                    : window.innerHeight;
-                var availableHeight = viewportHeight - gridRect.top - 32;
-                grid.height = Math.max(Math.round(availableHeight), 420);
-            }
+            const debouncedSearch = debounce(function () {
+                loadEntries({ resetPage: true });
+            }, 350);
 
             applyStoredFilters();
-
-            grid.query = buildQuery(getQuickSearchValue());
-            grid.dataSource = new ej.data.DataManager({
-                url: dataUrl,
-                adaptor: new ej.data.UrlAdaptor()
-            });
-            grid.searchSettings = {
-                fields: ['Number', 'Description', 'Reference', 'BranchName', 'CreatedByName', 'StatusDisplay', 'TotalDebitFormatted', 'TotalCreditFormatted'],
-                operator: 'contains',
-                key: '',
-                ignoreCase: true
-            };
-            grid.sortSettings = { columns: [{ field: 'Date', direction: 'Descending' }] };
-            grid.groupSettings = { showDropArea: false };
-
-            applyStoredGrouping();
-            updateFilterChips(getQuickSearchValue());
-            updateSummary(getQuickSearchValue());
-            updateGridHeight();
-            window.addEventListener('resize', updateGridHeight);
-            if (window.visualViewport) {
-                window.visualViewport.addEventListener('resize', updateGridHeight);
-            }
-            if (typeof ResizeObserver !== 'undefined') {
-                var layoutObserver = new ResizeObserver(function () {
-                    updateGridHeight();
-                });
-                var cardElement = document.querySelector('.journal-shell');
-                if (cardElement) {
-                    layoutObserver.observe(cardElement);
-                }
-            }
-
-            grid.rowDataBound = function (args) {
-                if (!args || !args.row) {
-                    return;
-                }
-                args.row.classList.remove('unbalanced-entry');
-                if (args.data && args.data.IsBalanced === false) {
-                    args.row.classList.add('unbalanced-entry');
-                }
-            };
-
-            grid.actionBegin = function (args) {
-                if (trackedRequestTypes.indexOf(args.requestType) > -1) {
-                    showLoading();
-                }
-            };
-
-            grid.actionComplete = function (args) {
-                hideLoading();
-                updateResultsInfo(args);
-                updateGroupingInfo();
-                if (args && typeof args.count === 'number') {
-                    lastKnownCount = args.count;
-                }
-                var timestamp = new Date().toLocaleString();
-                if (lastRefreshAt) {
-                    lastRefreshAt.textContent = timestamp;
-                }
-            };
-
-            grid.actionFailure = function () {
-                hideLoading();
-            };
+            updateGroupingInfo();
+            updateSortIndicators();
+            updateSearchClearState(getQuickSearchValue());
+            loadEntries({ resetPage: true });
 
             ['fromDate', 'toDate', 'branchFilter', 'statusFilter'].forEach(function (id) {
-                var element = document.getElementById(id);
+                const element = document.getElementById(id);
                 if (!element) {
                     return;
                 }
                 element.addEventListener('change', function () {
-                    grid.pageSettings.currentPage = 1;
-                    reloadGrid();
+                    loadEntries({ resetPage: true });
                 });
             });
 
             if (groupSelect) {
                 groupSelect.addEventListener('change', function (event) {
-                    grid.clearGrouping();
-                    var value = event.target.value;
-                    if (value) {
-                        grid.groupColumn(value);
-                    }
-                    updateGroupingInfo();
-                    grid.pageSettings.currentPage = 1;
-                    reloadGrid();
+                    state.groupBy = event.target.value || '';
+                    loadEntries({ resetPage: true });
                 });
             }
 
             if (unbalancedToggle) {
                 unbalancedToggle.addEventListener('change', function () {
-                    grid.pageSettings.currentPage = 1;
-                    reloadGrid();
+                    loadEntries({ resetPage: true });
+                });
+            }
+
+            if (pageSizeSelect) {
+                pageSizeSelect.addEventListener('change', function (event) {
+                    const value = parseInt(event.target.value, 10);
+                    state.pageSize = Number.isNaN(value) ? state.pageSize : value;
+                    loadEntries({ resetPage: true });
+                });
+            }
+
+            if (pagination) {
+                pagination.addEventListener('click', function (event) {
+                    const button = event.target.closest('button[data-page]');
+                    if (!button) {
+                        return;
+                    }
+                    const targetPage = parseInt(button.getAttribute('data-page'), 10);
+                    if (Number.isNaN(targetPage) || targetPage === state.page) {
+                        return;
+                    }
+                    state.page = targetPage;
+                    loadEntries();
                 });
             }
 
             if (activeFiltersContainer) {
                 activeFiltersContainer.addEventListener('click', function (event) {
-                    var button = event.target.closest('button');
+                    const button = event.target.closest('button');
                     if (!button) {
                         return;
                     }
-                    var chip = button.closest('.filter-chip');
+                    const chip = button.closest('.filter-chip');
                     if (!chip) {
                         return;
                     }
-                    var key = chip.dataset.key;
-                    if (!key) {
-                        return;
+                    const key = chip.dataset.key;
+                    switch (key) {
+                        case 'fromDate':
+                            if (filterControls.fromDate) {
+                                filterControls.fromDate.value = '';
+                            }
+                            break;
+                        case 'toDate':
+                            if (filterControls.toDate) {
+                                filterControls.toDate.value = '';
+                            }
+                            break;
+                        case 'branchFilter':
+                            if (filterControls.branchId) {
+                                filterControls.branchId.selectedIndex = 0;
+                            }
+                            break;
+                        case 'statusFilter':
+                            if (filterControls.status) {
+                                filterControls.status.selectedIndex = 0;
+                            }
+                            break;
+                        case 'groupBy':
+                            state.groupBy = '';
+                            if (groupSelect) {
+                                groupSelect.value = '';
+                            }
+                            break;
+                        case 'showUnbalancedOnly':
+                            if (unbalancedToggle) {
+                                unbalancedToggle.checked = false;
+                            }
+                            break;
+                        case 'searchTerm':
+                            if (searchInput) {
+                                searchInput.value = '';
+                            }
+                            break;
                     }
-                    resetFilterByKey(key);
-                    grid.pageSettings.currentPage = 1;
-                    reloadGrid();
+                    loadEntries({ resetPage: true });
                 });
             }
 
@@ -1101,60 +1459,46 @@
                     if (!searchInput) {
                         return;
                     }
-                    if (searchInput.value === '') {
-                        reloadGrid();
-                        return;
-                    }
                     searchInput.value = '';
-                    grid.pageSettings.currentPage = 1;
-                    reloadGrid();
+                    updateSearchClearState('');
+                    loadEntries({ resetPage: true });
+                });
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', function () {
+                    debouncedSearch();
+                });
+                searchInput.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                    }
                 });
             }
 
             if (refreshButton) {
                 refreshButton.addEventListener('click', function () {
-                    grid.pageSettings.currentPage = 1;
-                    reloadGrid();
+                    loadEntries();
                 });
             }
 
-            var searchDebounce;
-            if (searchInput) {
-                searchInput.addEventListener('keyup', function (event) {
-                    if (event.key === 'Enter') {
-                        event.preventDefault();
-                        grid.pageSettings.currentPage = 1;
-                        reloadGrid();
-                    }
-                });
-
-                searchInput.addEventListener('input', function () {
-                    clearTimeout(searchDebounce);
-                    searchDebounce = setTimeout(function () {
-                        grid.pageSettings.currentPage = 1;
-                        reloadGrid();
-                    }, 350);
-                });
-            }
-
-            var resetButton = document.getElementById('resetFilters');
-            if (resetButton) {
-                resetButton.addEventListener('click', function () {
-                    if (filterControls.fromDate) {
-                        filterControls.fromDate.value = '';
-                    }
-                    if (filterControls.toDate) {
-                        filterControls.toDate.value = '';
-                    }
-                    if (filterControls.branchId) {
-                        filterControls.branchId.selectedIndex = 0;
-                    }
-                    if (filterControls.status) {
-                        filterControls.status.selectedIndex = 0;
-                    }
+            if (resetFiltersButton) {
+                resetFiltersButton.addEventListener('click', function () {
+                    ['fromDate', 'toDate'].forEach(function (id) {
+                        const input = document.getElementById(id);
+                        if (input) {
+                            input.value = '';
+                        }
+                    });
+                    ['branchFilter', 'statusFilter'].forEach(function (id) {
+                        const select = document.getElementById(id);
+                        if (select) {
+                            select.selectedIndex = 0;
+                        }
+                    });
+                    state.groupBy = '';
                     if (groupSelect) {
                         groupSelect.value = '';
-                        grid.clearGrouping();
                     }
                     if (unbalancedToggle) {
                         unbalancedToggle.checked = false;
@@ -1162,117 +1506,141 @@
                     if (searchInput) {
                         searchInput.value = '';
                     }
-
-                    grid.clearFiltering();
-                    grid.clearSorting();
-                    grid.clearGrouping();
-                    grid.searchSettings.key = '';
-                    grid.pageSettings.currentPage = 1;
+                    if (pageSizeSelect) {
+                        pageSizeSelect.value = '25';
+                        state.pageSize = 25;
+                    }
+                    state.sortField = 'Date';
+                    state.sortDir = 'Descending';
+                    updateSortIndicators();
+                    updateSearchClearState('');
                     clearPersistedFilters();
-                    reloadGrid();
+                    loadEntries({ resetPage: true });
                 });
             }
 
-            grid.toolbarClick = function (args) {
-                if (!args.item || typeof args.item.id !== 'string') {
-                    return;
-                }
-                var id = args.item.id.toLowerCase();
-                if (id.indexOf('excelexport') !== -1) {
-                    grid.excelExport({
-                        fileName: 'journal-entries.xlsx',
-                        header: {
-                            headerRows: 2,
-                            rows: [
-                                { cells: [{ colSpan: 7, value: 'قائمة القيود المالية', style: { fontSize: 16, bold: true, hAlign: 'Right' } }] },
-                                { cells: [{ colSpan: 7, value: 'تاريخ التصدير: ' + new Date().toLocaleString(), style: { hAlign: 'Right' } }] }
-                            ]
+            if (table) {
+                const header = table.querySelector('thead');
+                if (header) {
+                    header.addEventListener('click', function (event) {
+                        const cell = event.target.closest('th.sortable');
+                        if (!cell) {
+                            return;
+                        }
+                        const sortField = cell.getAttribute('data-sort');
+                        if (!sortField) {
+                            return;
+                        }
+                        if (state.sortField === sortField) {
+                            state.sortDir = state.sortDir === 'Ascending' ? 'Descending' : 'Ascending';
+                        } else {
+                            state.sortField = sortField;
+                            state.sortDir = sortField === 'Date' ? 'Descending' : 'Ascending';
+                        }
+                        state.page = 1;
+                        updateSortIndicators();
+                        loadEntries();
+                    });
+                    header.addEventListener('keydown', function (event) {
+                        if ((event.key === 'Enter' || event.key === ' ') && event.target.closest('th.sortable')) {
+                            event.preventDefault();
+                            const cell = event.target.closest('th.sortable');
+                            if (cell) {
+                                cell.click();
+                            }
                         }
                     });
-                    args.cancel = true;
                 }
-            };
+            }
 
-            document.getElementById('journalEntriesGrid').addEventListener('click', function (event) {
-                var postButton = event.target.closest('.btn-post-entry');
-                if (postButton) {
-                    var postId = postButton.getAttribute('data-id');
-                    var postNumber = postButton.getAttribute('data-number');
-                    if (!postId) {
+            if (tableBody) {
+                tableBody.addEventListener('click', function (event) {
+                    const postButton = event.target.closest('.btn-post-entry');
+                    if (postButton) {
+                        const entryId = postButton.getAttribute('data-id');
+                        const number = postButton.getAttribute('data-number');
+                        if (!entryId) {
+                            return;
+                        }
+                        if (!confirm('هل تريد ترحيل القيد رقم ' + number + '?')) {
+                            return;
+                        }
+                        showLoading();
+                        authorizedFetch(postUrlBase + '/' + entryId, {
+                            method: 'POST'
+                        })
+                            .then(function (response) {
+                                if (!response.ok) {
+                                    return response.text().then(function (message) {
+                                        throw new Error(message || 'تعذر ترحيل القيد.');
+                                    });
+                                }
+                                return response.text();
+                            })
+                            .then(function () {
+                                if (window.swal) {
+                                    swal({ title: 'تم الترحيل بنجاح', icon: 'success', button: 'حسناً' });
+                                } else {
+                                    alert('تم ترحيل القيد بنجاح');
+                                }
+                                loadEntries();
+                            })
+                            .catch(function (error) {
+                                if (window.swal) {
+                                    swal({ title: 'خطأ', text: error.message, icon: 'error', button: 'إغلاق' });
+                                } else {
+                                    alert(error.message);
+                                }
+                            })
+                            .finally(function () {
+                                hideLoading();
+                            });
                         return;
                     }
-
-                    if (!confirm('هل تريد ترحيل القيد رقم ' + postNumber + '?')) {
+                    const deleteButton = event.target.closest('.btn-delete-entry');
+                    if (!deleteButton) {
                         return;
                     }
-
+                    const deleteId = deleteButton.getAttribute('data-id');
+                    const deleteNumber = deleteButton.getAttribute('data-number');
+                    if (!deleteId) {
+                        return;
+                    }
+                    if (!confirm('هل تريد إلغاء القيد رقم ' + deleteNumber + '?')) {
+                        return;
+                    }
                     showLoading();
-                    $.ajax(buildRequestOptions({
-                        url: postUrlBase + '/' + postId,
-                        type: 'POST',
-                        success: function () {
-                            hideLoading();
-                            grid.refresh();
-                            updateSummary(getQuickSearchValue());
-                            if (window.swal) {
-                                swal({ title: 'تم الترحيل بنجاح', icon: 'success', button: 'حسناً' });
-                            } else {
-                                alert('تم ترحيل القيد بنجاح');
+                    authorizedFetch(deleteUrlBase + '/' + deleteId, {
+                        method: 'POST'
+                    })
+                        .then(function (response) {
+                            if (!response.ok) {
+                                return response.text().then(function (message) {
+                                    throw new Error(message || 'تعذر إلغاء القيد.');
+                                });
                             }
-                        },
-                        error: function (xhr) {
-                            hideLoading();
-                            var message = xhr.responseText || 'تعذر ترحيل القيد.';
+                            return response.text();
+                        })
+                        .then(function () {
                             if (window.swal) {
-                                swal({ title: 'خطأ', text: message, icon: 'error', button: 'إغلاق' });
+                                swal({ title: 'تم الإلغاء بنجاح', icon: 'success', button: 'حسناً' });
                             } else {
-                                alert(message);
+                                alert('تم إلغاء القيد بنجاح');
                             }
-                        }
-                    }));
-                    return;
-                }
-
-                var deleteButton = event.target.closest('.btn-delete-entry');
-                if (!deleteButton) {
-                    return;
-                }
-
-                var deleteId = deleteButton.getAttribute('data-id');
-                var deleteNumber = deleteButton.getAttribute('data-number');
-                if (!deleteId) {
-                    return;
-                }
-
-                if (!confirm('هل تريد إلغاء القيد رقم ' + deleteNumber + '?')) {
-                    return;
-                }
-
-                showLoading();
-                $.ajax(buildRequestOptions({
-                    url: deleteUrlBase + '/' + deleteId,
-                    type: 'POST',
-                    success: function () {
-                        hideLoading();
-                        grid.refresh();
-                        updateSummary(getQuickSearchValue());
-                        if (window.swal) {
-                            swal({ title: 'تم الإلغاء بنجاح', icon: 'success', button: 'حسناً' });
-                        } else {
-                            alert('تم إلغاء القيد بنجاح');
-                        }
-                    },
-                    error: function (xhr) {
-                        hideLoading();
-                        var message = xhr.responseText || 'تعذر إلغاء القيد.';
-                        if (window.swal) {
-                            swal({ title: 'خطأ', text: message, icon: 'error', button: 'إغلاق' });
-                        } else {
-                            alert(message);
-                        }
-                    }
-                }));
-            });
+                            loadEntries();
+                        })
+                        .catch(function (error) {
+                            if (window.swal) {
+                                swal({ title: 'خطأ', text: error.message, icon: 'error', button: 'إغلاق' });
+                            } else {
+                                alert(error.message);
+                            }
+                        })
+                        .finally(function () {
+                            hideLoading();
+                        });
+                });
+            }
         });
     </script>
 }
