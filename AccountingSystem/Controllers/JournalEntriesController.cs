@@ -278,11 +278,6 @@ namespace AccountingSystem.Controllers
                 query = query.Where(j => j.Date < to);
             }
 
-            if (showUnbalancedOnly)
-            {
-                query = query.Where(j => j.Lines.Sum(l => l.DebitAmount) != j.Lines.Sum(l => l.CreditAmount));
-            }
-
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 var trimmedTerm = searchTerm.Trim();
@@ -381,6 +376,11 @@ namespace AccountingSystem.Controllers
                         IsBalanced = isBalanced
                     };
                 });
+
+            if (showUnbalancedOnly)
+            {
+                dataSource = dataSource.Where(entry => !entry.IsBalanced);
+            }
 
             var operation = new DataOperations();
 
