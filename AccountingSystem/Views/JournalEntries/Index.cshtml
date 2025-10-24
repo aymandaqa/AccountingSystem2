@@ -16,12 +16,18 @@
             min-height: calc(100vh - 6rem);
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+        }
+
+        .journal-entries-card .card-header > .d-flex {
+            gap: 1rem;
         }
 
         .journal-entries-card .card-body {
             display: flex;
             flex-direction: column;
             gap: 1rem;
+            overflow-x: auto;
         }
 
         .journal-entries-grid {
@@ -50,7 +56,10 @@
         }
 
         .quick-search {
-            min-width: clamp(16rem, 24vw, 22rem);
+            flex: 1 1 16rem;
+            min-width: 0;
+            width: 100%;
+            max-width: clamp(16rem, 24vw, 22rem);
         }
 
             .quick-search .form-control {
@@ -343,22 +352,15 @@
                 return searchInput ? searchInput.value.trim() : '';
             }
 
-            function applyGridSearch(searchValue) {
-                var value = searchValue || '';
-                if (grid.searchModule && typeof grid.searchModule.clearSearch === 'function' && !value) {
-                    grid.searchModule.clearSearch();
-                    grid.refresh();
-                    return;
-                }
-
-                grid.search(value);
-            }
-
             function reloadGrid() {
                 showLoading();
                 var searchValue = getQuickSearchValue();
                 grid.query = buildQuery(searchValue);
-                applyGridSearch(searchValue);
+                var normalizedSearch = (searchValue || '').trim();
+                if (grid.searchSettings.key !== normalizedSearch) {
+                    grid.searchSettings.key = normalizedSearch;
+                }
+                grid.refresh();
             }
 
             grid.query = buildQuery(getQuickSearchValue());
