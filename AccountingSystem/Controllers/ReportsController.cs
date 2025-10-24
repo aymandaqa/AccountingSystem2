@@ -449,7 +449,6 @@ namespace AccountingSystem.Controllers
                 CreateMetric("مجمل الربح", grossProfitMonth, grossProfitMonthTarget),
                 CreateMetric("الربح التشغيلي (EBIT)", operatingProfitMonth, operatingProfitMonthTarget),
                 CreateMetric("صافي الربح قبل الضريبة", netProfitBeforeTaxMonth, netProfitBeforeTaxMonthTarget),
-                CreateMetric("المخزون", inventoryMonth, inventoryMonthTarget),
                 CreateMetric("الذمم المدينة", receivablesMonth, receivablesMonthTarget),
                 CreateMetric("هامش صافي الربح", netProfitMarginMonth, netProfitMarginMonthTarget, true),
                 CreateMetric("هامش الربح التشغيلي", operatingProfitMarginMonth, operatingProfitMarginMonthTarget, true)
@@ -461,7 +460,6 @@ namespace AccountingSystem.Controllers
                 CreateMetric("مجمل الربح التراكمي", grossProfitYearToDate, grossProfitYearToDateTarget),
                 CreateMetric("الربح التشغيلي التراكمي", operatingProfitYearToDate, operatingProfitYearToDateTarget),
                 CreateMetric("صافي الربح قبل الضريبة (تراكمي)", netProfitBeforeTaxYearToDate, netProfitBeforeTaxYearToDateTarget),
-                CreateMetric("متوسط المخزون", inventoryYearToDate, inventoryYearToDateTarget),
                 CreateMetric("متوسط الذمم المدينة", receivablesYearToDate, receivablesYearToDateTarget),
                 CreateMetric("هامش صافي الربح التراكمي", netProfitMarginYearToDate, netProfitMarginYearToDateTarget, true),
                 CreateMetric("هامش الربح التشغيلي التراكمي", operatingProfitMarginYearToDate, operatingProfitMarginYearToDateTarget, true)

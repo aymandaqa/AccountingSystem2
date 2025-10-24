@@ -21,7 +21,46 @@
         var formatted = string.Format(culture, "{0:N2}", value);
         return metric.IsPercentage ? $"{formatted}%" : $"{formatted} {Model.CurrencyCode}";
     };
-    Func<decimal, string> formatDays = value => string.Format(culture, "{0:N1}", value);
+    Func<string, string> getMetricEmphasisClass = title =>
+    {
+        if (title.Contains("إيراد"))
+        {
+            return "metric-value-revenue";
+        }
+
+        if (title.Contains("مصروف"))
+        {
+            return "metric-value-expense";
+        }
+
+        if (title.Contains("ربح"))
+        {
+            return "metric-value-profit";
+        }
+
+        return string.Empty;
+    };
+    Func<string, string> getFinancialToneClass = name =>
+    {
+        if (name.Contains("مصروف"))
+        {
+            return "text-expense";
+        }
+
+        if (name.Contains("إيراد"))
+        {
+            return "text-revenue";
+        }
+
+        if (name.Contains("ربح"))
+        {
+            return "text-profit";
+        }
+
+        return string.Empty;
+    };
+    Func<decimal, string> getVarianceBadgeClass = variance => variance >= 0 ? "badge bg-success-subtle text-success" : "badge bg-danger-subtle text-danger";
+    Func<decimal, string> getVarianceIcon = variance => variance >= 0 ? "▲" : "▼";
     string selectedPeriodLabel = $"{Model.MonthDisplay}/{Model.YearDisplay}";
 }
 
@@ -73,15 +112,14 @@
                     <div class="row g-3">
                         @foreach (var metric in Model.MonthlyMetrics)
                         {
-                            var varianceClass = metric.Variance >= 0 ? "text-success" : "text-danger";
                             var progress = Math.Min(200d, Math.Max(0d, (double)metric.Achievement));
                             <div class="col-12 col-md-6">
                                 <div class="metric-card h-100">
                                     <div class="metric-title">@metric.Title</div>
-                                    <div class="metric-value">@formatMetricValue(metric, metric.Actual)</div>
+                                    <div class="metric-value @getMetricEmphasisClass(metric.Title)">@formatMetricValue(metric, metric.Actual)</div>
                                     <div class="d-flex justify-content-between align-items-center small text-muted">
                                         <span>المستهدف: @formatMetricValue(metric, metric.Target)</span>
-                                        <span class="@varianceClass">@formatMetricValue(metric, metric.Variance)</span>
+                                        <span class="metric-variance @getVarianceBadgeClass(metric.Variance)"><span class="metric-variance-icon">@getVarianceIcon(metric.Variance)</span>@formatMetricValue(metric, metric.Variance)</span>
                                     </div>
                                     <div class="progress mt-2" role="progressbar" aria-valuenow="@progress" aria-valuemin="0" aria-valuemax="200">
                                         <div class="progress-bar" style="width: @progress%;"></div>
@@ -106,15 +144,14 @@
                     <div class="row g-3">
                         @foreach (var metric in Model.YearToDateMetrics)
                         {
-                            var varianceClass = metric.Variance >= 0 ? "text-success" : "text-danger";
                             var progress = Math.Min(200d, Math.Max(0d, (double)metric.Achievement));
                             <div class="col-12 col-md-6">
                                 <div class="metric-card h-100">
                                     <div class="metric-title">@metric.Title</div>
-                                    <div class="metric-value">@formatMetricValue(metric, metric.Actual)</div>
+                                    <div class="metric-value @getMetricEmphasisClass(metric.Title)">@formatMetricValue(metric, metric.Actual)</div>
                                     <div class="d-flex justify-content-between align-items-center small text-muted">
                                         <span>المستهدف: @formatMetricValue(metric, metric.Target)</span>
-                                        <span class="@varianceClass">@formatMetricValue(metric, metric.Variance)</span>
+                                        <span class="metric-variance @getVarianceBadgeClass(metric.Variance)"><span class="metric-variance-icon">@getVarianceIcon(metric.Variance)</span>@formatMetricValue(metric, metric.Variance)</span>
                                     </div>
                                     <div class="progress mt-2" role="progressbar" aria-valuenow="@progress" aria-valuemin="0" aria-valuemax="200">
                                         <div class="progress-bar" style="width: @progress%;"></div>
@@ -129,38 +166,7 @@
     </div>
 
     <div class="row g-4 mt-1">
-        <div class="col-12 col-xl-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-white border-bottom-0 pb-0">
-                    <h5 class="card-title mb-0">دورة التحويل النقدي</h5>
-                    <p class="text-muted small mb-0">قياس سرعة تحويل النقد بين المخزون والموردين والعملاء.</p>
-                </div>
-                <div class="card-body">
-                    <div class="cash-cycle-summary mb-3">
-                        <span class="text-muted">القيمة الشهرية</span>
-                        <div class="display-6 fw-bold">@formatDays(Model.CashConversionCycleMonthly) يوم</div>
-                        <span class="badge bg-secondary-subtle text-secondary">التراكمي: @formatDays(Model.CashConversionCycleYearToDate) يوم</span>
-                    </div>
-                    <ul class="list-group list-group-flush">
-                        @foreach (var metric in Model.CashConversionMetrics)
-                        {
-                            var daysProgress = Math.Min(200d, Math.Max(0d, (double)metric.MonthlyValue));
-                            <li class="list-group-item px-0">
-                                <div class="d-flex justify-content-between">
-                                    <span class="fw-semibold">@metric.Name</span>
-                                    <span class="text-muted">@formatDays(metric.MonthlyValue) يوم</span>
-                                </div>
-                                <div class="progress mt-2" role="progressbar" aria-valuemin="0" aria-valuemax="200">
-                                    <div class="progress-bar bg-info" style="width: @daysProgress%;"></div>
-                                </div>
-                                <div class="small text-muted mt-1">التراكمي: @formatDays(metric.YearToDateValue) يوم</div>
-                            </li>
-                        }
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-xl-4">
+        <div class="col-12 col-xl-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-white border-bottom-0 pb-0">
                     <h5 class="card-title mb-0">تفاصيل المصروفات التشغيلية</h5>
@@ -189,8 +195,8 @@
                                     {
                                         <tr>
                                             <td class="fw-semibold">@item.Name</td>
-                                            <td class="text-end">@formatNumber(item.MonthlyAmount) @Model.CurrencyCode</td>
-                                            <td class="text-end">@formatNumber(item.YearToDateAmount) @Model.CurrencyCode</td>
+                                            <td class="text-end text-expense">@formatNumber(item.MonthlyAmount) @Model.CurrencyCode</td>
+                                            <td class="text-end text-expense">@formatNumber(item.YearToDateAmount) @Model.CurrencyCode</td>
                                         </tr>
                                     }
                                 }
@@ -200,7 +206,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-12 col-xl-4">
+        <div class="col-12 col-xl-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-white border-bottom-0 pb-0">
                     <h5 class="card-title mb-0">بيان الدخل المختصر</h5>
@@ -222,12 +228,13 @@
                                 @foreach (var row in Model.IncomeStatement)
                                 {
                                     var rowClass = row.Name.Contains("ربح") ? "table-success" : string.Empty;
+                                    var toneClass = getFinancialToneClass(row.Name);
                                     <tr class="@rowClass">
                                         <td class="fw-semibold">@row.Name</td>
-                                        <td class="text-end">@formatNumber(row.MonthlyActual) @Model.CurrencyCode</td>
-                                        <td class="text-end">@formatNumber(row.MonthlyTarget) @Model.CurrencyCode</td>
-                                        <td class="text-end">@formatNumber(row.YearToDateActual) @Model.CurrencyCode</td>
-                                        <td class="text-end">@formatNumber(row.YearToDateTarget) @Model.CurrencyCode</td>
+                                        <td class="text-end @toneClass">@formatNumber(row.MonthlyActual) @Model.CurrencyCode</td>
+                                        <td class="text-end @toneClass">@formatNumber(row.MonthlyTarget) @Model.CurrencyCode</td>
+                                        <td class="text-end @toneClass">@formatNumber(row.YearToDateActual) @Model.CurrencyCode</td>
+                                        <td class="text-end @toneClass">@formatNumber(row.YearToDateTarget) @Model.CurrencyCode</td>
                                     </tr>
                                 }
                             </tbody>
@@ -269,10 +276,10 @@
                                 var rowClass = point.IsSelected ? "table-primary" : string.Empty;
                                 <tr class="@rowClass">
                                     <td class="fw-semibold">@point.Label</td>
-                                    <td class="text-end">@formatNumber(point.Revenue) @Model.CurrencyCode</td>
+                                    <td class="text-end text-revenue">@formatNumber(point.Revenue) @Model.CurrencyCode</td>
                                     <td class="text-end">@formatNumber(point.CostOfSales) @Model.CurrencyCode</td>
-                                    <td class="text-end">@formatNumber(point.OperatingExpenses) @Model.CurrencyCode</td>
-                                    <td class="text-end">@formatNumber(point.Profit) @Model.CurrencyCode</td>
+                                    <td class="text-end text-expense">@formatNumber(point.OperatingExpenses) @Model.CurrencyCode</td>
+                                    <td class="text-end text-profit">@formatNumber(point.Profit) @Model.CurrencyCode</td>
                                 </tr>
                             }
                         }
@@ -318,6 +325,18 @@
                 color: var(--bs-dark);
             }
 
+            .executive-dashboard-page .metric-value.metric-value-revenue {
+                color: #198754;
+            }
+
+            .executive-dashboard-page .metric-value.metric-value-expense {
+                color: #dc3545;
+            }
+
+            .executive-dashboard-page .metric-value.metric-value-profit {
+                color: #0b5137;
+            }
+
             .executive-dashboard-page .progress {
                 height: 0.4rem;
                 background-color: rgba(13, 110, 253, 0.1);
@@ -327,13 +346,35 @@
                 background: linear-gradient(90deg, var(--bs-primary), var(--bs-info));
             }
 
-            .executive-dashboard-page .cash-cycle-summary .display-6 {
-                font-size: 2rem;
-            }
-
             .executive-dashboard-page table thead th {
                 background-color: rgba(0, 0, 0, 0.02);
             }
+
+        .executive-dashboard-page .metric-variance {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            border-radius: 999px;
+        }
+
+        .executive-dashboard-page .metric-variance-icon {
+            font-size: 0.75rem;
+        }
+
+        .executive-dashboard-page .text-expense {
+            color: #dc3545 !important;
+        }
+
+        .executive-dashboard-page .text-revenue {
+            color: #198754 !important;
+        }
+
+        .executive-dashboard-page .text-profit {
+            color: #0b5137 !important;
+            font-weight: 700;
+        }
 
         .dashboard-filters .form-label {
             font-size: 0.85rem;
