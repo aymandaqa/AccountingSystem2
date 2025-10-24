@@ -27,5 +27,16 @@ namespace AccountingSystem.ViewModels
         public string Description { get; set; } = string.Empty;
         public decimal TotalDebit { get; set; }
         public decimal TotalCredit { get; set; }
+        public string TransactionTypeName { get; set; } = string.Empty;
+        public List<UserJournalEntryLineSummary> Lines { get; set; } = new();
+    }
+
+    public class UserJournalEntryLineSummary
+    {
+        public string AccountCode { get; set; } = string.Empty;
+        public string AccountName { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public decimal DebitAmount { get; set; }
+        public decimal CreditAmount { get; set; }
     }
 }
