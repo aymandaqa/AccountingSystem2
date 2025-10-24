@@ -286,12 +286,14 @@
                 var branchId = document.getElementById('branchFilter').value;
                 var status = document.getElementById('statusFilter').value;
                 var showUnbalancedOnly = unbalancedToggle && unbalancedToggle.checked;
+                var searchTerm = (searchValue || '').trim();
 
                 if (fromDate) query = query.addParams('fromDate', fromDate);
                 if (toDate) query = query.addParams('toDate', toDate);
                 if (branchId) query = query.addParams('branchId', branchId);
                 if (status) query = query.addParams('status', status);
                 if (showUnbalancedOnly) query = query.addParams('showUnbalancedOnly', 'true');
+                if (searchTerm) query = query.addParams('searchTerm', searchTerm);
 
                 return query;
             }
