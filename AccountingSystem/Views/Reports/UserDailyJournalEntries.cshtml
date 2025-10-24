@@ -8,11 +8,19 @@
 
 <div class="container-fluid">
     <div class="card">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h5 class="mb-0">
                 <i class="fas fa-book-open me-2"></i>
                 تقرير يومي لحركات القيود حسب المرجع
             </h5>
+            <a asp-action="UserDailyJournalEntriesExcel"
+               asp-route-fromDate="@Model.FromDate.ToString("yyyy-MM-dd")"
+               asp-route-toDate="@Model.ToDate.ToString("yyyy-MM-dd")"
+               asp-route-reference="@Model.ReferenceFilter"
+               class="btn btn-success text-white">
+                <i class="fas fa-file-excel me-1"></i>
+                تصدير إلى Excel
+            </a>
         </div>
         <div class="card-body">
             <form method="get" class="row g-3">
@@ -55,8 +63,9 @@
                         <tr>
                             <th style="width: 12%;">التاريخ</th>
                             <th style="width: 18%;">المرجع</th>
-                            <th style="width: 15%;" class="text-end">إجمالي المدين</th>
-                            <th style="width: 15%;" class="text-end">إجمالي الدائن</th>
+                            <th style="width: 16%;">نوع المعاملة</th>
+                            <th style="width: 13%;" class="text-end">إجمالي المدين</th>
+                            <th style="width: 13%;" class="text-end">إجمالي الدائن</th>
                             <th>القيود</th>
                         </tr>
                     </thead>
@@ -64,7 +73,7 @@
                         @if (Model.Items.Count == 0)
                         {
                             <tr>
-                                <td colspan="5" class="text-center text-muted py-4">
+                                <td colspan="6" class="text-center text-muted py-4">
                                     لا توجد قيود مطابقة لمعايير البحث المحددة.
                                 </td>
                             </tr>
@@ -76,6 +85,16 @@
                                 <tr>
                                     <td>@group.Date.ToString("dd/MM/yyyy")</td>
                                     <td>@group.Reference</td>
+                                    <td>
+                                        <ul class="list-unstyled mb-0">
+                                            @foreach (var entry in group.Entries)
+                                            {
+                                                <li class="mb-2">
+                                                    <span class="badge bg-info-subtle text-info">@entry.TransactionTypeName</span>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </td>
                                     <td class="text-end">@group.TotalDebit.ToString("N2")</td>
                                     <td class="text-end">@group.TotalCredit.ToString("N2")</td>
                                     <td>
@@ -83,14 +102,27 @@
                                             @foreach (var entry in group.Entries)
                                             {
                                                 <li class="mb-2">
+                                                    @{ var collapseId = $"journal-entry-lines-{entry.JournalEntryId}"; }
                                                     <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2">
                                                         <div class="fw-semibold">@entry.Number</div>
                                                         <div class="text-muted flex-grow-1">@entry.Description</div>
-                                                        <div class="text-nowrap">
+                                                        <div class="d-flex flex-wrap align-items-center gap-2">
                                                             <span class="badge bg-success-subtle text-success">مدين: @entry.TotalDebit.ToString("N2")</span>
-                                                            <span class="badge bg-danger-subtle text-danger ms-2">دائن: @entry.TotalCredit.ToString("N2")</span>
+                                                            <span class="badge bg-danger-subtle text-danger">دائن: @entry.TotalCredit.ToString("N2")</span>
                                                         </div>
-                                                        <div>
+                                                        <div class="d-flex flex-wrap gap-2">
+                                                            @if (entry.Lines.Count > 0)
+                                                            {
+                                                                <button class="btn btn-sm btn-outline-secondary"
+                                                                        type="button"
+                                                                        data-bs-toggle="collapse"
+                                                                        data-bs-target="#@collapseId"
+                                                                        aria-expanded="false"
+                                                                        aria-controls="@collapseId">
+                                                                    <i class="fas fa-list-ul me-1"></i>
+                                                                    تفاصيل القيود
+                                                                </button>
+                                                            }
                                                             <a asp-controller="JournalEntries"
                                                                asp-action="Details"
                                                                asp-route-id="@entry.JournalEntryId"
@@ -101,6 +133,36 @@
                                                             </a>
                                                         </div>
                                                     </div>
+                                                    @if (entry.Lines.Count > 0)
+                                                    {
+                                                        <div class="collapse mt-2" id="@collapseId">
+                                                            <div class="card card-body bg-light border-0 shadow-sm">
+                                                                <div class="table-responsive">
+                                                                    <table class="table table-sm table-bordered mb-0">
+                                                                        <thead class="table-light">
+                                                                            <tr>
+                                                                                <th style="width: 35%;">الحساب</th>
+                                                                                <th style="width: 35%;">الوصف</th>
+                                                                                <th class="text-end" style="width: 15%;">مدين</th>
+                                                                                <th class="text-end" style="width: 15%;">دائن</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            @foreach (var line in entry.Lines)
+                                                                            {
+                                                                                <tr>
+                                                                                    <td>@line.AccountCode - @line.AccountName</td>
+                                                                                    <td>@(string.IsNullOrWhiteSpace(line.Description) ? "-" : line.Description)</td>
+                                                                                    <td class="text-end">@line.DebitAmount.ToString("N2")</td>
+                                                                                    <td class="text-end">@line.CreditAmount.ToString("N2")</td>
+                                                                                </tr>
+                                                                            }
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    }
                                                 </li>
                                             }
                                         </ul>

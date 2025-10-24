@@ -1215,10 +1215,109 @@ namespace AccountingSystem.Controllers
                 ? null
                 : reference!.Trim();
 
+            var viewModel = await BuildUserDailyJournalEntriesReport(userId, startDate, endDate, referenceFilter);
+
+            return View(viewModel);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> UserDailyJournalEntriesExcel(DateTime? fromDate, DateTime? toDate, string? reference)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Challenge();
+            }
+
+            var today = DateTime.Today;
+            var startDate = (fromDate ?? today).Date;
+            var endDate = (toDate ?? today).Date;
+
+            if (endDate < startDate)
+            {
+                endDate = startDate;
+            }
+
+            var referenceFilter = string.IsNullOrWhiteSpace(reference)
+                ? null
+                : reference!.Trim();
+
+            var viewModel = await BuildUserDailyJournalEntriesReport(userId, startDate, endDate, referenceFilter);
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("الحركات اليومية");
+
+            var currentRow = 1;
+            worksheet.Cell(currentRow, 1).Value = "التاريخ";
+            worksheet.Cell(currentRow, 2).Value = "المرجع";
+            worksheet.Cell(currentRow, 3).Value = "نوع المعاملة";
+            worksheet.Cell(currentRow, 4).Value = "رقم القيد";
+            worksheet.Cell(currentRow, 5).Value = "وصف القيد";
+            worksheet.Cell(currentRow, 6).Value = "إجمالي المدين";
+            worksheet.Cell(currentRow, 7).Value = "إجمالي الدائن";
+            worksheet.Cell(currentRow, 8).Value = "الحساب";
+            worksheet.Cell(currentRow, 9).Value = "وصف السطر";
+            worksheet.Cell(currentRow, 10).Value = "مدين";
+            worksheet.Cell(currentRow, 11).Value = "دائن";
+            worksheet.Row(currentRow).Style.Font.SetBold();
+
+            foreach (var group in viewModel.Items
+                .OrderBy(g => g.Date)
+                .ThenBy(g => g.Reference, StringComparer.OrdinalIgnoreCase))
+            {
+                foreach (var entry in group.Entries)
+                {
+                    if (entry.Lines.Count == 0)
+                    {
+                        currentRow++;
+                        worksheet.Cell(currentRow, 1).Value = group.Date;
+                        worksheet.Cell(currentRow, 2).Value = group.Reference;
+                        worksheet.Cell(currentRow, 3).Value = entry.TransactionTypeName;
+                        worksheet.Cell(currentRow, 4).Value = entry.Number;
+                        worksheet.Cell(currentRow, 5).Value = entry.Description;
+                        worksheet.Cell(currentRow, 6).Value = entry.TotalDebit;
+                        worksheet.Cell(currentRow, 7).Value = entry.TotalCredit;
+                        continue;
+                    }
+
+                    foreach (var line in entry.Lines)
+                    {
+                        currentRow++;
+                        worksheet.Cell(currentRow, 1).Value = group.Date;
+                        worksheet.Cell(currentRow, 2).Value = group.Reference;
+                        worksheet.Cell(currentRow, 3).Value = entry.TransactionTypeName;
+                        worksheet.Cell(currentRow, 4).Value = entry.Number;
+                        worksheet.Cell(currentRow, 5).Value = entry.Description;
+                        worksheet.Cell(currentRow, 6).Value = entry.TotalDebit;
+                        worksheet.Cell(currentRow, 7).Value = entry.TotalCredit;
+                        worksheet.Cell(currentRow, 8).Value = $"{line.AccountCode} - {line.AccountName}";
+                        worksheet.Cell(currentRow, 9).Value = line.Description ?? string.Empty;
+                        worksheet.Cell(currentRow, 10).Value = line.DebitAmount;
+                        worksheet.Cell(currentRow, 11).Value = line.CreditAmount;
+                    }
+                }
+            }
+
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Seek(0, SeekOrigin.Begin);
+
+            var fileName = $"UserDailyJournalEntries_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.xlsx";
+            return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
+        private async Task<UserJournalEntryDailyReportViewModel> BuildUserDailyJournalEntriesReport(string userId, DateTime startDate, DateTime endDate, string? referenceFilter)
+        {
+            startDate = startDate.Date;
+            endDate = endDate.Date;
+            var inclusiveEndDate = endDate.AddDays(1);
+
             var query = _context.JournalEntries
                 .AsNoTracking()
                 .Where(e => e.CreatedById == userId)
-                .Where(e => e.Date >= startDate && e.Date <= endDate);
+                .Where(e => e.Date >= startDate && e.Date < inclusiveEndDate);
 
             if (!string.IsNullOrEmpty(referenceFilter))
             {
@@ -1238,6 +1337,45 @@ namespace AccountingSystem.Controllers
                 })
                 .ToListAsync();
 
+            var entryIds = entries
+                .Select(e => e.Id)
+                .ToList();
+
+            var linesLookup = new Dictionary<int, List<UserJournalEntryLineSummary>>();
+
+            if (entryIds.Count > 0)
+            {
+                var lines = await _context.JournalEntryLines
+                    .AsNoTracking()
+                    .Where(l => entryIds.Contains(l.JournalEntryId))
+                    .Select(l => new
+                    {
+                        l.JournalEntryId,
+                        l.Description,
+                        l.DebitAmount,
+                        l.CreditAmount,
+                        AccountCode = l.Account.Code,
+                        AccountName = l.Account.NameAr
+                    })
+                    .OrderBy(l => l.JournalEntryId)
+                    .ThenBy(l => l.AccountCode)
+                    .ThenBy(l => l.AccountName)
+                    .ToListAsync();
+
+                linesLookup = lines
+                    .GroupBy(l => l.JournalEntryId)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.Select(x => new UserJournalEntryLineSummary
+                        {
+                            AccountCode = x.AccountCode ?? string.Empty,
+                            AccountName = x.AccountName ?? string.Empty,
+                            Description = x.Description,
+                            DebitAmount = x.DebitAmount,
+                            CreditAmount = x.CreditAmount
+                        }).ToList());
+            }
+
             var grouped = entries
                 .GroupBy(e => new
                 {
@@ -1255,27 +1393,32 @@ namespace AccountingSystem.Controllers
                     Entries = g
                         .OrderByDescending(x => x.Date)
                         .ThenBy(x => x.Number, StringComparer.OrdinalIgnoreCase)
-                        .Select(x => new UserJournalEntrySummary
+                        .Select(x =>
                         {
-                            JournalEntryId = x.Id,
-                            Number = x.Number,
-                            Description = x.Description,
-                            TotalDebit = x.TotalDebit,
-                            TotalCredit = x.TotalCredit
+                            linesLookup.TryGetValue(x.Id, out var entryLines);
+
+                            return new UserJournalEntrySummary
+                            {
+                                JournalEntryId = x.Id,
+                                Number = x.Number,
+                                Description = x.Description,
+                                TotalDebit = x.TotalDebit,
+                                TotalCredit = x.TotalCredit,
+                                TransactionTypeName = GetTransactionType(x.Reference, x.Description),
+                                Lines = entryLines ?? new List<UserJournalEntryLineSummary>()
+                            };
                         })
                         .ToList()
                 })
                 .ToList();
 
-            var viewModel = new UserJournalEntryDailyReportViewModel
+            return new UserJournalEntryDailyReportViewModel
             {
                 FromDate = startDate,
                 ToDate = endDate,
                 ReferenceFilter = referenceFilter,
                 Items = grouped
             };
-
-            return View(viewModel);
         }
 
         [Authorize(Policy = "reports.dynamic")]
