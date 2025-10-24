@@ -356,7 +356,14 @@
                         <select id="pageSize" class="form-select form-select-sm" style="width: auto; display: inline-block;">
                             @foreach (var size in Model.PageSizes)
                             {
-                                <option value="@size" @(size == Model.DefaultPageSize ? "selected" : string.Empty)>@size</option>
+                                if (size == Model.DefaultPageSize)
+                                {
+                                    <option value="@size" selected>@size</option>
+                                }
+                                else
+                                {
+                                    <option value="@size">@size</option>
+                                }
                             }
                         </select>
                     </div>
