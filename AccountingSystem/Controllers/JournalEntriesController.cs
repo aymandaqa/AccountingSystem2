@@ -88,10 +88,10 @@ namespace AccountingSystem.Controllers
             {
                 var normalizedSearch = searchValue.Trim().ToLower();
                 query = query.Where(j =>
-                    j.Number.ToLower().Contains(normalizedSearch) ||
-                    j.Description.ToLower().Contains(normalizedSearch) ||
+                    (j.Number != null && j.Number.ToLower().Contains(normalizedSearch)) ||
+                    (j.Description != null && j.Description.ToLower().Contains(normalizedSearch)) ||
                     (j.Reference != null && j.Reference.ToLower().Contains(normalizedSearch)) ||
-                    j.Branch.NameAr.ToLower().Contains(normalizedSearch) ||
+                    (j.Branch != null && j.Branch.NameAr != null && j.Branch.NameAr.ToLower().Contains(normalizedSearch)) ||
                     (j.CreatedBy != null && (
                         (j.CreatedBy.FirstName != null && j.CreatedBy.FirstName.ToLower().Contains(normalizedSearch)) ||
                         (j.CreatedBy.LastName != null && j.CreatedBy.LastName.ToLower().Contains(normalizedSearch)) ||
@@ -125,13 +125,13 @@ namespace AccountingSystem.Controllers
             var numberFilter = GetColumnSearchValue(0);
             if (!string.IsNullOrWhiteSpace(numberFilter))
             {
-                query = query.Where(j => j.Number.Contains(numberFilter));
+                query = query.Where(j => j.Number != null && j.Number.Contains(numberFilter));
             }
 
             var descriptionFilter = GetColumnSearchValue(2);
             if (!string.IsNullOrWhiteSpace(descriptionFilter))
             {
-                query = query.Where(j => j.Description.Contains(descriptionFilter));
+                query = query.Where(j => j.Description != null && j.Description.Contains(descriptionFilter));
             }
 
             var referenceFilter = GetColumnSearchValue(3);
@@ -143,7 +143,7 @@ namespace AccountingSystem.Controllers
             var branchFilterValue = GetColumnSearchValue(4);
             if (!string.IsNullOrWhiteSpace(branchFilterValue))
             {
-                query = query.Where(j => j.Branch.NameAr.Contains(branchFilterValue));
+                query = query.Where(j => j.Branch != null && j.Branch.NameAr != null && j.Branch.NameAr.Contains(branchFilterValue));
             }
 
             var createdByFilterValue = GetColumnSearchValue(5);
@@ -400,10 +400,10 @@ namespace AccountingSystem.Controllers
                 }
 
                 query = query.Where(j =>
-                    j.Number.ToLower().Contains(normalizedTerm) ||
-                    j.Description.ToLower().Contains(normalizedTerm) ||
+                    (j.Number != null && j.Number.ToLower().Contains(normalizedTerm)) ||
+                    (j.Description != null && j.Description.ToLower().Contains(normalizedTerm)) ||
                     (j.Reference != null && j.Reference.ToLower().Contains(normalizedTerm)) ||
-                    j.Branch.NameAr.ToLower().Contains(normalizedTerm) ||
+                    (j.Branch != null && j.Branch.NameAr != null && j.Branch.NameAr.ToLower().Contains(normalizedTerm)) ||
                     (j.CreatedBy != null && (
                         (j.CreatedBy.FirstName != null && j.CreatedBy.FirstName.ToLower().Contains(normalizedTerm)) ||
                         (j.CreatedBy.LastName != null && j.CreatedBy.LastName.ToLower().Contains(normalizedTerm)) ||
