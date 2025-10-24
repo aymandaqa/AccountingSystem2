@@ -12,6 +12,10 @@
             <h5 class="card-title mb-0">إغلاقات الصندوق الخاصة بي</h5>
         </div>
         <div class="card-body">
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger">@TempData["Error"]</div>
+            }
             @if (Model.Any())
             {
                 <table class="table table-bordered">
