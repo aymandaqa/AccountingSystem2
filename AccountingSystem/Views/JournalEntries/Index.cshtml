@@ -277,18 +277,18 @@
             gap: 0.75rem;
         }
 
-        .grid-caption .result-info {
-            font-size: 0.85rem;
-            color: #4f5d75;
-        }
+            .grid-caption .result-info {
+                font-size: 0.85rem;
+                color: #4f5d75;
+            }
 
-        .grid-caption .badge {
-            font-size: 0.75rem;
-        }
+            .grid-caption .badge {
+                font-size: 0.75rem;
+            }
 
-        .grid-caption .form-select {
-            min-width: 6rem;
-        }
+            .grid-caption .form-select {
+                min-width: 6rem;
+            }
 
         .result-meta {
             display: flex;
@@ -304,28 +304,28 @@
             border: 1px solid rgba(15, 67, 130, 0.08);
         }
 
-        .grid-table table {
-            margin-bottom: 0;
-        }
+            .grid-table table {
+                margin-bottom: 0;
+            }
 
-        .grid-table thead th {
-            background-color: #f8f9ff;
-            font-weight: 700;
-            vertical-align: middle;
-            border-bottom-width: 1px;
-        }
+            .grid-table thead th {
+                background-color: #f8f9ff;
+                font-weight: 700;
+                vertical-align: middle;
+                border-bottom-width: 1px;
+            }
 
-        .grid-table tbody tr.unbalanced-entry {
-            background-color: #fdeaea;
-        }
+            .grid-table tbody tr.unbalanced-entry {
+                background-color: #fdeaea;
+            }
 
-        .grid-table tbody tr.unbalanced-entry td {
-            color: #b71c1c;
-        }
+                .grid-table tbody tr.unbalanced-entry td {
+                    color: #b71c1c;
+                }
 
-        .grid-table tbody tr:hover {
-            background-color: #f6f9ff;
-        }
+            .grid-table tbody tr:hover {
+                background-color: #f6f9ff;
+            }
 
         .sortable {
             cursor: pointer;
@@ -333,30 +333,30 @@
             white-space: nowrap;
         }
 
-        .sortable .sort-indicator {
-            display: inline-flex;
-            align-items: center;
-            margin-inline-start: 0.35rem;
-            color: #6c757d;
-            font-size: 0.8rem;
-        }
+            .sortable .sort-indicator {
+                display: inline-flex;
+                align-items: center;
+                margin-inline-start: 0.35rem;
+                color: #6c757d;
+                font-size: 0.8rem;
+            }
 
-        .sortable.active {
-            color: #0b4d94;
-        }
+            .sortable.active {
+                color: #0b4d94;
+            }
 
         .table-actions {
             min-width: 12rem;
         }
 
-        .table-actions .btn {
-            min-width: 2.25rem;
-            font-size: 0.85rem;
-        }
+            .table-actions .btn {
+                min-width: 2.25rem;
+                font-size: 0.85rem;
+            }
 
-        .table-actions .btn i {
-            pointer-events: none;
-        }
+                .table-actions .btn i {
+                    pointer-events: none;
+                }
 
         .loading-overlay {
             position: absolute;
@@ -387,7 +387,7 @@
             font-weight: 700;
         }
 
-        @media (max-width: 767.98px) {
+        @@media (max-width: 767.98px) {
             .journal-index {
                 padding-inline: 0.5rem;
                 padding-block: 1rem 1.5rem;
@@ -407,235 +407,240 @@
         }
     </style>
 }
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="journal-index container-fluid">
+                <div class="card journal-shell shadow-sm">
+                    <div class="card-header">
+                        <div class="headline">
+                            <div class="headline__title">
+                                <h3>
+                                    <i class="fas fa-file-invoice"></i>
+                                    <span>القيود المالية</span>
+                                </h3>
+                                <p>
+                                    إدارة القيود بسهولة، مع نظرة فورية على التوازن والفلترة الذكية عبر جميع الحقول.
+                                </p>
+                            </div>
+                            <div class="headline__actions">
+                                <div class="search-shell">
+                                    <label class="visually-hidden" for="quickSearch">بحث سريع</label>
+                                    <div class="input-group" role="search">
+                                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                        <input type="search" id="quickSearch" class="form-control" placeholder="بحث سريع في جميع الأعمدة" aria-label="بحث سريع" />
+                                        <button type="button" id="clearQuickSearch" class="btn btn-outline-secondary btn-clear-search" title="مسح البحث">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary btn-refresh" id="refreshGrid" title="تحديث القائمة">
+                                    <i class="fas fa-sync-alt"></i>
+                                    <span class="d-none d-lg-inline">تحديث</span>
+                                </button>
+                                <a asp-action="Create" class="btn btn-primary" asp-require-permission="journal.create">
+                                    <i class="fas fa-plus me-1"></i>
+                                    إضافة قيد جديد
+                                </a>
+                            </div>
+                        </div>
+                        <div class="summary-section" aria-live="polite">
+                            <div class="summary-grid">
+                                <div class="summary-card">
+                                    <span class="summary-card__label">إجمالي القيود</span>
+                                    <span class="summary-card__value" id="summaryTotal">0</span>
+                                    <span class="summary-card__hint" id="summaryTotalStatus">—</span>
+                                </div>
+                                <div class="summary-card">
+                                    <span class="summary-card__label">القيود غير المتوازنة</span>
+                                    <span class="summary-card__value text-danger" id="summaryUnbalanced">0</span>
+                                    <span class="summary-card__hint">تنبيه لأي فروقات بين المدين والدائن</span>
+                                </div>
+                                <div class="summary-card">
+                                    <span class="summary-card__label">إجمالي المدين</span>
+                                    <span class="summary-card__value" id="summaryDebit">0</span>
+                                    <span class="summary-card__hint">المبالغ الإجمالية (مدين)</span>
+                                </div>
+                                <div class="summary-card">
+                                    <span class="summary-card__label">إجمالي الدائن</span>
+                                    <span class="summary-card__value" id="summaryCredit">0</span>
+                                    <span class="summary-card__hint">المبالغ الإجمالية (دائن)</span>
+                                </div>
+                                <div class="summary-card">
+                                    <span class="summary-card__label">نسبة التوازن</span>
+                                    <span class="summary-card__value" id="summaryBalanceRatio">0%</span>
+                                    <span class="summary-card__hint">قيود متوازنة من إجمالي القيود</span>
+                                </div>
+                            </div>
+                            <div class="summary-meta">
+                                <span><i class="fas fa-info-circle"></i> <span id="summaryInsight">لا توجد بيانات حتى الآن.</span></span>
+                                <span><i class="fas fa-clock"></i> آخر تحديث: <span id="lastRefreshAt">—</span></span>
+                            </div>
+                            <div class="insights-panel" id="insightsPanel" hidden>
+                                <strong>اقتراحات محسّنة:</strong>
+                                <ul class="mb-0" id="smartSuggestions"></ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body d-flex flex-column gap-3">
+                        <div class="filters-shell">
+                            <div class="filters-toolbar">
+                                <button class="btn btn-outline-secondary btn-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="true" aria-controls="filtersCollapse">
+                                    <i class="fas fa-sliders-h"></i>
+                                    خيارات متقدمة
+                                </button>
+                                <div class="form-check form-switch ms-auto">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="showUnbalancedOnly">
+                                    <label class="form-check-label" for="showUnbalancedOnly">عرض القيود غير المتوازنة فقط</label>
+                                </div>
+                                <span class="active-filters-count d-none" id="activeFiltersCount">0</span>
+                                <button type="button" id="resetFilters" class="btn btn-link text-decoration-none text-danger">
+                                    <i class="fas fa-undo"></i>
+                                    إعادة تعيين
+                                </button>
+                            </div>
+                            <div class="active-filters" id="activeFilters" aria-live="polite"></div>
+                            <div class="collapse show" id="filtersCollapse">
+                                <form id="filtersForm" class="row g-3 pt-3">
+                                    <div class="col-sm-6 col-lg-3">
+                                        <label for="fromDate" class="form-label">من تاريخ</label>
+                                        <input type="date" id="fromDate" class="form-control" />
+                                    </div>
+                                    <div class="col-sm-6 col-lg-3">
+                                        <label for="toDate" class="form-label">إلى تاريخ</label>
+                                        <input type="date" id="toDate" class="form-control" />
+                                    </div>
+                                    <div class="col-sm-6 col-lg-3">
+                                        <label for="branchFilter" class="form-label">الفرع</label>
+                                        <select id="branchFilter" class="form-select">
+                                            @foreach (var branch in Model.Branches)
+                                            {
+                                                <option value="@branch.Value">@branch.Text</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-sm-6 col-lg-3">
+                                        <label for="statusFilter" class="form-label">الحالة</label>
+                                        <select id="statusFilter" class="form-select">
+                                            <option value="">جميع الحالات</option>
+                                            @foreach (var status in Model.Statuses)
+                                            {
+                                                <option value="@status.Value">@status.Text</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-sm-6 col-lg-3">
+                                        <label for="groupBy" class="form-label">تجميع النتائج</label>
+                                        <select id="groupBy" class="form-select">
+                                            <option value="" selected>بدون تجميع</option>
+                                            <option value="BranchName">حسب الفرع</option>
+                                            <option value="StatusDisplay">حسب الحالة</option>
+                                            <option value="DateGroup">حسب الشهر</option>
+                                            <option value="Reference">حسب المرجع</option>
+                                        </select>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
 
-<div class="journal-index container-fluid">
-    <div class="card journal-shell shadow-sm">
-        <div class="card-header">
-            <div class="headline">
-                <div class="headline__title">
-                    <h3>
-                        <i class="fas fa-file-invoice"></i>
-                        <span>القيود المالية</span>
-                    </h3>
-                    <p>
-                        إدارة القيود بسهولة، مع نظرة فورية على التوازن والفلترة الذكية عبر جميع الحقول.
-                    </p>
-                </div>
-                <div class="headline__actions">
-                    <div class="search-shell">
-                        <label class="visually-hidden" for="quickSearch">بحث سريع</label>
-                        <div class="input-group" role="search">
-                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            <input type="search" id="quickSearch" class="form-control" placeholder="بحث سريع في جميع الأعمدة" aria-label="بحث سريع" />
-                            <button type="button" id="clearQuickSearch" class="btn btn-outline-secondary btn-clear-search" title="مسح البحث">
-                                <i class="fas fa-times"></i>
-                            </button>
+                        <div class="grid-wrapper">
+                            <div class="grid-caption">
+                                <div class="result-meta">
+                                    <i class="fas fa-database text-primary"></i>
+                                    <span class="result-info" id="gridResultInfo">لا توجد بيانات بعد</span>
+                                </div>
+                                <div class="result-meta">
+                                    <span class="badge bg-light text-dark" id="groupingInfo" hidden>العرض مجمع</span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <label for="pageSize" class="form-label mb-0 small text-muted">عناصر في الصفحة</label>
+                                        <select id="pageSize" class="form-select form-select-sm w-auto">
+                                            <option value="10">10</option>
+                                            <option value="25" selected>25</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="grid-table">
+                                <div id="tableLoadingOverlay" class="loading-overlay" hidden>
+                                    <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+                                    <span>جاري تحميل البيانات...</span>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0" id="journalEntriesTable">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th scope="col" class="sortable" data-sort="Number" tabindex="0" aria-sort="none" title="ترتيب">
+                                                    رقم القيد
+                                                    <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                                </th>
+                                                <th scope="col" class="sortable" data-sort="Date" tabindex="0" aria-sort="none" title="ترتيب">
+                                                    التاريخ
+                                                    <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                                </th>
+                                                <th scope="col" class="sortable" data-sort="Description" tabindex="0" aria-sort="none" title="ترتيب">
+                                                    الوصف
+                                                    <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                                </th>
+                                                <th scope="col" class="sortable" data-sort="Reference" tabindex="0" aria-sort="none" title="ترتيب">
+                                                    المرجع
+                                                    <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                                </th>
+                                                <th scope="col" class="sortable" data-sort="BranchName" tabindex="0" aria-sort="none" title="ترتيب">
+                                                    الفرع
+                                                    <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                                </th>
+                                                <th scope="col" class="sortable" data-sort="CreatedByName" tabindex="0" aria-sort="none" title="ترتيب">
+                                                    مدخل القيد
+                                                    <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                                </th>
+                                                <th scope="col" class="text-end sortable" data-sort="TotalDebit" tabindex="0" aria-sort="none" title="ترتيب">
+                                                    إجمالي المدين
+                                                    <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                                </th>
+                                                <th scope="col" class="text-end sortable" data-sort="TotalCredit" tabindex="0" aria-sort="none" title="ترتيب">
+                                                    إجمالي الدائن
+                                                    <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                                </th>
+                                                <th scope="col" class="text-center sortable" data-sort="LinesCount" tabindex="0" aria-sort="none" title="ترتيب">
+                                                    عدد البنود
+                                                    <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                                </th>
+                                                <th scope="col" class="text-center sortable" data-sort="StatusDisplay" tabindex="0" aria-sort="none" title="ترتيب">
+                                                    الحالة
+                                                    <span class="sort-indicator"><i class="fas fa-sort"></i></span>
+                                                </th>
+                                                <th scope="col" class="text-center">
+                                                    الإجراءات
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="journalEntriesBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div id="emptyState" class="empty-state" hidden>
+                                <i class="fas fa-folder-open fa-2x mb-2 text-primary" aria-hidden="true"></i>
+                                <p class="mb-0">لا توجد قيود مطابقة للمعايير الحالية.</p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2 small text-muted">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span>استخدم رؤوس الأعمدة للترتيب أو شريط البحث للتصفية السريعة.</span>
+                                </div>
+                                <nav id="paginationNav" aria-label="صفحات القيود" class="d-none">
+                                    <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+                                </nav>
+                            </div>
                         </div>
-                    </div>
-                    <button type="button" class="btn btn-outline-primary btn-refresh" id="refreshGrid" title="تحديث القائمة">
-                        <i class="fas fa-sync-alt"></i>
-                        <span class="d-none d-lg-inline">تحديث</span>
-                    </button>
-                    <a asp-action="Create" class="btn btn-primary" asp-require-permission="journal.create">
-                        <i class="fas fa-plus me-1"></i>
-                        إضافة قيد جديد
-                    </a>
-                </div>
-            </div>
-            <div class="summary-section" aria-live="polite">
-                <div class="summary-grid">
-                    <div class="summary-card">
-                        <span class="summary-card__label">إجمالي القيود</span>
-                        <span class="summary-card__value" id="summaryTotal">0</span>
-                        <span class="summary-card__hint" id="summaryTotalStatus">—</span>
-                    </div>
-                    <div class="summary-card">
-                        <span class="summary-card__label">القيود غير المتوازنة</span>
-                        <span class="summary-card__value text-danger" id="summaryUnbalanced">0</span>
-                        <span class="summary-card__hint">تنبيه لأي فروقات بين المدين والدائن</span>
-                    </div>
-                    <div class="summary-card">
-                        <span class="summary-card__label">إجمالي المدين</span>
-                        <span class="summary-card__value" id="summaryDebit">0</span>
-                        <span class="summary-card__hint">المبالغ الإجمالية (مدين)</span>
-                    </div>
-                    <div class="summary-card">
-                        <span class="summary-card__label">إجمالي الدائن</span>
-                        <span class="summary-card__value" id="summaryCredit">0</span>
-                        <span class="summary-card__hint">المبالغ الإجمالية (دائن)</span>
-                    </div>
-                    <div class="summary-card">
-                        <span class="summary-card__label">نسبة التوازن</span>
-                        <span class="summary-card__value" id="summaryBalanceRatio">0%</span>
-                        <span class="summary-card__hint">قيود متوازنة من إجمالي القيود</span>
-                    </div>
-                </div>
-                <div class="summary-meta">
-                    <span><i class="fas fa-info-circle"></i> <span id="summaryInsight">لا توجد بيانات حتى الآن.</span></span>
-                    <span><i class="fas fa-clock"></i> آخر تحديث: <span id="lastRefreshAt">—</span></span>
-                </div>
-                <div class="insights-panel" id="insightsPanel" hidden>
-                    <strong>اقتراحات محسّنة:</strong>
-                    <ul class="mb-0" id="smartSuggestions"></ul>
-                </div>
-            </div>
-        </div>
-        <div class="card-body d-flex flex-column gap-3">
-            <div class="filters-shell">
-                <div class="filters-toolbar">
-                    <button class="btn btn-outline-secondary btn-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="true" aria-controls="filtersCollapse">
-                        <i class="fas fa-sliders-h"></i>
-                        خيارات متقدمة
-                    </button>
-                    <div class="form-check form-switch ms-auto">
-                        <input class="form-check-input" type="checkbox" role="switch" id="showUnbalancedOnly">
-                        <label class="form-check-label" for="showUnbalancedOnly">عرض القيود غير المتوازنة فقط</label>
-                    </div>
-                    <span class="active-filters-count d-none" id="activeFiltersCount">0</span>
-                    <button type="button" id="resetFilters" class="btn btn-link text-decoration-none text-danger">
-                        <i class="fas fa-undo"></i>
-                        إعادة تعيين
-                    </button>
-                </div>
-                <div class="active-filters" id="activeFilters" aria-live="polite"></div>
-                <div class="collapse show" id="filtersCollapse">
-                    <form id="filtersForm" class="row g-3 pt-3">
-                        <div class="col-sm-6 col-lg-3">
-                            <label for="fromDate" class="form-label">من تاريخ</label>
-                            <input type="date" id="fromDate" class="form-control" />
-                        </div>
-                        <div class="col-sm-6 col-lg-3">
-                            <label for="toDate" class="form-label">إلى تاريخ</label>
-                            <input type="date" id="toDate" class="form-control" />
-                        </div>
-                        <div class="col-sm-6 col-lg-3">
-                            <label for="branchFilter" class="form-label">الفرع</label>
-                            <select id="branchFilter" class="form-select">
-                                @foreach (var branch in Model.Branches)
-                                {
-                                    <option value="@branch.Value">@branch.Text</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-sm-6 col-lg-3">
-                            <label for="statusFilter" class="form-label">الحالة</label>
-                            <select id="statusFilter" class="form-select">
-                                <option value="">جميع الحالات</option>
-                                @foreach (var status in Model.Statuses)
-                                {
-                                    <option value="@status.Value">@status.Text</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-sm-6 col-lg-3">
-                            <label for="groupBy" class="form-label">تجميع النتائج</label>
-                            <select id="groupBy" class="form-select">
-                                <option value="" selected>بدون تجميع</option>
-                                <option value="BranchName">حسب الفرع</option>
-                                <option value="StatusDisplay">حسب الحالة</option>
-                                <option value="DateGroup">حسب الشهر</option>
-                                <option value="Reference">حسب المرجع</option>
-                            </select>
-                        </div>
-                    </form>
-                </div>
-            </div>
 
-            <div class="grid-wrapper">
-                <div class="grid-caption">
-                    <div class="result-meta">
-                        <i class="fas fa-database text-primary"></i>
-                        <span class="result-info" id="gridResultInfo">لا توجد بيانات بعد</span>
+                        <form id="antiForgeryForm" asp-action="Post" method="post" class="d-none">
+                            @Html.AntiForgeryToken()
+                        </form>
                     </div>
-                    <div class="result-meta">
-                        <span class="badge bg-light text-dark" id="groupingInfo" hidden>العرض مجمع</span>
-                        <div class="d-flex align-items-center gap-2">
-                            <label for="pageSize" class="form-label mb-0 small text-muted">عناصر في الصفحة</label>
-                            <select id="pageSize" class="form-select form-select-sm w-auto">
-                                <option value="10">10</option>
-                                <option value="25" selected>25</option>
-                                <option value="50">50</option>
-                                <option value="100">100</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="grid-table">
-                    <div id="tableLoadingOverlay" class="loading-overlay" hidden>
-                        <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
-                        <span>جاري تحميل البيانات...</span>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0" id="journalEntriesTable">
-                            <thead class="table-light">
-                                <tr>
-                                    <th scope="col" class="sortable" data-sort="Number" tabindex="0" aria-sort="none" title="ترتيب">
-                                        رقم القيد
-                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
-                                    </th>
-                                    <th scope="col" class="sortable" data-sort="Date" tabindex="0" aria-sort="none" title="ترتيب">
-                                        التاريخ
-                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
-                                    </th>
-                                    <th scope="col" class="sortable" data-sort="Description" tabindex="0" aria-sort="none" title="ترتيب">
-                                        الوصف
-                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
-                                    </th>
-                                    <th scope="col" class="sortable" data-sort="Reference" tabindex="0" aria-sort="none" title="ترتيب">
-                                        المرجع
-                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
-                                    </th>
-                                    <th scope="col" class="sortable" data-sort="BranchName" tabindex="0" aria-sort="none" title="ترتيب">
-                                        الفرع
-                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
-                                    </th>
-                                    <th scope="col" class="sortable" data-sort="CreatedByName" tabindex="0" aria-sort="none" title="ترتيب">
-                                        مدخل القيد
-                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
-                                    </th>
-                                    <th scope="col" class="text-end sortable" data-sort="TotalDebit" tabindex="0" aria-sort="none" title="ترتيب">
-                                        إجمالي المدين
-                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
-                                    </th>
-                                    <th scope="col" class="text-end sortable" data-sort="TotalCredit" tabindex="0" aria-sort="none" title="ترتيب">
-                                        إجمالي الدائن
-                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
-                                    </th>
-                                    <th scope="col" class="text-center sortable" data-sort="LinesCount" tabindex="0" aria-sort="none" title="ترتيب">
-                                        عدد البنود
-                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
-                                    </th>
-                                    <th scope="col" class="text-center sortable" data-sort="StatusDisplay" tabindex="0" aria-sort="none" title="ترتيب">
-                                        الحالة
-                                        <span class="sort-indicator"><i class="fas fa-sort"></i></span>
-                                    </th>
-                                    <th scope="col" class="text-center">
-                                        الإجراءات
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody id="journalEntriesBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-                <div id="emptyState" class="empty-state" hidden>
-                    <i class="fas fa-folder-open fa-2x mb-2 text-primary" aria-hidden="true"></i>
-                    <p class="mb-0">لا توجد قيود مطابقة للمعايير الحالية.</p>
-                </div>
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div class="d-flex align-items-center gap-2 small text-muted">
-                        <i class="fas fa-info-circle"></i>
-                        <span>استخدم رؤوس الأعمدة للترتيب أو شريط البحث للتصفية السريعة.</span>
-                    </div>
-                    <nav id="paginationNav" aria-label="صفحات القيود" class="d-none">
-                        <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
-                    </nav>
                 </div>
             </div>
-
-            <form id="antiForgeryForm" asp-action="Post" method="post" class="d-none">
-                @Html.AntiForgeryToken()
-            </form>
         </div>
     </div>
 </div>
