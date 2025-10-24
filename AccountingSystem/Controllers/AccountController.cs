@@ -51,12 +51,6 @@ namespace AccountingSystem.Controllers
 
             if (ModelState.IsValid)
             {
-                if (!model.LocationConsent || !model.Latitude.HasValue || !model.Longitude.HasValue)
-                {
-                    ModelState.AddModelError(string.Empty, "يجب السماح بالوصول إلى الموقع لإتمام تسجيل الدخول.");
-                    return View(model);
-                }
-
                 var user = await _userManager.FindByEmailAsync(model.Email);
                 if (user != null && user.IsActive)
                 {
