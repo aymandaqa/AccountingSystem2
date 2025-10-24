@@ -53,9 +53,23 @@ namespace AccountingSystem.Controllers
             if (accounts.Count == 0)
                 return NotFound();
 
-            var selectedAccount = accounts.FirstOrDefault(a => a.Id == (accountId ?? accounts.First().Id));
-            if (selectedAccount == null)
-                return NotFound();
+            var pendingAccountIds = await _context.CashBoxClosures
+                .Where(c => c.UserId == user.Id && c.Status == CashBoxClosureStatus.Pending)
+                .Select(c => c.AccountId)
+                .ToListAsync();
+
+            var availableAccounts = accounts
+                .Where(a => !pendingAccountIds.Contains(a.Id))
+                .ToList();
+
+            if (availableAccounts.Count == 0)
+            {
+                TempData["Error"] = "لديك طلب جرد قيد الانتظار لجميع حسابات الصندوق المصرح بها. يرجى انتظار معالجتها قبل إنشاء طلب جديد.";
+                return RedirectToAction(nameof(MyClosures));
+            }
+
+            var selectedAccount = availableAccounts.FirstOrDefault(a => a.Id == (accountId ?? availableAccounts.First().Id))
+                ?? availableAccounts.First();
 
             var today = DateTime.Today;
             var todayTransactions = await _context.JournalEntryLines
@@ -77,7 +91,7 @@ namespace AccountingSystem.Controllers
                 CumulativeBalance = selectedAccount.CurrentBalance
             };
 
-            await PopulateAccountDataAsync(model, accounts, selectedAccount);
+            await PopulateAccountDataAsync(model, availableAccounts, selectedAccount);
 
             return View(model);
         }
@@ -104,9 +118,24 @@ namespace AccountingSystem.Controllers
                 .Select(g => g.First()!)
                 .ToList();
 
-            var account = accounts.FirstOrDefault(a => a.Id == model.AccountId);
+            var pendingAccountIds = await _context.CashBoxClosures
+                .Where(c => c.UserId == user.Id && c.Status == CashBoxClosureStatus.Pending)
+                .Select(c => c.AccountId)
+                .ToListAsync();
+
+            var availableAccounts = accounts
+                .Where(a => !pendingAccountIds.Contains(a.Id))
+                .ToList();
+
+            if (availableAccounts.Count == 0)
+            {
+                TempData["Error"] = "لديك طلب جرد قيد الانتظار لجميع حسابات الصندوق المصرح بها. يرجى انتظار معالجتها قبل إنشاء طلب جديد.";
+                return RedirectToAction(nameof(MyClosures));
+            }
+
+            var account = availableAccounts.FirstOrDefault(a => a.Id == model.AccountId);
             if (account == null)
-                ModelState.AddModelError("AccountId", "الحساب غير موجود");
+                ModelState.AddModelError("AccountId", "الحساب غير موجود أو لديه طلب جرد قيد الانتظار");
 
             decimal todayTransactions = 0m;
             decimal openingBalance = 0m;
@@ -124,6 +153,19 @@ namespace AccountingSystem.Controllers
                 openingBalance = account.CurrentBalance - todayTransactions;
             }
 
+            if (account != null)
+            {
+                var hasPendingClosure = await _context.CashBoxClosures
+                    .AnyAsync(c => c.UserId == user.Id
+                                   && c.AccountId == account.Id
+                                   && c.Status == CashBoxClosureStatus.Pending);
+
+                if (hasPendingClosure)
+                {
+                    ModelState.AddModelError(string.Empty, "لديك طلب جرد قيد الانتظار لهذا الصندوق. يرجى انتظار معالجته قبل إنشاء طلب جديد.");
+                }
+            }
+
             if (!ModelState.IsValid)
             {
                 if (account != null)
@@ -137,7 +179,7 @@ namespace AccountingSystem.Controllers
                     model.CurrencyCode = account.Currency?.Code ?? string.Empty;
                 }
 
-                await PopulateAccountDataAsync(model, accounts, account);
+                await PopulateAccountDataAsync(model, availableAccounts, account);
                 return View(model);
             }
 
@@ -165,7 +207,7 @@ namespace AccountingSystem.Controllers
                         model.CurrencyId = account.CurrencyId;
                         model.CurrencyCode = account.Currency?.Code ?? string.Empty;
                     }
-                    await PopulateAccountDataAsync(model, accounts, account);
+                    await PopulateAccountDataAsync(model, availableAccounts, account);
                     return View(model);
                 }
 
@@ -183,7 +225,7 @@ namespace AccountingSystem.Controllers
                         model.CurrencyId = account.CurrencyId;
                         model.CurrencyCode = account.Currency?.Code ?? string.Empty;
                     }
-                    await PopulateAccountDataAsync(model, accounts, account);
+                    await PopulateAccountDataAsync(model, availableAccounts, account);
                     return View(model);
                 }
 
