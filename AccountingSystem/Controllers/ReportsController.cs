@@ -29,11 +29,13 @@ namespace AccountingSystem.Controllers
     public class ReportsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly RoadFnDbContext _roadContext;
         private readonly ICurrencyService _currencyService;
 
-        public ReportsController(ApplicationDbContext context, ICurrencyService currencyService)
+        public ReportsController(ApplicationDbContext context, RoadFnDbContext roadContext, ICurrencyService currencyService)
         {
             _context = context;
+            _roadContext = roadContext;
             _currencyService = currencyService;
         }
 
@@ -646,6 +648,381 @@ namespace AccountingSystem.Controllers
                 CashConversionCycleYearToDate = cashConversionCycleYear,
                 OperatingExpenseBreakdown = operatingExpenseBreakdown,
                 IncomeStatement = incomeStatement
+            };
+
+            return View(viewModel);
+        }
+
+        [Authorize(Policy = "reports.view")]
+        public async Task<IActionResult> UserDailyTransactions(DateTime? date)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Challenge();
+            }
+
+            var selectedDate = (date ?? DateTime.Today).Date;
+            var endDate = selectedDate.AddDays(1);
+
+            var journalEntries = await _context.JournalEntries
+                .AsNoTracking()
+                .Where(e => e.CreatedById == userId)
+                .Where(e => e.Date >= selectedDate && e.Date < endDate)
+                .Include(e => e.Lines)
+                    .ThenInclude(l => l.Account)
+                .Include(e => e.Lines)
+                    .ThenInclude(l => l.CostCenter)
+                .ToListAsync();
+
+            var groupedEntries = journalEntries
+                .GroupBy(e => string.IsNullOrWhiteSpace(e.Reference) ? $"JE:{e.Id}" : e.Reference!.Trim())
+                .ToList();
+
+            var receiptVoucherIds = new HashSet<int>();
+            var disbursementVoucherIds = new HashSet<int>();
+            var paymentVoucherIds = new HashSet<int>();
+            var salaryPaymentIds = new HashSet<int>();
+            var employeeAdvanceIds = new HashSet<int>();
+            var payrollBatchIds = new HashSet<int>();
+            var cashClosureIds = new HashSet<int>();
+            var driverInvoiceIds = new HashSet<long>();
+            var businessPaymentIds = new HashSet<long>();
+
+            foreach (var group in groupedEntries)
+            {
+                var key = group.Key;
+                if (TryExtractId(key, "RCV:", out var id) && id <= int.MaxValue)
+                {
+                    receiptVoucherIds.Add((int)id);
+                    continue;
+                }
+
+                if (TryExtractId(key, "DSBV:", out id) && id <= int.MaxValue)
+                {
+                    disbursementVoucherIds.Add((int)id);
+                    continue;
+                }
+
+                if (TryExtractId(key, "سند مصاريف:", out id) && id <= int.MaxValue)
+                {
+                    paymentVoucherIds.Add((int)id);
+                    continue;
+                }
+
+                if (TryExtractId(key, "سند دفع وكيل:", out id) && id <= int.MaxValue)
+                {
+                    paymentVoucherIds.Add((int)id);
+                    continue;
+                }
+
+                if (TryExtractId(key, "SALPAY:", out id) && id <= int.MaxValue)
+                {
+                    salaryPaymentIds.Add((int)id);
+                    continue;
+                }
+
+                if (TryExtractId(key, "EMPADV:", out id) && id <= int.MaxValue)
+                {
+                    employeeAdvanceIds.Add((int)id);
+                    continue;
+                }
+
+                if (TryExtractId(key, "PR-", out id) && id <= int.MaxValue)
+                {
+                    payrollBatchIds.Add((int)id);
+                    continue;
+                }
+
+                if (TryExtractId(key, "CashBoxClosure:", out id) && id <= int.MaxValue)
+                {
+                    cashClosureIds.Add((int)id);
+                    continue;
+                }
+
+                if (TryExtractId(key, "DriverInvoice:", out id))
+                {
+                    driverInvoiceIds.Add(id);
+                    continue;
+                }
+
+                if (TryExtractId(key, "PaymenToBusiness:", out id))
+                {
+                    businessPaymentIds.Add(id);
+                }
+            }
+
+            var receiptVouchers = receiptVoucherIds.Count == 0
+                ? new Dictionary<int, ReceiptVoucher>()
+                : await _context.ReceiptVouchers
+                    .AsNoTracking()
+                    .Where(v => receiptVoucherIds.Contains(v.Id))
+                    .Include(v => v.Supplier)
+                    .Include(v => v.Account).ThenInclude(a => a.Currency)
+                    .Include(v => v.PaymentAccount).ThenInclude(a => a.Currency)
+                    .Include(v => v.Currency)
+                    .ToDictionaryAsync(v => v.Id);
+
+            var disbursementVouchers = disbursementVoucherIds.Count == 0
+                ? new Dictionary<int, DisbursementVoucher>()
+                : await _context.DisbursementVouchers
+                    .AsNoTracking()
+                    .Where(v => disbursementVoucherIds.Contains(v.Id))
+                    .Include(v => v.Supplier)
+                    .Include(v => v.Account).ThenInclude(a => a.Currency)
+                    .Include(v => v.Currency)
+                    .ToDictionaryAsync(v => v.Id);
+
+            var paymentVouchers = paymentVoucherIds.Count == 0
+                ? new Dictionary<int, PaymentVoucher>()
+                : await _context.PaymentVouchers
+                    .AsNoTracking()
+                    .Where(v => paymentVoucherIds.Contains(v.Id))
+                    .Include(v => v.Supplier).ThenInclude(s => s.Account).ThenInclude(a => a.Currency)
+                    .Include(v => v.Agent).ThenInclude(a => a.Account).ThenInclude(ac => ac.Currency)
+                    .Include(v => v.Account).ThenInclude(a => a.Currency)
+                    .Include(v => v.Currency)
+                    .Include(v => v.CreatedBy).ThenInclude(u => u.PaymentAccount).ThenInclude(a => a.Currency)
+                    .ToDictionaryAsync(v => v.Id);
+
+            var salaryPayments = salaryPaymentIds.Count == 0
+                ? new Dictionary<int, SalaryPayment>()
+                : await _context.SalaryPayments
+                    .AsNoTracking()
+                    .Where(p => salaryPaymentIds.Contains(p.Id))
+                    .Include(p => p.Employee).ThenInclude(e => e.Branch)
+                    .Include(p => p.PaymentAccount).ThenInclude(a => a.Currency)
+                    .Include(p => p.Currency)
+                    .Include(p => p.Branch)
+                    .ToDictionaryAsync(p => p.Id);
+
+            var employeeAdvances = employeeAdvanceIds.Count == 0
+                ? new Dictionary<int, EmployeeAdvance>()
+                : await _context.EmployeeAdvances
+                    .AsNoTracking()
+                    .Where(a => employeeAdvanceIds.Contains(a.Id))
+                    .Include(a => a.Employee).ThenInclude(e => e.Branch)
+                    .Include(a => a.PaymentAccount).ThenInclude(p => p.Currency)
+                    .Include(a => a.Currency)
+                    .Include(a => a.Branch)
+                    .ToDictionaryAsync(a => a.Id);
+
+            var payrollBatches = payrollBatchIds.Count == 0
+                ? new Dictionary<int, PayrollBatch>()
+                : await _context.PayrollBatches
+                    .AsNoTracking()
+                    .Where(p => payrollBatchIds.Contains(p.Id))
+                    .Include(p => p.Branch)
+                    .Include(p => p.PaymentAccount).ThenInclude(a => a.Currency)
+                    .ToDictionaryAsync(p => p.Id);
+
+            var cashClosures = cashClosureIds.Count == 0
+                ? new Dictionary<int, CashBoxClosure>()
+                : await _context.CashBoxClosures
+                    .AsNoTracking()
+                    .Where(c => cashClosureIds.Contains(c.Id))
+                    .Include(c => c.User)
+                    .Include(c => c.Account).ThenInclude(a => a.Currency)
+                    .Include(c => c.Branch)
+                    .ToDictionaryAsync(c => c.Id);
+
+            var driverPayments = driverInvoiceIds.Count == 0
+                ? new Dictionary<long, DriverPaymentHeaderInfo>()
+                : await _roadContext.DriverPaymentHeader
+                    .AsNoTracking()
+                    .Where(h => driverInvoiceIds.Contains(h.Id))
+                    .Select(h => new DriverPaymentHeaderInfo
+                    {
+                        Id = h.Id,
+                        DriverId = h.DriverId,
+                        PaymentDate = h.PaymentDate,
+                        PaymentValue = h.PaymentValue,
+                        TotalCod = h.TotalCod,
+                        DriverCommission = h.DriverComision,
+                        SumOfCommission = h.SumOfComison
+                    })
+                    .ToDictionaryAsync(h => h.Id);
+
+            var businessPayments = businessPaymentIds.Count == 0
+                ? new Dictionary<long, BusinessPaymentHeaderInfo>()
+                : await _roadContext.BisnessUserPaymentHeader
+                    .AsNoTracking()
+                    .Where(h => businessPaymentIds.Contains(h.Id))
+                    .Select(h => new BusinessPaymentHeaderInfo
+                    {
+                        Id = h.Id,
+                        UserId = h.UserId,
+                        PaymentValue = h.PaymentValue,
+                        PaymentDate = h.PaymentDate,
+                        StatusId = h.StatusId
+                    })
+                    .ToDictionaryAsync(h => h.Id);
+
+            var driverIds = driverPayments.Values
+                .Where(h => h.DriverId.HasValue)
+                .Select(h => h.DriverId!.Value)
+                .Distinct()
+                .ToList();
+
+            var driverNames = driverIds.Count == 0
+                ? new Dictionary<int, string>()
+                : await _roadContext.Drives
+                    .AsNoTracking()
+                    .Where(d => driverIds.Contains(d.Id))
+                    .Select(d => new
+                    {
+                        d.Id,
+                        Name = string.Join(' ', new[] { d.FirstName, d.SecoundName, d.FamilyName }
+                            .Where(part => !string.IsNullOrWhiteSpace(part)))
+                    })
+                    .ToDictionaryAsync(d => d.Id, d => string.IsNullOrWhiteSpace(d.Name) ? $"سائق {d.Id}" : d.Name);
+
+            var businessUserIds = businessPayments.Values
+                .Where(h => h.UserId.HasValue)
+                .Select(h => h.UserId!.Value)
+                .Distinct()
+                .ToList();
+
+            var businessUserNames = businessUserIds.Count == 0
+                ? new Dictionary<int, string>()
+                : await _roadContext.Users
+                    .AsNoTracking()
+                    .Where(u => businessUserIds.Contains(u.Id))
+                    .Select(u => new
+                    {
+                        u.Id,
+                        Name = string.Join(' ', new[] { u.FirstName, u.LastName }
+                            .Where(part => !string.IsNullOrWhiteSpace(part)))
+                    })
+                    .ToDictionaryAsync(u => u.Id, u => string.IsNullOrWhiteSpace(u.Name) ? $"مستخدم {u.Id}" : u.Name);
+
+            var documents = new Dictionary<string, UserDailyTransactionDocumentInfo>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var group in groupedEntries)
+            {
+                var key = group.Key;
+
+                if (TryExtractId(key, "RCV:", out var id) && id <= int.MaxValue && receiptVouchers.TryGetValue((int)id, out var receiptVoucher))
+                {
+                    documents[key] = BuildReceiptVoucherDocument(receiptVoucher);
+                    continue;
+                }
+
+                if (TryExtractId(key, "DSBV:", out id) && id <= int.MaxValue && disbursementVouchers.TryGetValue((int)id, out var disbursementVoucher))
+                {
+                    documents[key] = BuildDisbursementVoucherDocument(disbursementVoucher);
+                    continue;
+                }
+
+                if (TryExtractId(key, "سند مصاريف:", out id) && id <= int.MaxValue && paymentVouchers.TryGetValue((int)id, out var expenseVoucher))
+                {
+                    documents[key] = BuildPaymentVoucherDocument(expenseVoucher, "سند مصاريف");
+                    continue;
+                }
+
+                if (TryExtractId(key, "سند دفع وكيل:", out id) && id <= int.MaxValue && paymentVouchers.TryGetValue((int)id, out var agentVoucher))
+                {
+                    documents[key] = BuildPaymentVoucherDocument(agentVoucher, "سند دفع وكيل");
+                    continue;
+                }
+
+                if (TryExtractId(key, "SALPAY:", out id) && id <= int.MaxValue && salaryPayments.TryGetValue((int)id, out var salaryPayment))
+                {
+                    documents[key] = BuildSalaryPaymentDocument(salaryPayment);
+                    continue;
+                }
+
+                if (TryExtractId(key, "EMPADV:", out id) && id <= int.MaxValue && employeeAdvances.TryGetValue((int)id, out var advance))
+                {
+                    documents[key] = BuildEmployeeAdvanceDocument(advance);
+                    continue;
+                }
+
+                if (TryExtractId(key, "PR-", out id) && id <= int.MaxValue && payrollBatches.TryGetValue((int)id, out var payrollBatch))
+                {
+                    documents[key] = BuildPayrollBatchDocument(payrollBatch);
+                    continue;
+                }
+
+                if (TryExtractId(key, "CashBoxClosure:", out id) && id <= int.MaxValue && cashClosures.TryGetValue((int)id, out var closure))
+                {
+                    documents[key] = BuildCashClosureDocument(closure);
+                    continue;
+                }
+
+                if (TryExtractId(key, "DriverInvoice:", out id) && driverPayments.TryGetValue(id, out var driverPayment))
+                {
+                    documents[key] = BuildDriverPaymentDocument(driverPayment, driverNames);
+                    continue;
+                }
+
+                if (TryExtractId(key, "PaymenToBusiness:", out id) && businessPayments.TryGetValue(id, out var businessPayment))
+                {
+                    documents[key] = BuildBusinessPaymentDocument(businessPayment, businessUserNames);
+                }
+            }
+
+            var items = groupedEntries
+                .Select(group =>
+                {
+                    var orderedEntries = group
+                        .OrderByDescending(e => e.Date)
+                        .ThenByDescending(e => e.CreatedAt)
+                        .ToList();
+
+                    var firstEntry = orderedEntries.First();
+
+                    var entryViewModels = orderedEntries
+                        .Select(entry => new UserDailyTransactionEntryViewModel
+                        {
+                            JournalEntryId = entry.Id,
+                            Number = entry.Number,
+                            Date = entry.Date,
+                            Description = entry.Description,
+                            TotalDebit = entry.TotalDebit,
+                            TotalCredit = entry.TotalCredit,
+                            Lines = entry.Lines
+                                .OrderByDescending(l => l.DebitAmount)
+                                .ThenBy(l => l.CreditAmount)
+                                .Select(line => new UserDailyTransactionLineViewModel
+                                {
+                                    AccountCode = line.Account.Code,
+                                    AccountName = line.Account.NameAr,
+                                    Debit = line.DebitAmount,
+                                    Credit = line.CreditAmount,
+                                    CostCenter = line.CostCenter == null
+                                        ? null
+                                        : $"{line.CostCenter.Code} - {line.CostCenter.NameAr}",
+                                    Notes = string.IsNullOrWhiteSpace(line.Description) ? line.Reference : line.Description
+                                })
+                                .ToList()
+                        })
+                        .ToList();
+
+                    var item = new UserDailyTransactionReportItem
+                    {
+                        Key = group.Key,
+                        Reference = string.IsNullOrWhiteSpace(firstEntry.Reference) ? null : firstEntry.Reference,
+                        TypeDisplay = GetTransactionType(firstEntry.Reference, firstEntry.Description),
+                        Date = firstEntry.Date,
+                        CreatedAt = firstEntry.CreatedAt,
+                        Description = firstEntry.Description,
+                        TotalDebit = group.Sum(e => e.TotalDebit),
+                        TotalCredit = group.Sum(e => e.TotalCredit),
+                        Entries = entryViewModels,
+                        Document = documents.TryGetValue(group.Key, out var documentInfo) ? documentInfo : null
+                    };
+
+                    return item;
+                })
+                .OrderByDescending(i => i.Date)
+                .ThenByDescending(i => i.CreatedAt)
+                .ToList();
+
+            var viewModel = new UserDailyTransactionReportViewModel
+            {
+                SelectedDate = selectedDate,
+                Items = items
             };
 
             return View(viewModel);
@@ -3441,6 +3818,26 @@ namespace AccountingSystem.Controllers
             return View(viewModel);
         }
 
+        private class DriverPaymentHeaderInfo
+        {
+            public long Id { get; set; }
+            public int? DriverId { get; set; }
+            public DateTime? PaymentDate { get; set; }
+            public decimal? PaymentValue { get; set; }
+            public decimal? TotalCod { get; set; }
+            public decimal? DriverCommission { get; set; }
+            public decimal? SumOfCommission { get; set; }
+        }
+
+        private class BusinessPaymentHeaderInfo
+        {
+            public long Id { get; set; }
+            public int? UserId { get; set; }
+            public decimal? PaymentValue { get; set; }
+            public DateTime? PaymentDate { get; set; }
+            public int? StatusId { get; set; }
+        }
+
         private async Task<List<SelectListItem>> GetBranchesSelectList()
         {
             return await _context.Branches
@@ -3578,6 +3975,338 @@ namespace AccountingSystem.Controllers
             }
 
             return viewModel;
+        }
+
+        private static bool TryExtractId(string reference, string prefix, out long id)
+        {
+            id = 0;
+            if (string.IsNullOrWhiteSpace(reference))
+            {
+                return false;
+            }
+
+            var trimmed = reference.Trim();
+            if (!trimmed.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var remainder = trimmed.Substring(prefix.Length).Trim();
+            if (string.IsNullOrEmpty(remainder))
+            {
+                return false;
+            }
+
+            var digits = new string(remainder.TakeWhile(char.IsDigit).ToArray());
+            if (string.IsNullOrEmpty(digits))
+            {
+                return false;
+            }
+
+            return long.TryParse(digits, out id);
+        }
+
+        private static string GetTransactionType(string? reference, string description)
+        {
+            if (string.IsNullOrWhiteSpace(reference))
+            {
+                return "قيد محاسبي يدوي";
+            }
+
+            var trimmed = reference.Trim();
+
+            if (trimmed.StartsWith("RCV:", StringComparison.OrdinalIgnoreCase))
+            {
+                return "سند قبض";
+            }
+
+            if (trimmed.StartsWith("DSBV:", StringComparison.OrdinalIgnoreCase))
+            {
+                return "سند صرف";
+            }
+
+            if (trimmed.StartsWith("سند مصاريف:", StringComparison.Ordinal))
+            {
+                return "سند مصاريف";
+            }
+
+            if (trimmed.StartsWith("سند دفع وكيل:", StringComparison.Ordinal))
+            {
+                return "سند دفع وكيل";
+            }
+
+            if (trimmed.StartsWith("SALPAY:", StringComparison.OrdinalIgnoreCase))
+            {
+                return "دفع راتب";
+            }
+
+            if (trimmed.StartsWith("EMPADV:", StringComparison.OrdinalIgnoreCase))
+            {
+                return "سلفة موظف";
+            }
+
+            if (trimmed.StartsWith("PR-", StringComparison.OrdinalIgnoreCase))
+            {
+                return "دفعة رواتب";
+            }
+
+            if (trimmed.StartsWith("CashBoxClosure:", StringComparison.OrdinalIgnoreCase))
+            {
+                return "إقفال صندوق";
+            }
+
+            if (trimmed.StartsWith("DriverInvoice:", StringComparison.OrdinalIgnoreCase))
+            {
+                return "فاتورة سائق";
+            }
+
+            if (trimmed.StartsWith("PaymenToBusiness:", StringComparison.OrdinalIgnoreCase))
+            {
+                return "دفعة بزنس";
+            }
+
+            if (trimmed.StartsWith("ASSET:", StringComparison.OrdinalIgnoreCase))
+            {
+                return "عملية أصل";
+            }
+
+            if (trimmed.StartsWith("PAYV:", StringComparison.OrdinalIgnoreCase))
+            {
+                return "سند نقدي";
+            }
+
+            return "حركة محاسبية";
+        }
+
+        private static string FormatAmount(decimal? value, string? currencyCode = null)
+        {
+            if (!value.HasValue)
+            {
+                return "-";
+            }
+
+            var formatted = value.Value.ToString("N2");
+            return string.IsNullOrWhiteSpace(currencyCode)
+                ? formatted
+                : $"{formatted} {currencyCode}";
+        }
+
+        private static UserDailyTransactionDocumentInfo BuildReceiptVoucherDocument(ReceiptVoucher voucher)
+        {
+            var info = new UserDailyTransactionDocumentInfo
+            {
+                Title = $"سند قبض رقم {voucher.Id}",
+                Fields = new List<UserDailyTransactionDocumentField>
+                {
+                    new("التاريخ", voucher.Date.ToString("dd/MM/yyyy")),
+                    new("المورد", voucher.Supplier?.NameAr ?? "-"),
+                    new("الحساب الدائن", $"{voucher.Account.Code} - {voucher.Account.NameAr}"),
+                    new("حساب التحصيل", $"{voucher.PaymentAccount.Code} - {voucher.PaymentAccount.NameAr}"),
+                    new("المبلغ", FormatAmount(voucher.Amount, voucher.Currency.Code))
+                },
+                Notes = string.IsNullOrWhiteSpace(voucher.Notes) ? null : voucher.Notes.Trim()
+            };
+
+            return info;
+        }
+
+        private static UserDailyTransactionDocumentInfo BuildDisbursementVoucherDocument(DisbursementVoucher voucher)
+        {
+            var info = new UserDailyTransactionDocumentInfo
+            {
+                Title = $"سند صرف رقم {voucher.Id}",
+                Fields = new List<UserDailyTransactionDocumentField>
+                {
+                    new("التاريخ", voucher.Date.ToString("dd/MM/yyyy")),
+                    new("المورد", voucher.Supplier?.NameAr ?? "-"),
+                    new("حساب المصروف", $"{voucher.Account.Code} - {voucher.Account.NameAr}"),
+                    new("المبلغ", FormatAmount(voucher.Amount, voucher.Currency.Code))
+                },
+                Notes = string.IsNullOrWhiteSpace(voucher.Notes) ? null : voucher.Notes.Trim()
+            };
+
+            return info;
+        }
+
+        private static UserDailyTransactionDocumentInfo BuildPaymentVoucherDocument(PaymentVoucher voucher, string typeDisplay)
+        {
+            var beneficiaryName = voucher.Supplier?.NameAr ?? voucher.Agent?.NameAr ?? "-";
+            var beneficiaryAccount = voucher.Supplier?.Account != null
+                ? $"{voucher.Supplier.Account.Code} - {voucher.Supplier.Account.NameAr}"
+                : voucher.Agent?.Account != null
+                    ? $"{voucher.Agent.Account.Code} - {voucher.Agent.Account.NameAr}"
+                    : "-";
+
+            string paymentAccount;
+            if (voucher.IsCash && voucher.CreatedBy?.PaymentAccount != null)
+            {
+                paymentAccount = $"{voucher.CreatedBy.PaymentAccount.Code} - {voucher.CreatedBy.PaymentAccount.NameAr}";
+            }
+            else if (!voucher.IsCash && voucher.Account != null)
+            {
+                paymentAccount = $"{voucher.Account.Code} - {voucher.Account.NameAr}";
+            }
+            else
+            {
+                paymentAccount = "-";
+            }
+
+            var info = new UserDailyTransactionDocumentInfo
+            {
+                Title = $"{typeDisplay} رقم {voucher.Id}",
+                Fields = new List<UserDailyTransactionDocumentField>
+                {
+                    new("التاريخ", voucher.Date.ToString("dd/MM/yyyy")),
+                    new("المستفيد", beneficiaryName),
+                    new("حساب المستفيد", beneficiaryAccount),
+                    new("نوع السند", voucher.IsCash ? "نقدي" : "على الحساب"),
+                    new("الحساب المستخدم", paymentAccount),
+                    new("المبلغ", FormatAmount(voucher.Amount, voucher.Currency.Code))
+                },
+                Notes = string.IsNullOrWhiteSpace(voucher.Notes) ? null : voucher.Notes.Trim()
+            };
+
+            return info;
+        }
+
+        private static UserDailyTransactionDocumentInfo BuildSalaryPaymentDocument(SalaryPayment payment)
+        {
+            var info = new UserDailyTransactionDocumentInfo
+            {
+                Title = $"دفع راتب رقم {payment.Id}",
+                Fields = new List<UserDailyTransactionDocumentField>
+                {
+                    new("التاريخ", payment.Date.ToString("dd/MM/yyyy")),
+                    new("الموظف", payment.Employee?.Name ?? "-"),
+                    new("الفرع", payment.Branch?.NameAr ?? "-"),
+                    new("حساب الدفع", $"{payment.PaymentAccount.Code} - {payment.PaymentAccount.NameAr}"),
+                    new("المبلغ", FormatAmount(payment.Amount, payment.Currency.Code))
+                },
+                Notes = string.IsNullOrWhiteSpace(payment.Notes) ? null : payment.Notes.Trim()
+            };
+
+            return info;
+        }
+
+        private static UserDailyTransactionDocumentInfo BuildEmployeeAdvanceDocument(EmployeeAdvance advance)
+        {
+            var info = new UserDailyTransactionDocumentInfo
+            {
+                Title = $"سلفة موظف رقم {advance.Id}",
+                Fields = new List<UserDailyTransactionDocumentField>
+                {
+                    new("التاريخ", advance.Date.ToString("dd/MM/yyyy")),
+                    new("الموظف", advance.Employee?.Name ?? "-"),
+                    new("الفرع", advance.Branch?.NameAr ?? "-"),
+                    new("حساب الدفع", $"{advance.PaymentAccount.Code} - {advance.PaymentAccount.NameAr}"),
+                    new("المبلغ", FormatAmount(advance.Amount, advance.Currency.Code))
+                },
+                Notes = string.IsNullOrWhiteSpace(advance.Notes) ? null : advance.Notes.Trim()
+            };
+
+            return info;
+        }
+
+        private static UserDailyTransactionDocumentInfo BuildPayrollBatchDocument(PayrollBatch batch)
+        {
+            string statusDisplay = batch.Status switch
+            {
+                PayrollBatchStatus.Draft => "مسودة",
+                PayrollBatchStatus.Confirmed => "معتمد",
+                PayrollBatchStatus.Cancelled => "ملغى",
+                _ => batch.Status.ToString()
+            };
+
+            var info = new UserDailyTransactionDocumentInfo
+            {
+                Title = $"دفعة رواتب رقم {batch.Id}",
+                Fields = new List<UserDailyTransactionDocumentField>
+                {
+                    new("السنة", batch.Year.ToString()),
+                    new("الشهر", batch.Month.ToString("00")),
+                    new("الفرع", batch.Branch?.NameAr ?? "-"),
+                    new("حساب الدفع", $"{batch.PaymentAccount.Code} - {batch.PaymentAccount.NameAr}"),
+                    new("إجمالي المبلغ", FormatAmount(batch.TotalAmount)),
+                    new("الحالة", statusDisplay)
+                },
+                Notes = string.IsNullOrWhiteSpace(batch.Notes) ? null : batch.Notes.Trim()
+            };
+
+            return info;
+        }
+
+        private static UserDailyTransactionDocumentInfo BuildCashClosureDocument(CashBoxClosure closure)
+        {
+            string statusDisplay = closure.Status switch
+            {
+                CashBoxClosureStatus.Pending => "قيد المراجعة",
+                CashBoxClosureStatus.ApprovedMatched => "معتمد بدون فرق",
+                CashBoxClosureStatus.ApprovedWithDifference => "معتمد مع فرق",
+                CashBoxClosureStatus.Rejected => "مرفوض",
+                _ => closure.Status.ToString()
+            };
+
+            var info = new UserDailyTransactionDocumentInfo
+            {
+                Title = $"إقفال صندوق رقم {closure.Id}",
+                Fields = new List<UserDailyTransactionDocumentField>
+                {
+                    new("تاريخ الإقفال", closure.ClosingDate?.ToString("dd/MM/yyyy") ?? closure.CreatedAt.ToString("dd/MM/yyyy")),
+                    new("الحساب", closure.Account != null ? $"{closure.Account.Code} - {closure.Account.NameAr}" : "-"),
+                    new("الفرع", closure.Branch?.NameAr ?? "-"),
+                    new("المستخدم", closure.User?.FullName ?? closure.User?.UserName ?? "-"),
+                    new("المبلغ المعدود", FormatAmount(closure.CountedAmount)),
+                    new("الرصيد الختامي", FormatAmount(closure.ClosingBalance)),
+                    new("الحالة", statusDisplay)
+                },
+                Notes = string.IsNullOrWhiteSpace(closure.Notes) ? null : closure.Notes.Trim()
+            };
+
+            return info;
+        }
+
+        private static UserDailyTransactionDocumentInfo BuildDriverPaymentDocument(DriverPaymentHeaderInfo header, Dictionary<int, string> driverNames)
+        {
+            var driverName = header.DriverId.HasValue && driverNames.TryGetValue(header.DriverId.Value, out var name)
+                ? name
+                : header.DriverId.HasValue ? $"سائق {header.DriverId.Value}" : "-";
+
+            var info = new UserDailyTransactionDocumentInfo
+            {
+                Title = $"فاتورة سائق رقم {header.Id}",
+                Fields = new List<UserDailyTransactionDocumentField>
+                {
+                    new("التاريخ", header.PaymentDate?.ToString("dd/MM/yyyy") ?? "-"),
+                    new("السائق", driverName),
+                    new("قيمة الدفعة", FormatAmount(header.PaymentValue)),
+                    new("إجمالي COD", FormatAmount(header.TotalCod)),
+                    new("عمولة السائق", FormatAmount(header.DriverCommission)),
+                    new("إجمالي العمولات", FormatAmount(header.SumOfCommission))
+                }
+            };
+
+            return info;
+        }
+
+        private static UserDailyTransactionDocumentInfo BuildBusinessPaymentDocument(BusinessPaymentHeaderInfo header, Dictionary<int, string> userNames)
+        {
+            var userName = header.UserId.HasValue && userNames.TryGetValue(header.UserId.Value, out var name)
+                ? name
+                : header.UserId.HasValue ? $"مورد {header.UserId.Value}" : "-";
+
+            var info = new UserDailyTransactionDocumentInfo
+            {
+                Title = $"دفعة بزنس رقم {header.Id}",
+                Fields = new List<UserDailyTransactionDocumentField>
+                {
+                    new("التاريخ", header.PaymentDate?.ToString("dd/MM/yyyy") ?? "-"),
+                    new("المورد", userName),
+                    new("قيمة الدفعة", FormatAmount(header.PaymentValue)),
+                    new("الحالة", header.StatusId?.ToString() ?? "-")
+                }
+            };
+
+            return info;
         }
     }
 }
