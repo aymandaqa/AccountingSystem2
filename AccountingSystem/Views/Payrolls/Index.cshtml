@@ -50,12 +50,14 @@
                             <th></th>
                             <th>الاسم</th>
                             <th>المسمى الوظيفي</th>
-                            <th>الراتب</th>
+                            <th>الراتب الأساسي</th>
+                            <th>الخصم</th>
+                            <th>الصافي</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr class="text-center text-muted" id="employeesPlaceholder">
-                            <td colspan="4">اختر فرعاً لعرض الموظفين</td>
+                            <td colspan="6">اختر فرعاً لعرض الموظفين</td>
                         </tr>
                     </tbody>
                 </table>
@@ -272,12 +274,30 @@
                 monthSelect.disabled = false;
             }
 
+            function formatCurrency(value) {
+                const number = Number(value ?? 0);
+                if (!Number.isFinite(number)) {
+                    return '0.00';
+                }
+                return number.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            function clampDeduction(value, salary) {
+                if (!Number.isFinite(value) || value < 0) {
+                    return 0;
+                }
+                if (value > salary) {
+                    return salary;
+                }
+                return value;
+            }
+
             function renderEmployees(employees) {
                 employeesTable.innerHTML = '';
                 if (!employees.length) {
                     const row = document.createElement('tr');
                     row.className = 'text-center text-muted';
-                    row.innerHTML = '<td colspan="4">لا يوجد موظفون متاحون</td>';
+                    row.innerHTML = '<td colspan="6">لا يوجد موظفون متاحون</td>';
                     employeesTable.appendChild(row);
                     return;
                 }
@@ -295,19 +315,48 @@
                     const salary = Number(salaryRaw ?? 0);
 
                     row.dataset.id = String(employeeId);
+                    row.dataset.salary = String(Number.isFinite(salary) ? salary : 0);
                     row.innerHTML = `
                         <td><input type="checkbox" class="form-check-input" value="${employeeId}" /></td>
                         <td><strong>${employeeName}</strong><div class="text-muted small">${jobTitle}</div></td>
                         <td>${jobTitle}</td>
-                        <td>${salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>`;
+                        <td class="text-end">${formatCurrency(salary)}</td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm deduction-input" value="0" min="0" step="0.01" />
+                        </td>
+                        <td class="text-end net-amount">${formatCurrency(salary)}</td>`;
                     employeesTable.appendChild(row);
                 });
 
-                employeesTable.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-                    cb.addEventListener('change', () => {
-                        cb.closest('tr').classList.toggle('selected', cb.checked);
-                        updateSelectedCount();
-                    });
+                employeesTable.querySelectorAll('tr').forEach(row => {
+                    const checkbox = row.querySelector('input[type="checkbox"]');
+                    const deductionInput = row.querySelector('.deduction-input');
+                    const netCell = row.querySelector('.net-amount');
+                    const salary = Number(row.dataset.salary ?? '0');
+
+                    const updateNet = () => {
+                        if (!deductionInput) {
+                            return;
+                        }
+
+                        const rawValue = parseFloat(deductionInput.value);
+                        const deduction = clampDeduction(rawValue, salary);
+                        deductionInput.value = deduction.toFixed(2);
+                        const net = salary - deduction;
+                        netCell.textContent = formatCurrency(net);
+                    };
+
+                    if (checkbox) {
+                        checkbox.addEventListener('change', () => {
+                            row.classList.toggle('selected', checkbox.checked);
+                            updateSelectedCount();
+                        });
+                    }
+
+                    if (deductionInput) {
+                        deductionInput.addEventListener('input', updateNet);
+                        deductionInput.addEventListener('change', updateNet);
+                    }
                 });
 
                 updateSelectedCount();
@@ -318,15 +367,24 @@
                 employeesTable.innerHTML = '';
                 const row = document.createElement('tr');
                 row.className = 'text-center text-muted';
-                row.innerHTML = '<td colspan="4"><div class="spinner-border spinner-border-sm text-primary"></div> جاري تحميل الموظفين...</td>';
+                row.innerHTML = '<td colspan="6"><div class="spinner-border spinner-border-sm text-primary"></div> جاري تحميل الموظفين...</td>';
                 employeesTable.appendChild(row);
 
                 if (branchId === null) {
-                    row.innerHTML = '<td colspan="4">اختر فرعاً لعرض الموظفين</td>';
+                    row.innerHTML = '<td colspan="6">اختر فرعاً لعرض الموظفين</td>';
                     return;
                 }
 
-                const response = await fetch(`@Url.Action("Employees")?branchId=${branchId}`);
+                let url = `@Url.Action("Employees")?branchId=${branchId}`;
+                const periodValue = monthSelect.value;
+                if (periodValue) {
+                    const [periodYear, periodMonth] = periodValue.split('-').map(part => parseInt(part, 10));
+                    if (!Number.isNaN(periodYear) && !Number.isNaN(periodMonth)) {
+                        url += `&year=${periodYear}&month=${periodMonth}`;
+                    }
+                }
+
+                const response = await fetch(url);
                 const data = await response.json();
                 renderEmployees(data);
             }
@@ -335,6 +393,12 @@
                 currentBatchId = null;
                 summaryContent.innerHTML = '';
                 loadMonths();
+                loadEmployees();
+            });
+
+            monthSelect.addEventListener('change', () => {
+                currentBatchId = null;
+                summaryContent.innerHTML = '';
                 loadEmployees();
             });
 
@@ -361,8 +425,31 @@
                 const branchId = getSelectedBranchId();
                 const periodValue = monthSelect.value;
                 const employees = Array.from(employeesTable.querySelectorAll('input[type="checkbox"]:checked'))
-                    .map(cb => parseInt(cb.value, 10))
-                    .filter(id => !Number.isNaN(id));
+                    .map(cb => {
+                        const id = parseInt(cb.value, 10);
+                        if (Number.isNaN(id)) {
+                            return null;
+                        }
+
+                        const row = cb.closest('tr');
+                        const salary = Number(row?.dataset.salary ?? '0');
+                        const deductionInput = row?.querySelector('.deduction-input');
+                        let deduction = 0;
+                        if (deductionInput) {
+                            deduction = parseFloat(deductionInput.value);
+                            if (Number.isNaN(deduction)) {
+                                deduction = 0;
+                            }
+                            deduction = clampDeduction(deduction, salary);
+                            deductionInput.value = deduction.toFixed(2);
+                        }
+
+                        return {
+                            employeeId: id,
+                            deductionAmount: Number(deduction.toFixed(2))
+                        };
+                    })
+                    .filter(item => item !== null);
 
                 if (branchId === null) {
                     alert('يرجى اختيار الفرع.');
@@ -391,7 +478,7 @@
                             branchId,
                             year,
                             month,
-                            employeeIds: employees
+                            employees
                         })
                     });
 
@@ -408,9 +495,15 @@
                     const batchId = getProperty(summary, 'batchId', 'BatchId');
                     const employeeCountRaw = getProperty(summary, 'employeeCount', 'EmployeeCount');
                     const totalAmountRaw = getProperty(summary, 'totalAmount', 'TotalAmount');
+                    const totalGrossRaw = getProperty(summary, 'totalGrossAmount', 'TotalGrossAmount');
+                    const totalDeductionRaw = getProperty(summary, 'totalDeductionAmount', 'TotalDeductionAmount');
                     const employeeCount = Number.isFinite(employeeCountRaw) ? employeeCountRaw : parseInt(employeeCountRaw ?? '0', 10) || 0;
                     const totalAmountValue = Number(totalAmountRaw ?? 0);
+                    const totalGrossValue = Number(totalGrossRaw ?? 0);
+                    const totalDeductionValue = Number(totalDeductionRaw ?? 0);
                     const totalAmount = Number.isNaN(totalAmountValue) ? 0 : totalAmountValue;
+                    const totalGross = Number.isNaN(totalGrossValue) ? 0 : totalGrossValue;
+                    const totalDeduction = Number.isNaN(totalDeductionValue) ? 0 : totalDeductionValue;
                     currentBatchId = typeof batchId === 'number' ? batchId : parseInt(batchId ?? '', 10);
                     if (Number.isNaN(currentBatchId)) {
                         currentBatchId = null;
@@ -426,20 +519,21 @@
                                 <strong>${employeeCount}</strong>
                             </div>
                             <div class="list-group-item d-flex justify-content-between">
-                                <span>إجمالي الرواتب</span>
-                                <strong>${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                                <span>إجمالي الرواتب الأساسية</span>
+                                <strong>${formatCurrency(totalGross)}</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between">
+                                <span>إجمالي الخصومات</span>
+                                <strong>${formatCurrency(totalDeduction)}</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between">
+                                <span>صافي الرواتب</span>
+                                <strong>${formatCurrency(totalAmount)}</strong>
                             </div>
                         </div>`;
 
                     summaryModal.show();
-                    const selectedOption = monthSelect.querySelector(`option[value="${periodValue}"]`);
-                    if (selectedOption) {
-                        selectedOption.remove();
-                    }
-                    if (monthSelect.options.length === 1) {
-                        monthSelect.selectedIndex = 0;
-                        monthSelect.disabled = true;
-                    }
+                    await loadEmployees();
                 } finally {
                     toggleOverlay(false);
                 }
@@ -514,9 +608,14 @@
                         }
                         html += `<div class="mb-3"><strong>الحالة:</strong> ${data.status}</div>`;
                         html += `<div class="mb-3"><strong>المرجع:</strong> ${data.reference || '---'}</div>`;
-                        html += '<table class="table table-sm"><thead><tr><th>الموظف</th><th>المسمى الوظيفي</th><th>المبلغ</th></tr></thead><tbody>';
+                        html += '<table class="table table-sm"><thead><tr><th>الموظف</th><th>المسمى الوظيفي</th><th>الراتب الأساسي</th><th>الخصم</th><th>الصافي</th></tr></thead><tbody>';
                         data.employees.forEach(emp => {
-                            html += `<tr><td>${emp.name}</td><td>${emp.jobTitle || ''}</td><td>${Number(emp.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>`;
+                            const name = getProperty(emp, 'name', 'Name') ?? '';
+                            const title = getProperty(emp, 'jobTitle', 'JobTitle') ?? '';
+                            const gross = getProperty(emp, 'grossAmount', 'GrossAmount');
+                            const deduction = getProperty(emp, 'deductionAmount', 'DeductionAmount');
+                            const amount = getProperty(emp, 'amount', 'Amount');
+                            html += `<tr><td>${name}</td><td>${title}</td><td>${formatCurrency(gross)}</td><td>${formatCurrency(deduction)}</td><td>${formatCurrency(amount)}</td></tr>`;
                         });
                         html += '</tbody></table>';
                         detailsContent.innerHTML = html;
