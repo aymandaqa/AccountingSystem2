@@ -13,6 +13,7 @@ using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
 using Syncfusion.EJ2.Base;
+using System.Text.Json;
 
 namespace AccountingSystem.Controllers
 {
@@ -50,6 +51,34 @@ namespace AccountingSystem.Controllers
                 if (dictionary is IDictionary nonGenericDict && nonGenericDict.Contains(key))
                 {
                     return nonGenericDict[key]?.ToString();
+                }
+
+                if (dictionary is JsonElement element && element.ValueKind == JsonValueKind.Object)
+                {
+                    if (element.TryGetProperty(key, out var property))
+                    {
+                        if (property.ValueKind == JsonValueKind.String)
+                        {
+                            return property.GetString();
+                        }
+
+                        if (property.ValueKind == JsonValueKind.Number)
+                        {
+                            return property.GetRawText();
+                        }
+
+                        if (property.ValueKind == JsonValueKind.True || property.ValueKind == JsonValueKind.False)
+                        {
+                            return property.GetBoolean().ToString();
+                        }
+
+                        if (property.ValueKind == JsonValueKind.Null)
+                        {
+                            return null;
+                        }
+
+                        return property.GetRawText();
+                    }
                 }
 
                 return null;
