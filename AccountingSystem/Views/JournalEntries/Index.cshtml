@@ -15,7 +15,8 @@
         delete = Url.Action("Delete", "JournalEntries"),
         details = Url.Action("Details", "JournalEntries", new { id = "__id__" }),
         edit = Url.Action("Edit", "JournalEntries", new { id = "__id__" }),
-        print = Url.Action("Print", "JournalEntries", new { id = "__id__" })
+        print = Url.Action("Print", "JournalEntries", new { id = "__id__" }),
+        export = Url.Action("ExportManagementExcel", "JournalEntries")
     };
     var endpointsJson = JsonSerializer.Serialize(endpoints);
     var permissionsJson = JsonSerializer.Serialize(new
@@ -61,12 +62,6 @@
                 max-width: 70ch;
             }
 
-        .management-layout {
-            display: grid;
-            grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
-            gap: 1.25rem;
-        }
-
         .filters-card {
             background: #ffffff;
             border-radius: 1rem;
@@ -74,9 +69,6 @@
             padding: 1.25rem;
             display: grid;
             gap: 1rem;
-            position: sticky;
-            top: 5.5rem;
-            align-self: start;
         }
 
             .filters-card h3 {
@@ -87,6 +79,18 @@
                 align-items: center;
                 gap: 0.5rem;
             }
+
+        .filters-wrapper {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .filters-toolbar {
+            display: flex;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
 
             .filters-card .form-label {
                 font-weight: 600;
@@ -128,6 +132,10 @@
                 gap: 0.75rem;
                 align-items: center;
             }
+
+        .toolbar-group .input-group.group-by select {
+            min-width: 12rem;
+        }
 
         .summary-metrics {
             display: grid;
@@ -194,6 +202,34 @@
                 white-space: nowrap;
             }
 
+        .management-table .group-row td {
+            background-color: #f1f5ff;
+            font-weight: 600;
+            color: #0b4d94;
+        }
+
+        .group-row .group-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .group-row .group-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .group-row .group-metrics {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+        }
+
         .sortable-indicator {
             display: inline-flex;
             align-items: center;
@@ -242,16 +278,6 @@
             color: #4f5d75;
         }
 
-        @@media (max-width: 1199.98px) {
-            .management-layout {
-                grid-template-columns: minmax(0, 1fr);
-            }
-
-            .filters-card {
-                position: static;
-            }
-        }
-
         @@media (max-width: 767.98px) {
             .journal-management {
                 padding-block: 1rem 2rem;
@@ -265,6 +291,10 @@
                 .results-toolbar .toolbar-group {
                     justify-content: space-between;
                 }
+
+            .toolbar-group .input-group.group-by select {
+                min-width: 0;
+            }
         }
     </style>
 }
@@ -274,7 +304,7 @@
         <h2><i class="fas fa-database"></i> إدارة القيود المالية</h2>
         <p>واجهة متقدمة لإدارة القيود مع عرض مكثف للبيانات، بحث متقدم، وعمليات سريعة لكل قيد.</p>
     </div>
-    <div class="management-layout">
+    <div class="collapse show" id="advancedFilters">
         <div class="filters-card" id="filtersPanel">
             <h3><i class="fas fa-filter"></i> البحث المتقدم</h3>
             <form id="filterForm" autocomplete="off">
@@ -349,7 +379,8 @@
                 </div>
             </form>
         </div>
-        <div class="results-card">
+    </div>
+    <div class="results-card">
             <div class="results-toolbar">
                 <div class="toolbar-group">
                     <div>
@@ -373,8 +404,22 @@
                         <input type="search" id="quickSearch" class="form-control" placeholder="بحث فوري في الجدول" />
                         <button class="btn btn-outline-secondary" type="button" id="clearQuickSearch" title="مسح"><i class="fas fa-times"></i></button>
                     </div>
+                    <div class="input-group input-group-sm group-by">
+                        <span class="input-group-text"><i class="fas fa-layer-group"></i></span>
+                        <select id="groupBy" class="form-select">
+                            <option value="">بدون تجميع</option>
+                            <option value="branch">تجميع حسب الفرع</option>
+                            <option value="status">تجميع حسب الحالة</option>
+                            <option value="month">تجميع حسب الشهر</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="toolbar-group">
+                    <button type="button" class="btn btn-outline-secondary" id="filtersToggleButton" data-bs-toggle="collapse" data-bs-target="#advancedFilters" aria-expanded="true" aria-controls="advancedFilters">
+                        <i class="fas fa-angle-up"></i>
+                        <span class="toggle-text">إخفاء البحث المتقدم</span>
+                    </button>
+                    <button type="button" class="btn btn-outline-success" id="exportExcel"><i class="fas fa-file-excel"></i> تصدير إكسل</button>
                     <a asp-action="Create" class="btn btn-primary" asp-require-permission="journal.create"><i class="fas fa-plus"></i> قيد جديد</a>
                     <button type="button" class="btn btn-outline-primary" id="refreshButton"><i class="fas fa-sync"></i> تحديث</button>
                 </div>
@@ -465,6 +510,12 @@
             const totalRecordsLabel = document.getElementById('totalRecords');
             const refreshButton = document.getElementById('refreshButton');
             const pageSizeSelect = document.getElementById('pageSize');
+            const groupBySelect = document.getElementById('groupBy');
+            const exportButton = document.getElementById('exportExcel');
+            const filtersToggleButton = document.getElementById('filtersToggleButton');
+            const filtersCollapseElement = document.getElementById('advancedFilters');
+            const filtersToggleText = filtersToggleButton ? filtersToggleButton.querySelector('.toggle-text') : null;
+            const filtersToggleIcon = filtersToggleButton ? filtersToggleButton.querySelector('i') : null;
 
             const summaryTotal = document.getElementById('summaryTotal');
             const summaryBalanced = document.getElementById('summaryBalanced');
@@ -475,13 +526,18 @@
             const tokenInput = filterForm.querySelector('input[name="__RequestVerificationToken"]');
             const antiForgeryToken = tokenInput ? tokenInput.value : '';
 
+            let lastItems = [];
+
             const state = {
                 page: 1,
                 pageSize: defaultPageSize,
                 sortColumn: 'date',
                 sortDirection: 'desc',
-                filters: {}
+                filters: {},
+                groupBy: ''
             };
+
+            state.groupBy = groupBySelect ? groupBySelect.value : '';
 
             function formatNumber(value) {
                 if (value === null || value === undefined) {
@@ -510,12 +566,12 @@
                 const printUrl = (endpoints.print || '').replace('__id__', entry.Id);
 
                 let html = '<div class="d-flex justify-content-center flex-wrap gap-2 table-actions">';
-                html += '<a href="' + escapeHtml(detailsUrl) + '" class="btn btn-sm btn-outline-info" title="عرض"><i class="fas fa-eye"></i></a>';
-                if (entry.IsDraft && permissions.canEdit) {
-                    html += '<a href="' + escapeHtml(editUrl) + '" class="btn btn-sm btn-outline-warning" title="تعديل"><i class="fas fa-edit"></i></a>';
-                }
+                html += '<a href="' + escapeHtml(detailsUrl) + '" class="btn btn-sm btn-outline-info" title="تفاصيل"><i class="fas fa-eye"></i></a>';
                 if (entry.IsDraft && permissions.canApprove) {
-                    html += '<button type="button" class="btn btn-sm btn-outline-success btn-post" data-id="' + id + '" data-number="' + numberAttr + '" title="ترحيل"><i class="fas fa-share"></i></button>';
+                    html += '<button type="button" class="btn btn-sm btn-outline-success btn-post" data-id="' + id + '" data-number="' + numberAttr + '" title="ترحيل"><i class="fas fa-share-square"></i></button>';
+                }
+                if (entry.IsDraft && permissions.canEdit) {
+                    html += '<a href="' + escapeHtml(editUrl) + '" class="btn btn-sm btn-outline-primary" title="تعديل"><i class="fas fa-edit"></i></a>';
                 }
                 html += '<a href="' + escapeHtml(printUrl) + '" target="_blank" class="btn btn-sm btn-outline-secondary" title="طباعة"><i class="fas fa-print"></i></a>';
                 if (entry.CanDelete && permissions.canDelete) {
@@ -525,36 +581,189 @@
                 return html;
             }
 
+            function toNumber(value) {
+                if (value === null || value === undefined) {
+                    return 0;
+                }
+                if (typeof value === 'number') {
+                    return isNaN(value) ? 0 : value;
+                }
+
+                const normalized = String(value)
+                    .replace(/[^0-9.,-]/g, '')
+                    .replace(/,/g, '');
+                const parsed = Number(normalized);
+                return isNaN(parsed) ? 0 : parsed;
+            }
+
+            function buildRow(entry) {
+                const statusClass = 'badge ' + escapeHtml(entry.StatusClass || 'bg-secondary');
+                const updatedAt = entry.UpdatedAtFormatted || '—';
+                const rowClass = entry.IsBalanced ? '' : ' class="unbalanced"';
+                const cells = [
+                    '<td>' + escapeHtml(entry.Number || '') + '</td>',
+                    '<td>' + escapeHtml(entry.DateFormatted || '') + '</td>',
+                    '<td>' + escapeHtml(entry.BranchName || '') + '</td>',
+                    '<td class="text-truncate" style="max-width: 20ch;" title="' + escapeHtml(entry.Description || '') + '">' + escapeHtml(entry.Description || '') + '</td>',
+                    '<td>' + escapeHtml(entry.Reference || '') + '</td>',
+                    '<td>' + escapeHtml(entry.CreatedByName || '') + '</td>',
+                    '<td class="text-end">' + escapeHtml(entry.TotalDebitFormatted || formatNumber(entry.TotalDebit)) + '</td>',
+                    '<td class="text-end">' + escapeHtml(entry.TotalCreditFormatted || formatNumber(entry.TotalCredit)) + '</td>',
+                    '<td class="text-center">' + escapeHtml(entry.LinesCount ?? '') + '</td>',
+                    '<td class="text-center"><span class="' + statusClass + '">' + escapeHtml(entry.StatusDisplay || '') + '</span></td>',
+                    '<td>' + escapeHtml(updatedAt) + '</td>',
+                    '<td class="text-center">' + buildActions(entry) + '</td>'
+                ];
+                return '<tr' + rowClass + '>' + cells.join('') + '</tr>';
+            }
+
+            function getGroupMetadata(entry) {
+                switch (state.groupBy) {
+                    case 'branch':
+                        return {
+                            key: entry.BranchName || '',
+                            label: entry.BranchName || 'غير محدد',
+                            icon: 'fa-code-branch'
+                        };
+                    case 'status':
+                        return {
+                            key: entry.Status || '',
+                            label: entry.StatusDisplay || entry.Status || 'غير محدد',
+                            icon: 'fa-flag'
+                        };
+                    case 'month':
+                        return {
+                            key: entry.MonthGroup || '',
+                            label: entry.MonthGroupLabel || entry.MonthGroup || 'غير محدد',
+                            icon: 'fa-calendar-alt'
+                        };
+                    default:
+                        return {
+                            key: '',
+                            label: '',
+                            icon: 'fa-layer-group'
+                        };
+                }
+            }
+
             function renderRows(items) {
-                if (!items || items.length === 0) {
+                lastItems = Array.isArray(items) ? items : [];
+
+                if (!lastItems.length) {
                     tableBody.innerHTML = '';
                     emptyState.hidden = false;
                     return;
                 }
 
                 emptyState.hidden = true;
-                const rows = items.map(function (entry) {
-                    const statusClass = 'badge ' + escapeHtml(entry.StatusClass || 'bg-secondary');
-                    const updatedAt = entry.UpdatedAtFormatted || '—';
-                    const rowClass = entry.IsBalanced ? '' : ' class="unbalanced"';
-                    const cells = [
-                        '<td>' + escapeHtml(entry.Number || '') + '</td>',
-                        '<td>' + escapeHtml(entry.DateFormatted || '') + '</td>',
-                        '<td>' + escapeHtml(entry.BranchName || '') + '</td>',
-                        '<td class="text-truncate" style="max-width: 20ch;" title="' + escapeHtml(entry.Description || '') + '">' + escapeHtml(entry.Description || '') + '</td>',
-                        '<td>' + escapeHtml(entry.Reference || '') + '</td>',
-                        '<td>' + escapeHtml(entry.CreatedByName || '') + '</td>',
-                        '<td class="text-end">' + escapeHtml(entry.TotalDebitFormatted || formatNumber(entry.TotalDebit)) + '</td>',
-                        '<td class="text-end">' + escapeHtml(entry.TotalCreditFormatted || formatNumber(entry.TotalCredit)) + '</td>',
-                        '<td class="text-center">' + escapeHtml(entry.LinesCount ?? '') + '</td>',
-                        '<td class="text-center"><span class="' + statusClass + '">' + escapeHtml(entry.StatusDisplay || '') + '</span></td>',
-                        '<td>' + escapeHtml(updatedAt) + '</td>',
-                        '<td class="text-center">' + buildActions(entry) + '</td>'
-                    ];
-                    return '<tr' + rowClass + '>' + cells.join('') + '</tr>';
+
+                if (!state.groupBy) {
+                    const rows = lastItems.map(buildRow);
+                    tableBody.innerHTML = rows.join('');
+                    return;
+                }
+
+                const groupOrder = [];
+                const groupMap = new Map();
+
+                lastItems.forEach(function (entry) {
+                    const meta = getGroupMetadata(entry);
+                    const rawKey = meta.key;
+                    const groupKey = rawKey === null || rawKey === undefined || rawKey === '' ? '__empty__' : String(rawKey);
+                    const label = meta.label || (rawKey ? String(rawKey) : 'غير محدد');
+                    const icon = meta.icon || 'fa-layer-group';
+
+                    if (!groupMap.has(groupKey)) {
+                        groupMap.set(groupKey, {
+                            label,
+                            icon,
+                            items: [],
+                            debit: 0,
+                            credit: 0
+                        });
+                        groupOrder.push(groupKey);
+                    }
+
+                    const group = groupMap.get(groupKey);
+                    group.items.push(entry);
+                    group.debit += toNumber(entry.TotalDebit);
+                    group.credit += toNumber(entry.TotalCredit);
+                });
+
+                const rows = [];
+                groupOrder.forEach(function (key) {
+                    const group = groupMap.get(key);
+                    const countText = Number(group.items.length).toLocaleString();
+                    const groupHeader = '<tr class="group-row"><td colspan="12"><div class="group-header">' +
+                        '<div class="group-title"><i class="fas ' + escapeHtml(group.icon) + '"></i><span>' + escapeHtml(group.label) + '</span></div>' +
+                        '<div class="group-metrics"><span class="badge bg-primary">' + countText + ' قيود</span>' +
+                        '<span class="text-nowrap"><strong>إجمالي مدين:</strong> ' + formatNumber(group.debit) + '</span>' +
+                        '<span class="text-nowrap"><strong>إجمالي دائن:</strong> ' + formatNumber(group.credit) + '</span>' +
+                        '</div></div></td></tr>';
+                    rows.push(groupHeader);
+                    group.items.forEach(function (entry) {
+                        rows.push(buildRow(entry));
+                    });
                 });
 
                 tableBody.innerHTML = rows.join('');
+            }
+
+            function buildQueryString() {
+                const params = new URLSearchParams();
+                Object.entries(state.filters).forEach(function ([key, value]) {
+                    if (value === undefined || value === null || value === '') {
+                        return;
+                    }
+                    params.append(key, value);
+                });
+
+                if (state.sortColumn) {
+                    params.append('sortColumn', state.sortColumn);
+                }
+                if (state.sortDirection) {
+                    params.append('sortDirection', state.sortDirection);
+                }
+
+                return params.toString();
+            }
+
+            if (groupBySelect) {
+                groupBySelect.addEventListener('change', function () {
+                    state.groupBy = groupBySelect.value;
+                    renderRows(lastItems);
+                });
+            }
+
+            if (exportButton) {
+                exportButton.addEventListener('click', function () {
+                    const query = buildQueryString();
+                    const url = query ? endpoints.export + '?' + query : endpoints.export;
+                    window.location.href = url;
+                });
+            }
+
+            if (filtersToggleButton && filtersCollapseElement) {
+                const updateToggleState = function (expanded) {
+                    filtersToggleButton.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                    if (filtersToggleIcon) {
+                        filtersToggleIcon.classList.toggle('fa-angle-up', expanded);
+                        filtersToggleIcon.classList.toggle('fa-angle-down', !expanded);
+                    }
+                    if (filtersToggleText) {
+                        filtersToggleText.textContent = expanded ? 'إخفاء البحث المتقدم' : 'عرض البحث المتقدم';
+                    }
+                };
+
+                updateToggleState(filtersCollapseElement.classList.contains('show'));
+
+                filtersCollapseElement.addEventListener('shown.bs.collapse', function () {
+                    updateToggleState(true);
+                });
+
+                filtersCollapseElement.addEventListener('hidden.bs.collapse', function () {
+                    updateToggleState(false);
+                });
             }
 
             function updateSummary(summary, totalRecords) {
@@ -644,6 +853,7 @@
                 catch (error) {
                     console.error(error);
                     tableBody.innerHTML = '<tr><td colspan="12" class="text-center text-danger">حدث خطأ أثناء تحميل البيانات.</td></tr>';
+                    emptyState.hidden = true;
                 }
                 finally {
                     loadingOverlay.hidden = true;

@@ -14,6 +14,8 @@ using System.Linq;
 using System.Security.Claims;
 using Syncfusion.EJ2.Base;
 using System.Text.Json;
+using ClosedXML.Excel;
+using System.IO;
 
 namespace AccountingSystem.Controllers
 {
@@ -732,6 +734,8 @@ namespace AccountingSystem.Controllers
                 })
                 .ToListAsync();
 
+            var arabicCulture = CultureInfo.GetCultureInfo("ar-SA");
+
             var result = new
             {
                 page,
@@ -756,6 +760,7 @@ namespace AccountingSystem.Controllers
                         Date = entry.Date,
                         DateFormatted = entry.Date.ToString("dd/MM/yyyy"),
                         MonthGroup = entry.Date.ToString("yyyy-MM"),
+                        MonthGroupLabel = entry.Date.ToString("MMMM yyyy", arabicCulture),
                         entry.Description,
                         entry.Reference,
                         Status = entry.Status.ToString(),
@@ -780,6 +785,107 @@ namespace AccountingSystem.Controllers
             };
 
             return Json(result);
+        }
+
+        [HttpGet]
+        [Authorize(Policy = "journal.view")]
+        public async Task<IActionResult> ExportManagementExcel([FromQuery] JournalEntryManagementFilters? filters, string? sortColumn, string? sortDirection)
+        {
+            filters ??= new JournalEntryManagementFilters();
+
+            var query = _context.JournalEntries
+                .AsNoTracking()
+                .Include(j => j.Branch)
+                .Include(j => j.CreatedBy)
+                .Include(j => j.Lines)
+                .AsQueryable();
+
+            query = ApplyManagementFilters(query, filters);
+
+            var orderedQuery = ApplyManagementOrdering(query, sortColumn, sortDirection);
+
+            var entries = await orderedQuery
+                .Select(entry => new
+                {
+                    entry.Number,
+                    entry.Date,
+                    entry.Description,
+                    entry.Reference,
+                    entry.Status,
+                    BranchName = entry.Branch.NameAr,
+                    CreatedByFirstName = entry.CreatedBy.FirstName,
+                    CreatedByLastName = entry.CreatedBy.LastName,
+                    CreatedByUserName = entry.CreatedBy.UserName,
+                    entry.TotalDebit,
+                    entry.TotalCredit,
+                    LinesCount = entry.Lines.Count
+                })
+                .ToListAsync();
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("JournalEntries");
+
+            worksheet.Cell(1, 1).Value = "رقم القيد";
+            worksheet.Cell(1, 2).Value = "التاريخ";
+            worksheet.Cell(1, 3).Value = "الفرع";
+            worksheet.Cell(1, 4).Value = "الوصف";
+            worksheet.Cell(1, 5).Value = "المرجع";
+            worksheet.Cell(1, 6).Value = "الحالة";
+            worksheet.Cell(1, 7).Value = "أنشئ بواسطة";
+            worksheet.Cell(1, 8).Value = "إجمالي المدين";
+            worksheet.Cell(1, 9).Value = "إجمالي الدائن";
+            worksheet.Cell(1, 10).Value = "عدد البنود";
+            worksheet.Row(1).Style.Font.Bold = true;
+
+            worksheet.Column(2).Style.DateFormat.Format = "yyyy-MM-dd";
+            worksheet.Column(8).Style.NumberFormat.Format = "#,##0.00";
+            worksheet.Column(9).Style.NumberFormat.Format = "#,##0.00";
+
+            var row = 2;
+            decimal totalDebit = 0m;
+            decimal totalCredit = 0m;
+
+            foreach (var entry in entries)
+            {
+                var statusInfo = GetStatusInfo(entry.Status);
+                var createdBy = BuildCreatedBy(entry.CreatedByFirstName, entry.CreatedByLastName, entry.CreatedByUserName);
+
+                worksheet.Cell(row, 1).Value = entry.Number;
+                worksheet.Cell(row, 2).Value = entry.Date;
+                worksheet.Cell(row, 3).Value = entry.BranchName ?? string.Empty;
+                worksheet.Cell(row, 4).Value = entry.Description ?? string.Empty;
+                worksheet.Cell(row, 5).Value = entry.Reference ?? string.Empty;
+                worksheet.Cell(row, 6).Value = statusInfo.Text;
+                worksheet.Cell(row, 7).Value = createdBy;
+                worksheet.Cell(row, 8).Value = entry.TotalDebit;
+                worksheet.Cell(row, 9).Value = entry.TotalCredit;
+                worksheet.Cell(row, 10).Value = entry.LinesCount;
+
+                totalDebit += entry.TotalDebit;
+                totalCredit += entry.TotalCredit;
+
+                row++;
+            }
+
+            if (row > 2)
+            {
+                worksheet.Cell(row, 7).Value = "الإجمالي";
+                worksheet.Cell(row, 7).Style.Font.Bold = true;
+                worksheet.Cell(row, 8).Value = totalDebit;
+                worksheet.Cell(row, 9).Value = totalCredit;
+                worksheet.Range(row, 8, row, 9).Style.Font.Bold = true;
+            }
+
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            var fileName = $"JournalEntries_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+            return File(stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
         }
 
         [HttpPost]
