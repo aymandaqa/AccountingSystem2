@@ -4130,7 +4130,7 @@ namespace AccountingSystem.Controllers
 
         private static UserDailyTransactionDocumentInfo BuildPaymentVoucherDocument(PaymentVoucher voucher, string typeDisplay)
         {
-            var beneficiaryName = voucher.Supplier?.NameAr ?? voucher.Agent?.NameAr ?? "-";
+            var beneficiaryName = voucher.Supplier?.NameAr ?? voucher.Agent?.Name ?? "-";
             var beneficiaryAccount = voucher.Supplier?.Account != null
                 ? $"{voucher.Supplier.Account.Code} - {voucher.Supplier.Account.NameAr}"
                 : voucher.Agent?.Account != null
