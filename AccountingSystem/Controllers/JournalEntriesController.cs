@@ -449,6 +449,30 @@ namespace AccountingSystem.Controllers
                 return View(model);
             }
 
+            var totalDebit = Math.Round(model.Lines.Sum(l => l.DebitAmount), 2, MidpointRounding.AwayFromZero);
+            var totalCredit = Math.Round(model.Lines.Sum(l => l.CreditAmount), 2, MidpointRounding.AwayFromZero);
+
+            if (totalDebit != totalCredit)
+            {
+                ModelState.AddModelError(string.Empty, "القيد غير متوازن");
+                await PopulateDropdowns(model);
+                return View(model);
+            }
+
+            var accountIds = model.Lines.Select(l => l.AccountId).Distinct().ToList();
+            var currencies = await _context.Accounts
+                .Where(a => accountIds.Contains(a.Id))
+                .Select(a => a.CurrencyId)
+                .Distinct()
+                .ToListAsync();
+
+            if (currencies.Count > 1)
+            {
+                ModelState.AddModelError(string.Empty, "يجب أن تكون جميع الحسابات بنفس العملة");
+                await PopulateDropdowns(model);
+                return View(model);
+            }
+
             var createdById = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             var lines = model.Lines.Select(line => new JournalEntryLine
             {
