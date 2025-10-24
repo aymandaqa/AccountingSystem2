@@ -57,6 +57,7 @@ namespace AccountingSystem.Data
         public DbSet<Employee> Employees { get; set; }
         public DbSet<PayrollBatch> PayrollBatches { get; set; }
         public DbSet<PayrollBatchLine> PayrollBatchLines { get; set; }
+        public DbSet<PayrollBatchLineDeduction> PayrollBatchLineDeductions { get; set; }
         public DbSet<SalaryPayment> SalaryPayments { get; set; }
         public DbSet<EmployeeAdvance> EmployeeAdvances { get; set; }
         public DbSet<WorkflowDefinition> WorkflowDefinitions { get; set; }
@@ -342,6 +343,8 @@ namespace AccountingSystem.Data
             builder.Entity<PayrollBatchLine>(entity =>
             {
                 entity.HasKey(e => e.Id);
+                entity.Property(e => e.GrossAmount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.DeductionAmount).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
 
                 entity.HasOne(e => e.PayrollBatch)
@@ -358,6 +361,19 @@ namespace AccountingSystem.Data
                     .WithMany()
                     .HasForeignKey(e => e.BranchId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(e => e.Deductions)
+                    .WithOne(d => d.PayrollLine)
+                    .HasForeignKey(d => d.PayrollBatchLineId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<PayrollBatchLineDeduction>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Type).HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(250);
             });
 
             builder.Entity<SalaryPayment>(entity =>

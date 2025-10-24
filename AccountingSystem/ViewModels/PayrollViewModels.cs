@@ -54,7 +54,14 @@ namespace AccountingSystem.ViewModels
     public class PayrollEmployeeSelection
     {
         public int EmployeeId { get; set; }
-        public decimal DeductionAmount { get; set; }
+        public List<PayrollEmployeeDeductionSelection> Deductions { get; set; } = new();
+    }
+
+    public class PayrollEmployeeDeductionSelection
+    {
+        public string? Type { get; set; }
+        public string? Description { get; set; }
+        public decimal Amount { get; set; }
     }
 
     public class CreatePayrollBatchRequest

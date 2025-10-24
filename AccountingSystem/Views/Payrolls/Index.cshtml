@@ -51,7 +51,7 @@
                             <th>الاسم</th>
                             <th>المسمى الوظيفي</th>
                             <th>الراتب الأساسي</th>
-                            <th>الخصم</th>
+                            <th>الخصومات</th>
                             <th>الصافي</th>
                         </tr>
                     </thead>
@@ -135,9 +135,20 @@
                                     </td>
                                     <td>@item.ReferenceNumber</td>
                                     <td>
-                                        <button class="btn btn-outline-info btn-sm view-batch" data-id="@item.Id">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <button type="button" class="btn btn-outline-info btn-sm view-batch" data-id="@item.Id" title="عرض التفاصيل">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            @if (item.Status == "Draft")
+                                            {
+                                                <button type="button" class="btn btn-success btn-sm confirm-batch" data-id="@item.Id" title="اعتماد الدفعة" asp-require-permission="payroll.process">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-danger btn-sm delete-batch" data-id="@item.Id" title="حذف الدفعة" asp-require-permission="payroll.process">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            }
+                                        </div>
                                     </td>
                                 </tr>
                             }
@@ -151,6 +162,43 @@
                     لا توجد عمليات تنزيل سابقة
                 </div>
             }
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="deductionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deductionModalTitle">الخصومات</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <div id="deductionEmptyState" class="alert alert-info text-center">
+                    لا توجد خصومات لهذا الموظف.
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle d-none" id="deductionTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>نوع الخصم</th>
+                                <th>الوصف</th>
+                                <th class="text-end">المبلغ</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="deductionTableBody"></tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-outline-primary btn-sm mt-3" id="addDeductionBtn">
+                    <i class="fas fa-plus"></i> إضافة خصم
+                </button>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-primary" id="saveDeductionBtn">حفظ</button>
+            </div>
         </div>
     </div>
 </div>
@@ -180,6 +228,18 @@
         #employeesTable tbody tr.selected {
             background-color: rgba(0, 123, 255, 0.1);
         }
+
+        .deduction-summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+
+        .deduction-total-badge {
+            min-width: 90px;
+            text-align: center;
+        }
     </style>
 }
 
@@ -202,9 +262,38 @@
             const historyTable = document.getElementById('historyTable');
             const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
             const antiForgery = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            const deductionModalElement = document.getElementById('deductionModal');
+            const deductionModal = deductionModalElement ? new bootstrap.Modal(deductionModalElement) : null;
+            const deductionModalTitle = document.getElementById('deductionModalTitle');
+            const deductionTable = document.getElementById('deductionTable');
+            const deductionTableBody = document.getElementById('deductionTableBody');
+            const deductionEmptyState = document.getElementById('deductionEmptyState');
+            const addDeductionBtn = document.getElementById('addDeductionBtn');
+            const saveDeductionBtn = document.getElementById('saveDeductionBtn');
+            const employeeDeductions = new Map();
+            let activeDeductionRow = null;
+            let activeDeductionEmployeeId = null;
+            let activeDeductionSalary = 0;
             let currentBatchId = null;
 
+            function escapeHtml(value) {
+                if (value === null || value === undefined) {
+                    return '';
+                }
+
+                return String(value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
             function toggleOverlay(show) {
+                if (!overlay) {
+                    return;
+                }
+
                 overlay.classList.toggle('d-none', !show);
             }
 
@@ -220,7 +309,7 @@
 
             function updateSelectedCount() {
                 const checked = employeesTable.querySelectorAll('input[type="checkbox"]:checked').length;
-                selectedCount.textContent = checked + ' موظف محدد';
+                selectedCount.textContent = `${checked} موظف محدد`;
             }
 
             function getProperty(obj, ...names) {
@@ -282,14 +371,186 @@
                 return number.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
 
-            function clampDeduction(value, salary) {
-                if (!Number.isFinite(value) || value < 0) {
+            function calculateDeductionTotal(deductions) {
+                if (!Array.isArray(deductions)) {
                     return 0;
                 }
-                if (value > salary) {
-                    return salary;
+
+                return deductions.reduce((sum, item) => {
+                    const amount = Number(item?.amount ?? 0);
+                    return sum + (Number.isFinite(amount) ? amount : 0);
+                }, 0);
+            }
+
+            function getRowEmployeeId(row) {
+                if (!row) {
+                    return null;
                 }
-                return value;
+
+                const id = parseInt(row.dataset.id ?? '', 10);
+                return Number.isNaN(id) ? null : id;
+            }
+
+            function updateRowTotals(row) {
+                if (!row) {
+                    return;
+                }
+
+                const employeeId = getRowEmployeeId(row);
+                if (employeeId === null) {
+                    return;
+                }
+
+                const salary = Number(row.dataset.salary ?? '0');
+                const deductions = employeeDeductions.get(employeeId) ?? [];
+                const total = Math.min(calculateDeductionTotal(deductions), Number.isFinite(salary) ? salary : 0);
+                const net = Math.max(0, (Number.isFinite(salary) ? salary : 0) - total);
+
+                const totalBadge = row.querySelector('.deduction-total');
+                if (totalBadge) {
+                    totalBadge.textContent = formatCurrency(total);
+                }
+
+                const netCell = row.querySelector('.net-amount');
+                if (netCell) {
+                    netCell.textContent = formatCurrency(net);
+                }
+            }
+
+            function setDeductionTableVisibility() {
+                if (!deductionTable || !deductionEmptyState) {
+                    return;
+                }
+
+                const hasRows = deductionTableBody && deductionTableBody.children.length > 0;
+                deductionTable.classList.toggle('d-none', !hasRows);
+                deductionEmptyState.classList.toggle('d-none', hasRows);
+            }
+
+            function buildDeductionRow(data = {}) {
+                const row = document.createElement('tr');
+                const type = data?.type ?? '';
+                const description = data?.description ?? '';
+                const amountValue = Number(data?.amount ?? 0);
+                const amount = Number.isFinite(amountValue) ? amountValue.toFixed(2) : '0.00';
+
+                row.innerHTML = `
+                    <td><input type="text" class="form-control form-control-sm deduction-type" maxlength="100" value="${escapeHtml(type)}" /></td>
+                    <td><input type="text" class="form-control form-control-sm deduction-description" maxlength="250" value="${escapeHtml(description)}" /></td>
+                    <td class="text-end"><input type="number" class="form-control form-control-sm deduction-amount" min="0" step="0.01" value="${amount}" /></td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-deduction" title="حذف الخصم">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>`;
+
+                const removeBtn = row.querySelector('.remove-deduction');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', () => {
+                        row.remove();
+                        setDeductionTableVisibility();
+                    });
+                }
+
+                return row;
+            }
+
+            function renderDeductionTable(deductions) {
+                if (!deductionTableBody) {
+                    return;
+                }
+
+                deductionTableBody.innerHTML = '';
+                deductions
+                    .filter(item => item && typeof item === 'object')
+                    .forEach(item => {
+                        deductionTableBody.appendChild(buildDeductionRow(item));
+                    });
+
+                setDeductionTableVisibility();
+            }
+
+            function openDeductionModal(row) {
+                if (!deductionModal) {
+                    return;
+                }
+
+                const employeeId = getRowEmployeeId(row);
+                if (employeeId === null) {
+                    return;
+                }
+
+                activeDeductionRow = row;
+                activeDeductionEmployeeId = employeeId;
+                activeDeductionSalary = Number(row.dataset.salary ?? '0');
+
+                const employeeName = row.dataset.name ?? '';
+                if (deductionModalTitle) {
+                    deductionModalTitle.textContent = employeeName ? `الخصومات - ${employeeName}` : 'الخصومات';
+                }
+
+                const existing = (employeeDeductions.get(employeeId) ?? [])
+                    .filter(item => item && typeof item === 'object')
+                    .map(item => ({
+                        type: item.type ?? '',
+                        description: item.description ?? '',
+                        amount: Number(item.amount ?? 0)
+                    }));
+
+                renderDeductionTable(existing);
+                deductionModal.show();
+            }
+
+            function collectDeductionsFromModal() {
+                if (!deductionTableBody) {
+                    return [];
+                }
+
+                return Array.from(deductionTableBody.querySelectorAll('tr'))
+                    .map(row => {
+                        const typeInput = row.querySelector('.deduction-type');
+                        const descriptionInput = row.querySelector('.deduction-description');
+                        const amountInput = row.querySelector('.deduction-amount');
+
+                        const type = typeInput?.value?.trim() ?? '';
+                        const description = descriptionInput?.value?.trim() ?? '';
+                        let amount = parseFloat(amountInput?.value ?? '0');
+                        if (!Number.isFinite(amount) || amount < 0) {
+                            amount = 0;
+                        }
+                        amount = Number(amount.toFixed(2));
+
+                        return {
+                            type: type || null,
+                            description: description || null,
+                            amount
+                        };
+                    })
+                    .filter(item => Number.isFinite(item.amount) && item.amount > 0);
+            }
+
+            function buildDeductionDetails(deductions) {
+                if (!Array.isArray(deductions) || deductions.length === 0) {
+                    return '<span class="text-muted">---</span>';
+                }
+
+                let content = '<ul class="list-unstyled mb-0">';
+                deductions.forEach(item => {
+                    const amount = getProperty(item, 'amount', 'Amount');
+                    const type = getProperty(item, 'type', 'Type') ?? '';
+                    const description = getProperty(item, 'description', 'Description') ?? '';
+                    const labelParts = [];
+                    if (type) {
+                        labelParts.push(type);
+                    }
+                    if (description) {
+                        labelParts.push(description);
+                    }
+                    const label = labelParts.length ? `<span class="fw-semibold">${escapeHtml(labelParts.join(' - '))}</span>: ` : '';
+                    content += `<li>${label}${formatCurrency(amount)}</li>`;
+                });
+                content += '</ul>';
+                return content;
             }
 
             function renderEmployees(employees) {
@@ -299,6 +560,7 @@
                     row.className = 'text-center text-muted';
                     row.innerHTML = '<td colspan="6">لا يوجد موظفون متاحون</td>';
                     employeesTable.appendChild(row);
+                    updateSelectedCount();
                     return;
                 }
 
@@ -309,43 +571,40 @@
                     if (Number.isNaN(employeeId)) {
                         return;
                     }
+
                     const employeeName = getProperty(emp, 'name', 'Name') ?? '';
                     const jobTitle = getProperty(emp, 'jobTitle', 'JobTitle') ?? '';
                     const salaryRaw = getProperty(emp, 'salary', 'Salary');
                     const salary = Number(salaryRaw ?? 0);
+                    const deductions = employeeDeductions.get(employeeId) ?? [];
+                    employeeDeductions.set(employeeId, deductions);
+
+                    const totalDeduction = calculateDeductionTotal(deductions);
+                    const netAmount = Math.max(0, (Number.isFinite(salary) ? salary : 0) - totalDeduction);
 
                     row.dataset.id = String(employeeId);
                     row.dataset.salary = String(Number.isFinite(salary) ? salary : 0);
+                    row.dataset.name = employeeName;
+
+                    const safeName = escapeHtml(employeeName);
+                    const safeJobTitle = escapeHtml(jobTitle);
+
                     row.innerHTML = `
                         <td><input type="checkbox" class="form-check-input" value="${employeeId}" /></td>
-                        <td><strong>${employeeName}</strong><div class="text-muted small">${jobTitle}</div></td>
-                        <td>${jobTitle}</td>
+                        <td><strong>${safeName}</strong><div class="text-muted small">${safeJobTitle}</div></td>
+                        <td>${safeJobTitle}</td>
                         <td class="text-end">${formatCurrency(salary)}</td>
                         <td>
-                            <input type="number" class="form-control form-control-sm deduction-input" value="0" min="0" step="0.01" />
+                            <div class="deduction-summary">
+                                <span class="badge bg-light text-dark deduction-total deduction-total-badge" dir="ltr">${formatCurrency(totalDeduction)}</span>
+                                <button type="button" class="btn btn-outline-secondary btn-sm manage-deductions">
+                                    <i class="fas fa-sliders-h"></i> إدارة
+                                </button>
+                            </div>
                         </td>
-                        <td class="text-end net-amount">${formatCurrency(salary)}</td>`;
-                    employeesTable.appendChild(row);
-                });
+                        <td class="text-end net-amount">${formatCurrency(netAmount)}</td>`;
 
-                employeesTable.querySelectorAll('tr').forEach(row => {
                     const checkbox = row.querySelector('input[type="checkbox"]');
-                    const deductionInput = row.querySelector('.deduction-input');
-                    const netCell = row.querySelector('.net-amount');
-                    const salary = Number(row.dataset.salary ?? '0');
-
-                    const updateNet = () => {
-                        if (!deductionInput) {
-                            return;
-                        }
-
-                        const rawValue = parseFloat(deductionInput.value);
-                        const deduction = clampDeduction(rawValue, salary);
-                        deductionInput.value = deduction.toFixed(2);
-                        const net = salary - deduction;
-                        netCell.textContent = formatCurrency(net);
-                    };
-
                     if (checkbox) {
                         checkbox.addEventListener('change', () => {
                             row.classList.toggle('selected', checkbox.checked);
@@ -353,10 +612,13 @@
                         });
                     }
 
-                    if (deductionInput) {
-                        deductionInput.addEventListener('input', updateNet);
-                        deductionInput.addEventListener('change', updateNet);
+                    const manageBtn = row.querySelector('.manage-deductions');
+                    if (manageBtn && deductionModal) {
+                        manageBtn.addEventListener('click', () => openDeductionModal(row));
                     }
+
+                    employeesTable.appendChild(row);
+                    updateRowTotals(row);
                 });
 
                 updateSelectedCount();
@@ -365,6 +627,8 @@
             async function loadEmployees() {
                 const branchId = getSelectedBranchId();
                 employeesTable.innerHTML = '';
+                employeeDeductions.clear();
+
                 const row = document.createElement('tr');
                 row.className = 'text-center text-muted';
                 row.innerHTML = '<td colspan="6"><div class="spinner-border spinner-border-sm text-primary"></div> جاري تحميل الموظفين...</td>';
@@ -372,6 +636,7 @@
 
                 if (branchId === null) {
                     row.innerHTML = '<td colspan="6">اختر فرعاً لعرض الموظفين</td>';
+                    updateSelectedCount();
                     return;
                 }
 
@@ -386,7 +651,52 @@
 
                 const response = await fetch(url);
                 const data = await response.json();
-                renderEmployees(data);
+                renderEmployees(Array.isArray(data) ? data : []);
+            }
+
+            if (deductionModalElement) {
+                deductionModalElement.addEventListener('hidden.bs.modal', () => {
+                    activeDeductionRow = null;
+                    activeDeductionEmployeeId = null;
+                    activeDeductionSalary = 0;
+                    if (deductionTableBody) {
+                        deductionTableBody.innerHTML = '';
+                    }
+                    setDeductionTableVisibility();
+                });
+            }
+
+            if (addDeductionBtn && deductionModal) {
+                addDeductionBtn.addEventListener('click', () => {
+                    if (!deductionTableBody) {
+                        return;
+                    }
+
+                    deductionTableBody.appendChild(buildDeductionRow({ amount: 0 }));
+                    setDeductionTableVisibility();
+                    const amountInput = deductionTableBody.querySelector('tr:last-child .deduction-amount');
+                    amountInput?.focus();
+                });
+            }
+
+            if (saveDeductionBtn && deductionModal) {
+                saveDeductionBtn.addEventListener('click', () => {
+                    if (!activeDeductionRow || activeDeductionEmployeeId === null) {
+                        deductionModal.hide();
+                        return;
+                    }
+
+                    const deductions = collectDeductionsFromModal();
+                    const total = calculateDeductionTotal(deductions);
+                    if (activeDeductionSalary > 0 && total > activeDeductionSalary + 0.01) {
+                        alert('إجمالي الخصومات يتجاوز الراتب الأساسي لهذا الموظف.');
+                        return;
+                    }
+
+                    employeeDeductions.set(activeDeductionEmployeeId, deductions);
+                    updateRowTotals(activeDeductionRow);
+                    deductionModal.hide();
+                });
             }
 
             branchSelect.addEventListener('change', () => {
@@ -406,7 +716,7 @@
                 e.preventDefault();
                 employeesTable.querySelectorAll('input[type="checkbox"]').forEach(cb => {
                     cb.checked = true;
-                    cb.closest('tr').classList.add('selected');
+                    cb.closest('tr')?.classList.add('selected');
                 });
                 updateSelectedCount();
             });
@@ -415,7 +725,7 @@
                 e.preventDefault();
                 employeesTable.querySelectorAll('input[type="checkbox"]').forEach(cb => {
                     cb.checked = false;
-                    cb.closest('tr').classList.remove('selected');
+                    cb.closest('tr')?.classList.remove('selected');
                 });
                 updateSelectedCount();
             });
@@ -424,32 +734,7 @@
                 e.preventDefault();
                 const branchId = getSelectedBranchId();
                 const periodValue = monthSelect.value;
-                const employees = Array.from(employeesTable.querySelectorAll('input[type="checkbox"]:checked'))
-                    .map(cb => {
-                        const id = parseInt(cb.value, 10);
-                        if (Number.isNaN(id)) {
-                            return null;
-                        }
-
-                        const row = cb.closest('tr');
-                        const salary = Number(row?.dataset.salary ?? '0');
-                        const deductionInput = row?.querySelector('.deduction-input');
-                        let deduction = 0;
-                        if (deductionInput) {
-                            deduction = parseFloat(deductionInput.value);
-                            if (Number.isNaN(deduction)) {
-                                deduction = 0;
-                            }
-                            deduction = clampDeduction(deduction, salary);
-                            deductionInput.value = deduction.toFixed(2);
-                        }
-
-                        return {
-                            employeeId: id,
-                            deductionAmount: Number(deduction.toFixed(2))
-                        };
-                    })
-                    .filter(item => item !== null);
+                const selectedCheckboxes = Array.from(employeesTable.querySelectorAll('input[type="checkbox"]:checked'));
 
                 if (branchId === null) {
                     alert('يرجى اختيار الفرع.');
@@ -459,7 +744,49 @@
                     alert('يرجى اختيار شهر الرواتب.');
                     return;
                 }
-                if (employees.length === 0) {
+                if (selectedCheckboxes.length === 0) {
+                    alert('يرجى اختيار موظف واحد على الأقل.');
+                    return;
+                }
+
+                let invalidEmployeeName = null;
+                const employeesPayload = [];
+
+                selectedCheckboxes.forEach(cb => {
+                    const id = parseInt(cb.value, 10);
+                    if (Number.isNaN(id)) {
+                        return;
+                    }
+
+                    const row = cb.closest('tr');
+                    const salary = Number(row?.dataset.salary ?? '0');
+                    const name = row?.dataset.name ?? '';
+                    const deductions = (employeeDeductions.get(id) ?? [])
+                        .map(item => ({
+                            type: item?.type?.toString().trim() || null,
+                            description: item?.description?.toString().trim() || null,
+                            amount: Number(Number(item?.amount ?? 0).toFixed(2))
+                        }))
+                        .filter(item => Number.isFinite(item.amount) && item.amount > 0);
+
+                    const total = calculateDeductionTotal(deductions);
+                    if (Number.isFinite(salary) && salary > 0 && total > salary + 0.01) {
+                        invalidEmployeeName = name || `#${id}`;
+                        return;
+                    }
+
+                    employeesPayload.push({
+                        employeeId: id,
+                        deductions
+                    });
+                });
+
+                if (invalidEmployeeName) {
+                    alert(`إجمالي الخصومات يتجاوز الراتب الأساسي للموظف ${invalidEmployeeName}. يرجى تعديل الخصومات.`);
+                    return;
+                }
+
+                if (employeesPayload.length === 0) {
                     alert('يرجى اختيار موظف واحد على الأقل.');
                     return;
                 }
@@ -478,7 +805,7 @@
                             branchId,
                             year,
                             month,
-                            employees
+                            employees: employeesPayload
                         })
                     });
 
@@ -545,7 +872,7 @@
                 }
 
                 confirmBtn.disabled = true;
-                confirmBtn.querySelector('.spinner-border').classList.remove('d-none');
+                confirmBtn.querySelector('.spinner-border')?.classList.remove('d-none');
                 try {
                     const response = await fetch('@Url.Action("ConfirmBatch")', {
                         method: 'POST',
@@ -575,21 +902,22 @@
                     window.location.reload();
                 } finally {
                     confirmBtn.disabled = false;
-                    confirmBtn.querySelector('.spinner-border').classList.add('d-none');
+                    confirmBtn.querySelector('.spinner-border')?.classList.add('d-none');
                 }
             });
 
-            refreshHistoryBtn.addEventListener('click', function (e) {
-                e.preventDefault();
-                window.location.reload();
-            });
-
-            if (branchSelect.value) {
-                loadMonths();
-                loadEmployees();
+            if (refreshHistoryBtn) {
+                refreshHistoryBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    window.location.reload();
+                });
             }
 
-            if (historyTable) {
+            function attachHistoryActions() {
+                if (!historyTable) {
+                    return;
+                }
+
                 historyTable.querySelectorAll('.view-batch').forEach(btn => {
                     btn.addEventListener('click', async function () {
                         const id = this.getAttribute('data-id');
@@ -608,21 +936,109 @@
                         }
                         html += `<div class="mb-3"><strong>الحالة:</strong> ${data.status}</div>`;
                         html += `<div class="mb-3"><strong>المرجع:</strong> ${data.reference || '---'}</div>`;
-                        html += '<table class="table table-sm"><thead><tr><th>الموظف</th><th>المسمى الوظيفي</th><th>الراتب الأساسي</th><th>الخصم</th><th>الصافي</th></tr></thead><tbody>';
-                        data.employees.forEach(emp => {
+                        html += '<table class="table table-sm"><thead><tr><th>الموظف</th><th>المسمى الوظيفي</th><th class="text-end">الراتب الأساسي</th><th class="text-end">إجمالي الخصومات</th><th>تفاصيل الخصومات</th><th class="text-end">الصافي</th></tr></thead><tbody>';
+                        (data.employees ?? []).forEach(emp => {
                             const name = getProperty(emp, 'name', 'Name') ?? '';
                             const title = getProperty(emp, 'jobTitle', 'JobTitle') ?? '';
                             const gross = getProperty(emp, 'grossAmount', 'GrossAmount');
                             const deduction = getProperty(emp, 'deductionAmount', 'DeductionAmount');
                             const amount = getProperty(emp, 'amount', 'Amount');
-                            html += `<tr><td>${name}</td><td>${title}</td><td>${formatCurrency(gross)}</td><td>${formatCurrency(deduction)}</td><td>${formatCurrency(amount)}</td></tr>`;
+                            const deductionDetails = buildDeductionDetails(getProperty(emp, 'deductions', 'Deductions'));
+                            html += `<tr><td>${escapeHtml(name)}</td><td>${escapeHtml(title)}</td><td class="text-end">${formatCurrency(gross)}</td><td class="text-end">${formatCurrency(deduction)}</td><td>${deductionDetails}</td><td class="text-end">${formatCurrency(amount)}</td></tr>`;
                         });
                         html += '</tbody></table>';
                         detailsContent.innerHTML = html;
                         detailsModal.show();
                     });
                 });
+
+                historyTable.querySelectorAll('.confirm-batch').forEach(btn => {
+                    btn.addEventListener('click', async function () {
+                        const id = parseInt(this.getAttribute('data-id') ?? '', 10);
+                        if (Number.isNaN(id)) {
+                            return;
+                        }
+                        if (!confirm('هل تريد اعتماد هذه الدفعة؟')) {
+                            return;
+                        }
+
+                        toggleOverlay(true);
+                        try {
+                            const response = await fetch('@Url.Action("ConfirmBatch")', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'RequestVerificationToken': antiForgery
+                                },
+                                body: JSON.stringify({ batchId: id })
+                            });
+
+                            const result = await response.json();
+                            const success = getProperty(result, 'success', 'Success');
+                            const isSuccess = success === true || success === 'true';
+                            if (!response.ok || !isSuccess) {
+                                const message = getProperty(result, 'message', 'Message');
+                                alert(message || 'حدث خطأ أثناء تأكيد الدفعة');
+                                return;
+                            }
+
+                            const journalsRaw = getProperty(result, 'journals', 'Journals');
+                            const journals = Array.isArray(journalsRaw)
+                                ? journalsRaw
+                                : (journalsRaw ? [journalsRaw] : []);
+                            alert('تم تأكيد تنزيل الرواتب بنجاح. أرقام القيود: ' + journals.join(', '));
+                            window.location.reload();
+                        } finally {
+                            toggleOverlay(false);
+                        }
+                    });
+                });
+
+                historyTable.querySelectorAll('.delete-batch').forEach(btn => {
+                    btn.addEventListener('click', async function () {
+                        const id = parseInt(this.getAttribute('data-id') ?? '', 10);
+                        if (Number.isNaN(id)) {
+                            return;
+                        }
+                        if (!confirm('هل تريد حذف هذه الدفعة؟')) {
+                            return;
+                        }
+
+                        toggleOverlay(true);
+                        try {
+                            const response = await fetch('@Url.Action("DeleteBatch")', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'RequestVerificationToken': antiForgery
+                                },
+                                body: JSON.stringify({ batchId: id })
+                            });
+
+                            const result = await response.json().catch(() => ({}));
+                            const success = getProperty(result, 'success', 'Success');
+                            const isSuccess = success === true || success === 'true';
+                            if (!response.ok || !isSuccess) {
+                                const message = getProperty(result, 'message', 'Message');
+                                alert(message || 'حدث خطأ أثناء حذف الدفعة');
+                                return;
+                            }
+
+                            alert('تم حذف الدفعة بنجاح.');
+                            window.location.reload();
+                        } finally {
+                            toggleOverlay(false);
+                        }
+                    });
+                });
             }
+
+            if (branchSelect.value) {
+                loadMonths();
+                loadEmployees();
+            }
+
+            attachHistoryActions();
         });
     </script>
 }
