@@ -130,10 +130,26 @@ namespace AccountingSystem.Controllers
             var requestedEmployees = request.Employees
                 .Where(e => e != null && e.EmployeeId > 0)
                 .GroupBy(e => e.EmployeeId)
-                .Select(g => new PayrollEmployeeSelection
+                .Select(g =>
                 {
-                    EmployeeId = g.Key,
-                    DeductionAmount = g.Last().DeductionAmount
+                    var selection = g.Last();
+                    var sanitizedDeductions = (selection.Deductions ?? new List<PayrollEmployeeDeductionSelection>())
+                        .Where(d => d != null)
+                        .Select(d => new PayrollEmployeeDeductionSelection
+                        {
+                            Amount = SanitizeAmount(d.Amount),
+                            Type = TrimAndTruncate(d.Type, 100),
+                            Description = TrimAndTruncate(d.Description, 250)
+                        })
+                        .Where(d => d.Amount > 0)
+                        .Take(20)
+                        .ToList();
+
+                    return new PayrollEmployeeSelection
+                    {
+                        EmployeeId = g.Key,
+                        Deductions = sanitizedDeductions
+                    };
                 })
                 .ToList();
 
@@ -267,7 +283,7 @@ namespace AccountingSystem.Controllers
 
             var deductionMap = requestedEmployees.ToDictionary(
                 e => e.EmployeeId,
-                e => e.DeductionAmount < 0 ? 0m : e.DeductionAmount);
+                e => e);
 
             decimal totalGross = 0m;
             decimal totalDeduction = 0m;
@@ -276,22 +292,64 @@ namespace AccountingSystem.Controllers
             foreach (var employee in employees)
             {
                 var gross = employee.Salary;
-                var deduction = deductionMap.TryGetValue(employee.Id, out var requestedDeduction)
-                    ? requestedDeduction
-                    : 0m;
-
-                if (deduction < 0)
+                var deductionEntries = new List<PayrollBatchLineDeduction>();
+                if (deductionMap.TryGetValue(employee.Id, out var employeeSelection))
                 {
-                    deduction = 0m;
+                    foreach (var deductionItem in employeeSelection.Deductions)
+                    {
+                        var amount = deductionItem.Amount;
+                        if (amount <= 0)
+                        {
+                            continue;
+                        }
+
+                        amount = Math.Round(amount, 2, MidpointRounding.AwayFromZero);
+                        if (amount <= 0)
+                        {
+                            continue;
+                        }
+
+                        deductionEntries.Add(new PayrollBatchLineDeduction
+                        {
+                            Amount = amount,
+                            Type = string.IsNullOrWhiteSpace(deductionItem.Type) ? null : deductionItem.Type,
+                            Description = string.IsNullOrWhiteSpace(deductionItem.Description) ? null : deductionItem.Description
+                        });
+                    }
                 }
 
+                var deduction = deductionEntries.Sum(d => d.Amount);
                 if (deduction > gross)
                 {
-                    deduction = gross;
+                    var excess = deduction - gross;
+                    for (var i = deductionEntries.Count - 1; i >= 0 && excess > 0; i--)
+                    {
+                        var entry = deductionEntries[i];
+                        if (excess >= entry.Amount)
+                        {
+                            excess -= entry.Amount;
+                            deductionEntries.RemoveAt(i);
+                            continue;
+                        }
+
+                        entry.Amount = Math.Round(entry.Amount - excess, 2, MidpointRounding.AwayFromZero);
+                        excess = 0;
+                        if (entry.Amount <= 0)
+                        {
+                            deductionEntries.RemoveAt(i);
+                        }
+                    }
+
+                    deduction = deductionEntries.Sum(d => d.Amount);
                 }
 
+                deduction = Math.Clamp(deduction, 0m, gross);
                 deduction = Math.Round(deduction, 2, MidpointRounding.AwayFromZero);
                 var net = Math.Round(gross - deduction, 2, MidpointRounding.AwayFromZero);
+                if (net < 0)
+                {
+                    net = 0;
+                }
 
                 totalGross += gross;
                 totalDeduction += deduction;
@@ -303,7 +361,8 @@ namespace AccountingSystem.Controllers
                     BranchId = employee.BranchId,
                     GrossAmount = gross,
                     DeductionAmount = deduction,
-                    Amount = net
+                    Amount = net,
+                    Deductions = deductionEntries
                 });
             }
 
@@ -353,6 +412,8 @@ namespace AccountingSystem.Controllers
                 .Include(b => b.Lines)
                     .ThenInclude(l => l.Employee)
                         .ThenInclude(e => e.Account)
+                .Include(b => b.Lines)
+                    .ThenInclude(l => l.Deductions)
                 .FirstOrDefaultAsync(b => b.Id == request.BatchId);
 
             if (batch == null)
@@ -457,6 +518,37 @@ namespace AccountingSystem.Controllers
             return Json(new { success = true, journals = journalNumbers });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "payroll.process")]
+        public async Task<IActionResult> DeleteBatch([FromBody] ConfirmPayrollBatchRequest request)
+        {
+            if (request == null || request.BatchId <= 0)
+            {
+                return BadRequest(new { message = "معرف الدفعة غير صالح" });
+            }
+
+            var batch = await _context.PayrollBatches
+                .Include(b => b.Lines)
+                    .ThenInclude(l => l.Deductions)
+                .FirstOrDefaultAsync(b => b.Id == request.BatchId);
+
+            if (batch == null)
+            {
+                return NotFound(new { message = "لم يتم العثور على الدفعة" });
+            }
+
+            if (batch.Status != PayrollBatchStatus.Draft)
+            {
+                return BadRequest(new { message = "يمكن حذف الدفعات بالحالة مسودة فقط" });
+            }
+
+            _context.PayrollBatches.Remove(batch);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true });
+        }
+
         [HttpGet]
         public async Task<IActionResult> BatchDetails(int id)
         {
@@ -466,6 +558,8 @@ namespace AccountingSystem.Controllers
                 .Include(b => b.PaymentAccount)
                 .Include(b => b.Lines)
                     .ThenInclude(l => l.Employee)
+                .Include(b => b.Lines)
+                    .ThenInclude(l => l.Deductions)
                 .FirstOrDefaultAsync(b => b.Id == id);
 
             if (batch == null)
@@ -508,7 +602,16 @@ namespace AccountingSystem.Controllers
                     l.Amount,
                     l.GrossAmount,
                     l.DeductionAmount,
-                    l.Employee.JobTitle
+                    l.Employee.JobTitle,
+                    Deductions = l.Deductions
+                        .OrderBy(d => d.Id)
+                        .Select(d => new
+                        {
+                            d.Type,
+                            d.Description,
+                            d.Amount
+                        })
+                        .ToList()
                 });
 
             return Json(new
@@ -520,6 +623,27 @@ namespace AccountingSystem.Controllers
                 month = batch.Month,
                 year = batch.Year
             });
+        }
+
+        private static decimal SanitizeAmount(decimal amount)
+        {
+            if (amount < 0)
+            {
+                return 0m;
+            }
+
+            return Math.Round(amount, 2, MidpointRounding.AwayFromZero);
+        }
+
+        private static string? TrimAndTruncate(string? value, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            var trimmed = value.Trim();
+            return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
         }
 
         [HttpGet]

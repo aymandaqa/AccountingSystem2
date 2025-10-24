@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -34,5 +35,7 @@ namespace AccountingSystem.Models
         public virtual Employee Employee { get; set; } = null!;
 
         public virtual Branch Branch { get; set; } = null!;
+
+        public virtual ICollection<PayrollBatchLineDeduction> Deductions { get; set; } = new List<PayrollBatchLineDeduction>();
     }
 }
