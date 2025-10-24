@@ -172,6 +172,7 @@ namespace AccountingSystem.Controllers
             {
                 var trimmedTerm = parameters.SearchTerm.Trim();
                 var normalizedTerm = trimmedTerm.ToLowerInvariant();
+                var likePattern = $"%{EscapeLikePattern(trimmedTerm)}%";
                 var statusMatches = Enum.GetValues<JournalEntryStatus>()
                     .Where(s => GetStatusInfo(s).Text.Contains(trimmedTerm, StringComparison.OrdinalIgnoreCase))
                     .ToList();
@@ -190,16 +191,16 @@ namespace AccountingSystem.Controllers
                 }
 
                 query = query.Where(j =>
-                    (j.Number != null && j.Number.ToLower().Contains(normalizedTerm)) ||
-                    (j.Description != null && j.Description.ToLower().Contains(normalizedTerm)) ||
-                    (j.Reference != null && j.Reference.ToLower().Contains(normalizedTerm)) ||
-                    (j.Branch != null && j.Branch.NameAr != null && j.Branch.NameAr.ToLower().Contains(normalizedTerm)) ||
+                    (j.Number != null && EF.Functions.Like(j.Number, likePattern)) ||
+                    (j.Description != null && EF.Functions.Like(j.Description, likePattern)) ||
+                    (j.Reference != null && EF.Functions.Like(j.Reference, likePattern)) ||
+                    (j.Branch != null && j.Branch.NameAr != null && EF.Functions.Like(j.Branch.NameAr, likePattern)) ||
                     (j.CreatedBy != null && (
-                        (j.CreatedBy.FirstName != null && j.CreatedBy.FirstName.ToLower().Contains(normalizedTerm)) ||
-                        (j.CreatedBy.LastName != null && j.CreatedBy.LastName.ToLower().Contains(normalizedTerm)) ||
-                        (j.CreatedBy.UserName != null && j.CreatedBy.UserName.ToLower().Contains(normalizedTerm))
+                        (j.CreatedBy.FirstName != null && EF.Functions.Like(j.CreatedBy.FirstName, likePattern)) ||
+                        (j.CreatedBy.LastName != null && EF.Functions.Like(j.CreatedBy.LastName, likePattern)) ||
+                        (j.CreatedBy.UserName != null && EF.Functions.Like(j.CreatedBy.UserName, likePattern))
                     )) ||
-                    j.Lines.Any(l => l.Description != null && l.Description.ToLower().Contains(normalizedTerm)) ||
+                    j.Lines.Any(l => l.Description != null && EF.Functions.Like(l.Description, likePattern)) ||
                     (statusMatches.Count > 0 && statusMatches.Contains(j.Status)) ||
                     (searchForUnbalanced && j.Lines.Sum(l => l.DebitAmount) != j.Lines.Sum(l => l.CreditAmount)) ||
                     (numericSearch.HasValue && (
@@ -216,6 +217,19 @@ namespace AccountingSystem.Controllers
             }
 
             return query;
+        }
+
+        private static string EscapeLikePattern(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return string.Empty;
+            }
+
+            return value
+                .Replace("[", "[[]")
+                .Replace("%", "[%]")
+                .Replace("_", "[_]");
         }
 
         // GET: JournalEntries

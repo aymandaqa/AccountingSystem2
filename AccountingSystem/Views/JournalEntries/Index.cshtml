@@ -34,6 +34,14 @@
             color-scheme: light;
         }
 
+        .journal-index {
+            padding-inline: clamp(0.75rem, 1vw, 2rem);
+            padding-block: 1.25rem 2rem;
+            min-height: 100vh;
+            width: 100%;
+            margin-inline: auto;
+            overflow-x: hidden;
+        }
 
 
 
@@ -258,6 +266,7 @@
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
+            width: 100%;
         }
 
         .grid-caption {
@@ -291,12 +300,14 @@
         .grid-table {
             position: relative;
             border-radius: 0.75rem;
-            overflow: hidden;
             border: 1px solid rgba(15, 67, 130, 0.08);
+            overflow-x: auto;
+            overflow-y: hidden;
         }
 
             .grid-table table {
                 margin-bottom: 0;
+                width: 100%;
             }
 
             .grid-table thead th {
