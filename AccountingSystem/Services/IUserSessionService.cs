@@ -5,7 +5,7 @@ namespace AccountingSystem.Services
 {
     public interface IUserSessionService
     {
-        Task<UserSession> CreateSessionAsync(User user, HttpContext httpContext, CancellationToken cancellationToken = default);
+        Task<UserSession> CreateSessionAsync(User user, HttpContext httpContext, SessionCreationOptions? options = null, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<UserSession>> InvalidateOtherSessionsAsync(string userId, string activeSessionId, CancellationToken cancellationToken = default);
         Task<bool> IsSessionActiveAsync(string userId, string sessionId, CancellationToken cancellationToken = default);
         Task UpdateSessionActivityAsync(string sessionId, CancellationToken cancellationToken = default);
