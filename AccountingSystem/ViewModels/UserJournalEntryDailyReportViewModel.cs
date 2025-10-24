@@ -17,6 +17,7 @@ namespace AccountingSystem.ViewModels
         public string Reference { get; set; } = string.Empty;
         public decimal TotalDebit { get; set; }
         public decimal TotalCredit { get; set; }
+        public decimal TotalCashImpact { get; set; }
         public List<UserJournalEntrySummary> Entries { get; set; } = new();
     }
 
@@ -25,14 +26,17 @@ namespace AccountingSystem.ViewModels
         public int JournalEntryId { get; set; }
         public string Number { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public DateTime Date { get; set; }
         public decimal TotalDebit { get; set; }
         public decimal TotalCredit { get; set; }
+        public decimal CashImpactAmount { get; set; }
         public string TransactionTypeName { get; set; } = string.Empty;
         public List<UserJournalEntryLineSummary> Lines { get; set; } = new();
     }
 
     public class UserJournalEntryLineSummary
     {
+        public int AccountId { get; set; }
         public string AccountCode { get; set; } = string.Empty;
         public string AccountName { get; set; } = string.Empty;
         public string? Description { get; set; }

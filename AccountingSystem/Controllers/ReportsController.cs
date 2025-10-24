@@ -1253,8 +1253,7 @@ namespace AccountingSystem.Controllers
             worksheet.Cell(currentRow, 3).Value = "نوع المعاملة";
             worksheet.Cell(currentRow, 4).Value = "رقم القيد";
             worksheet.Cell(currentRow, 5).Value = "وصف القيد";
-            worksheet.Cell(currentRow, 6).Value = "إجمالي المدين";
-            worksheet.Cell(currentRow, 7).Value = "إجمالي الدائن";
+            worksheet.Cell(currentRow, 6).Value = "تأثير الصندوق";
             worksheet.Row(currentRow).Style.Font.SetBold();
 
             foreach (var group in viewModel.Items
@@ -1270,12 +1269,11 @@ namespace AccountingSystem.Controllers
                     worksheet.Cell(currentRow, 3).Value = entry.TransactionTypeName;
                     worksheet.Cell(currentRow, 4).Value = entry.Number;
                     worksheet.Cell(currentRow, 5).Value = entry.Description;
-                    worksheet.Cell(currentRow, 6).Value = entry.TotalDebit;
-                    worksheet.Cell(currentRow, 7).Value = entry.TotalCredit;
+                    worksheet.Cell(currentRow, 6).Value = entry.CashImpactAmount;
                 }
             }
 
-            var dataRange = worksheet.Range(1, 1, currentRow, 7);
+            var dataRange = worksheet.Range(1, 1, currentRow, 6);
             dataRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             dataRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
             worksheet.Columns().AdjustToContents();
@@ -1293,6 +1291,27 @@ namespace AccountingSystem.Controllers
             startDate = startDate.Date;
             endDate = endDate.Date;
             var inclusiveEndDate = endDate.AddDays(1);
+
+            var userCashAccountIds = await _context.UserPaymentAccounts
+                .AsNoTracking()
+                .Where(upa => upa.UserId == userId)
+                .Select(upa => upa.AccountId)
+                .ToListAsync();
+
+            var defaultPaymentAccountId = await _context.Users
+                .AsNoTracking()
+                .Where(u => u.Id == userId)
+                .Select(u => u.PaymentAccountId)
+                .FirstOrDefaultAsync();
+
+            if (defaultPaymentAccountId.HasValue)
+            {
+                userCashAccountIds.Add(defaultPaymentAccountId.Value);
+            }
+
+            var cashAccountIdSet = userCashAccountIds.Count == 0
+                ? null
+                : new HashSet<int>(userCashAccountIds);
 
             var query = _context.JournalEntries
                 .AsNoTracking()
@@ -1331,6 +1350,7 @@ namespace AccountingSystem.Controllers
                     .Select(l => new
                     {
                         l.JournalEntryId,
+                        l.AccountId,
                         l.Description,
                         l.DebitAmount,
                         l.CreditAmount,
@@ -1348,6 +1368,7 @@ namespace AccountingSystem.Controllers
                         g => g.Key,
                         g => g.Select(x => new UserJournalEntryLineSummary
                         {
+                            AccountId = x.AccountId,
                             AccountCode = x.AccountCode ?? string.Empty,
                             AccountName = x.AccountName ?? string.Empty,
                             Description = x.Description,
@@ -1377,15 +1398,24 @@ namespace AccountingSystem.Controllers
                         {
                             linesLookup.TryGetValue(x.Id, out var entryLines);
 
+                            var linesForEntry = entryLines ?? new List<UserJournalEntryLineSummary>();
+                            var cashImpact = cashAccountIdSet == null
+                                ? 0m
+                                : linesForEntry
+                                    .Where(l => cashAccountIdSet.Contains(l.AccountId))
+                                    .Sum(l => l.DebitAmount - l.CreditAmount);
+
                             return new UserJournalEntrySummary
                             {
                                 JournalEntryId = x.Id,
                                 Number = x.Number,
                                 Description = x.Description,
+                                Date = x.Date,
                                 TotalDebit = x.TotalDebit,
                                 TotalCredit = x.TotalCredit,
+                                CashImpactAmount = cashImpact,
                                 TransactionTypeName = GetTransactionType(x.Reference, x.Description),
-                                Lines = entryLines ?? new List<UserJournalEntryLineSummary>()
+                                Lines = linesForEntry
                             };
                         })
                         .ToList()
@@ -1398,6 +1428,12 @@ namespace AccountingSystem.Controllers
                 ToDate = endDate,
                 ReferenceFilter = referenceFilter,
                 Items = grouped
+                    .Select(item =>
+                    {
+                        item.TotalCashImpact = item.Entries.Sum(e => e.CashImpactAmount);
+                        return item;
+                    })
+                    .ToList()
             };
         }
 
