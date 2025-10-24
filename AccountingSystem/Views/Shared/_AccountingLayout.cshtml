@@ -1,5 +1,9 @@
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @inject IAuthorizationService AuthorizationService
+@inject UserManager<User> UserManager
+@inject AccountingSystem.Data.ApplicationDbContext DbContext
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -98,6 +102,22 @@
         var canReportsDynamic = (await AuthorizationService.AuthorizeAsync(User, "reports.dynamic")).Succeeded;
         var canQuickAccountStatementShortcut = (await AuthorizationService.AuthorizeAsync(User, "reports.quickaccountstatement")).Succeeded;
         var showReports = canReportsView || canReportsPending || canReportsDynamic;
+
+        var hasCashBox = false;
+        if (User.Identity?.IsAuthenticated ?? false)
+        {
+            var currentUser = await UserManager.GetUserAsync(User);
+            if (currentUser != null)
+            {
+                hasCashBox = currentUser.PaymentAccountId.HasValue;
+                if (!hasCashBox)
+                {
+                    hasCashBox = await DbContext.UserPaymentAccounts
+                        .AsNoTracking()
+                        .AnyAsync(upa => upa.UserId == currentUser.Id);
+                }
+            }
+        }
 
         var isSuperAdmin = User.IsInRole("SuperAdmin") || User.IsInRole("Admin");
         var showQuickAccountStatement = (isSuperAdmin && canReportsView) || canQuickAccountStatementShortcut;
@@ -705,6 +725,17 @@
                                             <i class="fas fa-file-alt"></i> كشف حساب
                                         </a>
                                     </li>
+                                    @if (hasCashBox)
+                                    {
+                                        <li class="report-item nav-item">
+                                            <a class="nav-link"
+                                               asp-controller="Reports"
+                                               asp-action="UserDailyJournalEntries"
+                                               asp-require-permission="reports.view">
+                                                <i class="fas fa-calendar-day"></i> قيود الصندوق اليومية
+                                            </a>
+                                        </li>
+                                    }
                                     <li class="report-item nav-item">
                                         <a class="nav-link"
                                            asp-controller="Reports"

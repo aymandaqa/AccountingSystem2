@@ -1,5 +1,9 @@
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @inject IAuthorizationService AuthorizationService
+@inject UserManager<User> UserManager
+@inject AccountingSystem.Data.ApplicationDbContext DbContext
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -75,6 +79,22 @@
         var canReportsDynamic = (await AuthorizationService.AuthorizeAsync(User, "reports.dynamic")).Succeeded;
         var canQuickAccountStatementShortcut = (await AuthorizationService.AuthorizeAsync(User, "reports.quickaccountstatement")).Succeeded;
         var showReports = canReportsView || canReportsPending || canReportsDynamic;
+
+        var hasCashBox = false;
+        if (User.Identity?.IsAuthenticated ?? false)
+        {
+            var currentUser = await UserManager.GetUserAsync(User);
+            if (currentUser != null)
+            {
+                hasCashBox = currentUser.PaymentAccountId.HasValue;
+                if (!hasCashBox)
+                {
+                    hasCashBox = await DbContext.UserPaymentAccounts
+                        .AsNoTracking()
+                        .AnyAsync(upa => upa.UserId == currentUser.Id);
+                }
+            }
+        }
 
         var isSuperAdmin = User.IsInRole("SuperAdmin") || User.IsInRole("Admin");
         var showQuickAccountStatement = (isSuperAdmin && canReportsView) || canQuickAccountStatementShortcut;
@@ -684,6 +704,17 @@
                                                 <i class="fa-solid fa-file-lines"></i><span>كشف حساب</span>
                                             </a>
                                         </li>
+                                        @if (hasCashBox)
+                                        {
+                                            <li class="report-item">
+                                                <a class="dropdown-item"
+                                                   asp-controller="Reports"
+                                                   asp-action="UserDailyJournalEntries"
+                                                   asp-require-permission="reports.view">
+                                                    <i class="fa-solid fa-calendar-day"></i><span>قيود الصندوق اليومية</span>
+                                                </a>
+                                            </li>
+                                        }
                                         <li class="report-item">
                                             <a class="dropdown-item"
                                                asp-controller="Reports"
