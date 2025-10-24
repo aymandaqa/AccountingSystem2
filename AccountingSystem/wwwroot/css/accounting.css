@@ -27,8 +27,12 @@ body {
 
 /* تحسين الشكل العام */
 .container-fluid {
-    max-width: 1400px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding-inline: 1.5rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
 }
 
 /* تحسين البطاقات */
