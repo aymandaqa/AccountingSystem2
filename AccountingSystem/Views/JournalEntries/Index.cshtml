@@ -43,11 +43,7 @@
             overflow-x: hidden;
         }
 
-        @@supports (height: 100dvh) {
-            .journal-index {
-                min-height: 100dvh;
-            }
-        }
+
 
         .journal-shell {
             border: none;
@@ -416,7 +412,7 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="journal-index container-fluid">
+            <div class="journal-index">
                 <div class="card journal-shell shadow-sm">
                     <div class="card-header">
                         <div class="headline">
@@ -574,7 +570,7 @@
                                     <span>جاري تحميل البيانات...</span>
                                 </div>
                                 <div class="table-responsive">
-                                    <table class="table table-hover align-middle mb-0" id="journalEntriesTable">
+                                    <table class="table table-hover align-middle mb-0" id="journalEntriesTable" style="max-width:100% !important">
                                         <thead class="table-light">
                                             <tr>
                                                 <th scope="col" class="sortable" data-sort="Number" tabindex="0" aria-sort="none" title="ترتيب">
