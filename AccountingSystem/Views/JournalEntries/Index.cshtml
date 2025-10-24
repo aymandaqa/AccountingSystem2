@@ -1245,11 +1245,6 @@
                 }
                 if (state.groupBy) {
                     chips.push({ key: 'groupBy', label: 'التجميع: ' + (groupLabels[state.groupBy] || state.groupBy) });
-                    updateGridHeight();
-                });
-                var cardElement = document.querySelector('.journal-shell');
-                if (cardElement) {
-                    layoutObserver.observe(cardElement);
                 }
                 if (params.showUnbalancedOnly === 'true') {
                     chips.push({ key: 'showUnbalancedOnly', label: 'غير متوازنة فقط' });
