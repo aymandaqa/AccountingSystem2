@@ -44,6 +44,18 @@
                     <span title="الرصيد بالعملة المختارة" class="text-primary">@node.BalanceSelected.ToString("0") @selectedCurrencyCode</span>
                 </span>
             </div>
+
+            @if (node.Id != 0 && node.CanPostTransactions)
+            {
+                <div class="tree-node-actions ms-2">
+                    <a href="@Url.Action("AccountStatement", "Reports", new { accountId = node.Id })"
+                       class="btn btn-outline-success btn-sm"
+                       asp-require-permission="reports.accountstatement"
+                       title="كشف الحساب">
+                        <i class="fas fa-file-alt"></i>
+                    </a>
+                </div>
+            }
         </div>
 
         @if (hasChildren)
