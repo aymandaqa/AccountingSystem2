@@ -292,7 +292,6 @@
                 if (branchId) query = query.addParams('branchId', branchId);
                 if (status) query = query.addParams('status', status);
                 if (showUnbalancedOnly) query = query.addParams('showUnbalancedOnly', 'true');
-                if (searchValue) query = query.addParams('searchTerm', searchValue);
 
                 return query;
             }
@@ -342,12 +341,21 @@
                 return searchInput ? searchInput.value.trim() : '';
             }
 
+            function applyGridSearch(searchValue) {
+                var value = searchValue || '';
+                if (grid.searchModule && typeof grid.searchModule.clearSearch === 'function' && !value) {
+                    grid.searchModule.clearSearch();
+                    return;
+                }
+
+                grid.search(value);
+            }
+
             function reloadGrid() {
                 showLoading();
                 var searchValue = getQuickSearchValue();
                 grid.query = buildQuery(searchValue);
-                grid.searchSettings.key = searchValue;
-                grid.refresh();
+                applyGridSearch(searchValue);
             }
 
             grid.query = buildQuery(getQuickSearchValue());
@@ -430,21 +438,21 @@
                 searchInput.addEventListener('change', executeSearch);
                 searchInput.addEventListener('search', executeSearch);
                 searchInput.addEventListener('input', function () {
-                clearTimeout(searchDebounce);
-                searchDebounce = setTimeout(executeSearch, 350);
-            });
-        }
+                    clearTimeout(searchDebounce);
+                    searchDebounce = setTimeout(executeSearch, 350);
+                });
+            }
 
-        if (clearSearchButton) {
-            clearSearchButton.addEventListener('click', function () {
-                if (!searchInput) {
-                    return;
-                }
-                searchInput.value = '';
-                grid.pageSettings.currentPage = 1;
-                reloadGrid();
-            });
-        }
+            if (clearSearchButton) {
+                clearSearchButton.addEventListener('click', function () {
+                    if (!searchInput) {
+                        return;
+                    }
+                    searchInput.value = '';
+                    grid.pageSettings.currentPage = 1;
+                    reloadGrid();
+                });
+            }
 
             grid.toolbarClick = function (args) {
                 if (args.item && typeof args.item.id === 'string' && args.item.id.toLowerCase().indexOf('excelexport') !== -1) {
