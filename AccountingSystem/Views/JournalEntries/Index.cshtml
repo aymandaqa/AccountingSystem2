@@ -92,15 +92,15 @@
             gap: 0.5rem;
         }
 
-            .filters-card .form-label {
-                font-weight: 600;
-                color: #1f3b5b;
-            }
+        .filters-card .form-label {
+            font-weight: 600;
+            color: #1f3b5b;
+        }
 
-            .filters-card .form-control,
-            .filters-card .form-select {
-                box-shadow: none;
-            }
+        .filters-card .form-control,
+        .filters-card .form-select {
+            box-shadow: none;
+        }
 
         .filters-actions {
             display: flex;
@@ -381,114 +381,114 @@
         </div>
     </div>
     <div class="results-card">
-            <div class="results-toolbar">
-                <div class="toolbar-group">
-                    <div>
-                        <label for="pageSize" class="form-label mb-0">عدد السجلات في الصفحة</label>
-                        <select id="pageSize" class="form-select form-select-sm" style="width: auto; display: inline-block;">
-                            @foreach (var size in Model.PageSizes)
-                            {
-                                if (size == Model.DefaultPageSize)
-                                {
-                                    <option value="@size" selected>@size</option>
-                                }
-                                else
-                                {
-                                    <option value="@size">@size</option>
-                                }
-                            }
-                        </select>
-                    </div>
-                    <div class="input-group input-group-sm" role="search">
-                        <span class="input-group-text"><i class="fas fa-search"></i></span>
-                        <input type="search" id="quickSearch" class="form-control" placeholder="بحث فوري في الجدول" />
-                        <button class="btn btn-outline-secondary" type="button" id="clearQuickSearch" title="مسح"><i class="fas fa-times"></i></button>
-                    </div>
-                    <div class="input-group input-group-sm group-by">
-                        <span class="input-group-text"><i class="fas fa-layer-group"></i></span>
-                        <select id="groupBy" class="form-select">
-                            <option value="">بدون تجميع</option>
-                            <option value="branch">تجميع حسب الفرع</option>
-                            <option value="status">تجميع حسب الحالة</option>
-                            <option value="month">تجميع حسب الشهر</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="toolbar-group">
-                    <button type="button" class="btn btn-outline-secondary" id="filtersToggleButton" data-bs-toggle="collapse" data-bs-target="#advancedFilters" aria-expanded="true" aria-controls="advancedFilters">
-                        <i class="fas fa-angle-up"></i>
-                        <span class="toggle-text">إخفاء البحث المتقدم</span>
-                    </button>
-                    <button type="button" class="btn btn-outline-success" id="exportExcel"><i class="fas fa-file-excel"></i> تصدير إكسل</button>
-                    <a asp-action="Create" class="btn btn-primary" asp-require-permission="journal.create"><i class="fas fa-plus"></i> قيد جديد</a>
-                    <button type="button" class="btn btn-outline-primary" id="refreshButton"><i class="fas fa-sync"></i> تحديث</button>
-                </div>
-            </div>
-            <div class="summary-metrics" aria-live="polite">
-                <div class="summary-tile">
-                    <span class="label">إجمالي القيود</span>
-                    <span class="value" id="summaryTotal">0</span>
-                    <small class="text-muted">العدد الكلي وفق الفلاتر الحالية</small>
-                </div>
-                <div class="summary-tile">
-                    <span class="label">القيود المتوازنة</span>
-                    <span class="value text-success" id="summaryBalanced">0</span>
-                </div>
-                <div class="summary-tile">
-                    <span class="label">القيود غير المتوازنة</span>
-                    <span class="value text-danger" id="summaryUnbalanced">0</span>
-                </div>
-                <div class="summary-tile">
-                    <span class="label">إجمالي المدين</span>
-                    <span class="value" id="summaryDebit">0</span>
-                </div>
-                <div class="summary-tile">
-                    <span class="label">إجمالي الدائن</span>
-                    <span class="value" id="summaryCredit">0</span>
-                </div>
-            </div>
-            <div class="table-shell">
-                <div class="loading-overlay" id="tableLoading" hidden>
-                    <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
-                    <span>جاري تحميل البيانات...</span>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-hover table-striped table-sm management-table" id="managementTable">
-                        <thead>
-                            <tr>
-                                <th data-column="number">رقم القيد <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                                <th data-column="date">التاريخ <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                                <th data-column="branch">الفرع <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                                <th data-column="description">الوصف</th>
-                                <th data-column="reference">المرجع <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                                <th data-column="createdBy">أنشئ بواسطة <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                                <th data-column="totalDebit">إجمالي المدين <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                                <th data-column="totalCredit">إجمالي الدائن <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                                <th data-column="linesCount">عدد البنود <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                                <th data-column="status">الحالة <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                                <th data-column="updatedAt">آخر تحديث <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                                <th class="text-center">العمليات</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-                <div class="empty-state" id="emptyState" hidden>
-                    <i class="fas fa-inbox fa-2x mb-3"></i>
-                    <p class="mb-0">لا توجد بيانات مطابقة للبحث الحالي.</p>
-                </div>
-            </div>
-            <div class="pagination-shell" aria-live="polite">
+        <div class="results-toolbar">
+            <div class="toolbar-group">
                 <div>
-                    <span>عرض <span id="rangeInfo">0-0</span> من <span id="totalRecords">0</span> سجل</span>
+                    <label for="pageSize" class="form-label mb-0">عدد السجلات في الصفحة</label>
+                    <select id="pageSize" class="form-select form-select-sm" style="width: auto; display: inline-block;">
+                        @foreach (var size in Model.PageSizes)
+                        {
+                            if (size == Model.DefaultPageSize)
+                            {
+                                <option value="@size" selected>@size</option>
+                            }
+                            else
+                            {
+                                <option value="@size">@size</option>
+                            }
+                        }
+                    </select>
                 </div>
-                <nav>
-                    <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
-                </nav>
+                <div class="input-group input-group-sm" role="search">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="search" id="quickSearch" class="form-control" placeholder="بحث فوري في الجدول" />
+                    <button class="btn btn-outline-secondary" type="button" id="clearQuickSearch" title="مسح"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="input-group input-group-sm group-by">
+                    <span class="input-group-text"><i class="fas fa-layer-group"></i></span>
+                    <select id="groupBy" class="form-select">
+                        <option value="">بدون تجميع</option>
+                        <option value="branch">تجميع حسب الفرع</option>
+                        <option value="status">تجميع حسب الحالة</option>
+                        <option value="month">تجميع حسب الشهر</option>
+                    </select>
+                </div>
             </div>
+            <div class="toolbar-group">
+                <button type="button" class="btn btn-outline-secondary" id="filtersToggleButton" data-bs-toggle="collapse" data-bs-target="#advancedFilters" aria-expanded="true" aria-controls="advancedFilters">
+                    <i class="fas fa-angle-up"></i>
+                    <span class="toggle-text">إخفاء البحث المتقدم</span>
+                </button>
+                <button type="button" class="btn btn-outline-success" id="exportExcel"><i class="fas fa-file-excel"></i> تصدير إكسل</button>
+                <a asp-action="Create" class="btn btn-primary" asp-require-permission="journal.create"><i class="fas fa-plus"></i> قيد جديد</a>
+                <button type="button" class="btn btn-outline-primary" id="refreshButton"><i class="fas fa-sync"></i> تحديث</button>
+            </div>
+        </div>
+        <div class="summary-metrics" aria-live="polite">
+            <div class="summary-tile">
+                <span class="label">إجمالي القيود</span>
+                <span class="value" id="summaryTotal">0</span>
+                <small class="text-muted">العدد الكلي وفق الفلاتر الحالية</small>
+            </div>
+            <div class="summary-tile">
+                <span class="label">القيود المتوازنة</span>
+                <span class="value text-success" id="summaryBalanced">0</span>
+            </div>
+            <div class="summary-tile">
+                <span class="label">القيود غير المتوازنة</span>
+                <span class="value text-danger" id="summaryUnbalanced">0</span>
+            </div>
+            <div class="summary-tile">
+                <span class="label">إجمالي المدين</span>
+                <span class="value" id="summaryDebit">0</span>
+            </div>
+            <div class="summary-tile">
+                <span class="label">إجمالي الدائن</span>
+                <span class="value" id="summaryCredit">0</span>
+            </div>
+        </div>
+        <div class="table-shell">
+            <div class="loading-overlay" id="tableLoading" hidden>
+                <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+                <span>جاري تحميل البيانات...</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover table-striped table-sm management-table" id="managementTable">
+                    <thead>
+                        <tr>
+                            <th data-column="number">رقم القيد <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
+                            <th data-column="date">التاريخ <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
+                            <th data-column="branch">الفرع <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
+                            <th data-column="description">الوصف</th>
+                            <th data-column="reference">المرجع <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
+                            <th data-column="createdBy">أنشئ بواسطة <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
+                            <th data-column="totalDebit">إجمالي المدين <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
+                            <th data-column="totalCredit">إجمالي الدائن <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
+                            <th data-column="linesCount">عدد البنود <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
+                            <th data-column="status">الحالة <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
+                            <th data-column="updatedAt">آخر تحديث <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
+                            <th class="text-center">العمليات</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="empty-state" id="emptyState" hidden>
+                <i class="fas fa-inbox fa-2x mb-3"></i>
+                <p class="mb-0">لا توجد بيانات مطابقة للبحث الحالي.</p>
+            </div>
+        </div>
+        <div class="pagination-shell" aria-live="polite">
+            <div>
+                <span>عرض <span id="rangeInfo">0-0</span> من <span id="totalRecords">0</span> سجل</span>
+            </div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+            </nav>
         </div>
     </div>
 </div>
+
 
 @section Scripts {
     <script>
