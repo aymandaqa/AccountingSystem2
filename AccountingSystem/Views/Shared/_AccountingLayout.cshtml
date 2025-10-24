@@ -84,9 +84,9 @@
         var canCashClosuresCreate = (await AuthorizationService.AuthorizeAsync(User, "cashclosures.create")).Succeeded;
         var canCashClosuresApprove = (await AuthorizationService.AuthorizeAsync(User, "cashclosures.approve")).Succeeded;
         var canCashClosuresReport = (await AuthorizationService.AuthorizeAsync(User, "cashclosures.report")).Succeeded;
-    var canTransfersView = (await AuthorizationService.AuthorizeAsync(User, "transfers.view")).Succeeded;
-    var canTransfersManage = (await AuthorizationService.AuthorizeAsync(User, "transfers.manage")).Succeeded;
-    var showOperations = canCashClosuresView || canCashClosuresCreate || canCashClosuresApprove || canCashClosuresReport || canTransfersView || canTransfersManage;
+        var canTransfersView = (await AuthorizationService.AuthorizeAsync(User, "transfers.view")).Succeeded;
+        var canTransfersManage = (await AuthorizationService.AuthorizeAsync(User, "transfers.manage")).Succeeded;
+        var showOperations = canCashClosuresView || canCashClosuresCreate || canCashClosuresApprove || canCashClosuresReport || canTransfersView || canTransfersManage;
 
         var canJournalView = (await AuthorizationService.AuthorizeAsync(User, "journal.view")).Succeeded;
         var canJournalCreate = (await AuthorizationService.AuthorizeAsync(User, "journal.create")).Succeeded;
@@ -1005,6 +1005,43 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="deductionModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deductionModalTitle">الخصومات</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="deductionEmptyState" class="alert alert-info text-center">
+                        لا توجد خصومات لهذا الموظف.
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle d-none" id="deductionTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>نوع الخصم</th>
+                                    <th>الوصف</th>
+                                    <th class="text-end">المبلغ</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="deductionTableBody"></tbody>
+                        </table>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm mt-3" id="addDeductionBtn">
+                        <i class="fas fa-plus"></i> إضافة خصم
+                    </button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                    <button type="button" class="btn btn-primary" id="saveDeductionBtn">حفظ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
 
     <div class="modal fade" id="accountModal" tabindex="-1">
