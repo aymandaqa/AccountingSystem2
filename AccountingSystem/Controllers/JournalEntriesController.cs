@@ -28,6 +28,187 @@ namespace AccountingSystem.Controllers
             _journalEntryService = journalEntryService;
         }
 
+        private sealed class JournalEntryFilterParameters
+        {
+            public DateTime? FromDate { get; set; }
+            public DateTime? ToDate { get; set; }
+            public int? BranchId { get; set; }
+            public JournalEntryStatus? Status { get; set; }
+            public string? SearchTerm { get; set; }
+            public bool ShowUnbalancedOnly { get; set; }
+        }
+
+        private JournalEntryFilterParameters ReadFilterParameters(HttpRequest request, DataManagerRequest? dm = null)
+        {
+            static string? TryReadFromDictionary(object? dictionary, string key)
+            {
+                if (dictionary is IDictionary<string, object?> genericDict && genericDict.TryGetValue(key, out var value))
+                {
+                    return value?.ToString();
+                }
+
+                if (dictionary is IDictionary nonGenericDict && nonGenericDict.Contains(key))
+                {
+                    return nonGenericDict[key]?.ToString();
+                }
+
+                return null;
+            }
+
+            string? GetParamValue(string key)
+            {
+                if (request.Query.TryGetValue(key, out var queryValues))
+                {
+                    var queryValue = queryValues.ToString();
+                    if (!string.IsNullOrWhiteSpace(queryValue))
+                    {
+                        return queryValue;
+                    }
+                }
+
+                if (dm == null)
+                {
+                    return null;
+                }
+
+                var paramsProperty = dm.GetType().GetProperty("Params");
+                if (paramsProperty != null)
+                {
+                    var value = TryReadFromDictionary(paramsProperty.GetValue(dm), key);
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        return value;
+                    }
+                }
+
+                var additionalParamsProperty = dm.GetType().GetProperty("AdditionalParams");
+                if (additionalParamsProperty != null)
+                {
+                    var value = TryReadFromDictionary(additionalParamsProperty.GetValue(dm), key);
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        return value;
+                    }
+                }
+
+                return null;
+            }
+
+            var parameters = new JournalEntryFilterParameters();
+
+            var fromValue = GetParamValue("fromDate");
+            if (!string.IsNullOrWhiteSpace(fromValue) && DateTime.TryParse(fromValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var fromDate))
+            {
+                parameters.FromDate = fromDate;
+            }
+
+            var toValue = GetParamValue("toDate");
+            if (!string.IsNullOrWhiteSpace(toValue) && DateTime.TryParse(toValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var toDate))
+            {
+                parameters.ToDate = toDate;
+            }
+
+            var branchValue = GetParamValue("branchId");
+            if (!string.IsNullOrWhiteSpace(branchValue) && int.TryParse(branchValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var branchId))
+            {
+                parameters.BranchId = branchId;
+            }
+
+            var statusValue = GetParamValue("status");
+            if (!string.IsNullOrWhiteSpace(statusValue) && Enum.TryParse<JournalEntryStatus>(statusValue, out var status))
+            {
+                parameters.Status = status;
+            }
+
+            var showUnbalancedValue = GetParamValue("showUnbalancedOnly");
+            if (!string.IsNullOrWhiteSpace(showUnbalancedValue) && bool.TryParse(showUnbalancedValue, out var showUnbalanced))
+            {
+                parameters.ShowUnbalancedOnly = showUnbalanced;
+            }
+
+            var searchValue = GetParamValue("searchTerm");
+            if (!string.IsNullOrWhiteSpace(searchValue))
+            {
+                parameters.SearchTerm = searchValue.Trim();
+            }
+
+            return parameters;
+        }
+
+        private IQueryable<JournalEntry> ApplyFilters(IQueryable<JournalEntry> query, JournalEntryFilterParameters parameters)
+        {
+            if (parameters.BranchId.HasValue && parameters.BranchId.Value > 0)
+            {
+                query = query.Where(j => j.BranchId == parameters.BranchId.Value);
+            }
+
+            if (parameters.Status.HasValue)
+            {
+                query = query.Where(j => j.Status == parameters.Status.Value);
+            }
+
+            if (parameters.FromDate.HasValue)
+            {
+                var from = parameters.FromDate.Value.Date;
+                query = query.Where(j => j.Date >= from);
+            }
+
+            if (parameters.ToDate.HasValue)
+            {
+                var to = parameters.ToDate.Value.Date.AddDays(1);
+                query = query.Where(j => j.Date < to);
+            }
+
+            if (!string.IsNullOrWhiteSpace(parameters.SearchTerm))
+            {
+                var trimmedTerm = parameters.SearchTerm.Trim();
+                var normalizedTerm = trimmedTerm.ToLowerInvariant();
+                var statusMatches = Enum.GetValues<JournalEntryStatus>()
+                    .Where(s => GetStatusInfo(s).Text.Contains(trimmedTerm, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                var searchForUnbalanced = normalizedTerm.Contains("غير") &&
+                    (normalizedTerm.Contains("متوازن") || normalizedTerm.Contains("متزنة") || normalizedTerm.Contains("موزون"));
+
+                decimal? numericSearch = null;
+                if (decimal.TryParse(trimmedTerm, NumberStyles.Number, CultureInfo.InvariantCulture, out var invariantNumeric))
+                {
+                    numericSearch = invariantNumeric;
+                }
+                else if (decimal.TryParse(trimmedTerm, NumberStyles.Number, CultureInfo.CurrentCulture, out var cultureNumeric))
+                {
+                    numericSearch = cultureNumeric;
+                }
+
+                query = query.Where(j =>
+                    (j.Number != null && j.Number.ToLower().Contains(normalizedTerm)) ||
+                    (j.Description != null && j.Description.ToLower().Contains(normalizedTerm)) ||
+                    (j.Reference != null && j.Reference.ToLower().Contains(normalizedTerm)) ||
+                    (j.Branch != null && j.Branch.NameAr != null && j.Branch.NameAr.ToLower().Contains(normalizedTerm)) ||
+                    (j.CreatedBy != null && (
+                        (j.CreatedBy.FirstName != null && j.CreatedBy.FirstName.ToLower().Contains(normalizedTerm)) ||
+                        (j.CreatedBy.LastName != null && j.CreatedBy.LastName.ToLower().Contains(normalizedTerm)) ||
+                        (j.CreatedBy.UserName != null && j.CreatedBy.UserName.ToLower().Contains(normalizedTerm))
+                    )) ||
+                    j.Lines.Any(l => l.Description != null && l.Description.ToLower().Contains(normalizedTerm)) ||
+                    (statusMatches.Count > 0 && statusMatches.Contains(j.Status)) ||
+                    (searchForUnbalanced && j.Lines.Sum(l => l.DebitAmount) != j.Lines.Sum(l => l.CreditAmount)) ||
+                    (numericSearch.HasValue && (
+                        j.TotalDebit == numericSearch.Value ||
+                        j.TotalCredit == numericSearch.Value ||
+                        j.Lines.Sum(l => l.DebitAmount) == numericSearch.Value ||
+                        j.Lines.Sum(l => l.CreditAmount) == numericSearch.Value))
+                );
+            }
+
+            if (parameters.ShowUnbalancedOnly)
+            {
+                query = query.Where(entry => entry.Lines.Sum(l => l.DebitAmount) != entry.Lines.Sum(l => l.CreditAmount));
+            }
+
+            return query;
+        }
+
         // GET: JournalEntries
         [Authorize(Policy = "journal.view")]
         public async Task<IActionResult> Index()
@@ -253,102 +434,7 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "journal.view")]
         public IActionResult UrlDatasourceJournalEntries([FromBody] DataManagerRequest dm)
         {
-            static string? GetParamValue(HttpRequest httpRequest, DataManagerRequest? request, string key)
-            {
-                if (httpRequest.Query.TryGetValue(key, out var queryValues))
-                {
-                    var queryValue = queryValues.ToString();
-                    if (!string.IsNullOrWhiteSpace(queryValue))
-                    {
-                        return queryValue;
-                    }
-                }
-
-                if (request == null)
-                {
-                    return null;
-                }
-
-                static string? TryReadFromDictionary(object? dictionary, string key)
-                {
-                    if (dictionary is IDictionary<string, object?> genericDict && genericDict.TryGetValue(key, out var value))
-                    {
-                        return value?.ToString();
-                    }
-
-                    if (dictionary is IDictionary nonGenericDict && nonGenericDict.Contains(key))
-                    {
-                        return nonGenericDict[key]?.ToString();
-                    }
-
-                    return null;
-                }
-
-                var paramsProperty = request.GetType().GetProperty("Params");
-                if (paramsProperty != null)
-                {
-                    var value = TryReadFromDictionary(paramsProperty.GetValue(request), key);
-                    if (!string.IsNullOrWhiteSpace(value))
-                    {
-                        return value;
-                    }
-                }
-
-                var additionalParamsProperty = request.GetType().GetProperty("AdditionalParams");
-                if (additionalParamsProperty != null)
-                {
-                    var value = TryReadFromDictionary(additionalParamsProperty.GetValue(request), key);
-                    if (!string.IsNullOrWhiteSpace(value))
-                    {
-                        return value;
-                    }
-                }
-
-                return null;
-            }
-
-            DateTime? fromDate = null;
-            DateTime? toDate = null;
-            int? branchId = null;
-            string? status = null;
-            string? searchTerm = null;
-            var showUnbalancedOnly = false;
-
-            var fromValue = GetParamValue(Request, dm, "fromDate");
-            if (!string.IsNullOrWhiteSpace(fromValue) && DateTime.TryParse(fromValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedFromDate))
-            {
-                fromDate = parsedFromDate;
-            }
-
-            var toValue = GetParamValue(Request, dm, "toDate");
-            if (!string.IsNullOrWhiteSpace(toValue) && DateTime.TryParse(toValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedToDate))
-            {
-                toDate = parsedToDate;
-            }
-
-            var branchValue = GetParamValue(Request, dm, "branchId");
-            if (!string.IsNullOrWhiteSpace(branchValue) && int.TryParse(branchValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedBranchId))
-            {
-                branchId = parsedBranchId;
-            }
-
-            var statusParameterValue = GetParamValue(Request, dm, "status");
-            if (!string.IsNullOrWhiteSpace(statusParameterValue))
-            {
-                status = statusParameterValue;
-            }
-
-            var showUnbalancedValue = GetParamValue(Request, dm, "showUnbalancedOnly");
-            if (!string.IsNullOrWhiteSpace(showUnbalancedValue) && bool.TryParse(showUnbalancedValue, out var parsedShowUnbalanced))
-            {
-                showUnbalancedOnly = parsedShowUnbalanced;
-            }
-
-            var searchValue = GetParamValue(Request, dm, "searchTerm");
-            if (!string.IsNullOrWhiteSpace(searchValue))
-            {
-                searchTerm = searchValue;
-            }
+            var filters = ReadFilterParameters(Request, dm);
 
             var query = _context.JournalEntries
                 .AsNoTracking()
@@ -357,70 +443,7 @@ namespace AccountingSystem.Controllers
                 .Include(j => j.Lines)
                 .AsQueryable();
 
-            if (branchId.HasValue && branchId.Value > 0)
-            {
-                query = query.Where(j => j.BranchId == branchId.Value);
-            }
-
-            if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<JournalEntryStatus>(status, out var statusFilterValue))
-            {
-                query = query.Where(j => j.Status == statusFilterValue);
-            }
-
-            if (fromDate.HasValue)
-            {
-                var from = fromDate.Value.Date;
-                query = query.Where(j => j.Date >= from);
-            }
-
-            if (toDate.HasValue)
-            {
-                var to = toDate.Value.Date.AddDays(1);
-                query = query.Where(j => j.Date < to);
-            }
-
-            if (!string.IsNullOrWhiteSpace(searchTerm))
-            {
-                var trimmedTerm = searchTerm.Trim();
-                var normalizedTerm = trimmedTerm.ToLowerInvariant();
-                var statusMatches = Enum.GetValues<JournalEntryStatus>()
-                    .Where(s => GetStatusInfo(s).Text.Contains(trimmedTerm, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-                var searchForUnbalanced = normalizedTerm.Contains("غير") &&
-                    (normalizedTerm.Contains("متوازن") || normalizedTerm.Contains("متزنة") || normalizedTerm.Contains("موزون"));
-
-                decimal? numericSearch = null;
-                if (decimal.TryParse(trimmedTerm, NumberStyles.Number, CultureInfo.InvariantCulture, out var invariantNumeric))
-                {
-                    numericSearch = invariantNumeric;
-                }
-                else if (decimal.TryParse(trimmedTerm, NumberStyles.Number, CultureInfo.CurrentCulture, out var cultureNumeric))
-                {
-                    numericSearch = cultureNumeric;
-                }
-
-                query = query.Where(j =>
-                    (j.Number != null && j.Number.ToLower().Contains(normalizedTerm)) ||
-                    (j.Description != null && j.Description.ToLower().Contains(normalizedTerm)) ||
-                    (j.Reference != null && j.Reference.ToLower().Contains(normalizedTerm)) ||
-                    (j.Branch != null && j.Branch.NameAr != null && j.Branch.NameAr.ToLower().Contains(normalizedTerm)) ||
-                    (j.CreatedBy != null && (
-                        (j.CreatedBy.FirstName != null && j.CreatedBy.FirstName.ToLower().Contains(normalizedTerm)) ||
-                        (j.CreatedBy.LastName != null && j.CreatedBy.LastName.ToLower().Contains(normalizedTerm)) ||
-                        (j.CreatedBy.UserName != null && j.CreatedBy.UserName.ToLower().Contains(normalizedTerm))
-                    )) ||
-                    j.Lines.Any(l => l.Description != null && l.Description.ToLower().Contains(normalizedTerm)) ||
-                    (statusMatches.Count > 0 && statusMatches.Contains(j.Status)) ||
-                    (searchForUnbalanced && j.Lines.Sum(l => l.DebitAmount) != j.Lines.Sum(l => l.CreditAmount)) ||
-                    (numericSearch.HasValue && (
-                        j.TotalDebit == numericSearch.Value ||
-                        j.TotalCredit == numericSearch.Value ||
-                        j.Lines.Sum(l => l.DebitAmount) == numericSearch.Value ||
-                        j.Lines.Sum(l => l.CreditAmount) == numericSearch.Value))
-                );
-            }
-
-            query = query
+            query = ApplyFilters(query, filters)
                 .OrderByDescending(entry => entry.Date)
                 .ThenByDescending(entry => entry.Id);
 
@@ -478,11 +501,6 @@ namespace AccountingSystem.Controllers
                     };
                 });
 
-            if (showUnbalancedOnly)
-            {
-                dataSource = dataSource.Where(entry => !entry.IsBalanced);
-            }
-
             var operation = new DataOperations();
 
             if (dm.Search != null && dm.Search.Count > 0)
@@ -513,6 +531,58 @@ namespace AccountingSystem.Controllers
             }
 
             return dm.RequiresCounts ? Json(new { result = dataSource, count }) : Json(dataSource);
+        }
+
+        [HttpGet]
+        [Authorize(Policy = "journal.view")]
+        public async Task<IActionResult> Summary()
+        {
+            var filters = ReadFilterParameters(Request);
+
+            var query = _context.JournalEntries
+                .AsNoTracking()
+                .Include(j => j.Branch)
+                .Include(j => j.CreatedBy)
+                .Include(j => j.Lines)
+                .AsQueryable();
+
+            query = ApplyFilters(query, filters);
+
+            var totalEntries = await query.CountAsync();
+
+            var statusCounts = await query
+                .GroupBy(entry => entry.Status)
+                .Select(group => new { Status = group.Key, Count = group.Count() })
+                .ToListAsync();
+
+            var unbalancedEntries = await query
+                .Where(entry => entry.Lines.Sum(line => line.DebitAmount) != entry.Lines.Sum(line => line.CreditAmount))
+                .CountAsync();
+
+            var totalDebit = await query
+                .SelectMany(entry => entry.Lines.Select(line => (decimal?)line.DebitAmount))
+                .SumAsync() ?? 0m;
+
+            var totalCredit = await query
+                .SelectMany(entry => entry.Lines.Select(line => (decimal?)line.CreditAmount))
+                .SumAsync() ?? 0m;
+
+            var statusSummary = statusCounts.Count == 0
+                ? string.Empty
+                : string.Join(" • ", statusCounts.Select(sc =>
+                {
+                    var info = GetStatusInfo(sc.Status);
+                    return string.Concat(info.Text, ": ", sc.Count);
+                }));
+
+            return Json(new
+            {
+                totalEntries,
+                unbalancedEntries,
+                totalDebit,
+                totalCredit,
+                statusSummary
+            });
         }
 
         // GET: JournalEntries/Create
