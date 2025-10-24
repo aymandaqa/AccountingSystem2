@@ -1381,7 +1381,7 @@ namespace AccountingSystem.Controllers
             };
         }
 
-        private sealed class JournalEntryManagementRequest
+        public sealed class JournalEntryManagementRequest
         {
             public int Page { get; set; } = 1;
             public int PageSize { get; set; } = 50;
