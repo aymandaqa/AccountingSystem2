@@ -10,15 +10,35 @@
     <style>
         .journal-entries-wrapper {
             padding-inline: clamp(0.5rem, 1vw, 1.75rem);
-            padding-block-end: 1.5rem;
+            padding-block: 1rem 1.5rem;
+            min-height: 100vh;
+            display: flex;
+            width: 100%;
         }
 
         .journal-entries-card {
             display: flex;
             flex-direction: column;
             gap: 1.25rem;
-            min-height: calc(100vh - 6rem);
+            flex: 1 1 auto;
+            min-height: 0;
             background-color: #fdfdfd;
+        }
+
+        @supports (height: 100dvh) {
+            .journal-entries-wrapper {
+                min-height: 100dvh;
+            }
+
+            .journal-entries-card {
+                min-height: calc(100dvh - 5.5rem);
+            }
+        }
+
+        @supports not (height: 100dvh) {
+            .journal-entries-card {
+                min-height: calc(100vh - 5.5rem);
+            }
         }
 
         .journal-entries-card .card-header {
@@ -239,6 +259,7 @@
         @@media (max-width: 575.98px) {
             .journal-entries-wrapper {
                 padding-inline: 0.25rem;
+                padding-block: 0.75rem 1rem;
             }
 
             .journal-entries-card .summary-grid {
@@ -696,14 +717,35 @@
             grid.sortSettings = { columns: [{ field: 'Date', direction: 'Descending' }] };
             grid.groupSettings = { showDropArea: false };
 
+            function getViewportHeight() {
+                if (window.visualViewport && typeof window.visualViewport.height === 'number') {
+                    return window.visualViewport.height;
+                }
+                return window.innerHeight;
+            }
+
             function updateGridHeight() {
+                if (!gridElement) {
+                    return;
+                }
                 var gridRect = gridElement.getBoundingClientRect();
-                var availableHeight = window.innerHeight - gridRect.top - 64;
-                grid.height = Math.max(availableHeight, 420);
+                var viewportHeight = getViewportHeight();
+                var availableHeight = viewportHeight - gridRect.top - 32;
+                grid.height = Math.max(Math.round(availableHeight), 420);
             }
 
             updateGridHeight();
             window.addEventListener('resize', updateGridHeight);
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', updateGridHeight);
+            }
+            if (typeof ResizeObserver !== 'undefined') {
+                var layoutObserver = new ResizeObserver(function () { updateGridHeight(); });
+                var cardElement = document.querySelector('.journal-entries-card');
+                if (cardElement) {
+                    layoutObserver.observe(cardElement);
+                }
+            }
 
             grid.rowDataBound = function (args) {
                 if (!args || !args.row) {
