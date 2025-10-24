@@ -1255,10 +1255,6 @@ namespace AccountingSystem.Controllers
             worksheet.Cell(currentRow, 5).Value = "وصف القيد";
             worksheet.Cell(currentRow, 6).Value = "إجمالي المدين";
             worksheet.Cell(currentRow, 7).Value = "إجمالي الدائن";
-            worksheet.Cell(currentRow, 8).Value = "الحساب";
-            worksheet.Cell(currentRow, 9).Value = "وصف السطر";
-            worksheet.Cell(currentRow, 10).Value = "مدين";
-            worksheet.Cell(currentRow, 11).Value = "دائن";
             worksheet.Row(currentRow).Style.Font.SetBold();
 
             foreach (var group in viewModel.Items
@@ -1267,37 +1263,21 @@ namespace AccountingSystem.Controllers
             {
                 foreach (var entry in group.Entries)
                 {
-                    if (entry.Lines.Count == 0)
-                    {
-                        currentRow++;
-                        worksheet.Cell(currentRow, 1).Value = group.Date;
-                        worksheet.Cell(currentRow, 2).Value = group.Reference;
-                        worksheet.Cell(currentRow, 3).Value = entry.TransactionTypeName;
-                        worksheet.Cell(currentRow, 4).Value = entry.Number;
-                        worksheet.Cell(currentRow, 5).Value = entry.Description;
-                        worksheet.Cell(currentRow, 6).Value = entry.TotalDebit;
-                        worksheet.Cell(currentRow, 7).Value = entry.TotalCredit;
-                        continue;
-                    }
-
-                    foreach (var line in entry.Lines)
-                    {
-                        currentRow++;
-                        worksheet.Cell(currentRow, 1).Value = group.Date;
-                        worksheet.Cell(currentRow, 2).Value = group.Reference;
-                        worksheet.Cell(currentRow, 3).Value = entry.TransactionTypeName;
-                        worksheet.Cell(currentRow, 4).Value = entry.Number;
-                        worksheet.Cell(currentRow, 5).Value = entry.Description;
-                        worksheet.Cell(currentRow, 6).Value = entry.TotalDebit;
-                        worksheet.Cell(currentRow, 7).Value = entry.TotalCredit;
-                        worksheet.Cell(currentRow, 8).Value = $"{line.AccountCode} - {line.AccountName}";
-                        worksheet.Cell(currentRow, 9).Value = line.Description ?? string.Empty;
-                        worksheet.Cell(currentRow, 10).Value = line.DebitAmount;
-                        worksheet.Cell(currentRow, 11).Value = line.CreditAmount;
-                    }
+                    currentRow++;
+                    worksheet.Cell(currentRow, 1).Value = group.Date;
+                    worksheet.Cell(currentRow, 1).Style.DateFormat.Format = "dd/MM/yyyy";
+                    worksheet.Cell(currentRow, 2).Value = group.Reference;
+                    worksheet.Cell(currentRow, 3).Value = entry.TransactionTypeName;
+                    worksheet.Cell(currentRow, 4).Value = entry.Number;
+                    worksheet.Cell(currentRow, 5).Value = entry.Description;
+                    worksheet.Cell(currentRow, 6).Value = entry.TotalDebit;
+                    worksheet.Cell(currentRow, 7).Value = entry.TotalCredit;
                 }
             }
 
+            var dataRange = worksheet.Range(1, 1, currentRow, 7);
+            dataRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            dataRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
             worksheet.Columns().AdjustToContents();
 
             using var stream = new MemoryStream();
