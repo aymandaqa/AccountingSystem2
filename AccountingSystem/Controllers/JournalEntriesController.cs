@@ -7,6 +7,7 @@ using AccountingSystem.ViewModels;
 using AccountingSystem.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -252,15 +253,58 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "journal.view")]
         public IActionResult UrlDatasourceJournalEntries([FromBody] DataManagerRequest dm)
         {
-            static string? GetParamValue(DataManagerRequest request, string key)
+            static string? GetParamValue(HttpRequest httpRequest, DataManagerRequest? request, string key)
             {
-                if (request?.Params == null || !request.Params.ContainsKey(key))
+                if (httpRequest.Query.TryGetValue(key, out var queryValues))
+                {
+                    var queryValue = queryValues.ToString();
+                    if (!string.IsNullOrWhiteSpace(queryValue))
+                    {
+                        return queryValue;
+                    }
+                }
+
+                if (request == null)
                 {
                     return null;
                 }
 
-                var value = request.Params[key];
-                return value?.ToString();
+                static string? TryReadFromDictionary(object? dictionary, string key)
+                {
+                    if (dictionary is IDictionary<string, object?> genericDict && genericDict.TryGetValue(key, out var value))
+                    {
+                        return value?.ToString();
+                    }
+
+                    if (dictionary is IDictionary nonGenericDict && nonGenericDict.Contains(key))
+                    {
+                        return nonGenericDict[key]?.ToString();
+                    }
+
+                    return null;
+                }
+
+                var paramsProperty = request.GetType().GetProperty("Params");
+                if (paramsProperty != null)
+                {
+                    var value = TryReadFromDictionary(paramsProperty.GetValue(request), key);
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        return value;
+                    }
+                }
+
+                var additionalParamsProperty = request.GetType().GetProperty("AdditionalParams");
+                if (additionalParamsProperty != null)
+                {
+                    var value = TryReadFromDictionary(additionalParamsProperty.GetValue(request), key);
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        return value;
+                    }
+                }
+
+                return null;
             }
 
             DateTime? fromDate = null;
@@ -270,37 +314,37 @@ namespace AccountingSystem.Controllers
             string? searchTerm = null;
             var showUnbalancedOnly = false;
 
-            var fromValue = GetParamValue(dm, "fromDate");
+            var fromValue = GetParamValue(Request, dm, "fromDate");
             if (!string.IsNullOrWhiteSpace(fromValue) && DateTime.TryParse(fromValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedFromDate))
             {
                 fromDate = parsedFromDate;
             }
 
-            var toValue = GetParamValue(dm, "toDate");
+            var toValue = GetParamValue(Request, dm, "toDate");
             if (!string.IsNullOrWhiteSpace(toValue) && DateTime.TryParse(toValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedToDate))
             {
                 toDate = parsedToDate;
             }
 
-            var branchValue = GetParamValue(dm, "branchId");
+            var branchValue = GetParamValue(Request, dm, "branchId");
             if (!string.IsNullOrWhiteSpace(branchValue) && int.TryParse(branchValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedBranchId))
             {
                 branchId = parsedBranchId;
             }
 
-            var statusValue = GetParamValue(dm, "status");
-            if (!string.IsNullOrWhiteSpace(statusValue))
+            var statusParameterValue = GetParamValue(Request, dm, "status");
+            if (!string.IsNullOrWhiteSpace(statusParameterValue))
             {
-                status = statusValue;
+                status = statusParameterValue;
             }
 
-            var showUnbalancedValue = GetParamValue(dm, "showUnbalancedOnly");
+            var showUnbalancedValue = GetParamValue(Request, dm, "showUnbalancedOnly");
             if (!string.IsNullOrWhiteSpace(showUnbalancedValue) && bool.TryParse(showUnbalancedValue, out var parsedShowUnbalanced))
             {
                 showUnbalancedOnly = parsedShowUnbalanced;
             }
 
-            var searchValue = GetParamValue(dm, "searchTerm");
+            var searchValue = GetParamValue(Request, dm, "searchTerm");
             if (!string.IsNullOrWhiteSpace(searchValue))
             {
                 searchTerm = searchValue;
@@ -318,9 +362,9 @@ namespace AccountingSystem.Controllers
                 query = query.Where(j => j.BranchId == branchId.Value);
             }
 
-            if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<JournalEntryStatus>(status, out var statusValue))
+            if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<JournalEntryStatus>(status, out var statusFilterValue))
             {
-                query = query.Where(j => j.Status == statusValue);
+                query = query.Where(j => j.Status == statusFilterValue);
             }
 
             if (fromDate.HasValue)
