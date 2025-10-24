@@ -85,7 +85,7 @@ namespace AccountingSystem.Controllers
                 MenuOrder = model.MenuOrder,
                 PermissionName = permissionName,
                 ManagePermissionName = managePermissionName,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 CreatedById = user?.Id
             };
 
@@ -195,7 +195,7 @@ namespace AccountingSystem.Controllers
             definition.MenuOrder = model.MenuOrder;
             definition.PermissionName = model.PermissionName?.Trim().ToLowerInvariant() ?? definition.PermissionName;
             definition.ManagePermissionName = model.ManagePermissionName?.Trim().ToLowerInvariant() ?? definition.ManagePermissionName;
-            definition.UpdatedAt = DateTime.UtcNow;
+            definition.UpdatedAt = DateTime.Now;
             definition.UpdatedById = user?.Id;
 
             var fieldsToKeep = new HashSet<DynamicScreenField>();
@@ -386,7 +386,7 @@ namespace AccountingSystem.Controllers
                     Name = permissionName,
                     DisplayName = displayName,
                     Category = "الشاشات الديناميكية",
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.Now
                 };
                 _context.Permissions.Add(permission);
             }

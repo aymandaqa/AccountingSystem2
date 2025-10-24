@@ -75,7 +75,7 @@ namespace AccountingSystem.Controllers
                 DocumentType = model.DocumentType,
                 BranchId = model.BranchId,
                 CreatedById = user?.Id,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 IsActive = true
             };
 
@@ -148,7 +148,7 @@ namespace AccountingSystem.Controllers
             definition.Name = model.Name;
             definition.BranchId = model.BranchId;
             definition.DocumentType = model.DocumentType;
-            definition.UpdatedAt = DateTime.UtcNow;
+            definition.UpdatedAt = DateTime.Now;
 
             var stepIds = definition.Steps.Select(s => s.Id).ToList();
             if (stepIds.Count > 0)
@@ -182,7 +182,7 @@ namespace AccountingSystem.Controllers
             }
 
             definition.IsActive = !definition.IsActive;
-            definition.UpdatedAt = DateTime.UtcNow;
+            definition.UpdatedAt = DateTime.Now;
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }

@@ -10,7 +10,7 @@ namespace AccountingSystem.Models.CompoundJournals
 
         public int DefinitionId { get; set; }
 
-        public DateTime ExecutedAtUtc { get; set; } = DateTime.UtcNow;
+        public DateTime ExecutedAtUtc { get; set; } = DateTime.Now;
 
         public bool IsAutomatic { get; set; }
 

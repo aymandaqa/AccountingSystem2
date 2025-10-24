@@ -40,7 +40,7 @@ namespace AccountingSystem.Models.DynamicScreens
         [StringLength(450)]
         public string? CreatedById { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         [StringLength(450)]
         public string? UpdatedById { get; set; }

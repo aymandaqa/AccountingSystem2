@@ -17,7 +17,7 @@ namespace AccountingSystem.Services
     {
         public string UserId { get; set; } = string.Empty;
 
-        public DateTime ExecutionDate { get; set; } = DateTime.UtcNow;
+        public DateTime ExecutionDate { get; set; } = DateTime.Now;
 
         public DateTime? JournalDate { get; set; }
 

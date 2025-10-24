@@ -61,7 +61,7 @@ namespace AccountingSystem.Services
             using var scope = _serviceProvider.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var service = scope.ServiceProvider.GetRequiredService<ICompoundJournalService>();
-            var nowUtc = DateTime.UtcNow;
+            var nowUtc = DateTime.Now;
 
             var dueDefinitions = await context.CompoundJournalDefinitions
                 .Where(d => d.IsActive && d.TriggerType != CompoundJournalTriggerType.Manual && d.NextRunUtc != null && d.NextRunUtc <= nowUtc)

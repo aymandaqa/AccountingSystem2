@@ -173,7 +173,7 @@ namespace AccountingSystem.Services
 
             action.Status = approve ? WorkflowActionStatus.Approved : WorkflowActionStatus.Rejected;
             action.UserId = userId;
-            action.ActionedAt = DateTime.UtcNow;
+            action.ActionedAt = DateTime.Now;
             action.Notes = notes;
 
             await _notificationService.MarkWorkflowActionNotificationsAsReadAsync(action.Id, userId, cancellationToken);
@@ -274,7 +274,7 @@ namespace AccountingSystem.Services
                 Message = message,
                 Link = "/WorkflowApprovals",
                 WorkflowActionId = action.Id,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.Now
             }).ToList();
 
             await _notificationService.CreateNotificationsAsync(notifications, cancellationToken);
@@ -374,7 +374,7 @@ namespace AccountingSystem.Services
         private async Task HandleRejectionAsync(WorkflowAction action, CancellationToken cancellationToken)
         {
             action.WorkflowInstance.Status = WorkflowInstanceStatus.Rejected;
-            action.WorkflowInstance.CompletedAt = DateTime.UtcNow;
+            action.WorkflowInstance.CompletedAt = DateTime.Now;
 
             var pendingActions = await _context.WorkflowActions
                 .Where(a => a.WorkflowInstanceId == action.WorkflowInstanceId && a.Status == WorkflowActionStatus.Pending)
@@ -422,7 +422,7 @@ namespace AccountingSystem.Services
                     if (entry != null)
                     {
                         entry.Status = DynamicScreenEntryStatus.Rejected;
-                        entry.RejectedAt = DateTime.UtcNow;
+                        entry.RejectedAt = DateTime.Now;
                         entry.RejectedById = action.UserId;
                         entry.WorkflowInstanceId = action.WorkflowInstance.Id;
                     }
@@ -438,7 +438,7 @@ namespace AccountingSystem.Services
         private async Task CompleteWorkflowAsync(WorkflowInstance instance, string approvedById, CancellationToken cancellationToken)
         {
             instance.Status = WorkflowInstanceStatus.Approved;
-            instance.CompletedAt = DateTime.UtcNow;
+            instance.CompletedAt = DateTime.Now;
 
             switch (instance.DocumentType)
             {
@@ -472,7 +472,7 @@ namespace AccountingSystem.Services
                     {
                         entry.WorkflowInstanceId = instance.Id;
                         entry.Status = DynamicScreenEntryStatus.Approved;
-                        entry.ApprovedAt = DateTime.UtcNow;
+                        entry.ApprovedAt = DateTime.Now;
                         entry.ApprovedById = approvedById;
                     }
                     break;

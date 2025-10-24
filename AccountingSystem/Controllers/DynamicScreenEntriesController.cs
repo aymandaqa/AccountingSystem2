@@ -201,7 +201,7 @@ namespace AccountingSystem.Controllers
             {
                 ScreenId = screen.Id,
                 ScreenType = screen.ScreenType,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 CreatedById = user.Id,
                 BranchId = input.BranchId,
                 IsCash = ResolvePaymentMode(screen.PaymentMode, input.IsCash),
@@ -216,7 +216,7 @@ namespace AccountingSystem.Controllers
 
             if (entry.Status == DynamicScreenEntryStatus.Approved)
             {
-                entry.ApprovedAt = DateTime.UtcNow;
+                entry.ApprovedAt = DateTime.Now;
                 entry.ApprovedById = user.Id;
             }
 
@@ -249,7 +249,7 @@ namespace AccountingSystem.Controllers
                     else
                     {
                         entry.Status = DynamicScreenEntryStatus.Approved;
-                        entry.ApprovedAt = DateTime.UtcNow;
+                        entry.ApprovedAt = DateTime.Now;
                         entry.ApprovedById = user.Id;
                         await _context.SaveChangesAsync();
                     }
@@ -257,7 +257,7 @@ namespace AccountingSystem.Controllers
                 else
                 {
                     entry.Status = DynamicScreenEntryStatus.Approved;
-                    entry.ApprovedAt = DateTime.UtcNow;
+                    entry.ApprovedAt = DateTime.Now;
                     entry.ApprovedById = user.Id;
                     await _context.SaveChangesAsync();
                 }

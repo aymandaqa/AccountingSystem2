@@ -61,7 +61,7 @@ namespace AccountingSystem.Services
             }
 
             loadedVoucher.Status = ReceiptVoucherStatus.Approved;
-            loadedVoucher.ApprovedAt = DateTime.UtcNow;
+            loadedVoucher.ApprovedAt = DateTime.Now;
             loadedVoucher.ApprovedById = approvedById;
 
             await _context.SaveChangesAsync(cancellationToken);

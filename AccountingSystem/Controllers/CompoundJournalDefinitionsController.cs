@@ -147,7 +147,7 @@ namespace AccountingSystem.Controllers
                 Recurrence = viewModel.TriggerType == CompoundJournalTriggerType.Recurring ? viewModel.Recurrence : null,
                 RecurrenceInterval = viewModel.TriggerType == CompoundJournalTriggerType.Recurring ? (viewModel.RecurrenceInterval ?? 1) : null,
                 CreatedById = userId,
-                CreatedAtUtc = DateTime.UtcNow
+                CreatedAtUtc = DateTime.Now
             };
 
             _context.CompoundJournalDefinitions.Add(definition);
@@ -277,7 +277,7 @@ namespace AccountingSystem.Controllers
             {
                 DefinitionId = definition.Id,
                 DefinitionName = definition.Name,
-                ExecutionDate = DateTime.UtcNow,
+                ExecutionDate = DateTime.Now,
                 BranchIdOverride = template.BranchId,
                 StatusOverride = template.Status,
                 ContextJson = template.DefaultContext != null ? JsonSerializer.Serialize(template.DefaultContext, _jsonOptions) : null,
@@ -335,7 +335,7 @@ namespace AccountingSystem.Controllers
                 var result = await _compoundJournalService.ExecuteAsync(id, new CompoundJournalExecutionRequest
                 {
                     UserId = userId,
-                    ExecutionDate = DateTime.UtcNow,
+                    ExecutionDate = DateTime.Now,
                     JournalDate = viewModel.JournalDate,
                     BranchIdOverride = viewModel.BranchIdOverride,
                     DescriptionOverride = viewModel.DescriptionOverride,
@@ -462,7 +462,7 @@ namespace AccountingSystem.Controllers
 
             if (viewModel.TriggerType == CompoundJournalTriggerType.Recurring)
             {
-                return viewModel.NextRunUtc ?? viewModel.StartDateUtc ?? DateTime.UtcNow.AddMinutes(5);
+                return viewModel.NextRunUtc ?? viewModel.StartDateUtc ?? DateTime.Now.AddMinutes(5);
             }
 
             return viewModel.NextRunUtc;

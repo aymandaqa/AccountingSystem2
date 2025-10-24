@@ -29,7 +29,7 @@ namespace AccountingSystem.Models.Workflows
         [StringLength(450)]
         public string InitiatorId { get; set; } = string.Empty;
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public DateTime? CompletedAt { get; set; }
 

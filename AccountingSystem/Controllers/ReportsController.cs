@@ -1679,7 +1679,7 @@ namespace AccountingSystem.Controllers
                 entity = new ReportQuery
                 {
                     CreatedById = userId,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.Now
                 };
                 _context.ReportQueries.Add(entity);
             }
@@ -1690,7 +1690,7 @@ namespace AccountingSystem.Controllers
             entity.SelectedColumnsJson = string.IsNullOrWhiteSpace(request.SelectedColumnsJson)
                 ? null
                 : request.SelectedColumnsJson;
-            entity.UpdatedAt = DateTime.UtcNow;
+            entity.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
 
@@ -1940,7 +1940,7 @@ namespace AccountingSystem.Controllers
                 report.Name = request.Name.Trim();
                 report.Layout = request.Layout;
                 report.ReportType = request.ReportType;
-                report.UpdatedAt = DateTime.UtcNow;
+                report.UpdatedAt = DateTime.Now;
             }
             else
             {
@@ -1950,7 +1950,7 @@ namespace AccountingSystem.Controllers
                     Layout = request.Layout,
                     ReportType = request.ReportType,
                     CreatedById = userId,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.Now
                 };
 
                 _context.PivotReports.Add(report);

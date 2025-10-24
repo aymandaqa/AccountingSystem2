@@ -11,7 +11,7 @@ namespace AccountingSystem.ViewModels
         public string DefinitionName { get; set; } = string.Empty;
 
         [Display(Name = "تاريخ التنفيذ")]
-        public DateTime ExecutionDate { get; set; } = DateTime.UtcNow;
+        public DateTime ExecutionDate { get; set; } = DateTime.Now;
 
         [Display(Name = "تاريخ القيد")]
         [DataType(DataType.Date)]

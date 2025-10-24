@@ -144,7 +144,7 @@ namespace AccountingSystem.Services
             }
 
             loadedVoucher.Status = PaymentVoucherStatus.Approved;
-            loadedVoucher.ApprovedAt = DateTime.UtcNow;
+            loadedVoucher.ApprovedAt = DateTime.Now;
             loadedVoucher.ApprovedById = approvedById;
 
             await _context.SaveChangesAsync(cancellationToken);

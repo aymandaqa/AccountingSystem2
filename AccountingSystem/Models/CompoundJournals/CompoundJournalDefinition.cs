@@ -37,7 +37,7 @@ namespace AccountingSystem.Models.CompoundJournals
 
         public string CreatedById { get; set; } = string.Empty;
 
-        public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAtUtc { get; set; } = DateTime.Now;
 
         [ForeignKey(nameof(CreatedById))]
         public virtual User CreatedBy { get; set; } = null!;
