@@ -347,6 +347,7 @@
                 var value = searchValue || '';
                 if (grid.searchModule && typeof grid.searchModule.clearSearch === 'function' && !value) {
                     grid.searchModule.clearSearch();
+                    grid.refresh();
                     return;
                 }
 
