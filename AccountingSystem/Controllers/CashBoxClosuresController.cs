@@ -9,6 +9,7 @@ using System.IO;
 using System;
 using System.Linq;
 using System.Text.Json;
+using System.Data;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
@@ -234,6 +235,31 @@ namespace AccountingSystem.Controllers
                 breakdownJson = JsonSerializer.Serialize(breakdownMap);
             }
 
+            await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+            var pendingExists = await _context.CashBoxClosures
+                .AnyAsync(c => c.UserId == user.Id
+                               && c.AccountId == account!.Id
+                               && c.Status == CashBoxClosureStatus.Pending);
+
+            if (pendingExists)
+            {
+                await transaction.RollbackAsync();
+
+                ModelState.AddModelError(string.Empty, "لديك طلب جرد قيد الانتظار لهذا الصندوق. يرجى انتظار معالجته قبل إنشاء طلب جديد.");
+
+                model.AccountName = account!.NameAr;
+                model.BranchName = account.Branch?.NameAr ?? string.Empty;
+                model.OpeningBalance = openingBalance;
+                model.TodayTransactions = todayTransactions;
+                model.CumulativeBalance = account.CurrentBalance;
+                model.CurrencyId = account.CurrencyId;
+                model.CurrencyCode = account.Currency?.Code ?? string.Empty;
+
+                await PopulateAccountDataAsync(model, availableAccounts, account);
+                return View(model);
+            }
+
             var closure = new CashBoxClosure
             {
                 UserId = user.Id,
@@ -250,6 +276,8 @@ namespace AccountingSystem.Controllers
 
             _context.CashBoxClosures.Add(closure);
             await _context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
 
             return RedirectToAction(nameof(MyClosures));
         }
