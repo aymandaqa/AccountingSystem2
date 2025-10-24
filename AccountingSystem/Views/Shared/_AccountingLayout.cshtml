@@ -113,8 +113,8 @@
                 if (!hasCashBox)
                 {
                     hasCashBox = await DbContext.UserPaymentAccounts
-                        .AsNoTracking()
-                        .AnyAsync(upa => upa.UserId == currentUser.Id);
+                    .AsNoTracking()
+                    .AnyAsync(upa => upa.UserId == currentUser.Id);
                 }
             }
         }

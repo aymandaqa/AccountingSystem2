@@ -397,7 +397,7 @@ namespace AccountingSystem.Controllers
 
         // GET: JournalEntries
         [Authorize(Policy = "journal.view")]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index1()
         {
             var branches = await _context.Branches
                 .OrderBy(b => b.NameAr)
@@ -434,7 +434,7 @@ namespace AccountingSystem.Controllers
         }
 
         [Authorize(Policy = "journal.view")]
-        public async Task<IActionResult> Management()
+        public async Task<IActionResult> Index()
         {
             var branches = await _context.Branches
                 .OrderBy(b => b.NameAr)
