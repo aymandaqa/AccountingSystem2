@@ -351,6 +351,7 @@ body.minible-rtl.sidebar-open::after {
     background: transparent;
     margin-inline-end: 0;
     transition: margin-inline-end 0.3s ease;
+    min-width: 0;
 }
 
 .topbar {
