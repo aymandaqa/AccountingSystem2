@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
+using AccountingSystem.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System;
 using System.Collections.Generic;
@@ -18,10 +19,12 @@ namespace AccountingSystem.Controllers
     public class JournalEntriesController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IJournalEntryService _journalEntryService;
 
-        public JournalEntriesController(ApplicationDbContext context)
+        public JournalEntriesController(ApplicationDbContext context, IJournalEntryService journalEntryService)
         {
             _context = context;
+            _journalEntryService = journalEntryService;
         }
 
         // GET: JournalEntries
@@ -439,55 +442,48 @@ namespace AccountingSystem.Controllers
                 return View(model);
             }
 
-            if (model.Lines == null || model.Lines.Count == 0 ||
-                Math.Round(model.Lines.Sum(l => l.DebitAmount), 2) != Math.Round(model.Lines.Sum(l => l.CreditAmount), 2))
+            if (model.Lines == null || model.Lines.Count == 0)
             {
-                ModelState.AddModelError(string.Empty, "القيد غير متوازن");
+                ModelState.AddModelError(string.Empty, "يجب إضافة بند واحد على الأقل");
                 await PopulateDropdowns(model);
                 return View(model);
             }
 
-            var accountIds = model.Lines.Select(l => l.AccountId).Distinct().ToList();
-            var currencies = await _context.Accounts
-                .Where(a => accountIds.Contains(a.Id))
-                .Select(a => a.CurrencyId)
-                .Distinct()
-                .ToListAsync();
-            if (currencies.Count > 1)
+            var createdById = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+            var lines = model.Lines.Select(line => new JournalEntryLine
             {
-                ModelState.AddModelError(string.Empty, "يجب أن تكون جميع الحسابات بنفس العملة");
-                await PopulateDropdowns(model);
-                return View(model);
+                AccountId = line.AccountId,
+                Description = line.Description,
+                DebitAmount = line.DebitAmount,
+                CreditAmount = line.CreditAmount,
+                CostCenterId = line.CostCenterId
+            }).ToList();
+
+            try
+            {
+                await _journalEntryService.CreateJournalEntryAsync(
+                    model.Date,
+                    model.Description,
+                    model.BranchId,
+                    createdById,
+                    lines,
+                    JournalEntryStatus.Draft,
+                    model.Reference,
+                    model.Number);
+
+                return RedirectToAction(nameof(Index));
+            }
+            catch (InvalidOperationException ex)
+            {
+                ModelState.AddModelError(string.Empty, ex.Message);
+            }
+            catch (ArgumentException ex)
+            {
+                ModelState.AddModelError(string.Empty, ex.Message);
             }
 
-            var entry = new JournalEntry
-            {
-                Number = model.Number,
-                Date = model.Date,
-                Description = model.Description,
-                Reference = model.Reference,
-                BranchId = model.BranchId,
-                CreatedById = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty,
-                TotalDebit = model.Lines.Sum(l => l.DebitAmount),
-                TotalCredit = model.Lines.Sum(l => l.CreditAmount),
-
-            };
-
-            foreach (var line in model.Lines)
-            {
-                entry.Lines.Add(new JournalEntryLine
-                {
-                    AccountId = line.AccountId,
-                    Description = line.Description,
-                    DebitAmount = line.DebitAmount,
-                    CreditAmount = line.CreditAmount,
-                    CostCenterId = line.CostCenterId
-                });
-            }
-
-            _context.JournalEntries.Add(entry);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            await PopulateDropdowns(model);
+            return View(model);
         }
 
         private async Task<string> GenerateJournalEntryNumber()
