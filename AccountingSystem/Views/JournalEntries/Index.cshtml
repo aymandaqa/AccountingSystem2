@@ -3,126 +3,329 @@
 
 @{
     ViewData["Title"] = "القيود المالية";
-    var toolbarItems = new List<string> { "Search", "ExcelExport", "Print" };
+    var toolbarItems = new List<string> { "ColumnChooser", "ExcelExport", "Print" };
 }
 
 @section Styles {
     <style>
         .journal-entries-wrapper {
-            padding-inline: clamp(0.25rem, 0.8vw, 1.5rem);
+            padding-inline: clamp(0.5rem, 1vw, 1.75rem);
+            padding-block-end: 1.5rem;
         }
 
         .journal-entries-card {
-            min-height: calc(100vh - 6rem);
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            gap: 1.25rem;
+            min-height: calc(100vh - 6rem);
+            background-color: #fdfdfd;
         }
 
-            .journal-entries-card .card-header > .d-flex {
-                gap: 1rem;
-            }
+        .journal-entries-card .card-header {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
 
-            .journal-entries-card .card-body {
-                display: flex;
-                flex-direction: column;
-                gap: 1rem;
-                overflow-x: auto;
-            }
+        .journal-entries-card .page-heading {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .journal-entries-card .page-heading-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .journal-entries-card .quick-search {
+            flex: 1 1 16rem;
+            min-width: 14rem;
+            max-width: clamp(16rem, 26vw, 24rem);
+        }
+
+        .journal-entries-card .quick-search .input-group-text {
+            background-color: #f1f3f5;
+            border-inline-end: 0;
+        }
+
+        .journal-entries-card .quick-search .form-control {
+            border-inline-start: 0;
+            box-shadow: none;
+        }
+
+        .journal-entries-card .quick-search .btn-clear-search {
+            border-radius: 0 var(--bs-border-radius) var(--bs-border-radius) 0;
+        }
+
+        .journal-entries-card .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .journal-entries-card .summary-card {
+            background: linear-gradient(135deg, rgba(16, 108, 200, 0.08), rgba(16, 108, 200, 0.02));
+            border: 1px solid rgba(16, 108, 200, 0.15);
+            border-radius: 0.75rem;
+            padding: 1rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            min-height: 6.25rem;
+        }
+
+        .summary-card .label {
+            font-size: 0.85rem;
+            color: #1f3b5b;
+            font-weight: 600;
+        }
+
+        .summary-card .value {
+            font-size: clamp(1.35rem, 2vw, 1.85rem);
+            font-weight: 700;
+            color: #0b4d94;
+        }
+
+        .summary-card .sub-value {
+            font-size: 0.8rem;
+            color: #4f5d75;
+        }
+
+        .filters-shell {
+            background-color: #ffffff;
+            border: 1px solid rgba(15, 67, 130, 0.08);
+            border-radius: 0.75rem;
+            padding: 1rem 1.25rem;
+        }
+
+        .filters-shell .filters-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .filters-shell .filters-toolbar .btn-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-weight: 600;
+        }
+
+        .filters-shell .filters-toolbar .active-filters-count {
+            background-color: #0b4d94;
+            color: #fff;
+            border-radius: 999px;
+            padding: 0.15rem 0.6rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .filters-shell .active-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.85rem;
+        }
+
+        .filters-shell .filter-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.75rem;
+            background-color: #e7f1ff;
+            border-radius: 999px;
+            border: 1px solid rgba(15, 67, 130, 0.15);
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #0b4d94;
+        }
+
+        .filters-shell .filter-chip button {
+            border: none;
+            background: transparent;
+            color: inherit;
+            display: inline-flex;
+            align-items: center;
+            padding: 0;
+            font-size: 0.85rem;
+        }
+
+        .filters-shell .collapse.show {
+            margin-top: 1rem;
+        }
+
+        .filters-shell form .form-label {
+            font-weight: 600;
+            color: #1f3b5b;
+        }
+
+        .filters-shell form .form-select,
+        .filters-shell form .form-control {
+            box-shadow: none;
+        }
+
+        .filters-shell .form-switch .form-check-input {
+            width: 2.5rem;
+            height: 1.25rem;
+        }
+
+        .filters-shell .form-switch .form-check-label {
+            font-weight: 600;
+            color: #1f3b5b;
+        }
 
         .journal-entries-grid {
+            background-color: #ffffff;
+            border: 1px solid rgba(15, 67, 130, 0.08);
+            border-radius: 0.75rem;
+            padding: 0.5rem;
             flex: 1 1 auto;
             min-height: 24rem;
+            position: relative;
         }
 
-            .journal-entries-grid .e-grid {
-                height: 100%;
-            }
+        .journal-entries-grid .grid-caption {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0.75rem 0.75rem;
+            gap: 0.75rem;
+        }
 
-        .table-actions .btn {
+        .journal-entries-grid .grid-caption .result-info {
+            font-size: 0.85rem;
+            color: #4f5d75;
+        }
+
+        .journal-entries-grid .e-grid {
+            height: calc(100% - 2.25rem);
+        }
+
+        .journal-entries-grid .table-actions .btn {
             min-width: 2.25rem;
+            font-size: 0.85rem;
         }
 
-            .table-actions .btn i {
-                pointer-events: none;
-            }
-
-        .filters-card .form-label {
-            font-weight: 600;
+        .journal-entries-grid .table-actions .btn i {
+            pointer-events: none;
         }
-
-        .filters-card .form-check-label {
-            font-weight: 600;
-        }
-
-        .quick-search {
-            flex: 1 1 16rem;
-            min-width: 0;
-            width: 100%;
-            max-width: clamp(16rem, 24vw, 22rem);
-        }
-
-            .quick-search .form-control {
-                border-inline-start: 0;
-            }
-
-            .quick-search .input-group-text {
-                background-color: #f8f9fa;
-            }
-
-            .quick-search .btn-clear-search {
-                border-radius: 0 var(--bs-border-radius) var(--bs-border-radius) 0;
-            }
 
         .unbalanced-entry {
             background-color: #fdeaea;
         }
 
-            .unbalanced-entry .e-rowcell {
-                color: #b71c1c;
+        .unbalanced-entry .e-rowcell {
+            color: #b71c1c;
+        }
+
+        @@media (max-width: 991.98px) {
+            .journal-entries-card .page-heading {
+                gap: 1.25rem;
             }
 
-        @@media (max-width: 767.98px) {
-            .quick-search {
+            .journal-entries-card .page-heading-actions {
                 width: 100%;
             }
 
-                .quick-search .btn,
-                .quick-search .input-group-text {
-                    border-radius: 0;
-                }
+            .journal-entries-card .quick-search {
+                max-width: 100%;
+            }
+        }
+
+        @@media (max-width: 575.98px) {
+            .journal-entries-wrapper {
+                padding-inline: 0.25rem;
+            }
+
+            .journal-entries-card .summary-grid {
+                grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+            }
+
+            .filters-shell {
+                padding: 0.75rem;
+            }
+
+            .journal-entries-grid {
+                padding: 0.25rem;
+            }
         }
     </style>
 }
 
-
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow-sm journal-entries-card h-100">
-                <div class="card-header">
-                    <div class="d-flex flex-column flex-xl-row align-items-xl-center gap-3">
-                        <h3 class="card-title mb-0 d-flex align-items-center gap-2">
+<div class="journal-entries-wrapper container-fluid">
+    <div class="card journal-entries-card shadow-sm">
+        <div class="card-header">
+            <div class="page-heading">
+                <div class="d-flex flex-column flex-xl-row justify-content-between gap-3">
+                    <div class="d-flex flex-column gap-1">
+                        <h3 class="card-title mb-0 d-flex align-items-center gap-2 text-primary">
                             <i class="fas fa-file-invoice"></i>
                             <span>القيود المالية</span>
                         </h3>
-                        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-lg-end gap-2 w-100">
-                            <div class="input-group quick-search" role="search">
-                                <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                <input type="search" id="quickSearch" class="form-control" placeholder="بحث سريع برقم القيد أو الوصف أو المرجع" aria-label="بحث سريع" />
-                                <button type="button" id="clearQuickSearch" class="btn btn-outline-secondary btn-clear-search" title="مسح البحث">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                            <a asp-action="Create" class="btn btn-primary" asp-require-permission="journal.create">
-                                <i class="fas fa-plus me-1"></i>
-                                إضافة قيد جديد
-                            </a>
+                        <p class="text-muted mb-0">إدارة القيود والبحث السريع عن أي قيد أو مرجع مع عرض شامل للحالة المالية.</p>
+                    </div>
+                    <div class="page-heading-actions">
+                        <div class="input-group quick-search" role="search">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="search" id="quickSearch" class="form-control" placeholder="بحث سريع في جميع الأعمدة" aria-label="بحث سريع" />
+                            <button type="button" id="clearQuickSearch" class="btn btn-outline-secondary btn-clear-search" title="مسح البحث">
+                                <i class="fas fa-times"></i>
+                            </button>
                         </div>
+                        <a asp-action="Create" class="btn btn-primary" asp-require-permission="journal.create">
+                            <i class="fas fa-plus me-1"></i>
+                            إضافة قيد جديد
+                        </a>
                     </div>
                 </div>
-                <div class="card-body filters-card d-flex flex-column">
-                    <form id="filtersForm" class="row g-3 align-items-end">
+                <div class="summary-grid" id="summaryCards" aria-live="polite">
+                    <div class="summary-card">
+                        <span class="label">إجمالي القيود</span>
+                        <span class="value" id="summaryTotal">0</span>
+                        <span class="sub-value" id="summaryTotalStatus">—</span>
+                    </div>
+                    <div class="summary-card">
+                        <span class="label">القيود غير المتوازنة</span>
+                        <span class="value text-danger" id="summaryUnbalanced">0</span>
+                        <span class="sub-value">يُنبهك لأي فروقات في المدين والدائن</span>
+                    </div>
+                    <div class="summary-card">
+                        <span class="label">إجمالي المدين</span>
+                        <span class="value" id="summaryDebit">0</span>
+                        <span class="sub-value">المبالغ الإجمالية (مدين)</span>
+                    </div>
+                    <div class="summary-card">
+                        <span class="label">إجمالي الدائن</span>
+                        <span class="value" id="summaryCredit">0</span>
+                        <span class="sub-value">المبالغ الإجمالية (دائن)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body d-flex flex-column gap-3">
+            <div class="filters-shell">
+                <div class="filters-toolbar">
+                    <button class="btn btn-outline-secondary btn-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="true" aria-controls="filtersCollapse">
+                        <i class="fas fa-sliders-h"></i>
+                        خيارات متقدمة
+                    </button>
+                    <div class="form-check form-switch ms-auto">
+                        <input class="form-check-input" type="checkbox" role="switch" id="showUnbalancedOnly">
+                        <label class="form-check-label" for="showUnbalancedOnly">عرض القيود غير المتوازنة فقط</label>
+                    </div>
+                    <span class="active-filters-count d-none" id="activeFiltersCount">0</span>
+                    <button type="button" id="resetFilters" class="btn btn-link text-decoration-none text-danger">
+                        <i class="fas fa-undo"></i>
+                        إعادة تعيين
+                    </button>
+                </div>
+                <div class="active-filters" id="activeFilters" aria-live="polite"></div>
+                <div class="collapse show" id="filtersCollapse">
+                    <form id="filtersForm" class="row g-3 pt-3">
                         <div class="col-sm-6 col-lg-3">
                             <label for="fromDate" class="form-label">من تاريخ</label>
                             <input type="date" id="fromDate" class="form-control" />
@@ -159,69 +362,68 @@
                                 <option value="Reference">حسب المرجع</option>
                             </select>
                         </div>
-                        <div class="col-sm-6 col-lg-3 d-flex align-items-center">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" role="switch" id="showUnbalancedOnly">
-                                <label class="form-check-label" for="showUnbalancedOnly">عرض القيود غير المتوازنة فقط</label>
-                            </div>
-                        </div>
-                        <div class="col-sm-6 col-lg-3 d-flex">
-                            <button type="button" id="resetFilters" class="btn btn-outline-secondary w-100 mt-auto">
-                                <i class="fas fa-undo"></i> إعادة تعيين
-                            </button>
-                        </div>
-                    </form>
-
-                    <div class="journal-entries-grid">
-                        <ejs-grid id="journalEntriesGrid"
-                                  allowPaging="true"
-                                  allowSorting="true"
-                                  allowFiltering="true"
-                                  allowGrouping="true"
-                                  allowExcelExport="true"
-                                  allowTextWrap="true"
-                                  allowResizing="true"
-                                  allowReordering="true"
-                                  enableStickyHeader="true"
-                                  enableRtl="true"
-                                  allowSelection="false"
-                                  width="100%"
-                                  height="100%"
-                                  gridLines="Both"
-                                  toolbar="@toolbarItems">
-                            <e-data-manager url="@Url.Action("UrlDatasourceJournalEntries", "JournalEntries")" adaptor="UrlAdaptor"></e-data-manager>
-                            <e-grid-filterSettings type="Excel"></e-grid-filterSettings>
-                            <e-grid-aggregates>
-                                <e-grid-aggregate>
-                                    <e-aggregate-columns>
-                                        <e-aggregate-column field="TotalDebit" type="Sum" format="N2" footerTemplate="<div class='text-end fw-semibold'>إجمالي المدين: ${Sum}</div>" groupCaptionTemplate="<span class='fw-semibold text-primary'>إجمالي المدين: ${Sum}</span>"></e-aggregate-column>
-                                        <e-aggregate-column field="TotalCredit" type="Sum" format="N2" footerTemplate="<div class='text-end fw-semibold'>إجمالي الدائن: ${Sum}</div>" groupCaptionTemplate="<span class='fw-semibold text-primary'>إجمالي الدائن: ${Sum}</span>"></e-aggregate-column>
-                                    </e-aggregate-columns>
-                                </e-grid-aggregate>
-                            </e-grid-aggregates>
-                            <e-grid-columns>
-                                <e-grid-column field="Number" headerText="رقم القيد" width="140"></e-grid-column>
-                                <e-grid-column field="Date" headerText="التاريخ" format="dd/MM/yyyy HH:mm" type="date" textAlign="Center" width="140"></e-grid-column>
-                                <e-grid-column field="Description" headerText="الوصف" width="220"></e-grid-column>
-                                <e-grid-column field="Reference" headerText="المرجع" width="180"></e-grid-column>
-                                <e-grid-column field="BranchName" headerText="الفرع" width="180"></e-grid-column>
-                                <e-grid-column field="CreatedByName" headerText="مدخل القيد" width="200"></e-grid-column>
-                                <e-grid-column field="TotalDebit" headerText="إجمالي المدين" format="N2" type="number" textAlign="Right" width="160"></e-grid-column>
-                                <e-grid-column field="TotalCredit" headerText="إجمالي الدائن" format="N2" type="number" textAlign="Right" width="160"></e-grid-column>
-                                <e-grid-column field="LinesCount" headerText="عدد البنود" textAlign="Center" width="130"></e-grid-column>
-                                <e-grid-column field="StatusDisplay" headerText="الحالة" template="#statusTemplate" textAlign="Center" width="140"></e-grid-column>
-                                <e-grid-column field="DateGroup" headerText="الشهر" visible="false"></e-grid-column>
-                                <e-grid-column field="IsBalanced" visible="false"></e-grid-column>
-                                <e-grid-column field="Id" headerText="الإجراءات" template="#actionsTemplate" textAlign="Center" width="210" allowSorting="false" allowFiltering="false"></e-grid-column>
-                            </e-grid-columns>
-                        </ejs-grid>
-                    </div>
-
-                    <form id="antiForgeryForm" asp-action="Post" method="post" class="d-none">
-                        @Html.AntiForgeryToken()
                     </form>
                 </div>
             </div>
+
+            <div class="journal-entries-grid">
+                <div class="grid-caption">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-database text-primary"></i>
+                        <span class="result-info" id="gridResultInfo">لا توجد بيانات بعد</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-light text-dark" id="groupingInfo" hidden>العرض مجمع</span>
+                    </div>
+                </div>
+                <ejs-grid id="journalEntriesGrid"
+                          allowPaging="true"
+                          allowSorting="true"
+                          allowFiltering="true"
+                          allowGrouping="true"
+                          allowExcelExport="true"
+                          allowTextWrap="true"
+                          allowResizing="true"
+                          allowReordering="true"
+                          allowSelection="false"
+                          showColumnChooser="true"
+                          enableStickyHeader="true"
+                          enableRtl="true"
+                          width="100%"
+                          height="100%"
+                          gridLines="Both"
+                          toolbar="@toolbarItems">
+                    <e-data-manager url="@Url.Action("UrlDatasourceJournalEntries", "JournalEntries")" adaptor="UrlAdaptor"></e-data-manager>
+                    <e-grid-filterSettings type="Excel"></e-grid-filterSettings>
+                    <e-grid-pageSettings pageSize="25" pageSizes="@(new object[] { 10, 25, 50, 100, "All" })"></e-grid-pageSettings>
+                    <e-grid-aggregates>
+                        <e-grid-aggregate>
+                            <e-aggregate-columns>
+                                <e-aggregate-column field="TotalDebit" type="Sum" format="N2" footerTemplate="<div class='text-end fw-semibold'>إجمالي المدين: ${Sum}</div>" groupCaptionTemplate="<span class='fw-semibold text-primary'>إجمالي المدين: ${Sum}</span>"></e-aggregate-column>
+                                <e-aggregate-column field="TotalCredit" type="Sum" format="N2" footerTemplate="<div class='text-end fw-semibold'>إجمالي الدائن: ${Sum}</div>" groupCaptionTemplate="<span class='fw-semibold text-primary'>إجمالي الدائن: ${Sum}</span>"></e-aggregate-column>
+                            </e-aggregate-columns>
+                        </e-grid-aggregate>
+                    </e-grid-aggregates>
+                    <e-grid-columns>
+                        <e-grid-column field="Number" headerText="رقم القيد" width="140"></e-grid-column>
+                        <e-grid-column field="Date" headerText="التاريخ" format="dd/MM/yyyy HH:mm" type="date" textAlign="Center" width="160"></e-grid-column>
+                        <e-grid-column field="Description" headerText="الوصف" width="260"></e-grid-column>
+                        <e-grid-column field="Reference" headerText="المرجع" width="200"></e-grid-column>
+                        <e-grid-column field="BranchName" headerText="الفرع" width="200"></e-grid-column>
+                        <e-grid-column field="CreatedByName" headerText="مدخل القيد" width="200"></e-grid-column>
+                        <e-grid-column field="TotalDebit" headerText="إجمالي المدين" format="N2" type="number" textAlign="Right" width="180"></e-grid-column>
+                        <e-grid-column field="TotalCredit" headerText="إجمالي الدائن" format="N2" type="number" textAlign="Right" width="180"></e-grid-column>
+                        <e-grid-column field="LinesCount" headerText="عدد البنود" textAlign="Center" width="140"></e-grid-column>
+                        <e-grid-column field="StatusDisplay" headerText="الحالة" template="#statusTemplate" textAlign="Center" width="150"></e-grid-column>
+                        <e-grid-column field="DateGroup" headerText="الشهر" visible="false"></e-grid-column>
+                        <e-grid-column field="IsBalanced" visible="false"></e-grid-column>
+                        <e-grid-column field="Id" headerText="الإجراءات" template="#actionsTemplate" textAlign="Center" width="230" allowSorting="false" allowFiltering="false"></e-grid-column>
+                    </e-grid-columns>
+                </ejs-grid>
+            </div>
+            <form id="antiForgeryForm" asp-action="Post" method="post" class="d-none">
+                @Html.AntiForgeryToken()
+            </form>
         </div>
     </div>
 </div>
@@ -258,12 +460,27 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             var dataUrl = '@Url.Action("UrlDatasourceJournalEntries", "JournalEntries")';
+            var summaryUrl = '@Url.Action("Summary", "JournalEntries")';
             var postUrlBase = '@Url.Action("Post", "JournalEntries")';
             var deleteUrlBase = '@Url.Action("Delete", "JournalEntries")';
             var gridElement = document.getElementById('journalEntriesGrid');
             var searchInput = document.getElementById('quickSearch');
             var clearSearchButton = document.getElementById('clearQuickSearch');
             var unbalancedToggle = document.getElementById('showUnbalancedOnly');
+            var filtersCollapse = document.getElementById('filtersCollapse');
+            var activeFiltersContainer = document.getElementById('activeFilters');
+            var activeFiltersCount = document.getElementById('activeFiltersCount');
+            var resultInfo = document.getElementById('gridResultInfo');
+            var groupingInfo = document.getElementById('groupingInfo');
+            var summaryFields = {
+                total: document.getElementById('summaryTotal'),
+                totalStatus: document.getElementById('summaryTotalStatus'),
+                unbalanced: document.getElementById('summaryUnbalanced'),
+                debit: document.getElementById('summaryDebit'),
+                credit: document.getElementById('summaryCredit')
+            };
+            var lastKnownCount = 0;
+
             if (!gridElement || !gridElement.ej2_instances || !gridElement.ej2_instances.length) {
                 return;
             }
@@ -285,33 +502,203 @@
                 return Object.assign({}, options, { headers: headers });
             }
 
-            grid.pageSettings = { pageSize: 25, pageSizes: [10, 25, 50, 100, 'All'] };
-            grid.groupSettings = { showDropArea: false };
-            grid.searchSettings = { fields: ['Number', 'Description', 'Reference', 'BranchName', 'CreatedByName', 'StatusDisplay', 'TotalDebitFormatted', 'TotalCreditFormatted'], operator: 'contains', key: '', ignoreCase: true };
-            grid.sortSettings = { columns: [{ field: 'Date', direction: 'Descending' }] };
-
             function buildQuery(searchValue) {
                 var query = new ej.data.Query();
-                var fromDate = document.getElementById('fromDate').value;
-                var toDate = document.getElementById('toDate').value;
-                var branchId = document.getElementById('branchFilter').value;
-                var status = document.getElementById('statusFilter').value;
-                var showUnbalancedOnly = unbalancedToggle && unbalancedToggle.checked;
-                var searchTerm = (searchValue || '').trim();
-
-                if (fromDate) query = query.addParams('fromDate', fromDate);
-                if (toDate) query = query.addParams('toDate', toDate);
-                if (branchId) query = query.addParams('branchId', branchId);
-                if (status) query = query.addParams('status', status);
-                if (showUnbalancedOnly) query = query.addParams('showUnbalancedOnly', 'true');
-                if (searchTerm) query = query.addParams('searchTerm', searchTerm);
-
+                var params = gatherFilterParameters(searchValue);
+                Object.keys(params).forEach(function (key) {
+                    if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+                        query = query.addParams(key, params[key]);
+                    }
+                });
                 return query;
             }
 
+            function gatherFilterParameters(searchValue) {
+                return {
+                    fromDate: document.getElementById('fromDate').value,
+                    toDate: document.getElementById('toDate').value,
+                    branchId: document.getElementById('branchFilter').value,
+                    status: document.getElementById('statusFilter').value,
+                    groupBy: document.getElementById('groupBy').value,
+                    showUnbalancedOnly: unbalancedToggle && unbalancedToggle.checked ? 'true' : '',
+                    searchTerm: (searchValue || '').trim()
+                };
+            }
+
+            function buildQueryString(params) {
+                var query = new URLSearchParams();
+                Object.keys(params).forEach(function (key) {
+                    var value = params[key];
+                    if (value !== undefined && value !== null && value !== '') {
+                        query.append(key, value);
+                    }
+                });
+                return query.toString();
+            }
+
+            function formatNumber(value) {
+                var number = Number(value || 0);
+                return number.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+            }
+
+            function updateSummary(searchValue) {
+                if (!summaryUrl) {
+                    return;
+                }
+                var params = gatherFilterParameters(searchValue);
+                var queryString = buildQueryString(params);
+                var url = summaryUrl + (queryString ? ('?' + queryString) : '');
+                fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (response) {
+                        if (!response.ok) {
+                            throw new Error('فشل في تحميل الملخص');
+                        }
+                        return response.json();
+                    })
+                    .then(function (data) {
+                        summaryFields.total.textContent = formatNumber(data.totalEntries);
+                        summaryFields.totalStatus.textContent = data.statusSummary || '—';
+                        summaryFields.unbalanced.textContent = formatNumber(data.unbalancedEntries);
+                        summaryFields.debit.textContent = formatNumber(data.totalDebit);
+                        summaryFields.credit.textContent = formatNumber(data.totalCredit);
+                    })
+                    .catch(function (error) {
+                        console.warn(error);
+                    });
+            }
+
+            function updateFilterChips(searchValue) {
+                if (!activeFiltersContainer || !activeFiltersCount) {
+                    return;
+                }
+                var params = gatherFilterParameters(searchValue);
+                var chips = [];
+                if (params.fromDate) {
+                    chips.push({ key: 'fromDate', label: 'من: ' + params.fromDate });
+                }
+                if (params.toDate) {
+                    chips.push({ key: 'toDate', label: 'إلى: ' + params.toDate });
+                }
+                if (params.branchId) {
+                    var branchSelect = document.getElementById('branchFilter');
+                    var branchText = branchSelect.options[branchSelect.selectedIndex].text;
+                    chips.push({ key: 'branchFilter', label: 'الفرع: ' + branchText });
+                }
+                if (params.status) {
+                    var statusSelect = document.getElementById('statusFilter');
+                    var statusText = statusSelect.options[statusSelect.selectedIndex].text;
+                    chips.push({ key: 'statusFilter', label: 'الحالة: ' + statusText });
+                }
+                if (params.showUnbalancedOnly === 'true') {
+                    chips.push({ key: 'showUnbalancedOnly', label: 'غير متوازنة فقط' });
+                }
+                if (params.searchTerm) {
+                    chips.push({ key: 'searchTerm', label: 'بحث: ' + params.searchTerm });
+                }
+                activeFiltersContainer.innerHTML = '';
+                chips.forEach(function (chip) {
+                    var chipElement = document.createElement('span');
+                    chipElement.className = 'filter-chip';
+                    chipElement.dataset.key = chip.key;
+                    chipElement.innerHTML = '<span>' + chip.label + '</span><button type="button" aria-label="إزالة الفلتر"><i class="fas fa-times"></i></button>';
+                    activeFiltersContainer.appendChild(chipElement);
+                });
+                activeFiltersCount.textContent = chips.length;
+                activeFiltersCount.classList.toggle('d-none', chips.length === 0);
+            }
+
+            function resetFilterByKey(key) {
+                switch (key) {
+                    case 'fromDate':
+                        document.getElementById('fromDate').value = '';
+                        break;
+                    case 'toDate':
+                        document.getElementById('toDate').value = '';
+                        break;
+                    case 'branchFilter':
+                        document.getElementById('branchFilter').selectedIndex = 0;
+                        break;
+                    case 'statusFilter':
+                        document.getElementById('statusFilter').selectedIndex = 0;
+                        break;
+                    case 'showUnbalancedOnly':
+                        if (unbalancedToggle) {
+                            unbalancedToggle.checked = false;
+                        }
+                        break;
+                    case 'searchTerm':
+                        if (searchInput) {
+                            searchInput.value = '';
+                        }
+                        break;
+                }
+            }
+
+            function updateResultsInfo(args) {
+                if (!resultInfo) {
+                    return;
+                }
+                var pageInfo = grid.pageSettings;
+                var totalRecords = (args && typeof args.count === 'number') ? args.count : lastKnownCount;
+                if (!totalRecords) {
+                    totalRecords = grid.currentViewData.length;
+                }
+                var currentPage = pageInfo.currentPage || 1;
+                var pageSize = pageInfo.pageSize || 25;
+                var start = ((currentPage - 1) * pageSize) + 1;
+                var end = Math.min(currentPage * pageSize, totalRecords);
+                if (totalRecords === 0) {
+                    resultInfo.textContent = 'لا توجد بيانات مطابقة للمرشحات الحالية';
+                } else {
+                    resultInfo.textContent = 'عرض ' + start + ' - ' + end + ' من ' + totalRecords + ' قيد';
+                }
+                if (totalRecords) {
+                    lastKnownCount = totalRecords;
+                }
+            }
+
+            function updateGroupingInfo() {
+                if (!groupingInfo) {
+                    return;
+                }
+                var groupedColumns = grid.groupSettings && grid.groupSettings.columns ? grid.groupSettings.columns : [];
+                if (groupedColumns.length > 0) {
+                    groupingInfo.hidden = false;
+                    groupingInfo.textContent = 'مجموعة حسب: ' + groupedColumns.join(', ');
+                } else {
+                    groupingInfo.hidden = true;
+                }
+            }
+
+            function getQuickSearchValue() {
+                return searchInput ? searchInput.value.trim() : '';
+            }
+
+            function reloadGrid() {
+                showLoading();
+                var searchValue = getQuickSearchValue();
+                grid.query = buildQuery(searchValue);
+                var normalizedSearch = (searchValue || '').trim();
+                if (grid.searchSettings.key !== normalizedSearch) {
+                    grid.searchSettings.key = normalizedSearch;
+                }
+                updateFilterChips(searchValue);
+                updateSummary(searchValue);
+                grid.refresh();
+            }
+
+            grid.query = buildQuery(getQuickSearchValue());
+            grid.dataSource = new ej.data.DataManager({
+                url: dataUrl,
+                adaptor: new ej.data.UrlAdaptor()
+            });
+            grid.searchSettings = { fields: ['Number', 'Description', 'Reference', 'BranchName', 'CreatedByName', 'StatusDisplay', 'TotalDebitFormatted', 'TotalCreditFormatted'], operator: 'contains', key: '', ignoreCase: true };
+            grid.sortSettings = { columns: [{ field: 'Date', direction: 'Descending' }] };
+            grid.groupSettings = { showDropArea: false };
+
             function updateGridHeight() {
                 var gridRect = gridElement.getBoundingClientRect();
-                var availableHeight = window.innerHeight - gridRect.top - 48;
+                var availableHeight = window.innerHeight - gridRect.top - 64;
                 grid.height = Math.max(availableHeight, 420);
             }
 
@@ -322,9 +709,7 @@
                 if (!args || !args.row) {
                     return;
                 }
-
                 args.row.classList.remove('unbalanced-entry');
-
                 if (args.data && args.data.IsBalanced === false) {
                     args.row.classList.add('unbalanced-entry');
                 }
@@ -340,36 +725,22 @@
                 if (trackedRequestTypes.indexOf(args.requestType) > -1) {
                     hideLoading();
                 }
+                if (typeof args.count === 'number') {
+                    lastKnownCount = args.count;
+                }
+                updateResultsInfo(args);
+                updateGroupingInfo();
             };
 
             grid.dataBound = function () {
                 hideLoading();
+                updateResultsInfo();
+                updateGroupingInfo();
             };
 
             grid.actionFailure = function () {
                 hideLoading();
             };
-
-            function getQuickSearchValue() {
-                return searchInput ? searchInput.value.trim() : '';
-            }
-
-            function reloadGrid() {
-                showLoading();
-                var searchValue = getQuickSearchValue();
-                grid.query = buildQuery(searchValue);
-                var normalizedSearch = (searchValue || '').trim();
-                if (grid.searchSettings.key !== normalizedSearch) {
-                    grid.searchSettings.key = normalizedSearch;
-                }
-                grid.refresh();
-            }
-
-            grid.query = buildQuery(getQuickSearchValue());
-            grid.dataSource = new ej.data.DataManager({
-                url: dataUrl,
-                adaptor: new ej.data.UrlAdaptor()
-            });
 
             ['fromDate', 'toDate', 'branchFilter', 'statusFilter'].forEach(function (id) {
                 var element = document.getElementById(id);
@@ -387,6 +758,60 @@
                 });
             }
 
+            if (activeFiltersContainer) {
+                activeFiltersContainer.addEventListener('click', function (event) {
+                    var button = event.target.closest('button');
+                    if (!button) {
+                        return;
+                    }
+                    var chip = button.closest('.filter-chip');
+                    if (!chip) {
+                        return;
+                    }
+                    var key = chip.dataset.key;
+                    if (!key) {
+                        return;
+                    }
+                    resetFilterByKey(key);
+                    grid.pageSettings.currentPage = 1;
+                    reloadGrid();
+                });
+            }
+
+            if (clearSearchButton) {
+                clearSearchButton.addEventListener('click', function () {
+                    if (!searchInput) {
+                        return;
+                    }
+                    if (searchInput.value === '') {
+                        reloadGrid();
+                        return;
+                    }
+                    searchInput.value = '';
+                    grid.pageSettings.currentPage = 1;
+                    reloadGrid();
+                });
+            }
+
+            var searchDebounce;
+            if (searchInput) {
+                searchInput.addEventListener('keyup', function (event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        grid.pageSettings.currentPage = 1;
+                        reloadGrid();
+                    }
+                });
+
+                searchInput.addEventListener('input', function () {
+                    clearTimeout(searchDebounce);
+                    searchDebounce = setTimeout(function () {
+                        grid.pageSettings.currentPage = 1;
+                        reloadGrid();
+                    }, 350);
+                });
+            }
+
             var resetButton = document.getElementById('resetFilters');
             if (resetButton) {
                 resetButton.addEventListener('click', function () {
@@ -398,16 +823,15 @@
                     if (unbalancedToggle) {
                         unbalancedToggle.checked = false;
                     }
-
-                    grid.clearFiltering();
-                    grid.clearSorting();
-                    grid.searchSettings.key = '';
-                    grid.clearGrouping();
-                    grid.pageSettings.currentPage = 1;
-                    reloadGrid();
                     if (searchInput) {
                         searchInput.value = '';
                     }
+                    grid.clearFiltering();
+                    grid.clearSorting();
+                    grid.clearGrouping();
+                    grid.searchSettings.key = '';
+                    grid.pageSettings.currentPage = 1;
+                    reloadGrid();
                 });
             }
 
@@ -423,53 +847,23 @@
                     if (value) {
                         grid.groupColumn(value);
                     }
-                });
-            }
-
-            function executeSearch() {
-                if (!searchInput) {
-                    return;
-                }
-                grid.pageSettings.currentPage = 1;
-                reloadGrid();
-            }
-
-            var searchDebounce;
-            if (searchInput) {
-                searchInput.addEventListener('keyup', function (event) {
-                    if (event.key === 'Enter') {
-                        executeSearch();
-                    }
-                });
-
-                searchInput.addEventListener('change', executeSearch);
-                searchInput.addEventListener('search', executeSearch);
-                searchInput.addEventListener('input', function () {
-                    clearTimeout(searchDebounce);
-                    searchDebounce = setTimeout(executeSearch, 350);
-                });
-            }
-
-            if (clearSearchButton) {
-                clearSearchButton.addEventListener('click', function () {
-                    if (!searchInput) {
-                        return;
-                    }
-                    searchInput.value = '';
-                    grid.pageSettings.currentPage = 1;
-                    reloadGrid();
+                    updateGroupingInfo();
                 });
             }
 
             grid.toolbarClick = function (args) {
-                if (args.item && typeof args.item.id === 'string' && args.item.id.toLowerCase().indexOf('excelexport') !== -1) {
+                if (!args.item || typeof args.item.id !== 'string') {
+                    return;
+                }
+                var id = args.item.id.toLowerCase();
+                if (id.indexOf('excelexport') !== -1) {
                     grid.excelExport({
                         fileName: 'journal-entries.xlsx',
                         header: {
                             headerRows: 2,
                             rows: [
-                                { cells: [{ colSpan: 6, value: 'قائمة القيود المالية', style: { fontSize: 16, bold: true, hAlign: 'Right' } }] },
-                                { cells: [{ colSpan: 6, value: 'تاريخ التصدير: ' + new Date().toLocaleString(), style: { hAlign: 'Right' } }] }
+                                { cells: [{ colSpan: 7, value: 'قائمة القيود المالية', style: { fontSize: 16, bold: true, hAlign: 'Right' } }] },
+                                { cells: [{ colSpan: 7, value: 'تاريخ التصدير: ' + new Date().toLocaleString(), style: { hAlign: 'Right' } }] }
                             ]
                         }
                     });
@@ -497,6 +891,7 @@
                         success: function () {
                             hideLoading();
                             grid.refresh();
+                            updateSummary(getQuickSearchValue());
                             if (window.swal) {
                                 swal({ title: 'تم الترحيل بنجاح', icon: 'success', button: 'حسناً' });
                             } else {
@@ -538,6 +933,7 @@
                     success: function () {
                         hideLoading();
                         grid.refresh();
+                        updateSummary(getQuickSearchValue());
                         if (window.swal) {
                             swal({ title: 'تم الإلغاء بنجاح', icon: 'success', button: 'حسناً' });
                         } else {
@@ -552,9 +948,12 @@
                         } else {
                             alert(message);
                         }
-                        }
+                    }
                 }));
             });
+
+            updateFilterChips(getQuickSearchValue());
+            updateSummary(getQuickSearchValue());
         });
     </script>
 }
