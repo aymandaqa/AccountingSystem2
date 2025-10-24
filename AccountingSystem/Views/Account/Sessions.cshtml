@@ -1,0 +1,134 @@
+@using System.Linq
+@model AccountingSystem.ViewModels.UserSessionsViewModel
+@{
+    ViewData["Title"] = "إدارة الجلسات";
+
+    string ResolveIcon(string? deviceType)
+    {
+        return deviceType switch
+        {
+            "جوال" => "fa-mobile-alt",
+            "شاشة" => "fa-tv",
+            _ => "fa-desktop"
+        };
+    }
+}
+
+<h2 class="mb-4">إدارة الجلسات</h2>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fa fa-satellite-dish me-2"></i>الجلسات النشطة</span>
+                <span class="badge bg-primary">@Model.ActiveSessions.Count</span>
+            </div>
+            <div class="list-group list-group-flush">
+                @if (!Model.ActiveSessions.Any())
+                {
+                    <div class="list-group-item text-center text-muted py-4">لا توجد جلسات نشطة حالياً</div>
+                }
+                else
+                {
+                    foreach (var session in Model.ActiveSessions)
+                    {
+                        var isCurrent = session.SessionId == Model.CurrentSessionId;
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="fw-bold">
+                                        <i class="fa @ResolveIcon(session.DeviceType) me-2"></i>
+                                        @(session.DeviceName ?? session.DeviceType ?? "جهاز غير معروف")
+                                        @if (isCurrent)
+                                        {
+                                            <span class="badge bg-success ms-2">الجلسة الحالية</span>
+                                        }
+                                    </div>
+                                    <div class="small text-muted mt-1">
+                                        <div><i class="fa fa-network-wired me-1"></i>IP: @(session.IpAddress ?? "غير معروف")</div>
+                                        <div><i class="fa fa-microchip me-1"></i>النظام: @(session.OperatingSystem ?? "غير معروف")</div>
+                                        <div><i class="fa fa-clock me-1"></i>بدء: @session.CreatedAt.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</div>
+                                        <div><i class="fa fa-bolt me-1"></i>آخر نشاط: @(session.LastActivityAt?.ToLocalTime().ToString("yyyy/MM/dd HH:mm") ?? "غير متوفر")</div>
+                                    </div>
+                                </div>
+                                @if (!isCurrent)
+                                {
+                                    <form asp-action="RevokeSession" method="post" class="ms-3">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@session.Id" />
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                                            <i class="fa fa-sign-out-alt me-1"></i>تسجيل الخروج
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fa fa-history me-2"></i>آخر الجلسات
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>الجهاز</th>
+                            <th>النوع</th>
+                            <th>IP</th>
+                            <th>النظام</th>
+                            <th>البدء</th>
+                            <th>آخر نشاط</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @if (!Model.RecentSessions.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">لا يوجد سجل جلسات</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var session in Model.RecentSessions)
+                        {
+                            <tr class="@(session.IsActive ? "" : "table-light")">
+                                <td>
+                                    <i class="fa @ResolveIcon(session.DeviceType) me-1"></i>
+                                    @(session.DeviceName ?? session.DeviceType ?? "غير معروف")
+                                </td>
+                                <td>@(session.DeviceType ?? "غير معروف")</td>
+                                <td>@(session.IpAddress ?? "غير معروف")</td>
+                                <td>@(session.OperatingSystem ?? "غير معروف")</td>
+                                <td>@session.CreatedAt.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</td>
+                                <td>@(session.LastActivityAt?.ToLocalTime().ToString("yyyy/MM/dd HH:mm") ?? "غير متوفر")</td>
+                                <td>
+                                    @if (session.IsActive)
+                                    {
+                                        <span class="badge bg-success">نشطة</span>
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex flex-column">
+                                            <span class="badge bg-secondary mb-1">منتهية</span>
+                                            @if (session.EndedAt.HasValue)
+                                            {
+                                                <small class="text-muted">@session.EndedAt.Value.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</small>
+                                            }
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

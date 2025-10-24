@@ -1,13 +1,17 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using AccountingSystem.Authorization;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Roadfn.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AccountingSystem.Services;
@@ -46,6 +50,29 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/Account/AccessDenied";
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
     options.SlidingExpiration = true;
+    options.Events = new CookieAuthenticationEvents
+    {
+        OnValidatePrincipal = async context =>
+        {
+            var sessionId = context.Principal?.FindFirst("SessionId")?.Value;
+            var userId = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(sessionId) || string.IsNullOrEmpty(userId))
+            {
+                return;
+            }
+
+            var sessionService = context.HttpContext.RequestServices.GetRequiredService<IUserSessionService>();
+            if (!await sessionService.IsSessionActiveAsync(userId, sessionId))
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+                return;
+            }
+
+            await sessionService.UpdateSessionActivityAsync(sessionId);
+        }
+    };
 });
 
 builder.Services.AddControllersWithViews().AddNewtonsoftJson(options =>
@@ -73,6 +100,7 @@ builder.Services.AddScoped<IPaymentVoucherProcessor, PaymentVoucherProcessor>();
 builder.Services.AddScoped<IReceiptVoucherProcessor, ReceiptVoucherProcessor>();
 builder.Services.AddScoped<IDisbursementVoucherProcessor, DisbursementVoucherProcessor>();
 builder.Services.AddScoped<IAssetExpenseProcessor, AssetExpenseProcessor>();
+builder.Services.AddScoped<IUserSessionService, UserSessionService>();
 
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();

@@ -45,6 +45,7 @@ namespace AccountingSystem.Models
         public virtual Agent? Agent { get; set; }
         public virtual ICollection<Expense> Expenses { get; set; } = new List<Expense>();
         public virtual ICollection<CashBoxClosure> CashBoxClosures { get; set; } = new List<CashBoxClosure>();
+        public virtual ICollection<UserSession> Sessions { get; set; } = new List<UserSession>();
     }
 }
 

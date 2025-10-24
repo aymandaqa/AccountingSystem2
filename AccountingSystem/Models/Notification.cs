@@ -25,6 +25,9 @@ namespace AccountingSystem.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
+        [StringLength(100)]
+        public string? Icon { get; set; }
+
         public int? WorkflowActionId { get; set; }
 
         public virtual User User { get; set; } = null!;

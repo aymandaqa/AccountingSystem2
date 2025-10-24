@@ -67,6 +67,7 @@ namespace AccountingSystem.Data
         public DbSet<DynamicScreenDefinition> DynamicScreenDefinitions { get; set; }
         public DbSet<DynamicScreenField> DynamicScreenFields { get; set; }
         public DbSet<DynamicScreenEntry> DynamicScreenEntries { get; set; }
+        public DbSet<UserSession> UserSessions { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<CompoundJournalDefinition> CompoundJournalDefinitions { get; set; }
         public DbSet<CompoundJournalExecutionLog> CompoundJournalExecutionLogs { get; set; }
@@ -1038,11 +1039,30 @@ namespace AccountingSystem.Data
                     .OnDelete(DeleteBehavior.SetNull);
             });
 
+            builder.Entity<UserSession>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.SessionId).IsUnique();
+                entity.Property(e => e.SessionId).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.DeviceType).HasMaxLength(100);
+                entity.Property(e => e.DeviceName).HasMaxLength(200);
+                entity.Property(e => e.OperatingSystem).HasMaxLength(200);
+                entity.Property(e => e.IpAddress).HasMaxLength(100);
+                entity.Property(e => e.UserAgent).HasMaxLength(1000);
+                entity.Property(e => e.EndedReason).HasMaxLength(200);
+
+                entity.HasOne(e => e.User)
+                    .WithMany(u => u.Sessions)
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
             builder.Entity<Notification>(entity =>
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.Message).HasMaxLength(1000);
+                entity.Property(e => e.Icon).HasMaxLength(100);
 
                 entity.HasOne(e => e.User)
                     .WithMany()

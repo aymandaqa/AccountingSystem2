@@ -27,11 +27,19 @@
                 foreach (var notification in Model.Notifications)
                 {
                     <a class="list-group-item list-group-item-action @(notification.IsRead ? "" : "fw-bold")" href="@(string.IsNullOrEmpty(notification.Link) ? "#" : notification.Link)">
-                        <div>@notification.Title</div>
-                        @if (!string.IsNullOrWhiteSpace(notification.Message))
-                        {
-                            <small class="text-muted">@notification.Message</small>
-                        }
+                        <div class="d-flex align-items-start">
+                            @if (!string.IsNullOrWhiteSpace(notification.Icon))
+                            {
+                                <i class="fa @notification.Icon me-2 text-primary"></i>
+                            }
+                            <div>
+                                <div>@notification.Title</div>
+                                @if (!string.IsNullOrWhiteSpace(notification.Message))
+                                {
+                                    <small class="text-muted">@notification.Message</small>
+                                }
+                            </div>
+                        </div>
                     </a>
                 }
             }
