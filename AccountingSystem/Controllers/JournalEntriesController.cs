@@ -250,8 +250,62 @@ namespace AccountingSystem.Controllers
 
         [HttpPost]
         [Authorize(Policy = "journal.view")]
-        public IActionResult UrlDatasourceJournalEntries([FromBody] DataManagerRequest dm, DateTime? fromDate, DateTime? toDate, int? branchId, string? status, bool showUnbalancedOnly = false, string? searchTerm = null)
+        public IActionResult UrlDatasourceJournalEntries([FromBody] DataManagerRequest dm)
         {
+            static string? GetParamValue(DataManagerRequest request, string key)
+            {
+                if (request?.Params == null || !request.Params.ContainsKey(key))
+                {
+                    return null;
+                }
+
+                var value = request.Params[key];
+                return value?.ToString();
+            }
+
+            DateTime? fromDate = null;
+            DateTime? toDate = null;
+            int? branchId = null;
+            string? status = null;
+            string? searchTerm = null;
+            var showUnbalancedOnly = false;
+
+            var fromValue = GetParamValue(dm, "fromDate");
+            if (!string.IsNullOrWhiteSpace(fromValue) && DateTime.TryParse(fromValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedFromDate))
+            {
+                fromDate = parsedFromDate;
+            }
+
+            var toValue = GetParamValue(dm, "toDate");
+            if (!string.IsNullOrWhiteSpace(toValue) && DateTime.TryParse(toValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedToDate))
+            {
+                toDate = parsedToDate;
+            }
+
+            var branchValue = GetParamValue(dm, "branchId");
+            if (!string.IsNullOrWhiteSpace(branchValue) && int.TryParse(branchValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedBranchId))
+            {
+                branchId = parsedBranchId;
+            }
+
+            var statusValue = GetParamValue(dm, "status");
+            if (!string.IsNullOrWhiteSpace(statusValue))
+            {
+                status = statusValue;
+            }
+
+            var showUnbalancedValue = GetParamValue(dm, "showUnbalancedOnly");
+            if (!string.IsNullOrWhiteSpace(showUnbalancedValue) && bool.TryParse(showUnbalancedValue, out var parsedShowUnbalanced))
+            {
+                showUnbalancedOnly = parsedShowUnbalanced;
+            }
+
+            var searchValue = GetParamValue(dm, "searchTerm");
+            if (!string.IsNullOrWhiteSpace(searchValue))
+            {
+                searchTerm = searchValue;
+            }
+
             var query = _context.JournalEntries
                 .AsNoTracking()
                 .Include(j => j.Branch)
