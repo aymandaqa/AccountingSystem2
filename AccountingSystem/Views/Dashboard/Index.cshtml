@@ -82,7 +82,7 @@
 
     <div class="dashboard-layout">
         <div class="dashboard-main">
-            <div class="card dashboard-customization-card shadow-sm border-0 mb-4">
+            @*     <div class="card dashboard-customization-card shadow-sm border-0 mb-4">
                 <div class="card-body d-flex flex-wrap align-items-start justify-content-between gap-3">
                     <div>
                         <h5 class="mb-1"><i class="fas fa-sliders-h ms-2"></i> تخصيص لوحة التحكم</h5>
@@ -106,27 +106,27 @@
                     </div>
                 </div>
             </div>
-
+ *@
             <div id="dashboardWidgetsGrid" class="dashboard-widgets-grid">
                 @if (canViewSearch)
                 {
                     <div class="dashboard-widget" data-widget-id="search" data-widget-name="البحث السريع" data-default-size="large">
-                    <div class="widget-controls" aria-hidden="true">
-                        <button type="button" class="widget-control-btn widget-drag-handle" title="سحب لترتيب الودجت">
-                            <i class="fas fa-grip-vertical"></i>
-                        </button>
-                        <div class="widget-resize-controls">
-                            <button type="button" class="widget-control-btn widget-size-down" title="تصغير الودجت">
-                                <i class="fas fa-compress-alt"></i>
+                        <div class="widget-controls" aria-hidden="true">
+                            <button type="button" class="widget-control-btn widget-drag-handle" title="سحب لترتيب الودجت">
+                                <i class="fas fa-grip-vertical"></i>
                             </button>
-                            <button type="button" class="widget-control-btn widget-size-up" title="تكبير الودجت">
-                                <i class="fas fa-expand-alt"></i>
+                            <div class="widget-resize-controls">
+                                <button type="button" class="widget-control-btn widget-size-down" title="تصغير الودجت">
+                                    <i class="fas fa-compress-alt"></i>
+                                </button>
+                                <button type="button" class="widget-control-btn widget-size-up" title="تكبير الودجت">
+                                    <i class="fas fa-expand-alt"></i>
+                                </button>
+                            </div>
+                            <button type="button" class="widget-control-btn widget-hide" title="إخفاء الودجت">
+                                <i class="fas fa-eye-slash"></i>
                             </button>
                         </div>
-                        <button type="button" class="widget-control-btn widget-hide" title="إخفاء الودجت">
-                            <i class="fas fa-eye-slash"></i>
-                        </button>
-                    </div>
                         <section class="card dashboard-search-card shadow-sm border-0 mb-0">
                             <div class="card-body">
                                 <div class="dashboard-search-header d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
@@ -147,137 +147,137 @@
                                         }
                                     </div>
                                 </div>
-                            <div class="dashboard-search-fields row g-3">
-                                <div class="col-12 col-lg-3">
-                                    <label for="branchFilter" class="form-label">فلتر حسب الفرع</label>
-                                    <div class="search-field">
-                                        <i class="fas fa-code-branch"></i>
-                                        <select id="branchFilter" class="form-select" onchange="applyFilters()">
-                                            <option value="">جميع الفروع</option>
-                                            @if (ViewBag.Branches != null)
-                                            {
-                                                foreach (var branch in ViewBag.Branches)
+                                <div class="dashboard-search-fields row g-3">
+                                    <div class="col-12 col-lg-3">
+                                        <label for="branchFilter" class="form-label">فلتر حسب الفرع</label>
+                                        <div class="search-field">
+                                            <i class="fas fa-code-branch"></i>
+                                            <select id="branchFilter" class="form-select" onchange="applyFilters()">
+                                                <option value="">جميع الفروع</option>
+                                                @if (ViewBag.Branches != null)
                                                 {
-                                                    var branchDisplay = branch.NameAr ?? branch.NameEn ?? branch.Name;
-                                                    <option value="@branch.Id" selected="@(Model.SelectedBranchId == branch.Id ? "selected" : null)">
-                                                        @branchDisplay
-                                                    </option>
+                                                    foreach (var branch in ViewBag.Branches)
+                                                    {
+                                                        var branchDisplay = branch.NameAr ?? branch.NameEn ?? branch.Name;
+                                                        <option value="@branch.Id" selected="@(Model.SelectedBranchId == branch.Id ? "selected" : null)">
+                                                            @branchDisplay
+                                                        </option>
+                                                    }
                                                 }
-                                            }
-                                        </select>
+                                            </select>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="col-12 col-lg-3">
-                                    <label for="fromDateFilter" class="form-label">من تاريخ</label>
-                                    <div class="search-field">
-                                        <i class="fas fa-calendar-day"></i>
-                                        <input type="date" id="fromDateFilter" class="form-control" value="@Model.FromDate.ToString("yyyy-MM-dd")" onchange="applyFilters()" />
+                                    <div class="col-12 col-lg-3">
+                                        <label for="fromDateFilter" class="form-label">من تاريخ</label>
+                                        <div class="search-field">
+                                            <i class="fas fa-calendar-day"></i>
+                                            <input type="date" id="fromDateFilter" class="form-control" value="@Model.FromDate.ToString("yyyy-MM-dd")" onchange="applyFilters()" />
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="col-12 col-lg-3">
-                                    <label for="toDateFilter" class="form-label">إلى تاريخ</label>
-                                    <div class="search-field">
-                                        <i class="fas fa-calendar-check"></i>
-                                        <input type="date" id="toDateFilter" class="form-control" value="@Model.ToDate.ToString("yyyy-MM-dd")" onchange="applyFilters()" />
+                                    <div class="col-12 col-lg-3">
+                                        <label for="toDateFilter" class="form-label">إلى تاريخ</label>
+                                        <div class="search-field">
+                                            <i class="fas fa-calendar-check"></i>
+                                            <input type="date" id="toDateFilter" class="form-control" value="@Model.ToDate.ToString("yyyy-MM-dd")" onchange="applyFilters()" />
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="col-12 col-lg-3">
-                                    <label for="currencyFilter" class="form-label">العملة</label>
-                                    <div class="search-field">
-                                        <i class="fas fa-coins"></i>
-                                        <select id="currencyFilter" class="form-select" onchange="applyFilters()">
-                                            <option value="">@Model.BaseCurrencyCode</option>
-                                            @if (ViewBag.Currencies != null)
-                                            {
-                                                foreach (var currency in ViewBag.Currencies)
+                                    <div class="col-12 col-lg-3">
+                                        <label for="currencyFilter" class="form-label">العملة</label>
+                                        <div class="search-field">
+                                            <i class="fas fa-coins"></i>
+                                            <select id="currencyFilter" class="form-select" onchange="applyFilters()">
+                                                <option value="">@Model.BaseCurrencyCode</option>
+                                                @if (ViewBag.Currencies != null)
                                                 {
-                                                    <option value="@currency.Id" selected="@(Model.SelectedCurrencyId == currency.Id ? "selected" : null)">@currency.Code</option>
+                                                    foreach (var currency in ViewBag.Currencies)
+                                                    {
+                                                        <option value="@currency.Id" selected="@(Model.SelectedCurrencyId == currency.Id ? "selected" : null)">@currency.Code</option>
+                                                    }
                                                 }
-                                            }
-                                        </select>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
+                                @if (hasAnySuggestions)
+                                {
+                                    <div class="dashboard-search-suggestions mt-4">
+                                        @if (hasCategorySuggestions)
+                                        {
+                                            <div class="suggestion-card">
+                                                <h6 class="suggestion-title"><i class="fas fa-layer-group ms-1"></i> التصنيفات</h6>
+                                                <ul class="suggestion-list">
+                                                    @if (canAccessAccounts)
+                                                    {
+                                                        <li><a href="@Url.Action("Index", "Accounts")">إدارة الحسابات</a></li>
+                                                    }
+                                                    @if (canAccessJournal)
+                                                    {
+                                                        <li><a href="@Url.Action("Index", "JournalEntries")">القيود المالية</a></li>
+                                                    }
+                                                    @if (canAccessBranches)
+                                                    {
+                                                        <li><a href="@Url.Action("Index", "Branches")">الفروع</a></li>
+                                                    }
+                                                    @if (canAccessCostCenters)
+                                                    {
+                                                        <li><a href="@Url.Action("Index", "CostCenters")">مراكز التكلفة</a></li>
+                                                    }
+                                                </ul>
+                                            </div>
+                                        }
+                                        @if (hasPopularSuggestions)
+                                        {
+                                            <div class="suggestion-card">
+                                                <h6 class="suggestion-title"><i class="fas fa-star ms-1"></i> عناصر شائعة</h6>
+                                                <ul class="suggestion-list">
+                                                    @if (canViewDashboard)
+                                                    {
+                                                        <li><a href="@Url.Action("Index", "Dashboard")">لوحة التحكم</a></li>
+                                                    }
+                                                    @if (canAccessReports)
+                                                    {
+                                                        <li><a href="@Url.Action("Index", "Reports")">التقارير المالية</a></li>
+                                                    }
+                                                    @if (canAccessUsers)
+                                                    {
+                                                        <li><a href="@Url.Action("Index", "Users")">إدارة المستخدمين</a></li>
+                                                    }
+                                                    @if (canAccessSuppliers)
+                                                    {
+                                                        <li><a href="@Url.Action("Index", "Suppliers")">الموردون</a></li>
+                                                    }
+                                                </ul>
+                                            </div>
+                                        }
+                                        @if (hasQuickActionSuggestions)
+                                        {
+                                            <div class="suggestion-card">
+                                                <h6 class="suggestion-title"><i class="fas fa-bolt ms-1"></i> إجراءات سريعة</h6>
+                                                <ul class="suggestion-list">
+                                                    @if (canCreateReceiptVouchers)
+                                                    {
+                                                        <li><a href="@Url.Action("Create", "ReceiptVouchers")">سند قبض جديد</a></li>
+                                                    }
+                                                    @if (canCreateDisbursementVouchers)
+                                                    {
+                                                        <li><a href="@Url.Action("Create", "DisbursementVouchers")">سند صرف جديد</a></li>
+                                                    }
+                                                    @if (canCreateJournalEntries)
+                                                    {
+                                                        <li><a href="@Url.Action("Create", "JournalEntries")">قيد مالي جديد</a></li>
+                                                    }
+                                                    @if (canCreateAssets)
+                                                    {
+                                                        <li><a href="@Url.Action("Create", "Assets")">إضافة أصل</a></li>
+                                                    }
+                                                </ul>
+                                            </div>
+                                        }
+                                    </div>
+                                }
                             </div>
-                            @if (hasAnySuggestions)
-                            {
-                                <div class="dashboard-search-suggestions mt-4">
-                                    @if (hasCategorySuggestions)
-                                    {
-                                        <div class="suggestion-card">
-                                            <h6 class="suggestion-title"><i class="fas fa-layer-group ms-1"></i> التصنيفات</h6>
-                                            <ul class="suggestion-list">
-                                                @if (canAccessAccounts)
-                                                {
-                                                    <li><a href="@Url.Action("Index", "Accounts")">إدارة الحسابات</a></li>
-                                                }
-                                                @if (canAccessJournal)
-                                                {
-                                                    <li><a href="@Url.Action("Index", "JournalEntries")">القيود المالية</a></li>
-                                                }
-                                                @if (canAccessBranches)
-                                                {
-                                                    <li><a href="@Url.Action("Index", "Branches")">الفروع</a></li>
-                                                }
-                                                @if (canAccessCostCenters)
-                                                {
-                                                    <li><a href="@Url.Action("Index", "CostCenters")">مراكز التكلفة</a></li>
-                                                }
-                                            </ul>
-                                        </div>
-                                    }
-                                    @if (hasPopularSuggestions)
-                                    {
-                                        <div class="suggestion-card">
-                                            <h6 class="suggestion-title"><i class="fas fa-star ms-1"></i> عناصر شائعة</h6>
-                                            <ul class="suggestion-list">
-                                                @if (canViewDashboard)
-                                                {
-                                                    <li><a href="@Url.Action("Index", "Dashboard")">لوحة التحكم</a></li>
-                                                }
-                                                @if (canAccessReports)
-                                                {
-                                                    <li><a href="@Url.Action("Index", "Reports")">التقارير المالية</a></li>
-                                                }
-                                                @if (canAccessUsers)
-                                                {
-                                                    <li><a href="@Url.Action("Index", "Users")">إدارة المستخدمين</a></li>
-                                                }
-                                                @if (canAccessSuppliers)
-                                                {
-                                                    <li><a href="@Url.Action("Index", "Suppliers")">الموردون</a></li>
-                                                }
-                                            </ul>
-                                        </div>
-                                    }
-                                    @if (hasQuickActionSuggestions)
-                                    {
-                                        <div class="suggestion-card">
-                                            <h6 class="suggestion-title"><i class="fas fa-bolt ms-1"></i> إجراءات سريعة</h6>
-                                            <ul class="suggestion-list">
-                                                @if (canCreateReceiptVouchers)
-                                                {
-                                                    <li><a href="@Url.Action("Create", "ReceiptVouchers")">سند قبض جديد</a></li>
-                                                }
-                                                @if (canCreateDisbursementVouchers)
-                                                {
-                                                    <li><a href="@Url.Action("Create", "DisbursementVouchers")">سند صرف جديد</a></li>
-                                                }
-                                                @if (canCreateJournalEntries)
-                                                {
-                                                    <li><a href="@Url.Action("Create", "JournalEntries")">قيد مالي جديد</a></li>
-                                                }
-                                                @if (canCreateAssets)
-                                                {
-                                                    <li><a href="@Url.Action("Create", "Assets")">إضافة أصل</a></li>
-                                                }
-                                            </ul>
-                                        </div>
-                                    }
-                                </div>
-                            }
-                        </div>
-                    </section>
-                </div>
+                        </section>
+                    </div>
                 }
 
                 @if (canViewStats)
