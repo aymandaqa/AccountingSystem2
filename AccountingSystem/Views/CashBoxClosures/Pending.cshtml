@@ -14,6 +14,7 @@
         <div class="card-body">
             @if (Model.Any())
             {
+                <div class="position-relative">
                 <table class="table table-bordered">
                     <thead>
                         <tr>
@@ -24,6 +25,7 @@
                             <th>تفاصيل الفئات</th>
                             <th>الرصيد</th>
                             <th>الفرق</th>
+                            <th>التاريخ</th>
                             <th>الإجراءات</th>
                         </tr>
                     </thead>
@@ -54,28 +56,39 @@
                                 </td>
                                 <td>@item.Account.CurrentBalance.ToString("N2")</td>
                                 <td class="@(diff == 0 ? "text-success" : "text-danger")">@diff.ToString("N2")</td>
+                                <td>@item.CreatedAt.ToString("yyyy/MM/dd HH:mm")</td>
                                 <td>
-                                    <form asp-action="Approve" method="post" class="d-inline" asp-require-permission="cashclosures.approve">
+                                    <form asp-action="Approve" method="post" class="d-inline action-form" asp-require-permission="cashclosures.approve" data-item-id="@item.Id">
                                         <input type="hidden" name="id" value="@item.Id" />
                                         <input type="hidden" name="matched" value="true" />
                                         <button type="submit" class="btn btn-success btn-sm">موافقة مطابقة</button>
                                     </form>
-                                    <form asp-action="Approve" method="post" class="d-inline mt-1" asp-require-permission="cashclosures.approve">
+                                    <form asp-action="Approve" method="post" class="d-inline mt-1 action-form" asp-require-permission="cashclosures.approve" data-item-id="@item.Id" data-requires-reason="true">
                                         <input type="hidden" name="id" value="@item.Id" />
                                         <input type="hidden" name="matched" value="false" />
-                                        <input type="text" required name="reason" class="form-control form-control-sm d-inline w-auto" placeholder="سبب" />
+                                        <input type="hidden" name="reason" />
                                         <button type="submit" class="btn btn-warning btn-sm">موافقة مع فرق</button>
                                     </form>
-                                    <form asp-action="Reject" method="post" class="d-inline mt-1" asp-require-permission="cashclosures.approve">
+                                    <form asp-action="Reject" method="post" class="d-inline mt-1 action-form" asp-require-permission="cashclosures.approve" data-item-id="@item.Id" data-requires-reason="true">
                                         <input type="hidden" name="id" value="@item.Id" />
-                                        <input type="text" required name="reason" class="form-control form-control-sm d-inline w-auto" placeholder="سبب" />
+                                        <input type="hidden" name="reason" />
                                         <button type="submit" class="btn btn-danger btn-sm">رفض</button>
                                     </form>
+                                    <div class="mt-2">
+                                        <label class="form-label small mb-1" for="reason-@item.Id">سبب الرفض / الفروقات</label>
+                                        <textarea id="reason-@item.Id" class="form-control form-control-sm reason-input" data-item-id="@item.Id" placeholder="أدخل السبب هنا"></textarea>
+                                    </div>
                                 </td>
                             </tr>
                         }
                     </tbody>
                 </table>
+                <div class="loading-overlay d-none" id="action-loading">
+                    <div class="spinner-border text-light" role="status">
+                        <span class="visually-hidden">جاري المعالجة...</span>
+                    </div>
+                </div>
+                </div>
             }
             else
             {
@@ -84,3 +97,64 @@
         </div>
     </div>
 </div>
+
+<style>
+    .loading-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(0, 0, 0, 0.35);
+        z-index: 10;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        (function () {
+            const overlay = document.getElementById('action-loading');
+            const forms = document.querySelectorAll('.action-form');
+
+            function showLoading() {
+                overlay?.classList.remove('d-none');
+            }
+
+            forms.forEach(form => {
+                form.addEventListener('submit', function (event) {
+                    const itemId = this.dataset.itemId;
+                    const reasonInput = document.querySelector(`.reason-input[data-item-id="${itemId}"]`);
+                    const requiresReason = this.dataset.requiresReason === 'true';
+                    const hiddenReason = this.querySelector('input[name="reason"]');
+
+                    if (requiresReason) {
+                        const value = reasonInput?.value.trim();
+                        if (!value) {
+                            event.preventDefault();
+                            reasonInput?.classList.add('is-invalid');
+                            reasonInput?.focus();
+                            return;
+                        }
+                        reasonInput?.classList.remove('is-invalid');
+                        if (hiddenReason) {
+                            hiddenReason.value = value;
+                        }
+                    } else if (hiddenReason && reasonInput) {
+                        hiddenReason.value = reasonInput.value.trim();
+                    }
+
+                    showLoading();
+                    this.querySelectorAll('button[type="submit"]').forEach(btn => btn.disabled = true);
+                });
+            });
+
+            document.querySelectorAll('.reason-input').forEach(textarea => {
+                textarea.addEventListener('input', function () {
+                    if (this.value.trim()) {
+                        this.classList.remove('is-invalid');
+                    }
+                });
+            });
+        })();
+    </script>
+}
