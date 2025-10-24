@@ -61,7 +61,7 @@
 <h2 class="mb-4">إدارة الجلسات</h2>
 
 <div class="row">
-    <div class="col-lg-6">
+    <div class="col-lg-4">
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="fa fa-satellite-dish me-2"></i>الجلسات النشطة</span>
@@ -94,12 +94,12 @@
                                         <div><i class="@ResolveBrowserIcon(session.BrowserIcon) me-1"></i>المتصفح: @(session.BrowserName ?? "غير معروف")</div>
                                         @if (session.Latitude.HasValue && session.Longitude.HasValue)
                                         {
-                                        <div><i class="fa-solid fa-location-dot me-1"></i>الموقع: @FormatCoordinate(session.Latitude), @FormatCoordinate(session.Longitude) (@FormatAccuracy(session.LocationAccuracy))</div>
-                                        <div class="mt-2">
-                                            <a class="btn btn-outline-primary btn-sm" href="@BuildGoogleMapsLink(session.Latitude!.Value, session.Longitude!.Value)" target="_blank" rel="noopener">
-                                                <i class="fa-brands fa-google me-1"></i>عرض على خرائط جوجل
-                                            </a>
-                                        </div>
+                                            <div><i class="fa-solid fa-location-dot me-1"></i>الموقع: @FormatCoordinate(session.Latitude), @FormatCoordinate(session.Longitude) (@FormatAccuracy(session.LocationAccuracy))</div>
+                                            <div class="mt-2">
+                                                <a class="btn btn-outline-primary btn-sm" href="@BuildGoogleMapsLink(session.Latitude!.Value, session.Longitude!.Value)" target="_blank" rel="noopener">
+                                                    <i class="fa-brands fa-google me-1"></i>عرض على خرائط جوجل
+                                                </a>
+                                            </div>
                                             if (session.LocationCapturedAt.HasValue)
                                             {
                                                 <div><i class="fa-solid fa-bullseye me-1"></i>وقت الالتقاط: @session.LocationCapturedAt.Value.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</div>
@@ -130,7 +130,7 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-6">
+    <div class="col-lg-8">
         <div class="card mb-4">
             <div class="card-header">
                 <i class="fa fa-history me-2"></i>آخر الجلسات
@@ -151,74 +151,74 @@
                         </tr>
                     </thead>
                     <tbody>
-                    @if (!Model.RecentSessions.Any())
-                    {
-                        <tr>
-                            <td colspan="9" class="text-center text-muted">لا يوجد سجل جلسات</td>
-                        </tr>
-                    }
-                    else
-                    {
-                        foreach (var session in Model.RecentSessions)
+                        @if (!Model.RecentSessions.Any())
                         {
-                            <tr class="@(session.IsActive ? "" : "table-light")">
-                                <td>
-                                    <i class="fa @ResolveDeviceIcon(session.DeviceType) me-1"></i>
-                                    @(session.DeviceName ?? session.DeviceType ?? "غير معروف")
-                                </td>
-                                <td>@(session.DeviceType ?? "غير معروف")</td>
-                                <td>@(session.IpAddress ?? "غير معروف")</td>
-                                <td>@(session.OperatingSystem ?? "غير معروف")</td>
-                                <td>
-                                    <i class="@ResolveBrowserIcon(session.BrowserIcon) me-1"></i>
-                                    @(session.BrowserName ?? "غير معروف")
-                                </td>
-                                <td>@session.CreatedAt.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</td>
-                                <td>@(session.LastActivityAt?.ToLocalTime().ToString("yyyy/MM/dd HH:mm") ?? "غير متوفر")</td>
-                                <td>
-                                    @if (session.Latitude.HasValue && session.Longitude.HasValue)
-                                    {
-                                        <div>@FormatCoordinate(session.Latitude), @FormatCoordinate(session.Longitude)</div>
-                                        if (session.LocationAccuracy.HasValue)
-                                        {
-                                            <small class="text-muted">(@FormatAccuracy(session.LocationAccuracy))</small>
-                                        }
-
-                                        if (session.LocationCapturedAt.HasValue)
-                                        {
-                                            <small class="text-muted d-block">تم الالتقاط: @session.LocationCapturedAt.Value.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</small>
-                                        }
-
-                                        <div class="mt-2">
-                                            <a class="btn btn-outline-primary btn-sm" href="@BuildGoogleMapsLink(session.Latitude!.Value, session.Longitude!.Value)" target="_blank" rel="noopener">
-                                                <i class="fa-brands fa-google me-1"></i>عرض على خرائط جوجل
-                                            </a>
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">غير متوفر</span>
-                                    }
-                                </td>
-                                <td>
-                                    @if (session.IsActive)
-                                    {
-                                        <span class="badge bg-success">نشطة</span>
-                                    }
-                                    else
-                                    {
-                                        <div class="d-flex flex-column">
-                                            <span class="badge bg-secondary mb-1">منتهية</span>
-                                            @if (session.EndedAt.HasValue)
-                                            {
-                                                <small class="text-muted">@session.EndedAt.Value.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</small>
-                                            }
-                                        </div>
-                                    }
-                                </td>
+                            <tr>
+                                <td colspan="9" class="text-center text-muted">لا يوجد سجل جلسات</td>
                             </tr>
                         }
-                    }
+                        else
+                        {
+                            foreach (var session in Model.RecentSessions)
+                            {
+                                <tr class="@(session.IsActive ? "" : "table-light")">
+                                    <td>
+                                        <i class="fa @ResolveDeviceIcon(session.DeviceType) me-1"></i>
+                                        @(session.DeviceName ?? session.DeviceType ?? "غير معروف")
+                                    </td>
+                                    <td>@(session.DeviceType ?? "غير معروف")</td>
+                                    <td>@(session.IpAddress ?? "غير معروف")</td>
+                                    <td>@(session.OperatingSystem ?? "غير معروف")</td>
+                                    <td>
+                                        <i class="@ResolveBrowserIcon(session.BrowserIcon) me-1"></i>
+                                        @(session.BrowserName ?? "غير معروف")
+                                    </td>
+                                    <td>@session.CreatedAt.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</td>
+                                    <td>@(session.LastActivityAt?.ToLocalTime().ToString("yyyy/MM/dd HH:mm") ?? "غير متوفر")</td>
+                                    <td>
+                                        @if (session.Latitude.HasValue && session.Longitude.HasValue)
+                                        {
+                                            <div>@FormatCoordinate(session.Latitude), @FormatCoordinate(session.Longitude)</div>
+                                            if (session.LocationAccuracy.HasValue)
+                                            {
+                                                <small class="text-muted">(@FormatAccuracy(session.LocationAccuracy))</small>
+                                            }
+
+                                            if (session.LocationCapturedAt.HasValue)
+                                            {
+                                                <small class="text-muted d-block">تم الالتقاط: @session.LocationCapturedAt.Value.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</small>
+                                            }
+
+                                            <div class="mt-2">
+                                                <a class="btn btn-outline-primary btn-sm" href="@BuildGoogleMapsLink(session.Latitude!.Value, session.Longitude!.Value)" target="_blank" rel="noopener">
+                                                    <i class="fa-brands fa-google me-1"></i>عرض على خرائط جوجل
+                                                </a>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">غير متوفر</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (session.IsActive)
+                                        {
+                                            <span class="badge bg-success">نشطة</span>
+                                        }
+                                        else
+                                        {
+                                            <div class="d-flex flex-column">
+                                                <span class="badge bg-secondary mb-1">منتهية</span>
+                                                @if (session.EndedAt.HasValue)
+                                                {
+                                                    <small class="text-muted">@session.EndedAt.Value.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</small>
+                                                }
+                                            </div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
                     </tbody>
                 </table>
             </div>
@@ -244,9 +244,9 @@
             min-height: 420px;
         }
 
-        #sessionsMap .leaflet-popup-content {
-            text-align: start;
-        }
+            #sessionsMap .leaflet-popup-content {
+                text-align: start;
+            }
     </style>
 }
 
