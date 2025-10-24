@@ -887,6 +887,7 @@
                             @if (User.Identity.IsAuthenticated)
                             {
                                 <a class="dropdown-item" href="@Url.Action("Profile", "Account")"><i class="fa-solid fa-user-pen"></i> الملف الشخصي</a>
+                                <a class="dropdown-item" href="@Url.Action("Sessions", "Account")"><i class="fa-solid fa-satellite-dish"></i> الجلسات النشطة</a>
                                 <div class="dropdown-divider"></div>
                                 <form asp-controller="Account" asp-action="Logout" method="post">
                                     <button type="submit" class="dropdown-item"><i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج</button>

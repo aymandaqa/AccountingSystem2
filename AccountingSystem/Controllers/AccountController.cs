@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using System.Linq;
+using System.Security.Claims;
 using AccountingSystem.Models;
+using AccountingSystem.Services;
 using AccountingSystem.ViewModels;
 
 namespace AccountingSystem.Controllers
@@ -11,15 +14,21 @@ namespace AccountingSystem.Controllers
         private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
         private readonly ILogger<AccountController> _logger;
+        private readonly IUserSessionService _userSessionService;
+        private readonly INotificationService _notificationService;
 
         public AccountController(
             UserManager<User> userManager,
             SignInManager<User> signInManager,
-            ILogger<AccountController> logger)
+            ILogger<AccountController> logger,
+            IUserSessionService userSessionService,
+            INotificationService notificationService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
+            _userSessionService = userSessionService;
+            _notificationService = notificationService;
         }
 
         [HttpGet]
@@ -45,14 +54,42 @@ namespace AccountingSystem.Controllers
                 var user = await _userManager.FindByEmailAsync(model.Email);
                 if (user != null && user.IsActive)
                 {
-                    var result = await _signInManager.PasswordSignInAsync(user, model.Password, isPersistent: false, lockoutOnFailure: false);
+                    var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, lockoutOnFailure: false);
 
                     if (result.Succeeded)
                     {
+                        var session = await _userSessionService.CreateSessionAsync(user, HttpContext);
+                        var revokedSessions = await _userSessionService.InvalidateOtherSessionsAsync(user.Id, session.SessionId);
+
+                        await _signInManager.SignInWithClaimsAsync(user, isPersistent: false, new[]
+                        {
+                            new Claim("SessionId", session.SessionId)
+                        });
+
                         user.LastLoginAt = DateTime.Now;
                         await _userManager.UpdateAsync(user);
 
                         _logger.LogInformation("User {Email} logged in.", model.Email);
+
+                        await _notificationService.CreateNotificationAsync(new Notification
+                        {
+                            UserId = user.Id,
+                            Title = "تسجيل دخول جديد",
+                            Message = $"تم تسجيل الدخول من {(session.DeviceName ?? session.DeviceType ?? "جهاز غير معروف")} ({session.OperatingSystem ?? "نظام غير معروف"}) - IP: {session.IpAddress ?? "غير معروف"}.",
+                            Icon = "fa-sign-in-alt"
+                        });
+
+                        if (revokedSessions.Count > 0)
+                        {
+                            var revoked = revokedSessions.First();
+                            await _notificationService.CreateNotificationAsync(new Notification
+                            {
+                                UserId = user.Id,
+                                Title = "تسجيل خروج تلقائي",
+                                Message = $"تم تسجيل خروج جلسة سابقة على {(revoked.DeviceName ?? revoked.DeviceType ?? "جهاز غير معروف")} (IP: {revoked.IpAddress ?? "غير معروف"}) بسبب تسجيل الدخول من جهاز آخر.",
+                                Icon = "fa-exclamation-triangle"
+                            });
+                        }
 
                         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                         {
@@ -78,9 +115,76 @@ namespace AccountingSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
+            var sessionId = User.FindFirst("SessionId")?.Value;
+            if (!string.IsNullOrEmpty(sessionId))
+            {
+                await _userSessionService.InvalidateSessionByIdentifierAsync(sessionId, "تسجيل خروج من المستخدم");
+            }
+
             await _signInManager.SignOutAsync();
             _logger.LogInformation("User logged out.");
             return RedirectToAction("Login");
+        }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> Sessions()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Challenge();
+            }
+
+            var activeSessions = await _userSessionService.GetActiveSessionsAsync(user.Id);
+            var recentSessions = await _userSessionService.GetRecentSessionsAsync(user.Id);
+            var currentSessionId = User.FindFirst("SessionId")?.Value;
+
+            var model = new UserSessionsViewModel
+            {
+                CurrentSessionId = currentSessionId,
+                ActiveSessions = activeSessions.Select(MapSession).ToList(),
+                RecentSessions = recentSessions.Select(MapSession).ToList()
+            };
+
+            return View(model);
+        }
+
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RevokeSession(Guid id)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Challenge();
+            }
+
+            var session = await _userSessionService.FindByIdAsync(id);
+            if (session == null || session.UserId != user.Id)
+            {
+                return NotFound();
+            }
+
+            var isCurrent = session.SessionId == User.FindFirst("SessionId")?.Value;
+            await _userSessionService.InvalidateSessionAsync(id, "تم إنهاء الجلسة بواسطة المستخدم");
+
+            if (isCurrent)
+            {
+                await _signInManager.SignOutAsync();
+                return RedirectToAction("Login");
+            }
+
+            await _notificationService.CreateNotificationAsync(new Notification
+            {
+                UserId = user.Id,
+                Title = "تم إنهاء جلسة",
+                Message = $"تم إنهاء جلسة على {(session.DeviceName ?? session.DeviceType ?? "جهاز غير معروف")} ({session.OperatingSystem ?? "نظام غير معروف"}) - IP: {session.IpAddress ?? "غير معروف"}.",
+                Icon = "fa-power-off"
+            });
+
+            return RedirectToAction(nameof(Sessions));
         }
 
         [HttpGet]
@@ -146,6 +250,23 @@ namespace AccountingSystem.Controllers
                 LastLoginAt = user.LastLoginAt
             };
             return View(model);
+        }
+
+        private static UserSessionItemViewModel MapSession(UserSession session)
+        {
+            return new UserSessionItemViewModel
+            {
+                Id = session.Id,
+                SessionId = session.SessionId,
+                DeviceName = session.DeviceName,
+                DeviceType = session.DeviceType,
+                OperatingSystem = session.OperatingSystem,
+                IpAddress = session.IpAddress,
+                CreatedAt = session.CreatedAt,
+                LastActivityAt = session.LastActivityAt,
+                EndedAt = session.EndedAt,
+                IsActive = session.IsActive
+            };
         }
 
         [Authorize]
