@@ -261,6 +261,140 @@ namespace AccountingSystem.Controllers
                 .Replace("_", "[_]");
         }
 
+        private IQueryable<JournalEntry> ApplyManagementFilters(IQueryable<JournalEntry> query, JournalEntryManagementFilters filters)
+        {
+            if (filters == null)
+            {
+                return query;
+            }
+
+            if (!string.IsNullOrWhiteSpace(filters.SearchTerm))
+            {
+                var normalized = filters.SearchTerm.Trim().ToLowerInvariant();
+                query = query.Where(entry =>
+                    (entry.Number != null && entry.Number.ToLower().Contains(normalized)) ||
+                    (entry.Description != null && entry.Description.ToLower().Contains(normalized)) ||
+                    (entry.Reference != null && entry.Reference.ToLower().Contains(normalized)) ||
+                    (entry.Branch != null && entry.Branch.NameAr != null && entry.Branch.NameAr.ToLower().Contains(normalized)) ||
+                    (entry.CreatedBy != null && (
+                        (entry.CreatedBy.FirstName != null && entry.CreatedBy.FirstName.ToLower().Contains(normalized)) ||
+                        (entry.CreatedBy.LastName != null && entry.CreatedBy.LastName.ToLower().Contains(normalized)) ||
+                        (entry.CreatedBy.UserName != null && entry.CreatedBy.UserName.ToLower().Contains(normalized))
+                    )));
+            }
+
+            if (!string.IsNullOrWhiteSpace(filters.Number))
+            {
+                var number = filters.Number.Trim();
+                query = query.Where(entry => entry.Number != null && entry.Number.Contains(number));
+            }
+
+            if (!string.IsNullOrWhiteSpace(filters.Description))
+            {
+                var description = filters.Description.Trim();
+                query = query.Where(entry => entry.Description != null && entry.Description.Contains(description));
+            }
+
+            if (!string.IsNullOrWhiteSpace(filters.Reference))
+            {
+                var reference = filters.Reference.Trim();
+                query = query.Where(entry => entry.Reference != null && entry.Reference.Contains(reference));
+            }
+
+            if (filters.BranchId.HasValue && filters.BranchId.Value > 0)
+            {
+                query = query.Where(entry => entry.BranchId == filters.BranchId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(filters.Status) && Enum.TryParse<JournalEntryStatus>(filters.Status, true, out var status))
+            {
+                query = query.Where(entry => entry.Status == status);
+            }
+
+            if (!string.IsNullOrWhiteSpace(filters.CreatedBy))
+            {
+                var createdBy = filters.CreatedBy.Trim().ToLowerInvariant();
+                query = query.Where(entry => entry.CreatedBy != null && (
+                    (entry.CreatedBy.FirstName != null && entry.CreatedBy.FirstName.ToLower().Contains(createdBy)) ||
+                    (entry.CreatedBy.LastName != null && entry.CreatedBy.LastName.ToLower().Contains(createdBy)) ||
+                    (entry.CreatedBy.UserName != null && entry.CreatedBy.UserName.ToLower().Contains(createdBy))));
+            }
+
+            if (filters.FromDate.HasValue)
+            {
+                var from = filters.FromDate.Value.Date;
+                query = query.Where(entry => entry.Date >= from);
+            }
+
+            if (filters.ToDate.HasValue)
+            {
+                var to = filters.ToDate.Value.Date.AddDays(1);
+                query = query.Where(entry => entry.Date < to);
+            }
+
+            if (filters.MinAmount.HasValue)
+            {
+                query = query.Where(entry => entry.TotalDebit >= filters.MinAmount.Value);
+            }
+
+            if (filters.MaxAmount.HasValue)
+            {
+                query = query.Where(entry => entry.TotalDebit <= filters.MaxAmount.Value);
+            }
+
+            if (filters.ShowUnbalancedOnly)
+            {
+                query = query.Where(entry => entry.TotalDebit != entry.TotalCredit);
+            }
+
+            return query;
+        }
+
+        private IQueryable<JournalEntry> ApplyManagementOrdering(IQueryable<JournalEntry> query, string? sortColumn, string? sortDirection)
+        {
+            var ascending = string.Equals(sortDirection, "asc", StringComparison.OrdinalIgnoreCase);
+
+            return sortColumn?.ToLowerInvariant() switch
+            {
+                "number" => ascending ? query.OrderBy(entry => entry.Number) : query.OrderByDescending(entry => entry.Number),
+                "branch" => ascending ? query.OrderBy(entry => entry.Branch.NameAr) : query.OrderByDescending(entry => entry.Branch.NameAr),
+                "status" => ascending ? query.OrderBy(entry => entry.Status) : query.OrderByDescending(entry => entry.Status),
+                "totaldebit" => ascending ? query.OrderBy(entry => entry.TotalDebit) : query.OrderByDescending(entry => entry.TotalDebit),
+                "totalcredit" => ascending ? query.OrderBy(entry => entry.TotalCredit) : query.OrderByDescending(entry => entry.TotalCredit),
+                "linescount" => ascending ? query.OrderBy(entry => entry.Lines.Count) : query.OrderByDescending(entry => entry.Lines.Count),
+                "createdby" => ascending ? query.OrderBy(entry => entry.CreatedBy.FirstName).ThenBy(entry => entry.CreatedBy.LastName) : query.OrderByDescending(entry => entry.CreatedBy.FirstName).ThenByDescending(entry => entry.CreatedBy.LastName),
+                "createdat" => ascending ? query.OrderBy(entry => entry.CreatedAt) : query.OrderByDescending(entry => entry.CreatedAt),
+                "updatedat" => ascending ? query.OrderBy(entry => entry.UpdatedAt) : query.OrderByDescending(entry => entry.UpdatedAt),
+                "reference" => ascending ? query.OrderBy(entry => entry.Reference) : query.OrderByDescending(entry => entry.Reference),
+                "description" => ascending ? query.OrderBy(entry => entry.Description) : query.OrderByDescending(entry => entry.Description),
+                _ => ascending
+                    ? query.OrderBy(entry => entry.Date).ThenBy(entry => entry.Id)
+                    : query.OrderByDescending(entry => entry.Date).ThenByDescending(entry => entry.Id)
+            };
+        }
+
+        private static string BuildCreatedBy(string? firstName, string? lastName, string? userName)
+        {
+            var parts = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(firstName))
+            {
+                parts.Add(firstName.Trim());
+            }
+
+            if (!string.IsNullOrWhiteSpace(lastName))
+            {
+                parts.Add(lastName.Trim());
+            }
+
+            if (parts.Count == 0 && !string.IsNullOrWhiteSpace(userName))
+            {
+                parts.Add(userName.Trim());
+            }
+
+            return parts.Count > 0 ? string.Join(' ', parts) : string.Empty;
+        }
+
         // GET: JournalEntries
         [Authorize(Policy = "journal.view")]
         public async Task<IActionResult> Index()
@@ -291,6 +425,39 @@ namespace AccountingSystem.Controllers
             statuses.Insert(0, new SelectListItem { Value = string.Empty, Text = "كل الحالات" });
 
             var viewModel = new JournalEntriesIndexViewModel
+            {
+                Branches = branches,
+                Statuses = statuses
+            };
+
+            return View(viewModel);
+        }
+
+        [Authorize(Policy = "journal.view")]
+        public async Task<IActionResult> Management()
+        {
+            var branches = await _context.Branches
+                .OrderBy(b => b.NameAr)
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = b.NameAr
+                })
+                .ToListAsync();
+
+            var statuses = Enum.GetValues<JournalEntryStatus>()
+                .Select(status =>
+                {
+                    var info = GetStatusInfo(status);
+                    return new SelectListItem
+                    {
+                        Value = status.ToString(),
+                        Text = info.Text
+                    };
+                })
+                .ToList();
+
+            var viewModel = new JournalEntryManagementViewModel
             {
                 Branches = branches,
                 Statuses = statuses
@@ -480,6 +647,139 @@ namespace AccountingSystem.Controllers
                 recordsFiltered,
                 data
             });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "journal.view")]
+        public async Task<IActionResult> ManagementData([FromBody] JournalEntryManagementRequest request)
+        {
+            if (request == null)
+            {
+                return BadRequest();
+            }
+
+            var page = request.Page < 1 ? 1 : request.Page;
+            var pageSize = request.PageSize;
+            if (pageSize <= 0)
+            {
+                pageSize = 50;
+            }
+            pageSize = Math.Clamp(pageSize, 10, 500);
+
+            var filters = request.Filters ?? new JournalEntryManagementFilters();
+
+            var query = _context.JournalEntries
+                .AsNoTracking()
+                .Include(j => j.Branch)
+                .Include(j => j.CreatedBy)
+                .Include(j => j.Lines)
+                .AsQueryable();
+
+            query = ApplyManagementFilters(query, filters);
+
+            var totalRecords = await query.CountAsync();
+
+            var aggregates = await query
+                .GroupBy(_ => 1)
+                .Select(g => new
+                {
+                    TotalDebit = g.Sum(entry => entry.TotalDebit),
+                    TotalCredit = g.Sum(entry => entry.TotalCredit),
+                    Balanced = g.Count(entry => entry.TotalDebit == entry.TotalCredit),
+                    Unbalanced = g.Count(entry => entry.TotalDebit != entry.TotalCredit)
+                })
+                .FirstOrDefaultAsync();
+
+            var orderedQuery = ApplyManagementOrdering(query, request.SortColumn, request.SortDirection);
+
+            var totalPages = totalRecords == 0 ? 0 : (int)Math.Ceiling(totalRecords / (double)pageSize);
+            if (totalPages == 0)
+            {
+                page = 1;
+            }
+            else if (page > totalPages)
+            {
+                page = totalPages;
+            }
+
+            var skip = (page - 1) * pageSize;
+            if (skip < 0)
+            {
+                skip = 0;
+            }
+
+            var items = await orderedQuery
+                .Skip(skip)
+                .Take(pageSize)
+                .Select(entry => new
+                {
+                    entry.Id,
+                    entry.Number,
+                    entry.Date,
+                    entry.Description,
+                    entry.Reference,
+                    entry.Status,
+                    BranchName = entry.Branch.NameAr,
+                    CreatedByFirstName = entry.CreatedBy.FirstName,
+                    CreatedByLastName = entry.CreatedBy.LastName,
+                    CreatedByUserName = entry.CreatedBy.UserName,
+                    entry.TotalDebit,
+                    entry.TotalCredit,
+                    LinesCount = entry.Lines.Count,
+                    entry.CreatedAt,
+                    entry.UpdatedAt
+                })
+                .ToListAsync();
+
+            var result = new
+            {
+                page,
+                pageSize,
+                totalRecords,
+                totalPages,
+                summary = new
+                {
+                    totalDebit = aggregates?.TotalDebit ?? 0,
+                    totalCredit = aggregates?.TotalCredit ?? 0,
+                    balanced = aggregates?.Balanced ?? 0,
+                    unbalanced = aggregates?.Unbalanced ?? 0
+                },
+                items = items.Select(entry =>
+                {
+                    var statusInfo = GetStatusInfo(entry.Status);
+                    var createdByName = BuildCreatedBy(entry.CreatedByFirstName, entry.CreatedByLastName, entry.CreatedByUserName);
+                    return new
+                    {
+                        entry.Id,
+                        entry.Number,
+                        Date = entry.Date,
+                        DateFormatted = entry.Date.ToString("dd/MM/yyyy"),
+                        MonthGroup = entry.Date.ToString("yyyy-MM"),
+                        entry.Description,
+                        entry.Reference,
+                        Status = entry.Status.ToString(),
+                        StatusDisplay = statusInfo.Text,
+                        StatusClass = statusInfo.CssClass,
+                        BranchName = entry.BranchName,
+                        CreatedByName = createdByName,
+                        entry.TotalDebit,
+                        TotalDebitFormatted = entry.TotalDebit.ToString("N2"),
+                        entry.TotalCredit,
+                        TotalCreditFormatted = entry.TotalCredit.ToString("N2"),
+                        entry.LinesCount,
+                        IsDraft = entry.Status == JournalEntryStatus.Draft,
+                        CanDelete = entry.Status == JournalEntryStatus.Draft || entry.Status == JournalEntryStatus.Posted,
+                        IsBalanced = entry.TotalDebit == entry.TotalCredit,
+                        CreatedAt = entry.CreatedAt,
+                        CreatedAtFormatted = entry.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
+                        UpdatedAt = entry.UpdatedAt,
+                        UpdatedAtFormatted = entry.UpdatedAt.HasValue ? entry.UpdatedAt.Value.ToString("dd/MM/yyyy HH:mm") : string.Empty
+                    };
+                })
+            };
+
+            return Json(result);
         }
 
         [HttpPost]
@@ -1079,6 +1379,31 @@ namespace AccountingSystem.Controllers
                 8 => ascending ? query.OrderBy(j => j.Status) : query.OrderByDescending(j => j.Status),
                 _ => ascending ? query.OrderBy(j => j.Date) : query.OrderByDescending(j => j.Date)
             };
+        }
+
+        private sealed class JournalEntryManagementRequest
+        {
+            public int Page { get; set; } = 1;
+            public int PageSize { get; set; } = 50;
+            public string? SortColumn { get; set; }
+            public string? SortDirection { get; set; }
+            public JournalEntryManagementFilters? Filters { get; set; }
+        }
+
+        private sealed class JournalEntryManagementFilters
+        {
+            public string? SearchTerm { get; set; }
+            public string? Number { get; set; }
+            public string? Description { get; set; }
+            public string? Reference { get; set; }
+            public int? BranchId { get; set; }
+            public string? Status { get; set; }
+            public string? CreatedBy { get; set; }
+            public DateTime? FromDate { get; set; }
+            public DateTime? ToDate { get; set; }
+            public decimal? MinAmount { get; set; }
+            public decimal? MaxAmount { get; set; }
+            public bool ShowUnbalancedOnly { get; set; }
         }
 
         private static (string Text, string CssClass) GetStatusInfo(JournalEntryStatus status)
