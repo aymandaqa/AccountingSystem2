@@ -1,9 +1,39 @@
 @using System.Linq
 @model AccountingSystem.ViewModels.UserJournalEntryDailyReportViewModel
+@functions {
+    protected string GetImpactBadgeClass(decimal amount)
+    {
+        if (amount > 0)
+        {
+            return "bg-success-subtle text-success";
+        }
+
+        if (amount < 0)
+        {
+            return "bg-danger-subtle text-danger";
+        }
+
+        return "bg-secondary-subtle text-secondary";
+    }
+
+    protected string GetImpactIcon(decimal amount)
+    {
+        if (amount > 0)
+        {
+            return "fa-arrow-up";
+        }
+
+        if (amount < 0)
+        {
+            return "fa-arrow-down";
+        }
+
+        return "fa-minus";
+    }
+}
 @{
     ViewData["Title"] = "تقرير الحركات اليومية للقيود";
-    var totalDebit = Model.Items.Sum(i => i.TotalDebit);
-    var totalCredit = Model.Items.Sum(i => i.TotalCredit);
+    var totalCashImpact = Model.Items.Sum(i => i.TotalCashImpact);
 }
 
 <div class="container-fluid">
@@ -45,14 +75,17 @@
             </form>
 
             <div class="mt-4">
-                <div class="alert alert-secondary d-flex justify-content-between align-items-center">
+                <div class="alert alert-secondary d-flex justify-content-between align-items-center flex-wrap gap-3">
                     <div>
                         <strong>إجمالي الحركات:</strong>
                         @Model.Items.Count مجموعة
                     </div>
-                    <div>
-                        <span class="me-3"><strong>إجمالي المدين:</strong> @totalDebit.ToString("N2")</span>
-                        <span><strong>إجمالي الدائن:</strong> @totalCredit.ToString("N2")</span>
+                    <div class="text-nowrap">
+                        <span class="badge @GetImpactBadgeClass(totalCashImpact) fs-6">
+                            <i class="fas @GetImpactIcon(totalCashImpact) me-2"></i>
+                            <strong>إجمالي تأثير الصندوق:</strong>
+                            <span class="ms-2">@totalCashImpact.ToString("N2")</span>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -62,65 +95,108 @@
                     <thead class="table-dark">
                         <tr>
                             <th style="width: 12%;">التاريخ</th>
-                            <th style="width: 18%;">المرجع</th>
-                            <th style="width: 16%;">نوع المعاملة</th>
-                            <th style="width: 13%;" class="text-end">إجمالي المدين</th>
-                            <th style="width: 13%;" class="text-end">إجمالي الدائن</th>
-                            <th>القيود</th>
+                            <th style="width: 20%;">المرجع</th>
+                            <th style="width: 25%;">نوع المعاملة</th>
+                            <th style="width: 18%;" class="text-end">تأثير الصندوق</th>
+                            <th style="width: 12%;" class="text-center">التفاصيل</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @if (Model.Items.Count == 0)
+                        @if (!Model.Items.Any())
                         {
                             <tr>
-                                <td colspan="6" class="text-center text-muted py-4">
+                                <td colspan="5" class="text-center text-muted py-4">
                                     لا توجد قيود مطابقة لمعايير البحث المحددة.
                                 </td>
                             </tr>
                         }
                         else
                         {
-                            foreach (var group in Model.Items)
+                            for (var index = 0; index < Model.Items.Count; index++)
                             {
+                                var group = Model.Items[index];
+                                var collapseId = $"journal-group-{index}";
+                                var accordionId = $"journal-group-accordion-{index}";
+                                var typeNames = group.Entries
+                                    .Select(e => e.TransactionTypeName)
+                                    .Where(name => !string.IsNullOrWhiteSpace(name))
+                                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                                    .ToList();
+                                var impactClass = GetImpactBadgeClass(group.TotalCashImpact);
+                                var impactIcon = GetImpactIcon(group.TotalCashImpact);
+
                                 <tr>
                                     <td>@group.Date.ToString("dd/MM/yyyy")</td>
                                     <td>@group.Reference</td>
                                     <td>
-                                        <ul class="list-unstyled mb-0">
-                                            @foreach (var entry in group.Entries)
-                                            {
-                                                <li class="mb-2">
-                                                    <span class="badge bg-info-subtle text-info">@entry.TransactionTypeName</span>
-                                                </li>
-                                            }
-                                        </ul>
+                                        @if (typeNames.Count == 0)
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                        else
+                                        {
+                                            <div class="d-flex flex-wrap gap-2">
+                                                @foreach (var name in typeNames)
+                                                {
+                                                    <span class="badge bg-info-subtle text-info">@name</span>
+                                                }
+                                            </div>
+                                        }
                                     </td>
-                                    <td class="text-end">@group.TotalDebit.ToString("N2")</td>
-                                    <td class="text-end">@group.TotalCredit.ToString("N2")</td>
-                                    <td>
-                                        <ul class="list-unstyled mb-0">
-                                            @foreach (var entry in group.Entries)
+                                    <td class="text-end">
+                                        <span class="badge @impactClass">
+                                            <i class="fas @impactIcon me-2"></i>
+                                            @group.TotalCashImpact.ToString("N2")
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-link text-decoration-none journal-group-toggle collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId" aria-expanded="false" aria-controls="@collapseId">
+                                            <span class="fw-semibold">عرض القيود</span>
+                                            <i class="fas fa-chevron-down toggle-icon ms-2"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="collapse" id="@collapseId">
+                                    <td colspan="5">
+                                        <div class="bg-light border rounded p-3">
+                                            @if (!group.Entries.Any())
                                             {
-                                                var collapseId = $"journal-entry-lines-{entry.JournalEntryId}";
-                                                var headerId = $"journal-entry-header-{entry.JournalEntryId}";
-                                                <li class="mb-3">
-                                                    <div class="accordion" id="accordion-entry-@entry.JournalEntryId">
-                                                        <div class="accordion-item border shadow-sm">
+                                                <div class="alert alert-secondary mb-0" role="alert">
+                                                    لا توجد قيود ضمن هذه المجموعة.
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="accordion" id="@accordionId">
+                                                    @foreach (var entry in group.Entries)
+                                                    {
+                                                        var entryCollapseId = $"journal-entry-lines-{entry.JournalEntryId}";
+                                                        var headerId = $"journal-entry-header-{entry.JournalEntryId}";
+                                                        var entryImpactClass = GetImpactBadgeClass(entry.CashImpactAmount);
+                                                        var entryImpactIcon = GetImpactIcon(entry.CashImpactAmount);
+
+                                                        <div class="accordion-item border shadow-sm mb-3">
                                                             <h2 class="accordion-header" id="@headerId">
-                                                                <button class="accordion-button collapsed gap-3" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId" aria-expanded="false" aria-controls="@collapseId">
+                                                                <button class="accordion-button collapsed gap-3" type="button" data-bs-toggle="collapse" data-bs-target="#@entryCollapseId" aria-expanded="false" aria-controls="@entryCollapseId">
                                                                     <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2 w-100">
                                                                         <div class="fw-semibold">@entry.Number</div>
                                                                         <div class="text-muted flex-grow-1">@entry.Description</div>
                                                                         <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
-                                                                            <span class="badge bg-success-subtle text-success">مدين: @entry.TotalDebit.ToString("N2")</span>
-                                                                            <span class="badge bg-danger-subtle text-danger">دائن: @entry.TotalCredit.ToString("N2")</span>
+                                                                            <span class="badge @entryImpactClass">
+                                                                                <i class="fas @entryImpactIcon me-2"></i>
+                                                                                تأثير الصندوق: @entry.CashImpactAmount.ToString("N2")
+                                                                            </span>
                                                                         </div>
                                                                     </div>
                                                                 </button>
                                                             </h2>
-                                                            <div id="@collapseId" class="accordion-collapse collapse" aria-labelledby="@headerId">
-                                                                <div class="accordion-body bg-light">
-                                                                    <div class="d-flex justify-content-end mb-3">
+                                                            <div id="@entryCollapseId" class="accordion-collapse collapse" aria-labelledby="@headerId" data-bs-parent="#@accordionId">
+                                                                <div class="accordion-body bg-white">
+                                                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                                                                        <div class="text-muted small">
+                                                                            <i class="far fa-calendar-alt me-1"></i>
+                                                                            تاريخ القيد: @entry.Date.ToString("dd/MM/yyyy")
+                                                                        </div>
                                                                         <a asp-controller="JournalEntries"
                                                                            asp-action="Details"
                                                                            asp-route-id="@entry.JournalEntryId"
@@ -136,17 +212,20 @@
                                                                             <table class="table table-sm table-bordered mb-0">
                                                                                 <thead class="table-light">
                                                                                     <tr>
-                                                                                        <th style="width: 35%;">الحساب</th>
-                                                                                        <th style="width: 35%;">الوصف</th>
-                                                                                        <th class="text-end" style="width: 15%;">مدين</th>
-                                                                                        <th class="text-end" style="width: 15%;">دائن</th>
+                                                                                        <th style="width: 30%;">الحساب</th>
+                                                                                        <th style="width: 30%;">الوصف</th>
+                                                                                        <th class="text-end" style="width: 20%;">مدين</th>
+                                                                                        <th class="text-end" style="width: 20%;">دائن</th>
                                                                                     </tr>
                                                                                 </thead>
                                                                                 <tbody>
                                                                                     @foreach (var line in entry.Lines)
                                                                                     {
                                                                                         <tr>
-                                                                                            <td>@line.AccountCode - @line.AccountName</td>
+                                                                                            <td>
+                                                                                                <div class="fw-semibold">@line.AccountName</div>
+                                                                                                <div class="text-muted small">@line.AccountCode</div>
+                                                                                            </td>
                                                                                             <td>@(string.IsNullOrWhiteSpace(line.Description) ? "-" : line.Description)</td>
                                                                                             <td class="text-end">@line.DebitAmount.ToString("N2")</td>
                                                                                             <td class="text-end">@line.CreditAmount.ToString("N2")</td>
@@ -165,10 +244,10 @@
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                </li>
+                                                    }
+                                                </div>
                                             }
-                                        </ul>
+                                        </div>
                                     </td>
                                 </tr>
                             }
@@ -179,3 +258,17 @@
         </div>
     </div>
 </div>
+
+<style>
+    .journal-group-toggle .toggle-icon {
+        transition: transform 0.2s ease;
+    }
+
+    .journal-group-toggle.collapsed .toggle-icon {
+        transform: rotate(0deg);
+    }
+
+    .journal-group-toggle:not(.collapsed) .toggle-icon {
+        transform: rotate(180deg);
+    }
+</style>
