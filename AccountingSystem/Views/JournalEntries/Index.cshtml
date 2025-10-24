@@ -8,134 +8,181 @@
 
 @section Styles {
     <style>
-        .journal-entries-wrapper {
-            padding-inline: clamp(0.5rem, 1vw, 1.75rem);
-            padding-block: 1rem 1.5rem;
-            min-height: 100vh;
-            display: flex;
-            width: 100%;
+        :root {
+            color-scheme: light;
         }
 
-        .journal-entries-card {
-            display: flex;
-            flex-direction: column;
-            gap: 1.25rem;
-            flex: 1 1 auto;
-            min-height: 0;
-            background-color: #fdfdfd;
+        .journal-index {
+            padding-inline: clamp(0.75rem, 1vw, 2rem);
+            padding-block: 1.25rem 2rem;
+            min-height: 100vh;
         }
 
         @supports (height: 100dvh) {
-            .journal-entries-wrapper {
+            .journal-index {
                 min-height: 100dvh;
             }
-
-            .journal-entries-card {
-                min-height: calc(100dvh - 5.5rem);
-            }
         }
 
-        @supports not (height: 100dvh) {
-            .journal-entries-card {
-                min-height: calc(100vh - 5.5rem);
-            }
+        .journal-shell {
+            border: none;
+            border-radius: 1rem;
+            overflow: hidden;
         }
 
-        .journal-entries-card .card-header {
+        .journal-shell .card-header {
+            background: linear-gradient(135deg, rgba(13, 110, 253, 0.12), rgba(13, 110, 253, 0.03));
             border-bottom: none;
-            padding-bottom: 0;
+            padding: clamp(1.25rem, 2vw, 1.75rem);
         }
 
-        .journal-entries-card .page-heading {
+        .journal-shell .headline {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 992px) {
+            .journal-shell .headline {
+                grid-template-columns: minmax(0, 1fr) auto;
+                align-items: center;
+            }
+        }
+
+        .headline__title {
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 0.5rem;
         }
 
-        .journal-entries-card .page-heading-actions {
+        .headline__title h3 {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: clamp(1.35rem, 2vw, 1.7rem);
+            color: #0b4d94;
+            margin: 0;
+        }
+
+        .headline__title p {
+            margin: 0;
+            color: #4f5d75;
+            max-width: 48ch;
+        }
+
+        .headline__actions {
             display: flex;
             flex-wrap: wrap;
             gap: 0.75rem;
             align-items: center;
+            justify-content: flex-start;
         }
 
-        .journal-entries-card .quick-search {
-            flex: 1 1 16rem;
+        .search-shell {
+            flex: 1 1 clamp(16rem, 28vw, 24rem);
             min-width: 14rem;
-            max-width: clamp(16rem, 26vw, 24rem);
+            position: relative;
         }
 
-        .journal-entries-card .quick-search .input-group-text {
+        .search-shell .input-group-text {
             background-color: #f1f3f5;
-            border-inline-end: 0;
+            border-inline-end: none;
         }
 
-        .journal-entries-card .quick-search .form-control {
-            border-inline-start: 0;
+        .search-shell .form-control {
+            border-inline-start: none;
             box-shadow: none;
         }
 
-        .journal-entries-card .quick-search .btn-clear-search {
+        .search-shell .btn-clear-search {
             border-radius: 0 var(--bs-border-radius) var(--bs-border-radius) 0;
         }
 
-        .journal-entries-card .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-            gap: 0.75rem;
-            margin-top: 0.5rem;
+        .headline__actions .btn-refresh {
+            position: relative;
         }
 
-        .journal-entries-card .summary-card {
-            background: linear-gradient(135deg, rgba(16, 108, 200, 0.08), rgba(16, 108, 200, 0.02));
-            border: 1px solid rgba(16, 108, 200, 0.15);
-            border-radius: 0.75rem;
+        .summary-section {
+            margin-top: 1.75rem;
+            display: grid;
+            gap: 0.85rem;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(14.5rem, 1fr));
+            gap: 0.85rem;
+        }
+
+        .summary-card {
+            border-radius: 0.9rem;
+            border: 1px solid rgba(13, 110, 253, 0.18);
+            background: linear-gradient(135deg, rgba(13, 110, 253, 0.1), rgba(13, 110, 253, 0.02));
             padding: 1rem 1.25rem;
             display: flex;
             flex-direction: column;
             gap: 0.35rem;
-            min-height: 6.25rem;
+            min-height: 6.5rem;
         }
 
-        .summary-card .label {
+        .summary-card__label {
             font-size: 0.85rem;
             color: #1f3b5b;
             font-weight: 600;
         }
 
-        .summary-card .value {
-            font-size: clamp(1.35rem, 2vw, 1.85rem);
+        .summary-card__value {
+            font-size: clamp(1.35rem, 2.2vw, 1.9rem);
             font-weight: 700;
             color: #0b4d94;
         }
 
-        .summary-card .sub-value {
+        .summary-card__hint {
             font-size: 0.8rem;
             color: #4f5d75;
         }
 
-        .filters-shell {
-            background-color: #ffffff;
-            border: 1px solid rgba(15, 67, 130, 0.08);
+        .summary-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+            color: #6c757d;
+            font-size: 0.85rem;
+        }
+
+        .insights-panel {
             border-radius: 0.75rem;
+            border: 1px dashed rgba(13, 110, 253, 0.35);
+            background-color: #f8f9ff;
             padding: 1rem 1.25rem;
         }
 
-        .filters-shell .filters-toolbar {
+        .insights-panel strong {
+            color: #0b4d94;
+        }
+
+        .filters-card {
+            background-color: #fff;
+            border: 1px solid rgba(15, 67, 130, 0.08);
+            border-radius: 0.85rem;
+            padding: 1.1rem 1.25rem;
+        }
+
+        .filters-toolbar {
             display: flex;
             flex-wrap: wrap;
             gap: 0.75rem;
             align-items: center;
         }
 
-        .filters-shell .filters-toolbar .btn-toggle {
+        .filters-toolbar .btn-toggle {
             display: inline-flex;
             align-items: center;
             gap: 0.35rem;
             font-weight: 600;
         }
 
-        .filters-shell .filters-toolbar .active-filters-count {
+        .filters-toolbar .active-filters-count {
             background-color: #0b4d94;
             color: #fff;
             border-radius: 999px;
@@ -144,14 +191,19 @@
             font-weight: 600;
         }
 
-        .filters-shell .active-filters {
+        .filters-toolbar .btn-reset {
+            color: #b02a37;
+            font-weight: 600;
+        }
+
+        .active-filters {
             display: flex;
             flex-wrap: wrap;
             gap: 0.5rem;
             margin-top: 0.85rem;
         }
 
-        .filters-shell .filter-chip {
+        .filter-chip {
             display: inline-flex;
             align-items: center;
             gap: 0.35rem;
@@ -164,7 +216,7 @@
             color: #0b4d94;
         }
 
-        .filters-shell .filter-chip button {
+        .filter-chip button {
             border: none;
             background: transparent;
             color: inherit;
@@ -174,63 +226,66 @@
             font-size: 0.85rem;
         }
 
-        .filters-shell .collapse.show {
-            margin-top: 1rem;
-        }
-
-        .filters-shell form .form-label {
+        .filters-card .form-label {
             font-weight: 600;
             color: #1f3b5b;
         }
 
-        .filters-shell form .form-select,
-        .filters-shell form .form-control {
+        .filters-card .form-select,
+        .filters-card .form-control {
             box-shadow: none;
         }
 
-        .filters-shell .form-switch .form-check-input {
+        .filters-card .form-switch .form-check-input {
             width: 2.5rem;
             height: 1.25rem;
         }
 
-        .filters-shell .form-switch .form-check-label {
+        .filters-card .form-switch .form-check-label {
             font-weight: 600;
             color: #1f3b5b;
         }
 
-        .journal-entries-grid {
-            background-color: #ffffff;
+        .grid-wrapper {
+            background-color: #fff;
             border: 1px solid rgba(15, 67, 130, 0.08);
-            border-radius: 0.75rem;
+            border-radius: 0.85rem;
             padding: 0.5rem;
-            flex: 1 1 auto;
             min-height: 24rem;
             position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
         }
 
-        .journal-entries-grid .grid-caption {
+        .grid-caption {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.5rem 0.75rem 0.75rem;
+            padding: 0.35rem 0.75rem 0;
             gap: 0.75rem;
+            flex-wrap: wrap;
         }
 
-        .journal-entries-grid .grid-caption .result-info {
+        .grid-caption .result-info {
             font-size: 0.85rem;
             color: #4f5d75;
         }
 
-        .journal-entries-grid .e-grid {
+        .grid-caption .badge {
+            font-size: 0.75rem;
+        }
+
+        .grid-wrapper .e-grid {
             height: calc(100% - 2.25rem);
         }
 
-        .journal-entries-grid .table-actions .btn {
+        .table-actions .btn {
             min-width: 2.25rem;
             font-size: 0.85rem;
         }
 
-        .journal-entries-grid .table-actions .btn i {
+        .table-actions .btn i {
             pointer-events: none;
         }
 
@@ -242,93 +297,101 @@
             color: #b71c1c;
         }
 
-        @@media (max-width: 991.98px) {
-            .journal-entries-card .page-heading {
-                gap: 1.25rem;
+        @media (max-width: 767.98px) {
+            .journal-index {
+                padding-inline: 0.5rem;
+                padding-block: 1rem 1.5rem;
             }
 
-            .journal-entries-card .page-heading-actions {
-                width: 100%;
+            .summary-grid {
+                grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
             }
 
-            .journal-entries-card .quick-search {
-                max-width: 100%;
-            }
-        }
-
-        @@media (max-width: 575.98px) {
-            .journal-entries-wrapper {
-                padding-inline: 0.25rem;
-                padding-block: 0.75rem 1rem;
+            .filters-card {
+                padding: 0.85rem;
             }
 
-            .journal-entries-card .summary-grid {
-                grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
-            }
-
-            .filters-shell {
-                padding: 0.75rem;
-            }
-
-            .journal-entries-grid {
-                padding: 0.25rem;
+            .grid-wrapper {
+                padding: 0.35rem;
             }
         }
     </style>
 }
 
-<div class="journal-entries-wrapper container-fluid">
-    <div class="card journal-entries-card shadow-sm">
+<div class="journal-index container-fluid">
+    <div class="card journal-shell shadow-sm">
         <div class="card-header">
-            <div class="page-heading">
-                <div class="d-flex flex-column flex-xl-row justify-content-between gap-3">
-                    <div class="d-flex flex-column gap-1">
-                        <h3 class="card-title mb-0 d-flex align-items-center gap-2 text-primary">
-                            <i class="fas fa-file-invoice"></i>
-                            <span>القيود المالية</span>
-                        </h3>
-                        <p class="text-muted mb-0">إدارة القيود والبحث السريع عن أي قيد أو مرجع مع عرض شامل للحالة المالية.</p>
-                    </div>
-                    <div class="page-heading-actions">
-                        <div class="input-group quick-search" role="search">
+            <div class="headline">
+                <div class="headline__title">
+                    <h3>
+                        <i class="fas fa-file-invoice"></i>
+                        <span>القيود المالية</span>
+                    </h3>
+                    <p>
+                        إدارة القيود بسهولة، مع نظرة فورية على التوازن والفلترة الذكية عبر جميع الحقول.
+                    </p>
+                </div>
+                <div class="headline__actions">
+                    <div class="search-shell">
+                        <label class="visually-hidden" for="quickSearch">بحث سريع</label>
+                        <div class="input-group" role="search">
                             <span class="input-group-text"><i class="fas fa-search"></i></span>
                             <input type="search" id="quickSearch" class="form-control" placeholder="بحث سريع في جميع الأعمدة" aria-label="بحث سريع" />
                             <button type="button" id="clearQuickSearch" class="btn btn-outline-secondary btn-clear-search" title="مسح البحث">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
-                        <a asp-action="Create" class="btn btn-primary" asp-require-permission="journal.create">
-                            <i class="fas fa-plus me-1"></i>
-                            إضافة قيد جديد
-                        </a>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-refresh" id="refreshGrid" title="تحديث القائمة">
+                        <i class="fas fa-sync-alt"></i>
+                        <span class="d-none d-lg-inline">تحديث</span>
+                    </button>
+                    <a asp-action="Create" class="btn btn-primary" asp-require-permission="journal.create">
+                        <i class="fas fa-plus me-1"></i>
+                        إضافة قيد جديد
+                    </a>
+                </div>
+            </div>
+            <div class="summary-section" aria-live="polite">
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <span class="summary-card__label">إجمالي القيود</span>
+                        <span class="summary-card__value" id="summaryTotal">0</span>
+                        <span class="summary-card__hint" id="summaryTotalStatus">—</span>
+                    </div>
+                    <div class="summary-card">
+                        <span class="summary-card__label">القيود غير المتوازنة</span>
+                        <span class="summary-card__value text-danger" id="summaryUnbalanced">0</span>
+                        <span class="summary-card__hint">تنبيه لأي فروقات بين المدين والدائن</span>
+                    </div>
+                    <div class="summary-card">
+                        <span class="summary-card__label">إجمالي المدين</span>
+                        <span class="summary-card__value" id="summaryDebit">0</span>
+                        <span class="summary-card__hint">المبالغ الإجمالية (مدين)</span>
+                    </div>
+                    <div class="summary-card">
+                        <span class="summary-card__label">إجمالي الدائن</span>
+                        <span class="summary-card__value" id="summaryCredit">0</span>
+                        <span class="summary-card__hint">المبالغ الإجمالية (دائن)</span>
+                    </div>
+                    <div class="summary-card">
+                        <span class="summary-card__label">نسبة التوازن</span>
+                        <span class="summary-card__value" id="summaryBalanceRatio">0%</span>
+                        <span class="summary-card__hint">قيود متوازنة من إجمالي القيود</span>
                     </div>
                 </div>
-                <div class="summary-grid" id="summaryCards" aria-live="polite">
-                    <div class="summary-card">
-                        <span class="label">إجمالي القيود</span>
-                        <span class="value" id="summaryTotal">0</span>
-                        <span class="sub-value" id="summaryTotalStatus">—</span>
-                    </div>
-                    <div class="summary-card">
-                        <span class="label">القيود غير المتوازنة</span>
-                        <span class="value text-danger" id="summaryUnbalanced">0</span>
-                        <span class="sub-value">يُنبهك لأي فروقات في المدين والدائن</span>
-                    </div>
-                    <div class="summary-card">
-                        <span class="label">إجمالي المدين</span>
-                        <span class="value" id="summaryDebit">0</span>
-                        <span class="sub-value">المبالغ الإجمالية (مدين)</span>
-                    </div>
-                    <div class="summary-card">
-                        <span class="label">إجمالي الدائن</span>
-                        <span class="value" id="summaryCredit">0</span>
-                        <span class="sub-value">المبالغ الإجمالية (دائن)</span>
-                    </div>
+                <div class="summary-meta">
+                    <span><i class="fas fa-info-circle"></i> <span id="summaryInsight">لا توجد بيانات حتى الآن.</span></span>
+                    <span><i class="fas fa-clock"></i> آخر تحديث: <span id="lastRefreshAt">—</span></span>
+                </div>
+                <div class="insights-panel" id="insightsPanel" hidden>
+                    <strong>اقتراحات محسّنة:</strong>
+                    <ul class="mb-0" id="smartSuggestions"></ul>
                 </div>
             </div>
         </div>
         <div class="card-body d-flex flex-column gap-3">
-            <div class="filters-shell">
+            <div class="filters-card">
                 <div class="filters-toolbar">
                     <button class="btn btn-outline-secondary btn-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="true" aria-controls="filtersCollapse">
                         <i class="fas fa-sliders-h"></i>
@@ -339,14 +402,14 @@
                         <label class="form-check-label" for="showUnbalancedOnly">عرض القيود غير المتوازنة فقط</label>
                     </div>
                     <span class="active-filters-count d-none" id="activeFiltersCount">0</span>
-                    <button type="button" id="resetFilters" class="btn btn-link text-decoration-none text-danger">
+                    <button type="button" id="resetFilters" class="btn btn-link btn-reset text-decoration-none">
                         <i class="fas fa-undo"></i>
                         إعادة تعيين
                     </button>
                 </div>
                 <div class="active-filters" id="activeFilters" aria-live="polite"></div>
                 <div class="collapse show" id="filtersCollapse">
-                    <form id="filtersForm" class="row g-3 pt-3">
+                    <form id="filtersForm" class="row g-3 pt-3" autocomplete="off">
                         <div class="col-sm-6 col-lg-3">
                             <label for="fromDate" class="form-label">من تاريخ</label>
                             <input type="date" id="fromDate" class="form-control" />
@@ -358,6 +421,7 @@
                         <div class="col-sm-6 col-lg-3">
                             <label for="branchFilter" class="form-label">الفرع</label>
                             <select id="branchFilter" class="form-select">
+                                <option value="">كل الفروع</option>
                                 @foreach (var branch in Model.Branches)
                                 {
                                     <option value="@branch.Value">@branch.Text</option>
@@ -367,6 +431,7 @@
                         <div class="col-sm-6 col-lg-3">
                             <label for="statusFilter" class="form-label">الحالة</label>
                             <select id="statusFilter" class="form-select">
+                                <option value="">جميع الحالات</option>
                                 @foreach (var status in Model.Statuses)
                                 {
                                     <option value="@status.Value">@status.Text</option>
@@ -387,7 +452,7 @@
                 </div>
             </div>
 
-            <div class="journal-entries-grid">
+            <div class="grid-wrapper">
                 <div class="grid-caption">
                     <div class="d-flex align-items-center gap-2">
                         <i class="fas fa-database text-primary"></i>
@@ -442,6 +507,7 @@
                     </e-grid-columns>
                 </ejs-grid>
             </div>
+
             <form id="antiForgeryForm" asp-action="Post" method="post" class="d-none">
                 @Html.AntiForgeryToken()
             </form>
@@ -484,22 +550,41 @@
             var summaryUrl = '@Url.Action("Summary", "JournalEntries")';
             var postUrlBase = '@Url.Action("Post", "JournalEntries")';
             var deleteUrlBase = '@Url.Action("Delete", "JournalEntries")';
+            var storageKey = 'journalEntries.index.filters.v2';
+
             var gridElement = document.getElementById('journalEntriesGrid');
             var searchInput = document.getElementById('quickSearch');
             var clearSearchButton = document.getElementById('clearQuickSearch');
+            var refreshButton = document.getElementById('refreshGrid');
             var unbalancedToggle = document.getElementById('showUnbalancedOnly');
-            var filtersCollapse = document.getElementById('filtersCollapse');
             var activeFiltersContainer = document.getElementById('activeFilters');
             var activeFiltersCount = document.getElementById('activeFiltersCount');
             var resultInfo = document.getElementById('gridResultInfo');
             var groupingInfo = document.getElementById('groupingInfo');
+            var lastRefreshAt = document.getElementById('lastRefreshAt');
+            var summaryInsight = document.getElementById('summaryInsight');
+            var insightsPanel = document.getElementById('insightsPanel');
+            var smartSuggestions = document.getElementById('smartSuggestions');
+            var groupSelect = document.getElementById('groupBy');
+
             var summaryFields = {
                 total: document.getElementById('summaryTotal'),
                 totalStatus: document.getElementById('summaryTotalStatus'),
                 unbalanced: document.getElementById('summaryUnbalanced'),
                 debit: document.getElementById('summaryDebit'),
-                credit: document.getElementById('summaryCredit')
+                credit: document.getElementById('summaryCredit'),
+                ratio: document.getElementById('summaryBalanceRatio')
             };
+
+            var filterControls = {
+                fromDate: document.getElementById('fromDate'),
+                toDate: document.getElementById('toDate'),
+                branchId: document.getElementById('branchFilter'),
+                status: document.getElementById('statusFilter'),
+                groupBy: groupSelect,
+                searchTerm: searchInput
+            };
+
             var lastKnownCount = 0;
 
             if (!gridElement || !gridElement.ej2_instances || !gridElement.ej2_instances.length) {
@@ -515,35 +600,96 @@
                 console.warn('Anti-forgery token was not found. Requests may be rejected.');
             }
 
-            function buildRequestOptions(options) {
-                var headers = Object.assign({}, options.headers);
-                if (antiForgeryToken) {
-                    headers['RequestVerificationToken'] = antiForgeryToken;
+            function loadPersistedFilters() {
+                try {
+                    var stored = localStorage.getItem(storageKey);
+                    return stored ? JSON.parse(stored) : null;
+                } catch (error) {
+                    console.warn('Failed to parse stored filters.', error);
+                    return null;
                 }
-                return Object.assign({}, options, { headers: headers });
+            }
+
+            function persistFilters(values) {
+                try {
+                    localStorage.setItem(storageKey, JSON.stringify(values));
+                } catch (error) {
+                    console.warn('Failed to persist filters.', error);
+                }
+            }
+
+            function clearPersistedFilters() {
+                try {
+                    localStorage.removeItem(storageKey);
+                } catch (error) {
+                    console.warn('Failed to clear stored filters.', error);
+                }
+            }
+
+            function applyStoredFilters() {
+                var stored = loadPersistedFilters();
+                if (!stored) {
+                    return;
+                }
+
+                if (filterControls.fromDate && stored.fromDate) {
+                    filterControls.fromDate.value = stored.fromDate;
+                }
+                if (filterControls.toDate && stored.toDate) {
+                    filterControls.toDate.value = stored.toDate;
+                }
+                if (filterControls.branchId && typeof stored.branchId === 'string') {
+                    setSelectValue(filterControls.branchId, stored.branchId);
+                }
+                if (filterControls.status && typeof stored.status === 'string') {
+                    setSelectValue(filterControls.status, stored.status);
+                }
+                if (filterControls.groupBy && typeof stored.groupBy === 'string') {
+                    setSelectValue(filterControls.groupBy, stored.groupBy);
+                }
+                if (unbalancedToggle && stored.showUnbalancedOnly === true) {
+                    unbalancedToggle.checked = true;
+                }
+                if (filterControls.searchTerm && typeof stored.searchTerm === 'string') {
+                    filterControls.searchTerm.value = stored.searchTerm;
+                }
+            }
+
+            function setSelectValue(selectElement, value) {
+                if (!selectElement) {
+                    return;
+                }
+                var found = Array.prototype.some.call(selectElement.options, function (option) {
+                    return option.value === value;
+                });
+                if (found) {
+                    selectElement.value = value;
+                } else {
+                    selectElement.selectedIndex = 0;
+                }
+            }
+
+            function gatherFilterParameters(searchValue) {
+                return {
+                    fromDate: filterControls.fromDate ? filterControls.fromDate.value : '',
+                    toDate: filterControls.toDate ? filterControls.toDate.value : '',
+                    branchId: filterControls.branchId ? filterControls.branchId.value : '',
+                    status: filterControls.status ? filterControls.status.value : '',
+                    groupBy: filterControls.groupBy ? filterControls.groupBy.value : '',
+                    showUnbalancedOnly: unbalancedToggle && unbalancedToggle.checked ? 'true' : '',
+                    searchTerm: (searchValue || (filterControls.searchTerm ? filterControls.searchTerm.value : '') || '').trim()
+                };
             }
 
             function buildQuery(searchValue) {
                 var query = new ej.data.Query();
                 var params = gatherFilterParameters(searchValue);
                 Object.keys(params).forEach(function (key) {
-                    if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+                    if (params[key]) {
                         query = query.addParams(key, params[key]);
                     }
                 });
                 return query;
-            }
-
-            function gatherFilterParameters(searchValue) {
-                return {
-                    fromDate: document.getElementById('fromDate').value,
-                    toDate: document.getElementById('toDate').value,
-                    branchId: document.getElementById('branchFilter').value,
-                    status: document.getElementById('statusFilter').value,
-                    groupBy: document.getElementById('groupBy').value,
-                    showUnbalancedOnly: unbalancedToggle && unbalancedToggle.checked ? 'true' : '',
-                    searchTerm: (searchValue || '').trim()
-                };
             }
 
             function buildQueryString(params) {
@@ -562,13 +708,20 @@
                 return number.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
             }
 
+            function formatPercentage(value) {
+                var number = Number(value || 0);
+                return number.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + '%';
+            }
+
             function updateSummary(searchValue) {
                 if (!summaryUrl) {
                     return;
                 }
+
                 var params = gatherFilterParameters(searchValue);
                 var queryString = buildQueryString(params);
                 var url = summaryUrl + (queryString ? ('?' + queryString) : '');
+
                 fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(function (response) {
                         if (!response.ok) {
@@ -577,23 +730,94 @@
                         return response.json();
                     })
                     .then(function (data) {
-                        summaryFields.total.textContent = formatNumber(data.totalEntries);
+                        var totalEntries = Number(data.totalEntries || 0);
+                        var unbalancedEntries = Number(data.unbalancedEntries || 0);
+                        var balancedRatio = totalEntries > 0 ? ((totalEntries - unbalancedEntries) / totalEntries) * 100 : 0;
+
+                        summaryFields.total.textContent = formatNumber(totalEntries);
                         summaryFields.totalStatus.textContent = data.statusSummary || '—';
-                        summaryFields.unbalanced.textContent = formatNumber(data.unbalancedEntries);
+                        summaryFields.unbalanced.textContent = formatNumber(unbalancedEntries);
                         summaryFields.debit.textContent = formatNumber(data.totalDebit);
                         summaryFields.credit.textContent = formatNumber(data.totalCredit);
+                        summaryFields.ratio.textContent = formatPercentage(balancedRatio);
+
+                        renderInsightMessage(totalEntries, unbalancedEntries, balancedRatio);
+                        renderSmartSuggestions(totalEntries, unbalancedEntries, data.totalDebit, data.totalCredit);
                     })
                     .catch(function (error) {
                         console.warn(error);
+                        summaryInsight.textContent = 'تعذر تحديث الملخص في الوقت الحالي.';
                     });
+            }
+
+            function renderInsightMessage(total, unbalanced, ratio) {
+                if (total === 0) {
+                    summaryInsight.textContent = 'ابدأ بإضافة القيود لعرض الإحصائيات والتقارير.';
+                    return;
+                }
+
+                if (unbalanced > 0) {
+                    summaryInsight.textContent = 'هناك ' + unbalanced + ' قيود تحتاج إلى مراجعة لتحقيق التوازن.';
+                } else if (ratio >= 99) {
+                    summaryInsight.textContent = 'أداء ممتاز! جميع القيود الحالية متوازنة.';
+                } else {
+                    summaryInsight.textContent = 'الغالبية العظمى من القيود متوازنة. استمر في مراقبة الأداء.';
+                }
+            }
+
+            function renderSmartSuggestions(total, unbalanced, totalDebit, totalCredit) {
+                if (!smartSuggestions) {
+                    return;
+                }
+
+                smartSuggestions.innerHTML = '';
+
+                var suggestions = [];
+
+                if (total === 0) {
+                    suggestions.push('استخدم زر "إضافة قيد جديد" لبدء إنشاء أول قيد.');
+                } else {
+                    if (unbalanced > 0) {
+                        suggestions.push('قم بتطبيق مرشح "عرض القيود غير المتوازنة" لمراجعة الفروقات مباشرة.');
+                    }
+                    if (Math.abs(Number(totalDebit || 0) - Number(totalCredit || 0)) > 0.01) {
+                        suggestions.push('راجع القيود ذات الفروقات الكبيرة بين المدين والدائن للتأكد من صحة الإدخالات.');
+                    }
+                    suggestions.push('جرّب تجميع النتائج حسب الفرع أو الحالة للحصول على رؤى أكثر دقة.');
+                }
+
+                if (suggestions.length > 0) {
+                    suggestions.forEach(function (tip) {
+                        var li = document.createElement('li');
+                        li.textContent = tip;
+                        smartSuggestions.appendChild(li);
+                    });
+                    insightsPanel.hidden = false;
+                } else {
+                    insightsPanel.hidden = true;
+                }
+            }
+
+            function buildRequestOptions(options) {
+                var headers = Object.assign({}, options.headers);
+                if (antiForgeryToken) {
+                    headers['RequestVerificationToken'] = antiForgeryToken;
+                }
+                return Object.assign({}, options, { headers: headers });
+            }
+
+            function getQuickSearchValue() {
+                return searchInput ? searchInput.value.trim() : '';
             }
 
             function updateFilterChips(searchValue) {
                 if (!activeFiltersContainer || !activeFiltersCount) {
                     return;
                 }
+
                 var params = gatherFilterParameters(searchValue);
                 var chips = [];
+
                 if (params.fromDate) {
                     chips.push({ key: 'fromDate', label: 'من: ' + params.fromDate });
                 }
@@ -601,13 +825,13 @@
                     chips.push({ key: 'toDate', label: 'إلى: ' + params.toDate });
                 }
                 if (params.branchId) {
-                    var branchSelect = document.getElementById('branchFilter');
-                    var branchText = branchSelect.options[branchSelect.selectedIndex].text;
+                    var branchSelect = filterControls.branchId;
+                    var branchText = branchSelect && branchSelect.options[branchSelect.selectedIndex] ? branchSelect.options[branchSelect.selectedIndex].text : params.branchId;
                     chips.push({ key: 'branchFilter', label: 'الفرع: ' + branchText });
                 }
                 if (params.status) {
-                    var statusSelect = document.getElementById('statusFilter');
-                    var statusText = statusSelect.options[statusSelect.selectedIndex].text;
+                    var statusSelect = filterControls.status;
+                    var statusText = statusSelect && statusSelect.options[statusSelect.selectedIndex] ? statusSelect.options[statusSelect.selectedIndex].text : params.status;
                     chips.push({ key: 'statusFilter', label: 'الحالة: ' + statusText });
                 }
                 if (params.showUnbalancedOnly === 'true') {
@@ -616,6 +840,7 @@
                 if (params.searchTerm) {
                     chips.push({ key: 'searchTerm', label: 'بحث: ' + params.searchTerm });
                 }
+
                 activeFiltersContainer.innerHTML = '';
                 chips.forEach(function (chip) {
                     var chipElement = document.createElement('span');
@@ -624,23 +849,108 @@
                     chipElement.innerHTML = '<span>' + chip.label + '</span><button type="button" aria-label="إزالة الفلتر"><i class="fas fa-times"></i></button>';
                     activeFiltersContainer.appendChild(chipElement);
                 });
+
                 activeFiltersCount.textContent = chips.length;
                 activeFiltersCount.classList.toggle('d-none', chips.length === 0);
+            }
+
+            function updateResultsInfo(args) {
+                if (!resultInfo) {
+                    return;
+                }
+
+                var pageInfo = grid.pageSettings;
+                var totalRecords = (args && typeof args.count === 'number') ? args.count : lastKnownCount;
+                if (!totalRecords) {
+                    totalRecords = grid.currentViewData.length;
+                }
+                var currentPage = pageInfo.currentPage || 1;
+                var pageSize = pageInfo.pageSize || 25;
+                var start = ((currentPage - 1) * pageSize) + 1;
+                var end = Math.min(currentPage * pageSize, totalRecords);
+
+                if (totalRecords === 0) {
+                    resultInfo.textContent = 'لا توجد بيانات مطابقة للمرشحات الحالية';
+                } else {
+                    resultInfo.textContent = 'عرض ' + start + ' - ' + end + ' من ' + totalRecords + ' قيد';
+                }
+
+                if (totalRecords) {
+                    lastKnownCount = totalRecords;
+                }
+            }
+
+            function updateGroupingInfo() {
+                if (!groupingInfo) {
+                    return;
+                }
+
+                var groupedColumns = grid.groupSettings && grid.groupSettings.columns ? grid.groupSettings.columns : [];
+                if (groupedColumns.length > 0) {
+                    groupingInfo.hidden = false;
+                    groupingInfo.textContent = 'مجموعة حسب: ' + groupedColumns.join(', ');
+                } else {
+                    groupingInfo.hidden = true;
+                }
+            }
+
+            function persistCurrentFilters(searchValue) {
+                var params = gatherFilterParameters(searchValue);
+                persistFilters({
+                    fromDate: params.fromDate || '',
+                    toDate: params.toDate || '',
+                    branchId: params.branchId || '',
+                    status: params.status || '',
+                    groupBy: params.groupBy || '',
+                    showUnbalancedOnly: params.showUnbalancedOnly === 'true',
+                    searchTerm: params.searchTerm || ''
+                });
+            }
+
+            function reloadGrid() {
+                showLoading();
+                var searchValue = getQuickSearchValue();
+                grid.query = buildQuery(searchValue);
+                var normalizedSearch = (searchValue || '').trim();
+                if (grid.searchSettings.key !== normalizedSearch) {
+                    grid.searchSettings.key = normalizedSearch;
+                }
+                persistCurrentFilters(searchValue);
+                updateFilterChips(searchValue);
+                updateSummary(searchValue);
+                grid.refresh();
+            }
+
+            function applyStoredGrouping() {
+                var stored = loadPersistedFilters();
+                if (!stored || !stored.groupBy) {
+                    return;
+                }
+                grid.clearGrouping();
+                grid.groupColumn(stored.groupBy);
             }
 
             function resetFilterByKey(key) {
                 switch (key) {
                     case 'fromDate':
-                        document.getElementById('fromDate').value = '';
+                        if (filterControls.fromDate) {
+                            filterControls.fromDate.value = '';
+                        }
                         break;
                     case 'toDate':
-                        document.getElementById('toDate').value = '';
+                        if (filterControls.toDate) {
+                            filterControls.toDate.value = '';
+                        }
                         break;
                     case 'branchFilter':
-                        document.getElementById('branchFilter').selectedIndex = 0;
+                        if (filterControls.branchId) {
+                            filterControls.branchId.selectedIndex = 0;
+                        }
                         break;
                     case 'statusFilter':
-                        document.getElementById('statusFilter').selectedIndex = 0;
+                        if (filterControls.status) {
+                            filterControls.status.selectedIndex = 0;
+                        }
                         break;
                     case 'showUnbalancedOnly':
                         if (unbalancedToggle) {
@@ -655,93 +965,48 @@
                 }
             }
 
-            function updateResultsInfo(args) {
-                if (!resultInfo) {
+            function updateGridHeight() {
+                if (!gridElement) {
                     return;
                 }
-                var pageInfo = grid.pageSettings;
-                var totalRecords = (args && typeof args.count === 'number') ? args.count : lastKnownCount;
-                if (!totalRecords) {
-                    totalRecords = grid.currentViewData.length;
-                }
-                var currentPage = pageInfo.currentPage || 1;
-                var pageSize = pageInfo.pageSize || 25;
-                var start = ((currentPage - 1) * pageSize) + 1;
-                var end = Math.min(currentPage * pageSize, totalRecords);
-                if (totalRecords === 0) {
-                    resultInfo.textContent = 'لا توجد بيانات مطابقة للمرشحات الحالية';
-                } else {
-                    resultInfo.textContent = 'عرض ' + start + ' - ' + end + ' من ' + totalRecords + ' قيد';
-                }
-                if (totalRecords) {
-                    lastKnownCount = totalRecords;
-                }
+
+                var gridRect = gridElement.getBoundingClientRect();
+                var viewportHeight = window.visualViewport && typeof window.visualViewport.height === 'number'
+                    ? window.visualViewport.height
+                    : window.innerHeight;
+                var availableHeight = viewportHeight - gridRect.top - 32;
+                grid.height = Math.max(Math.round(availableHeight), 420);
             }
 
-            function updateGroupingInfo() {
-                if (!groupingInfo) {
-                    return;
-                }
-                var groupedColumns = grid.groupSettings && grid.groupSettings.columns ? grid.groupSettings.columns : [];
-                if (groupedColumns.length > 0) {
-                    groupingInfo.hidden = false;
-                    groupingInfo.textContent = 'مجموعة حسب: ' + groupedColumns.join(', ');
-                } else {
-                    groupingInfo.hidden = true;
-                }
-            }
-
-            function getQuickSearchValue() {
-                return searchInput ? searchInput.value.trim() : '';
-            }
-
-            function reloadGrid() {
-                showLoading();
-                var searchValue = getQuickSearchValue();
-                grid.query = buildQuery(searchValue);
-                var normalizedSearch = (searchValue || '').trim();
-                if (grid.searchSettings.key !== normalizedSearch) {
-                    grid.searchSettings.key = normalizedSearch;
-                }
-                updateFilterChips(searchValue);
-                updateSummary(searchValue);
-                grid.refresh();
-            }
+            applyStoredFilters();
 
             grid.query = buildQuery(getQuickSearchValue());
             grid.dataSource = new ej.data.DataManager({
                 url: dataUrl,
                 adaptor: new ej.data.UrlAdaptor()
             });
-            grid.searchSettings = { fields: ['Number', 'Description', 'Reference', 'BranchName', 'CreatedByName', 'StatusDisplay', 'TotalDebitFormatted', 'TotalCreditFormatted'], operator: 'contains', key: '', ignoreCase: true };
+            grid.searchSettings = {
+                fields: ['Number', 'Description', 'Reference', 'BranchName', 'CreatedByName', 'StatusDisplay', 'TotalDebitFormatted', 'TotalCreditFormatted'],
+                operator: 'contains',
+                key: '',
+                ignoreCase: true
+            };
             grid.sortSettings = { columns: [{ field: 'Date', direction: 'Descending' }] };
             grid.groupSettings = { showDropArea: false };
 
-            function getViewportHeight() {
-                if (window.visualViewport && typeof window.visualViewport.height === 'number') {
-                    return window.visualViewport.height;
-                }
-                return window.innerHeight;
-            }
-
-            function updateGridHeight() {
-                if (!gridElement) {
-                    return;
-                }
-                var gridRect = gridElement.getBoundingClientRect();
-                var viewportHeight = getViewportHeight();
-                var availableHeight = viewportHeight - gridRect.top - 32;
-                grid.height = Math.max(Math.round(availableHeight), 420);
-            }
-
+            applyStoredGrouping();
+            updateFilterChips(getQuickSearchValue());
+            updateSummary(getQuickSearchValue());
             updateGridHeight();
             window.addEventListener('resize', updateGridHeight);
             if (window.visualViewport) {
                 window.visualViewport.addEventListener('resize', updateGridHeight);
             }
             if (typeof ResizeObserver !== 'undefined') {
-                var layoutObserver = new ResizeObserver(function () { updateGridHeight(); });
-                var cardElement = document.querySelector('.journal-entries-card');
+                var layoutObserver = new ResizeObserver(function () {
+                    updateGridHeight();
+                });
+                var cardElement = document.querySelector('.journal-shell');
                 if (cardElement) {
                     layoutObserver.observe(cardElement);
                 }
@@ -764,20 +1029,16 @@
             };
 
             grid.actionComplete = function (args) {
-                if (trackedRequestTypes.indexOf(args.requestType) > -1) {
-                    hideLoading();
-                }
-                if (typeof args.count === 'number') {
-                    lastKnownCount = args.count;
-                }
+                hideLoading();
                 updateResultsInfo(args);
                 updateGroupingInfo();
-            };
-
-            grid.dataBound = function () {
-                hideLoading();
-                updateResultsInfo();
-                updateGroupingInfo();
+                if (args && typeof args.count === 'number') {
+                    lastKnownCount = args.count;
+                }
+                var timestamp = new Date().toLocaleString();
+                if (lastRefreshAt) {
+                    lastRefreshAt.textContent = timestamp;
+                }
             };
 
             grid.actionFailure = function () {
@@ -786,12 +1047,27 @@
 
             ['fromDate', 'toDate', 'branchFilter', 'statusFilter'].forEach(function (id) {
                 var element = document.getElementById(id);
-                if (!element) return;
+                if (!element) {
+                    return;
+                }
                 element.addEventListener('change', function () {
                     grid.pageSettings.currentPage = 1;
                     reloadGrid();
                 });
             });
+
+            if (groupSelect) {
+                groupSelect.addEventListener('change', function (event) {
+                    grid.clearGrouping();
+                    var value = event.target.value;
+                    if (value) {
+                        grid.groupColumn(value);
+                    }
+                    updateGroupingInfo();
+                    grid.pageSettings.currentPage = 1;
+                    reloadGrid();
+                });
+            }
 
             if (unbalancedToggle) {
                 unbalancedToggle.addEventListener('change', function () {
@@ -835,6 +1111,13 @@
                 });
             }
 
+            if (refreshButton) {
+                refreshButton.addEventListener('click', function () {
+                    grid.pageSettings.currentPage = 1;
+                    reloadGrid();
+                });
+            }
+
             var searchDebounce;
             if (searchInput) {
                 searchInput.addEventListener('keyup', function (event) {
@@ -857,39 +1140,36 @@
             var resetButton = document.getElementById('resetFilters');
             if (resetButton) {
                 resetButton.addEventListener('click', function () {
-                    document.getElementById('fromDate').value = '';
-                    document.getElementById('toDate').value = '';
-                    document.getElementById('branchFilter').selectedIndex = 0;
-                    document.getElementById('statusFilter').selectedIndex = 0;
-                    document.getElementById('groupBy').value = '';
+                    if (filterControls.fromDate) {
+                        filterControls.fromDate.value = '';
+                    }
+                    if (filterControls.toDate) {
+                        filterControls.toDate.value = '';
+                    }
+                    if (filterControls.branchId) {
+                        filterControls.branchId.selectedIndex = 0;
+                    }
+                    if (filterControls.status) {
+                        filterControls.status.selectedIndex = 0;
+                    }
+                    if (groupSelect) {
+                        groupSelect.value = '';
+                        grid.clearGrouping();
+                    }
                     if (unbalancedToggle) {
                         unbalancedToggle.checked = false;
                     }
                     if (searchInput) {
                         searchInput.value = '';
                     }
+
                     grid.clearFiltering();
                     grid.clearSorting();
                     grid.clearGrouping();
                     grid.searchSettings.key = '';
                     grid.pageSettings.currentPage = 1;
+                    clearPersistedFilters();
                     reloadGrid();
-                });
-            }
-
-            var groupSelect = document.getElementById('groupBy');
-            if (groupSelect) {
-                if (groupSelect.value) {
-                    grid.clearGrouping();
-                    grid.groupColumn(groupSelect.value);
-                }
-                groupSelect.addEventListener('change', function (event) {
-                    grid.clearGrouping();
-                    var value = event.target.value;
-                    if (value) {
-                        grid.groupColumn(value);
-                    }
-                    updateGroupingInfo();
                 });
             }
 
@@ -993,9 +1273,6 @@
                     }
                 }));
             });
-
-            updateFilterChips(getQuickSearchValue());
-            updateSummary(getQuickSearchValue());
         });
     </script>
 }
