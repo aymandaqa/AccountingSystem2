@@ -20,12 +20,18 @@ namespace AccountingSystem.Services
             _logger = logger;
         }
 
-        public async Task<UserSession> CreateSessionAsync(User user, HttpContext httpContext, CancellationToken cancellationToken = default)
+        public async Task<UserSession> CreateSessionAsync(User user, HttpContext httpContext, SessionCreationOptions? options = null, CancellationToken cancellationToken = default)
         {
             var userAgent = httpContext.Request.Headers["User-Agent"].ToString();
             var deviceType = ResolveDeviceType(userAgent);
             var operatingSystem = ResolveOperatingSystem(userAgent);
             var deviceName = ResolveDeviceName(userAgent, operatingSystem);
+            var browserName = !string.IsNullOrWhiteSpace(options?.BrowserName)
+                ? options!.BrowserName!.Trim()
+                : ResolveBrowserName(userAgent);
+            var browserIcon = !string.IsNullOrWhiteSpace(options?.BrowserIcon)
+                ? options!.BrowserIcon!.Trim()
+                : ResolveBrowserIcon(browserName);
 
             var session = new UserSession
             {
@@ -37,10 +43,20 @@ namespace AccountingSystem.Services
                 OperatingSystem = operatingSystem,
                 IpAddress = httpContext.Connection.RemoteIpAddress?.ToString(),
                 UserAgent = userAgent,
+                BrowserName = browserName,
+                BrowserIcon = browserIcon,
                 CreatedAt = DateTime.UtcNow,
                 LastActivityAt = DateTime.UtcNow,
                 IsActive = true
             };
+
+            if (options != null && options.LocationConsent && options.Latitude.HasValue && options.Longitude.HasValue)
+            {
+                session.Latitude = options.Latitude;
+                session.Longitude = options.Longitude;
+                session.LocationAccuracy = options.LocationAccuracy;
+                session.LocationCapturedAt = options.LocationTimestamp;
+            }
 
             await _context.UserSessions.AddAsync(session, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
@@ -223,6 +239,60 @@ namespace AccountingSystem.Services
             }
 
             return "غير معروف";
+        }
+
+        private static string ResolveBrowserName(string userAgent)
+        {
+            if (string.IsNullOrWhiteSpace(userAgent))
+            {
+                return "غير معروف";
+            }
+
+            if (userAgent.Contains("Edg", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Microsoft Edge";
+            }
+
+            if (userAgent.Contains("OPR", StringComparison.OrdinalIgnoreCase) || userAgent.Contains("Opera", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Opera";
+            }
+
+            if (userAgent.Contains("Firefox", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Mozilla Firefox";
+            }
+
+            if (userAgent.Contains("Chrome", StringComparison.OrdinalIgnoreCase) || userAgent.Contains("CriOS", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Google Chrome";
+            }
+
+            if (userAgent.Contains("Safari", StringComparison.OrdinalIgnoreCase) && !userAgent.Contains("Chrome", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Safari";
+            }
+
+            if (userAgent.Contains("MSIE", StringComparison.OrdinalIgnoreCase) || userAgent.Contains("Trident", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Internet Explorer";
+            }
+
+            return "غير معروف";
+        }
+
+        private static string ResolveBrowserIcon(string? browserName)
+        {
+            return browserName switch
+            {
+                "Microsoft Edge" => "fa-brands fa-edge",
+                "Opera" => "fa-brands fa-opera",
+                "Mozilla Firefox" => "fa-brands fa-firefox-browser",
+                "Google Chrome" => "fa-brands fa-chrome",
+                "Safari" => "fa-solid fa-compass",
+                "Internet Explorer" => "fa-brands fa-internet-explorer",
+                _ => "fa-solid fa-globe"
+            };
         }
 
         private static string ResolveDeviceName(string userAgent, string operatingSystem)

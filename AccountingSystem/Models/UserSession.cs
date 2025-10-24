@@ -31,6 +31,20 @@ namespace AccountingSystem.Models
         [StringLength(1000)]
         public string? UserAgent { get; set; }
 
+        [StringLength(100)]
+        public string? BrowserName { get; set; }
+
+        [StringLength(100)]
+        public string? BrowserIcon { get; set; }
+
+        public double? Latitude { get; set; }
+
+        public double? Longitude { get; set; }
+
+        public double? LocationAccuracy { get; set; }
+
+        public DateTimeOffset? LocationCapturedAt { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? LastActivityAt { get; set; } = DateTime.UtcNow;

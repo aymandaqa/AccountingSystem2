@@ -1,9 +1,11 @@
 @using System.Linq
+@using System.Globalization
+@using System.Text.Json
 @model AccountingSystem.ViewModels.UserSessionsViewModel
 @{
     ViewData["Title"] = "إدارة الجلسات";
 
-    string ResolveIcon(string? deviceType)
+    string ResolveDeviceIcon(string? deviceType)
     {
         return deviceType switch
         {
@@ -12,6 +14,43 @@
             _ => "fa-desktop"
         };
     }
+
+    string ResolveBrowserIcon(string? browserIcon)
+    {
+        return string.IsNullOrWhiteSpace(browserIcon) ? "fa-solid fa-globe" : browserIcon;
+    }
+
+    string FormatCoordinate(double? value)
+    {
+        return value.HasValue ? value.Value.ToString("0.0000", CultureInfo.InvariantCulture) : "غير متوفر";
+    }
+
+    string FormatAccuracy(double? accuracy)
+    {
+        return accuracy.HasValue ? $"±{Math.Round(accuracy.Value):0} متر" : "±غير محدد";
+    }
+
+    var sessionLocations = Model.ActiveSessions
+        .Concat(Model.RecentSessions)
+        .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
+        .Select(s => new
+        {
+            s.SessionId,
+            DeviceName = s.DeviceName ?? s.DeviceType ?? "جهاز غير معروف",
+            BrowserName = s.BrowserName ?? "غير معروف",
+            s.BrowserIcon,
+            Latitude = s.Latitude!.Value,
+            Longitude = s.Longitude!.Value,
+            s.LocationAccuracy,
+            s.CreatedAt,
+            s.LastActivityAt,
+            s.LocationCapturedAt,
+            s.IsActive
+        })
+        .ToList();
+
+    var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    var sessionsJson = JsonSerializer.Serialize(sessionLocations, jsonOptions);
 }
 
 <h2 class="mb-4">إدارة الجلسات</h2>
@@ -37,7 +76,7 @@
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
                                     <div class="fw-bold">
-                                        <i class="fa @ResolveIcon(session.DeviceType) me-2"></i>
+                                        <i class="fa @ResolveDeviceIcon(session.DeviceType) me-2"></i>
                                         @(session.DeviceName ?? session.DeviceType ?? "جهاز غير معروف")
                                         @if (isCurrent)
                                         {
@@ -47,6 +86,19 @@
                                     <div class="small text-muted mt-1">
                                         <div><i class="fa fa-network-wired me-1"></i>IP: @(session.IpAddress ?? "غير معروف")</div>
                                         <div><i class="fa fa-microchip me-1"></i>النظام: @(session.OperatingSystem ?? "غير معروف")</div>
+                                        <div><i class="@ResolveBrowserIcon(session.BrowserIcon) me-1"></i>المتصفح: @(session.BrowserName ?? "غير معروف")</div>
+                                        @if (session.Latitude.HasValue && session.Longitude.HasValue)
+                                        {
+                                            <div><i class="fa-solid fa-location-dot me-1"></i>الموقع: @FormatCoordinate(session.Latitude), @FormatCoordinate(session.Longitude) (@FormatAccuracy(session.LocationAccuracy))</div>
+                                            if (session.LocationCapturedAt.HasValue)
+                                            {
+                                                <div><i class="fa-solid fa-bullseye me-1"></i>وقت الالتقاط: @session.LocationCapturedAt.Value.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <div><i class="fa-solid fa-location-slash me-1"></i>الموقع: غير متوفر</div>
+                                        }
                                         <div><i class="fa fa-clock me-1"></i>بدء: @session.CreatedAt.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</div>
                                         <div><i class="fa fa-bolt me-1"></i>آخر نشاط: @(session.LastActivityAt?.ToLocalTime().ToString("yyyy/MM/dd HH:mm") ?? "غير متوفر")</div>
                                     </div>
@@ -81,8 +133,10 @@
                             <th>النوع</th>
                             <th>IP</th>
                             <th>النظام</th>
+                            <th>المتصفح</th>
                             <th>البدء</th>
                             <th>آخر نشاط</th>
+                            <th>الموقع</th>
                             <th>الحالة</th>
                         </tr>
                     </thead>
@@ -90,7 +144,7 @@
                     @if (!Model.RecentSessions.Any())
                     {
                         <tr>
-                            <td colspan="7" class="text-center text-muted">لا يوجد سجل جلسات</td>
+                            <td colspan="9" class="text-center text-muted">لا يوجد سجل جلسات</td>
                         </tr>
                     }
                     else
@@ -99,14 +153,37 @@
                         {
                             <tr class="@(session.IsActive ? "" : "table-light")">
                                 <td>
-                                    <i class="fa @ResolveIcon(session.DeviceType) me-1"></i>
+                                    <i class="fa @ResolveDeviceIcon(session.DeviceType) me-1"></i>
                                     @(session.DeviceName ?? session.DeviceType ?? "غير معروف")
                                 </td>
                                 <td>@(session.DeviceType ?? "غير معروف")</td>
                                 <td>@(session.IpAddress ?? "غير معروف")</td>
                                 <td>@(session.OperatingSystem ?? "غير معروف")</td>
+                                <td>
+                                    <i class="@ResolveBrowserIcon(session.BrowserIcon) me-1"></i>
+                                    @(session.BrowserName ?? "غير معروف")
+                                </td>
                                 <td>@session.CreatedAt.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</td>
                                 <td>@(session.LastActivityAt?.ToLocalTime().ToString("yyyy/MM/dd HH:mm") ?? "غير متوفر")</td>
+                                <td>
+                                    @if (session.Latitude.HasValue && session.Longitude.HasValue)
+                                    {
+                                        <div>@FormatCoordinate(session.Latitude), @FormatCoordinate(session.Longitude)</div>
+                                        if (session.LocationAccuracy.HasValue)
+                                        {
+                                            <small class="text-muted">(@FormatAccuracy(session.LocationAccuracy))</small>
+                                        }
+
+                                        if (session.LocationCapturedAt.HasValue)
+                                        {
+                                            <small class="text-muted d-block">تم الالتقاط: @session.LocationCapturedAt.Value.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</small>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">غير متوفر</span>
+                                    }
+                                </td>
                                 <td>
                                     @if (session.IsActive)
                                     {
@@ -131,4 +208,89 @@
             </div>
         </div>
     </div>
+    <div class="col-12">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fa-solid fa-map-location-dot me-2"></i>خريطة مواقع الجلسات
+            </div>
+            <div class="card-body">
+                <div id="sessionsMap" class="w-100 rounded" style="height: 420px;"></div>
+                <div id="noLocationMessage" class="text-muted text-center py-4 d-none">لا توجد بيانات موقع متاحة للجلسات الحالية.</div>
+            </div>
+        </div>
+    </div>
 </div>
+
+@section Styles {
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-o9N1j7kGStb6K/XAINfBbqIYpAo0wXIw1f9Y+ugl0k0=" crossorigin="" />
+    <style>
+        #sessionsMap {
+            min-height: 420px;
+        }
+
+        #sessionsMap .leaflet-popup-content {
+            text-align: start;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-o9N1j7kGStb6K/XAINfBbqIYpAo0wXIw1f9Y+ugl0k0=" crossorigin=""></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const sessionLocations = @Html.Raw(sessionsJson);
+            const mapElement = document.getElementById('sessionsMap');
+            const messageElement = document.getElementById('noLocationMessage');
+
+            if (!mapElement || !messageElement) {
+                return;
+            }
+
+            if (!Array.isArray(sessionLocations) || sessionLocations.length === 0) {
+                mapElement.classList.add('d-none');
+                messageElement.classList.remove('d-none');
+                return;
+            }
+
+            messageElement.classList.add('d-none');
+
+            const locale = 'ar-SA';
+            const first = sessionLocations[0];
+            const map = L.map('sessionsMap', { tap: false }).setView([first.latitude, first.longitude], 6);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            const bounds = [];
+
+            sessionLocations.forEach(function (session) {
+                const coords = [session.latitude, session.longitude];
+                bounds.push(coords);
+
+                const accuracyText = session.locationAccuracy ? `±${Math.round(session.locationAccuracy)} متر` : '±غير محدد';
+                const createdAt = session.createdAt ? new Date(session.createdAt).toLocaleString(locale) : 'غير متوفر';
+                const lastActivity = session.lastActivityAt ? new Date(session.lastActivityAt).toLocaleString(locale) : 'غير متوفر';
+                const capturedAt = session.locationCapturedAt ? new Date(session.locationCapturedAt).toLocaleString(locale) : null;
+                const browserIcon = session.browserIcon || 'fa-solid fa-globe';
+                const browserName = session.browserName || 'غير معروف';
+                const statusBadge = session.isActive ? '<span class="badge bg-success">نشطة</span>' : '<span class="badge bg-secondary">منتهية</span>';
+
+                const popupHtml = `
+                    <div class="fw-bold mb-1">${session.deviceName}</div>
+                    <div><i class="${browserIcon} me-1"></i>${browserName}</div>
+                    <div><i class="fa-solid fa-location-dot me-1"></i>${session.latitude.toFixed(5)}, ${session.longitude.toFixed(5)} (${accuracyText})</div>
+                    <div><i class="fa-solid fa-clock me-1"></i>البداية: ${createdAt}</div>
+                    <div><i class="fa-solid fa-bolt me-1"></i>آخر نشاط: ${lastActivity}</div>
+                    ${capturedAt ? `<div><i class="fa-solid fa-bullseye me-1"></i>وقت الموقع: ${capturedAt}</div>` : ''}
+                    <div class="mt-2">${statusBadge}</div>`;
+
+                L.marker(coords).addTo(map).bindPopup(popupHtml);
+            });
+
+            if (bounds.length > 1) {
+                map.fitBounds(bounds, { padding: [30, 30] });
+            }
+        });
+    </script>
+}

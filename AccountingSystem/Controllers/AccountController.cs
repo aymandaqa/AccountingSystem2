@@ -51,6 +51,12 @@ namespace AccountingSystem.Controllers
 
             if (ModelState.IsValid)
             {
+                if (!model.LocationConsent || !model.Latitude.HasValue || !model.Longitude.HasValue)
+                {
+                    ModelState.AddModelError(string.Empty, "يجب السماح بالوصول إلى الموقع لإتمام تسجيل الدخول.");
+                    return View(model);
+                }
+
                 var user = await _userManager.FindByEmailAsync(model.Email);
                 if (user != null && user.IsActive)
                 {
@@ -58,7 +64,16 @@ namespace AccountingSystem.Controllers
 
                     if (result.Succeeded)
                     {
-                        var session = await _userSessionService.CreateSessionAsync(user, HttpContext);
+                        var session = await _userSessionService.CreateSessionAsync(user, HttpContext, new SessionCreationOptions
+                        {
+                            Latitude = model.Latitude,
+                            Longitude = model.Longitude,
+                            LocationAccuracy = model.LocationAccuracy,
+                            LocationTimestamp = model.LocationTimestamp,
+                            BrowserName = model.BrowserName,
+                            BrowserIcon = model.BrowserIcon,
+                            LocationConsent = model.LocationConsent
+                        });
                         var revokedSessions = await _userSessionService.InvalidateOtherSessionsAsync(user.Id, session.SessionId);
 
                         await _signInManager.SignInWithClaimsAsync(user, isPersistent: false, new[]
@@ -262,6 +277,12 @@ namespace AccountingSystem.Controllers
                 DeviceType = session.DeviceType,
                 OperatingSystem = session.OperatingSystem,
                 IpAddress = session.IpAddress,
+                BrowserName = session.BrowserName,
+                BrowserIcon = session.BrowserIcon,
+                Latitude = session.Latitude,
+                Longitude = session.Longitude,
+                LocationAccuracy = session.LocationAccuracy,
+                LocationCapturedAt = session.LocationCapturedAt,
                 CreatedAt = session.CreatedAt,
                 LastActivityAt = session.LastActivityAt,
                 EndedAt = session.EndedAt,
