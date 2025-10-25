@@ -137,19 +137,32 @@ namespace AccountingSystem.Services
         private async Task<string> GenerateJournalEntryNumber()
         {
             var year = System.DateTime.Now.Year;
-            var lastEntry = await _context.JournalEntries
-                .Where(j => j.Date.Year == year)
-                .OrderByDescending(j => j.Number)
-                .FirstOrDefaultAsync();
+            var prefix = $"JE{year}";
 
-            if (lastEntry == null)
-                return $"JE{year}001";
+            var existingNumbers = await _context.JournalEntries
+                .Where(j => j.Number.StartsWith(prefix))
+                .Select(j => j.Number)
+                .ToListAsync();
 
-            var lastNumber = lastEntry.Number.Substring(6);
-            if (int.TryParse(lastNumber, out int number))
-                return $"JE{year}{(number + 1):D3}";
+            if (existingNumbers.Count == 0)
+            {
+                return $"{prefix}001";
+            }
 
-            return $"JE{year}001";
+            var maxSequence = existingNumbers
+                .Select(n => n.Length > prefix.Length && int.TryParse(n.Substring(prefix.Length), out var seq) ? seq : 0)
+                .DefaultIfEmpty(0)
+                .Max();
+
+            string candidate;
+            do
+            {
+                maxSequence++;
+                candidate = $"{prefix}{maxSequence:D3}";
+            }
+            while (await _context.JournalEntries.AnyAsync(j => j.Number == candidate));
+
+            return candidate;
         }
 
         private async Task UpdateAccountBalances(JournalEntry entry)
