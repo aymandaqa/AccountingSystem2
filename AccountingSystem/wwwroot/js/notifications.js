@@ -12,6 +12,135 @@
         const wrapper = document.getElementById('notificationsDropdownWrapper');
         const list = document.getElementById('notificationsList');
         const badge = document.getElementById('notificationsBadge');
+        const toastContainer = document.getElementById('notificationToastContainer');
+
+        const audioContextType = window.AudioContext || window.webkitAudioContext;
+        let audioContext;
+
+        const ensureAudioContext = () => {
+            if (!audioContextType) {
+                return null;
+            }
+
+            if (!audioContext) {
+                audioContext = new audioContextType();
+            }
+
+            return audioContext;
+        };
+
+        const playNotificationSound = () => {
+            const context = ensureAudioContext();
+            if (!context) {
+                return;
+            }
+
+            if (context.state === 'suspended') {
+                context.resume().catch(() => { /* ignore resume errors */ });
+            }
+
+            const oscillator = context.createOscillator();
+            const gainNode = context.createGain();
+
+            const startTime = context.currentTime;
+
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(660, startTime);
+            oscillator.frequency.exponentialRampToValueAtTime(440, startTime + 0.6);
+
+            gainNode.gain.setValueAtTime(0.0001, startTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.25, startTime + 0.02);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + 1);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(context.destination);
+
+            oscillator.start(startTime);
+            oscillator.stop(startTime + 1);
+
+            oscillator.onended = () => {
+                oscillator.disconnect();
+                gainNode.disconnect();
+            };
+        };
+
+        const showToastNotification = (notification) => {
+            if (!notification) {
+                return;
+            }
+
+            playNotificationSound();
+
+            if (!toastContainer || typeof bootstrap === 'undefined') {
+                return;
+            }
+
+            const toastElement = document.createElement('div');
+            toastElement.className = 'toast notification-toast shadow border-0 text-bg-primary';
+            toastElement.setAttribute('role', 'alert');
+            toastElement.setAttribute('aria-live', 'assertive');
+            toastElement.setAttribute('aria-atomic', 'true');
+            toastElement.dataset.bsAutohide = 'true';
+            toastElement.dataset.bsDelay = '8000';
+
+            const toastContent = document.createElement('div');
+            toastContent.className = 'toast-body';
+
+            const titleElement = document.createElement('strong');
+            titleElement.className = 'd-block mb-1';
+            titleElement.textContent = notification.title || 'إشعار جديد';
+            toastContent.appendChild(titleElement);
+
+            if (notification.message) {
+                const messageElement = document.createElement('div');
+                messageElement.className = 'small text-muted';
+                messageElement.textContent = notification.message;
+                toastContent.appendChild(messageElement);
+            }
+
+            toastElement.appendChild(toastContent);
+
+            const closeButton = document.createElement('button');
+            closeButton.type = 'button';
+            closeButton.className = 'btn-close me-2 m-auto';
+            closeButton.setAttribute('data-bs-dismiss', 'toast');
+            closeButton.setAttribute('aria-label', 'إغلاق');
+
+            const footer = document.createElement('div');
+            footer.className = 'd-flex align-items-center justify-content-end gap-2 px-3 pb-3';
+            footer.appendChild(closeButton);
+
+            if (notification.link) {
+                const openLink = document.createElement('a');
+                openLink.className = 'btn btn-sm btn-outline-light';
+                openLink.href = notification.link;
+                openLink.textContent = 'عرض التفاصيل';
+                footer.appendChild(openLink);
+            }
+
+            toastElement.appendChild(footer);
+
+            toastContainer.appendChild(toastElement);
+
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
+
+            if (notification.link) {
+                toastElement.addEventListener('click', (event) => {
+                    const isButton = event.target.closest('button, a');
+                    if (!isButton) {
+                        window.location.href = notification.link;
+                    }
+                });
+            }
+
+            const toastInstance = new bootstrap.Toast(toastElement, {
+                autohide: true,
+                delay: 8000
+            });
+            toastInstance.show();
+        };
 
         if (!wrapper || !list || typeof signalR === 'undefined') {
             return;
@@ -113,6 +242,8 @@
             if (existingEmpty) {
                 existingEmpty.remove();
             }
+
+            showToastNotification(notification);
         };
 
         const connection = new signalR.HubConnectionBuilder()

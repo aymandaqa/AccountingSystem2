@@ -515,3 +515,29 @@ body {
 .user-balance-item .badge {
     font-size: 0.65rem;
 }
+
+#notificationToastContainer {
+    z-index: 1080;
+}
+
+.notification-toast {
+    min-width: 320px;
+    max-width: 380px;
+    cursor: pointer;
+    direction: rtl;
+}
+
+.notification-toast .toast-body {
+    font-size: 0.95rem;
+}
+
+.notification-toast .toast-body strong {
+    font-size: 1rem;
+}
+
+@media (max-width: 575.98px) {
+    .notification-toast {
+        min-width: 0;
+        width: calc(100vw - 2rem);
+    }
+}
