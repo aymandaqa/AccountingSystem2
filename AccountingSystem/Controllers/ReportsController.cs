@@ -2811,6 +2811,154 @@ namespace AccountingSystem.Controllers
             return viewModel;
         }
 
+        public async Task<IActionResult> AccountBalanceDiscrepancies()
+        {
+            const decimal tolerance = 0.01m;
+
+            var accountSummaries = await _context.Accounts
+                .AsNoTracking()
+                .Select(a => new
+                {
+                    a.Id,
+                    a.Code,
+                    a.NameAr,
+                    a.NameEn,
+                    a.OpeningBalance,
+                    a.CurrentBalance,
+                    a.Nature
+                })
+                .OrderBy(a => a.Code)
+                .ToListAsync();
+
+            var postedTotals = await _context.JournalEntryLines
+                .AsNoTracking()
+                .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
+                .GroupBy(l => l.AccountId)
+                .Select(g => new
+                {
+                    AccountId = g.Key,
+                    TotalDebit = g.Sum(l => l.DebitAmount),
+                    TotalCredit = g.Sum(l => l.CreditAmount)
+                })
+                .ToDictionaryAsync(g => g.AccountId);
+
+            var discrepancies = new List<AccountBalanceDiscrepancyItemViewModel>();
+            decimal totalCurrent = 0m;
+            decimal totalLedger = 0m;
+            decimal totalDifference = 0m;
+            decimal totalAbsolute = 0m;
+
+            foreach (var account in accountSummaries)
+            {
+                postedTotals.TryGetValue(account.Id, out var totals);
+                var totalDebit = totals?.TotalDebit ?? 0m;
+                var totalCredit = totals?.TotalCredit ?? 0m;
+
+                decimal ledgerBalance = account.OpeningBalance;
+                ledgerBalance += account.Nature == AccountNature.Debit
+                    ? totalDebit - totalCredit
+                    : totalCredit - totalDebit;
+
+                var difference = account.CurrentBalance - ledgerBalance;
+                if (Math.Abs(difference) < tolerance)
+                {
+                    continue;
+                }
+
+                var accountName = string.IsNullOrWhiteSpace(account.NameAr)
+                    ? account.NameEn ?? string.Empty
+                    : account.NameAr;
+
+                discrepancies.Add(new AccountBalanceDiscrepancyItemViewModel
+                {
+                    AccountId = account.Id,
+                    AccountCode = account.Code,
+                    AccountName = accountName,
+                    OpeningBalance = account.OpeningBalance,
+                    CurrentBalance = account.CurrentBalance,
+                    LedgerBalance = ledgerBalance,
+                    Difference = difference,
+                    Nature = account.Nature
+                });
+
+                totalCurrent += account.CurrentBalance;
+                totalLedger += ledgerBalance;
+                totalDifference += difference;
+                totalAbsolute += Math.Abs(difference);
+            }
+
+            if (discrepancies.Count > 0)
+            {
+                var accountIds = discrepancies.Select(d => d.AccountId).ToList();
+
+                var entryLines = await _context.JournalEntryLines
+                    .AsNoTracking()
+                    .Where(l => accountIds.Contains(l.AccountId) && l.JournalEntry.Status == JournalEntryStatus.Posted)
+                    .Select(l => new
+                    {
+                        l.AccountId,
+                        l.DebitAmount,
+                        l.CreditAmount,
+                        EntryId = l.JournalEntryId,
+                        l.JournalEntry.Number,
+                        l.JournalEntry.Date,
+                        l.JournalEntry.Description,
+                        l.JournalEntry.Reference
+                    })
+                    .OrderBy(e => e.Date)
+                    .ThenBy(e => e.Number)
+                    .ToListAsync();
+
+                var groupedEntries = entryLines
+                    .GroupBy(e => e.AccountId)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+                foreach (var discrepancy in discrepancies)
+                {
+                    if (!groupedEntries.TryGetValue(discrepancy.AccountId, out var accountEntries))
+                    {
+                        continue;
+                    }
+
+                    foreach (var entry in accountEntries)
+                    {
+                        var netImpact = discrepancy.Nature == AccountNature.Debit
+                            ? entry.DebitAmount - entry.CreditAmount
+                            : entry.CreditAmount - entry.DebitAmount;
+
+                        discrepancy.Entries.Add(new AccountBalanceDiscrepancyEntryViewModel
+                        {
+                            JournalEntryId = entry.EntryId,
+                            JournalNumber = entry.Number,
+                            Date = entry.Date,
+                            Description = entry.Description,
+                            Reference = entry.Reference,
+                            Debit = entry.DebitAmount,
+                            Credit = entry.CreditAmount,
+                            NetImpact = netImpact
+                        });
+                    }
+                }
+
+                discrepancies = discrepancies
+                    .OrderByDescending(d => Math.Abs(d.Difference))
+                    .ThenBy(d => d.AccountCode)
+                    .ToList();
+            }
+
+            var model = new AccountBalanceDiscrepancyViewModel
+            {
+                GeneratedAt = DateTime.Now,
+                Accounts = discrepancies,
+                TotalCurrentBalance = totalCurrent,
+                TotalLedgerBalance = totalLedger,
+                TotalDifference = totalDifference,
+                TotalAbsoluteDifference = totalAbsolute
+            };
+
+            return View(model);
+        }
+
         // GET: Reports/PendingTransactions
         [Authorize(Policy = "reports.pending")]
         public async Task<IActionResult> PendingTransactions(int? branchId, DateTime? fromDate, DateTime? toDate)
