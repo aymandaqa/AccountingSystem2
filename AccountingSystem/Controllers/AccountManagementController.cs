@@ -14,7 +14,6 @@ using System.Data;
 using System.Security.Claims;
 using System.Text;
 using System.Linq;
-using System.Transactions;
 using Microsoft.Extensions.Logging;
 using User = AccountingSystem.Models.User;
 
@@ -1073,7 +1072,7 @@ namespace Roadfn.Controllers
                 IActionResult? executionResult = null;
                 await executionStrategy.ExecuteAsync(async () =>
                 {
-                    using var transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+                    await using var transaction = await _context.Database.BeginTransactionAsync();
                     try
                     {
                         var cashAccount = await _accontext.UserPaymentAccounts
@@ -1416,7 +1415,7 @@ namespace Roadfn.Controllers
                             }
                         }
 
-                        transactionScope.Complete();
+                        await transaction.CommitAsync();
                         executionResult = Ok(driverPaymentHeader);
                     }
                     catch (Exception ex)
@@ -1424,6 +1423,7 @@ namespace Roadfn.Controllers
                         _context.ChangeTracker.Clear();
                         _accontext.ChangeTracker.Clear();
                         _logger.LogError(ex, "فشل معالجة دفعة السائق بواسطة المستخدم {UserId}", user.Id);
+                        await transaction.RollbackAsync();
                         executionResult = BadRequest("حدث خطأ أثناء معالجة العملية. تم التراجع عن جميع التغييرات.");
                     }
                 });
@@ -1520,7 +1520,7 @@ namespace Roadfn.Controllers
             var executionStrategy = _context.Database.CreateExecutionStrategy();
             return await executionStrategy.ExecuteAsync<(IActionResult? Result, BisnessUserPaymentHeader? Header)>(async () =>
             {
-                using var transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+                await using var transaction = await _context.Database.BeginTransactionAsync();
                 try
                 {
                     var bisnessUserPaymentHeader = new BisnessUserPaymentHeader
@@ -1670,7 +1670,7 @@ namespace Roadfn.Controllers
                         await _context.SaveChangesAsync();
                     }
 
-                    transactionScope.Complete();
+                    await transaction.CommitAsync();
                     return (null, bisnessUserPaymentHeader);
                 }
                 catch (Exception ex)
@@ -1678,6 +1678,7 @@ namespace Roadfn.Controllers
                     _context.ChangeTracker.Clear();
                     _accontext.ChangeTracker.Clear();
                     _logger.LogError(ex, "فشل معالجة دفعة بزنس للسائق {DriverId} من قبل المستخدم {UserId}", driverId, user.Id);
+                    await transaction.RollbackAsync();
                     return (BadRequest("حدث خطأ أثناء معالجة العملية. تم التراجع عن جميع التغييرات."), null);
                 }
             });
