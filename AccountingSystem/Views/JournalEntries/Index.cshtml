@@ -80,9 +80,45 @@
                 gap: 0.5rem;
             }
 
-        .filters-wrapper {
+        .filters-grid {
             display: grid;
-            gap: 0.75rem;
+            gap: 0.75rem 1rem;
+            grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+        }
+
+        @media (min-width: 1200px) {
+            .filters-grid {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+        }
+
+        .filter-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .filter-field--wide {
+            grid-column: 1 / -1;
+        }
+
+        .filter-field--switch {
+            flex-direction: row;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-field--switch .form-check {
+            margin: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-field--switch .form-check-label {
+            padding-top: 0;
+            font-weight: 600;
+            color: #1f3b5b;
         }
 
         .filters-toolbar {
@@ -309,28 +345,28 @@
             <h3><i class="fas fa-filter"></i> البحث المتقدم</h3>
             <form id="filterForm" autocomplete="off">
                 @Html.AntiForgeryToken()
-                <div class="mb-3">
-                    <label for="searchTerm" class="form-label">بحث عام</label>
-                    <input type="search" class="form-control" id="searchTerm" placeholder="رقم، وصف، مرجع، فرع، مستخدم" />
-                </div>
-                <div class="row g-3">
-                    <div class="col-12">
+                <div class="filters-grid">
+                    <div class="filter-field filter-field--wide">
+                        <label for="searchTerm" class="form-label">بحث عام</label>
+                        <input type="search" class="form-control" id="searchTerm" placeholder="رقم، وصف، مرجع، فرع، مستخدم" />
+                    </div>
+                    <div class="filter-field">
                         <label for="numberFilter" class="form-label">رقم القيد</label>
                         <input type="text" class="form-control" id="numberFilter" />
                     </div>
-                    <div class="col-12">
+                    <div class="filter-field">
                         <label for="referenceFilter" class="form-label">المرجع</label>
                         <input type="text" class="form-control" id="referenceFilter" />
                     </div>
-                    <div class="col-12">
+                    <div class="filter-field">
                         <label for="descriptionFilter" class="form-label">الوصف</label>
                         <input type="text" class="form-control" id="descriptionFilter" />
                     </div>
-                    <div class="col-12">
+                    <div class="filter-field">
                         <label for="createdByFilter" class="form-label">أنشئ بواسطة</label>
                         <input type="text" class="form-control" id="createdByFilter" placeholder="اسم أو اسم مستخدم" />
                     </div>
-                    <div class="col-12">
+                    <div class="filter-field">
                         <label for="branchFilter" class="form-label">الفرع</label>
                         <select id="branchFilter" class="form-select">
                             <option value="">كل الفروع</option>
@@ -340,7 +376,7 @@
                             }
                         </select>
                     </div>
-                    <div class="col-12">
+                    <div class="filter-field">
                         <label for="statusFilter" class="form-label">الحالة</label>
                         <select id="statusFilter" class="form-select">
                             <option value="">كل الحالات</option>
@@ -350,23 +386,23 @@
                             }
                         </select>
                     </div>
-                    <div class="col-12 col-lg-6">
+                    <div class="filter-field">
                         <label for="fromDate" class="form-label">من تاريخ</label>
                         <input type="date" class="form-control" id="fromDate" />
                     </div>
-                    <div class="col-12 col-lg-6">
+                    <div class="filter-field">
                         <label for="toDate" class="form-label">إلى تاريخ</label>
                         <input type="date" class="form-control" id="toDate" />
                     </div>
-                    <div class="col-12 col-lg-6">
+                    <div class="filter-field">
                         <label for="minAmount" class="form-label">الحد الأدنى للمبلغ</label>
                         <input type="number" class="form-control" id="minAmount" step="0.01" min="0" />
                     </div>
-                    <div class="col-12 col-lg-6">
+                    <div class="filter-field">
                         <label for="maxAmount" class="form-label">الحد الأقصى للمبلغ</label>
                         <input type="number" class="form-control" id="maxAmount" step="0.01" min="0" />
                     </div>
-                    <div class="col-12">
+                    <div class="filter-field filter-field--switch filter-field--wide">
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" role="switch" id="unbalancedOnly" />
                             <label class="form-check-label" for="unbalancedOnly">عرض القيود غير المتوازنة فقط</label>
@@ -453,29 +489,7 @@
                 <span>جاري تحميل البيانات...</span>
             </div>
             <div class="table-responsive">
-                <table class="table table-hover table-striped table-sm management-table" id="managementTable">
-                    <thead>
-                        <tr>
-                            <th data-column="number">رقم القيد <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                            <th data-column="date">التاريخ <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                            <th data-column="branch">الفرع <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                            <th data-column="description">الوصف</th>
-                            <th data-column="reference">المرجع <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                            <th data-column="createdBy">أنشئ بواسطة <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                            <th data-column="totalDebit">إجمالي المدين <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                            <th data-column="totalCredit">إجمالي الدائن <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                            <th data-column="linesCount">عدد البنود <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                            <th data-column="status">الحالة <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                            <th data-column="updatedAt">آخر تحديث <span class="sortable-indicator"><i class="fas fa-sort"></i></span></th>
-                            <th class="text-center">العمليات</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-            <div class="empty-state" id="emptyState" hidden>
-                <i class="fas fa-inbox fa-2x mb-3"></i>
-                <p class="mb-0">لا توجد بيانات مطابقة للبحث الحالي.</p>
+                <div id="journalGrid"></div>
             </div>
         </div>
         <div class="pagination-shell" aria-live="polite">
@@ -491,6 +505,17 @@
 
 
 @section Scripts {
+    <script type="text/x-template" id="journalGroupCaption">
+        <div class="group-header">
+            <div class="group-title">
+                <i class="fas fa-layer-group"></i>
+                <span>{{:key}}</span>
+            </div>
+            <div class="group-metrics">
+                <span class="badge bg-primary">{{:count}} قيود</span>
+            </div>
+        </div>
+    </script>
     <script>
         (function () {
             const endpoints = @Html.Raw(endpointsJson);
@@ -502,9 +527,7 @@
             const quickSearchInput = document.getElementById('quickSearch');
             const searchTermInput = document.getElementById('searchTerm');
             const clearQuickSearchBtn = document.getElementById('clearQuickSearch');
-            const tableBody = document.querySelector('#managementTable tbody');
             const loadingOverlay = document.getElementById('tableLoading');
-            const emptyState = document.getElementById('emptyState');
             const pagination = document.getElementById('pagination');
             const rangeInfo = document.getElementById('rangeInfo');
             const totalRecordsLabel = document.getElementById('totalRecords');
@@ -516,6 +539,7 @@
             const filtersCollapseElement = document.getElementById('advancedFilters');
             const filtersToggleText = filtersToggleButton ? filtersToggleButton.querySelector('.toggle-text') : null;
             const filtersToggleIcon = filtersToggleButton ? filtersToggleButton.querySelector('i') : null;
+            const gridElement = document.getElementById('journalGrid');
 
             const summaryTotal = document.getElementById('summaryTotal');
             const summaryBalanced = document.getElementById('summaryBalanced');
@@ -526,7 +550,7 @@
             const tokenInput = filterForm.querySelector('input[name="__RequestVerificationToken"]');
             const antiForgeryToken = tokenInput ? tokenInput.value : '';
 
-            let lastItems = [];
+            let grid = null;
 
             const state = {
                 page: 1,
@@ -537,7 +561,24 @@
                 groupBy: ''
             };
 
+            const sortColumnMap = {
+                Number: 'number',
+                DateFormatted: 'date',
+                BranchName: 'branch',
+                Description: 'description',
+                Reference: 'reference',
+                CreatedByName: 'createdBy',
+                TotalDebit: 'totalDebit',
+                TotalCredit: 'totalCredit',
+                LinesCount: 'linesCount',
+                StatusDisplay: 'status',
+                UpdatedAtFormatted: 'updatedAt'
+            };
+
             state.groupBy = groupBySelect ? groupBySelect.value : '';
+
+            initializeGrid();
+            applyGrouping();
 
             function formatNumber(value) {
                 if (value === null || value === undefined) {
@@ -595,118 +636,176 @@
                 const parsed = Number(normalized);
                 return isNaN(parsed) ? 0 : parsed;
             }
-
-            function buildRow(entry) {
-                const statusClass = 'badge ' + escapeHtml(entry.StatusClass || 'bg-secondary');
-                const updatedAt = entry.UpdatedAtFormatted || '—';
-                const rowClass = entry.IsBalanced ? '' : ' class="unbalanced"';
-                const cells = [
-                    '<td>' + escapeHtml(entry.Number || '') + '</td>',
-                    '<td>' + escapeHtml(entry.DateFormatted || '') + '</td>',
-                    '<td>' + escapeHtml(entry.BranchName || '') + '</td>',
-                    '<td class="text-truncate" style="max-width: 20ch;" title="' + escapeHtml(entry.Description || '') + '">' + escapeHtml(entry.Description || '') + '</td>',
-                    '<td>' + escapeHtml(entry.Reference || '') + '</td>',
-                    '<td>' + escapeHtml(entry.CreatedByName || '') + '</td>',
-                    '<td class="text-end">' + escapeHtml(entry.TotalDebitFormatted || formatNumber(entry.TotalDebit)) + '</td>',
-                    '<td class="text-end">' + escapeHtml(entry.TotalCreditFormatted || formatNumber(entry.TotalCredit)) + '</td>',
-                    '<td class="text-center">' + escapeHtml(entry.LinesCount ?? '') + '</td>',
-                    '<td class="text-center"><span class="' + statusClass + '">' + escapeHtml(entry.StatusDisplay || '') + '</span></td>',
-                    '<td>' + escapeHtml(updatedAt) + '</td>',
-                    '<td class="text-center">' + buildActions(entry) + '</td>'
-                ];
-                return '<tr' + rowClass + '>' + cells.join('') + '</tr>';
+            function statusTemplate(args) {
+                const statusClass = 'badge ' + escapeHtml(args.StatusClass || 'bg-secondary');
+                const text = escapeHtml(args.StatusDisplay || '');
+                return '<span class="' + statusClass + '">' + text + '</span>';
             }
 
-            function getGroupMetadata(entry) {
+            function descriptionTemplate(args) {
+                const text = escapeHtml(args.Description || '');
+                return '<span class="text-truncate d-inline-block" style="max-width: 22ch;" title="' + text + '">' + text + '</span>';
+            }
+
+            function amountTemplate(field) {
+                return function (args) {
+                    const value = typeof args[field] === 'number' ? args[field] : toNumber(args[field]);
+                    return '<span class="d-block text-end">' + formatNumber(value) + '</span>';
+                };
+            }
+
+            function actionsTemplate(args) {
+                return buildActions(args);
+            }
+
+            function applyGrouping() {
+                if (!grid) {
+                    return;
+                }
+
+                if (typeof grid.clearGrouping === 'function') {
+                    grid.clearGrouping();
+                }
+                else if (grid.groupModule && typeof grid.groupModule.clearGrouping === 'function') {
+                    grid.groupModule.clearGrouping();
+                }
+
                 switch (state.groupBy) {
                     case 'branch':
-                        return {
-                            key: entry.BranchName || '',
-                            label: entry.BranchName || 'غير محدد',
-                            icon: 'fa-code-branch'
-                        };
+                        grid.groupColumn('BranchName');
+                        break;
                     case 'status':
-                        return {
-                            key: entry.Status || '',
-                            label: entry.StatusDisplay || entry.Status || 'غير محدد',
-                            icon: 'fa-flag'
-                        };
+                        grid.groupColumn('StatusDisplay');
+                        break;
                     case 'month':
-                        return {
-                            key: entry.MonthGroup || '',
-                            label: entry.MonthGroupLabel || entry.MonthGroup || 'غير محدد',
-                            icon: 'fa-calendar-alt'
-                        };
+                        grid.groupColumn('MonthGroupLabel');
+                        break;
                     default:
-                        return {
-                            key: '',
-                            label: '',
-                            icon: 'fa-layer-group'
-                        };
+                        break;
                 }
             }
 
-            function renderRows(items) {
-                lastItems = Array.isArray(items) ? items : [];
-
-                if (!lastItems.length) {
-                    tableBody.innerHTML = '';
-                    emptyState.hidden = false;
+            function initializeGrid() {
+                if (!gridElement || grid) {
                     return;
                 }
 
-                emptyState.hidden = true;
+                grid = new ej.grids.Grid({
+                    dataSource: [],
+                    enableRtl: true,
+                    allowSorting: true,
+                    allowGrouping: true,
+                    allowPaging: false,
+                    allowTextWrap: true,
+                    gridLines: 'Both',
+                    locale: 'ar',
+                    height: 'auto',
+                    sortSettings: {
+                        columns: [{ field: 'DateFormatted', direction: 'Descending' }]
+                    },
+                    noRecordsTemplate: '<div class="empty-state text-center py-4"><i class="fas fa-inbox fa-2x mb-3"></i><p class="mb-0">لا توجد بيانات مطابقة للبحث الحالي.</p></div>',
+                    groupSettings: {
+                        showDropArea: false,
+                        showGroupedColumn: false,
+                        captionTemplate: '#journalGroupCaption'
+                    },
+                    columns: [
+                        { field: 'Number', headerText: 'رقم القيد', width: 110, textAlign: 'Center' },
+                        { field: 'DateFormatted', headerText: 'التاريخ', width: 120, textAlign: 'Center' },
+                        { field: 'BranchName', headerText: 'الفرع', width: 150 },
+                        { field: 'Description', headerText: 'الوصف', width: 220, template: descriptionTemplate },
+                        { field: 'Reference', headerText: 'المرجع', width: 140 },
+                        { field: 'CreatedByName', headerText: 'أنشئ بواسطة', width: 150 },
+                        { field: 'TotalDebit', headerText: 'إجمالي المدين', width: 140, textAlign: 'Right', template: amountTemplate('TotalDebit') },
+                        { field: 'TotalCredit', headerText: 'إجمالي الدائن', width: 140, textAlign: 'Right', template: amountTemplate('TotalCredit') },
+                        { field: 'LinesCount', headerText: 'عدد البنود', width: 110, textAlign: 'Center' },
+                        { field: 'StatusDisplay', headerText: 'الحالة', width: 130, textAlign: 'Center', template: statusTemplate },
+                        { field: 'UpdatedAtFormatted', headerText: 'آخر تحديث', width: 160 },
+                        { headerText: 'العمليات', width: 220, textAlign: 'Center', template: actionsTemplate },
+                        { field: 'MonthGroupLabel', visible: false }
+                    ]
+                });
 
-                if (!state.groupBy) {
-                    const rows = lastItems.map(buildRow);
-                    tableBody.innerHTML = rows.join('');
-                    return;
-                }
+                grid.rowDataBound = function (args) {
+                    if (args.data && args.data.IsBalanced === false) {
+                        args.row.classList.add('unbalanced');
+                    }
+                };
 
-                const groupOrder = [];
-                const groupMap = new Map();
+                grid.actionBegin = function (args) {
+                    if (args.requestType === 'sorting') {
+                        const columnName = args.columnName;
+                        const mapped = sortColumnMap[columnName];
+                        if (mapped) {
+                            state.sortColumn = mapped;
+                            state.sortDirection = args.direction === 'Descending' ? 'desc' : 'asc';
+                            state.page = 1;
+                            loadData();
+                        }
+                    }
+                };
 
-                lastItems.forEach(function (entry) {
-                    const meta = getGroupMetadata(entry);
-                    const rawKey = meta.key;
-                    const groupKey = rawKey === null || rawKey === undefined || rawKey === '' ? '__empty__' : String(rawKey);
-                    const label = meta.label || (rawKey ? String(rawKey) : 'غير محدد');
-                    const icon = meta.icon || 'fa-layer-group';
+                grid.appendTo(gridElement);
 
-                    if (!groupMap.has(groupKey)) {
-                        groupMap.set(groupKey, {
-                            label,
-                            icon,
-                            items: [],
-                            debit: 0,
-                            credit: 0
-                        });
-                        groupOrder.push(groupKey);
+                grid.element.addEventListener('click', async function (event) {
+                    const postBtn = event.target.closest('.btn-post');
+                    const deleteBtn = event.target.closest('.btn-delete');
+
+                    if (postBtn) {
+                        const id = postBtn.dataset.id;
+                        const number = postBtn.dataset.number;
+                        if (!confirm('هل تريد ترحيل القيد رقم ' + number + '؟')) {
+                            return;
+                        }
+
+                        try {
+                            const response = await fetch(endpoints.post + '/' + id, {
+                                method: 'POST',
+                                headers: {
+                                    'RequestVerificationToken': antiForgeryToken
+                                },
+                                credentials: 'same-origin'
+                            });
+
+                            if (!response.ok) {
+                                throw new Error('تعذر ترحيل القيد');
+                            }
+
+                            loadData(false);
+                        }
+                        catch (error) {
+                            alert(error.message);
+                        }
                     }
 
-                    const group = groupMap.get(groupKey);
-                    group.items.push(entry);
-                    group.debit += toNumber(entry.TotalDebit);
-                    group.credit += toNumber(entry.TotalCredit);
-                });
+                    if (deleteBtn) {
+                        const id = deleteBtn.dataset.id;
+                        const number = deleteBtn.dataset.number;
+                        if (!confirm('هل تريد إلغاء القيد رقم ' + number + '؟')) {
+                            return;
+                        }
 
-                const rows = [];
-                groupOrder.forEach(function (key) {
-                    const group = groupMap.get(key);
-                    const countText = Number(group.items.length).toLocaleString();
-                    const groupHeader = '<tr class="group-row"><td colspan="12"><div class="group-header">' +
-                        '<div class="group-title"><i class="fas ' + escapeHtml(group.icon) + '"></i><span>' + escapeHtml(group.label) + '</span></div>' +
-                        '<div class="group-metrics"><span class="badge bg-primary">' + countText + ' قيود</span>' +
-                        '<span class="text-nowrap"><strong>إجمالي مدين:</strong> ' + formatNumber(group.debit) + '</span>' +
-                        '<span class="text-nowrap"><strong>إجمالي دائن:</strong> ' + formatNumber(group.credit) + '</span>' +
-                        '</div></div></td></tr>';
-                    rows.push(groupHeader);
-                    group.items.forEach(function (entry) {
-                        rows.push(buildRow(entry));
-                    });
-                });
+                        try {
+                            const response = await fetch(endpoints.delete + '/' + id, {
+                                method: 'POST',
+                                headers: {
+                                    'RequestVerificationToken': antiForgeryToken
+                                },
+                                credentials: 'same-origin'
+                            });
 
-                tableBody.innerHTML = rows.join('');
+                            if (!response.ok) {
+                                const message = await response.text();
+                                throw new Error(message || 'تعذر إلغاء القيد');
+                            }
+
+                            loadData(false);
+                        }
+                        catch (error) {
+                            alert(error.message);
+                        }
+                    }
+                });
             }
 
             function buildQueryString() {
@@ -731,7 +830,7 @@
             if (groupBySelect) {
                 groupBySelect.addEventListener('change', function () {
                     state.groupBy = groupBySelect.value;
-                    renderRows(lastItems);
+                    applyGrouping();
                 });
             }
 
@@ -816,6 +915,9 @@
             async function loadData(showLoading = true) {
                 if (showLoading) {
                     loadingOverlay.hidden = false;
+                    if (grid && typeof grid.showSpinner === 'function') {
+                        grid.showSpinner();
+                    }
                 }
 
                 try {
@@ -845,18 +947,29 @@
                     const totalRecords = result.totalRecords || items.length;
                     const totalPages = result.totalPages || 1;
 
-                    renderRows(items);
+                    if (grid) {
+                        grid.dataSource = items;
+                        applyGrouping();
+                        grid.refresh();
+                    }
+
                     updateSummary(summary, totalRecords);
                     updatePagination(totalPages, totalRecords);
                     totalRecordsLabel.textContent = totalRecords.toLocaleString();
                 }
                 catch (error) {
                     console.error(error);
-                    tableBody.innerHTML = '<tr><td colspan="12" class="text-center text-danger">حدث خطأ أثناء تحميل البيانات.</td></tr>';
-                    emptyState.hidden = true;
+                    if (grid) {
+                        grid.dataSource = [];
+                        grid.refresh();
+                    }
+                    alert('حدث خطأ أثناء تحميل البيانات.');
                 }
                 finally {
                     loadingOverlay.hidden = true;
+                    if (grid && typeof grid.hideSpinner === 'function') {
+                        grid.hideSpinner();
+                    }
                 }
             }
 
@@ -997,85 +1110,6 @@
                     if (!isNaN(page) && page >= 1) {
                         state.page = page;
                         loadData(false);
-                    }
-                }
-            });
-
-            document.querySelectorAll('#managementTable thead th[data-column]').forEach(function (header) {
-                header.addEventListener('click', function () {
-                    const column = header.dataset.column;
-                    if (!column) {
-                        return;
-                    }
-
-                    if (state.sortColumn === column) {
-                        state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
-                    }
-                    else {
-                        state.sortColumn = column;
-                        state.sortDirection = column === 'date' ? 'desc' : 'asc';
-                    }
-
-                    loadData();
-                });
-            });
-
-            tableBody.addEventListener('click', async function (event) {
-                const postBtn = event.target.closest('.btn-post');
-                const deleteBtn = event.target.closest('.btn-delete');
-
-                if (postBtn) {
-                    const id = postBtn.dataset.id;
-                    const number = postBtn.dataset.number;
-                    if (!confirm('هل تريد ترحيل القيد رقم ' + number + '؟')) {
-                        return;
-                    }
-
-                    try {
-                        const response = await fetch(endpoints.post + '/' + id, {
-                            method: 'POST',
-                            headers: {
-                                'RequestVerificationToken': antiForgeryToken
-                            },
-                            credentials: 'same-origin'
-                        });
-
-                        if (!response.ok) {
-                            throw new Error('تعذر ترحيل القيد');
-                        }
-
-                        loadData(false);
-                    }
-                    catch (error) {
-                        alert(error.message);
-                    }
-                }
-
-                if (deleteBtn) {
-                    const id = deleteBtn.dataset.id;
-                    const number = deleteBtn.dataset.number;
-                    if (!confirm('هل تريد إلغاء القيد رقم ' + number + '؟')) {
-                        return;
-                    }
-
-                    try {
-                        const response = await fetch(endpoints.delete + '/' + id, {
-                            method: 'POST',
-                            headers: {
-                                'RequestVerificationToken': antiForgeryToken
-                            },
-                            credentials: 'same-origin'
-                        });
-
-                        if (!response.ok) {
-                            const message = await response.text();
-                            throw new Error(message || 'تعذر إلغاء القيد');
-                        }
-
-                        loadData(false);
-                    }
-                    catch (error) {
-                        alert(error.message);
                     }
                 }
             });
