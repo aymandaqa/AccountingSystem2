@@ -523,6 +523,7 @@
             const exportButton = document.getElementById('exportExcel');
             const filtersToggleButton = document.getElementById('filtersToggleButton');
             const filtersCollapseElement = document.getElementById('advancedFilters');
+            const resetFiltersButton = document.getElementById('resetFilters');
             const filtersToggleText = filtersToggleButton ? filtersToggleButton.querySelector('.toggle-text') : null;
             const filtersToggleIcon = filtersToggleButton ? filtersToggleButton.querySelector('i') : null;
             const gridElement = document.getElementById('journalGrid');
@@ -533,17 +534,19 @@
             const summaryDebit = document.getElementById('summaryDebit');
             const summaryCredit = document.getElementById('summaryCredit');
 
-            const tokenInput = filterForm.querySelector('input[name="__RequestVerificationToken"]');
+            const tokenInput = filterForm ? filterForm.querySelector('input[name="__RequestVerificationToken"]') : null;
             const antiForgeryToken = tokenInput ? tokenInput.value : '';
 
             let grid = null;
+            let quickSearchDebounce = null;
 
             const state = {
                 filters: {},
                 page: 1,
-                pageSize: defaultPageSize,
+                pageSize: Number(defaultPageSize) || 50,
                 sortColumn: 'date',
-                sortDirection: 'desc'
+                sortDirection: 'desc',
+                groupBy: groupBySelect ? groupBySelect.value : ''
             };
 
             const sortColumnMap = {
@@ -560,16 +563,20 @@
                 UpdatedAtFormatted: 'updatedAt'
             };
 
-            state.groupBy = groupBySelect ? groupBySelect.value : '';
-
             initializeGrid();
-            applyGrouping();
+            registerEventHandlers();
+            updateFiltersToggleState();
+            loadData();
 
             function formatNumber(value) {
-                if (value === null || value === undefined) {
-                    return '0';
+                if (value === null || value === undefined || value === '') {
+                    return '0.00';
                 }
-                return Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const numeric = Number(value);
+                if (Number.isNaN(numeric)) {
+                    return '0.00';
+                }
+                return numeric.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
 
             function escapeHtml(value) {
@@ -582,13 +589,6 @@
                     .replace(/>/g, '&gt;')
                     .replace(/"/g, '&quot;')
                     .replace(/'/g, '&#39;');
-            }
-
-            function formatNumber(value) {
-                if (value === null || value === undefined || isNaN(Number(value))) {
-                    return '0.00';
-                }
-                return Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
 
             function descriptionTemplate(args) {
@@ -633,67 +633,8 @@
                 return html;
             }
 
-            function toNumber(value) {
-                if (value === null || value === undefined) {
-                    return 0;
-                }
-                if (typeof value === 'number') {
-                    return isNaN(value) ? 0 : value;
-                }
-
-                const normalized = String(value)
-                    .replace(/[^0-9.,-]/g, '')
-                    .replace(/,/g, '');
-                const parsed = Number(normalized);
-                return isNaN(parsed) ? 0 : parsed;
-            }
-            function statusTemplate(args) {
-                const statusClass = 'badge ' + escapeHtml(args.StatusClass || 'bg-secondary');
-                const text = escapeHtml(args.StatusDisplay || '');
-                return '<span class="' + statusClass + '">' + text + '</span>';
-            }
-
-            function descriptionTemplate(args) {
-                const text = escapeHtml(args.Description || '');
-                return '<span class="text-truncate d-inline-block" style="max-width: 22ch;" title="' + text + '">' + text + '</span>';
-            }
-
-            function amountTemplate(field) {
-                return function (args) {
-                    const value = typeof args[field] === 'number' ? args[field] : toNumber(args[field]);
-                    return '<span class="d-block text-end">' + formatNumber(value) + '</span>';
-                };
-            }
-
             function actionsTemplate(args) {
                 return buildActions(args);
-            }
-
-            function applyGrouping() {
-                if (!grid) {
-                    return;
-                }
-
-                if (typeof grid.clearGrouping === 'function') {
-                    grid.clearGrouping();
-                }
-                else if (grid.groupModule && typeof grid.groupModule.clearGrouping === 'function') {
-                    grid.groupModule.clearGrouping();
-                }
-
-                switch (state.groupBy) {
-                    case 'branch':
-                        grid.groupColumn('BranchName');
-                        break;
-                    case 'status':
-                        grid.groupColumn('StatusDisplay');
-                        break;
-                    case 'month':
-                        grid.groupColumn('MonthGroupLabel');
-                        break;
-                    default:
-                        break;
-                }
             }
 
             function initializeGrid() {
@@ -727,8 +668,8 @@
                         { field: 'Description', headerText: 'الوصف', width: 220, template: descriptionTemplate },
                         { field: 'Reference', headerText: 'المرجع', width: 140 },
                         { field: 'CreatedByName', headerText: 'أنشئ بواسطة', width: 150 },
-                        { field: 'TotalDebit', headerText: 'إجمالي المدين', width: 140, textAlign: 'Right', template: amountTemplate('TotalDebit') },
-                        { field: 'TotalCredit', headerText: 'إجمالي الدائن', width: 140, textAlign: 'Right', template: amountTemplate('TotalCredit') },
+                        { field: 'TotalDebit', headerText: 'إجمالي المدين', width: 140, textAlign: 'Right', template: amountTemplate('TotalDebit', 'TotalDebitFormatted') },
+                        { field: 'TotalCredit', headerText: 'إجمالي الدائن', width: 140, textAlign: 'Right', template: amountTemplate('TotalCredit', 'TotalCreditFormatted') },
                         { field: 'LinesCount', headerText: 'عدد البنود', width: 110, textAlign: 'Center' },
                         { field: 'StatusDisplay', headerText: 'الحالة', width: 130, textAlign: 'Center', template: statusTemplate },
                         { field: 'UpdatedAtFormatted', headerText: 'آخر تحديث', width: 160 },
@@ -745,11 +686,13 @@
 
                 grid.actionBegin = function (args) {
                     if (args.requestType === 'sorting') {
+                        args.cancel = true;
                         const columnName = args.columnName;
                         const mapped = sortColumnMap[columnName];
                         if (mapped) {
                             state.sortColumn = mapped;
                             state.sortDirection = args.direction === 'Descending' ? 'desc' : 'asc';
+                            grid.sortSettings.columns = [{ field: columnName, direction: args.direction }];
                             state.page = 1;
                             loadData();
                         }
@@ -819,13 +762,41 @@
                 });
             }
 
-            function buildQuery() {
-                const query = new ej.data.Query();
-                Object.entries(state.filters).forEach(function ([key, value]) {
+            function applyGrouping() {
+                if (!grid) {
+                    return;
+                }
+
+                if (typeof grid.clearGrouping === 'function') {
+                    grid.clearGrouping();
+                }
+                else if (grid.groupModule && typeof grid.groupModule.clearGrouping === 'function') {
+                    grid.groupModule.clearGrouping();
+                }
+
+                switch (state.groupBy) {
+                    case 'branch':
+                        grid.groupColumn('BranchName');
+                        break;
+                    case 'status':
+                        grid.groupColumn('StatusDisplay');
+                        break;
+                    case 'month':
+                        grid.groupColumn('MonthGroupLabel');
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            function buildQueryString() {
+                const params = new URLSearchParams();
+
+                Object.entries(state.filters).forEach(([key, value]) => {
                     if (value === undefined || value === null || value === '') {
                         return;
                     }
-                    params.append(key, value);
+                    params.append(`filters.${key}`, value);
                 });
 
                 if (state.sortColumn) {
@@ -838,77 +809,313 @@
                 return params.toString();
             }
 
-            if (groupBySelect) {
-                groupBySelect.addEventListener('change', function () {
-                    state.groupBy = groupBySelect.value;
-                    applyGrouping();
-                });
+            function registerEventHandlers() {
+                if (groupBySelect) {
+                    groupBySelect.addEventListener('change', function () {
+                        state.groupBy = groupBySelect.value;
+                        applyGrouping();
+                    });
+                }
+
+                if (exportButton) {
+                    exportButton.addEventListener('click', function () {
+                        const query = buildQueryString();
+                        const url = query ? endpoints.export + '?' + query : endpoints.export;
+                        window.location.href = url;
+                    });
+                }
+
+                if (refreshButton) {
+                    refreshButton.addEventListener('click', function () {
+                        loadData();
+                    });
+                }
+
+                if (pageSizeSelect) {
+                    pageSizeSelect.addEventListener('change', function () {
+                        const parsed = parseInt(pageSizeSelect.value, 10);
+                        if (Number.isNaN(parsed) || parsed <= 0) {
+                            return;
+                        }
+                        state.pageSize = parsed;
+                        state.page = 1;
+                        loadData();
+                    });
+                }
+
+                if (pagination) {
+                    pagination.addEventListener('click', function (event) {
+                        const button = event.target.closest('button.page-link');
+                        if (!button || button.disabled) {
+                            return;
+                        }
+
+                        const li = button.parentElement;
+                        if (li && li.classList.contains('disabled')) {
+                            return;
+                        }
+
+                        const requestedPage = parseInt(button.dataset.page, 10);
+                        if (Number.isNaN(requestedPage) || requestedPage === state.page || requestedPage < 1) {
+                            return;
+                        }
+
+                        state.page = requestedPage;
+                        loadData();
+                    });
+                }
+
+                if (filterForm) {
+                    filterForm.addEventListener('submit', function (event) {
+                        event.preventDefault();
+                        state.filters = collectFiltersFromForm();
+                        state.page = 1;
+                        loadData();
+                    });
+                }
+
+                if (resetFiltersButton) {
+                    resetFiltersButton.addEventListener('click', function () {
+                        if (filterForm) {
+                            filterForm.reset();
+                        }
+                        if (quickSearchInput) {
+                            quickSearchInput.value = '';
+                        }
+                        if (searchTermInput) {
+                            searchTermInput.value = '';
+                        }
+                        state.filters = {};
+                        state.page = 1;
+                        loadData();
+                    });
+                }
+
+                if (quickSearchInput) {
+                    quickSearchInput.addEventListener('input', function () {
+                        if (quickSearchDebounce) {
+                            clearTimeout(quickSearchDebounce);
+                        }
+
+                        quickSearchDebounce = setTimeout(function () {
+                            const value = quickSearchInput.value.trim();
+                            if (searchTermInput) {
+                                searchTermInput.value = value;
+                            }
+
+                            if (value) {
+                                state.filters = {
+                                    ...state.filters,
+                                    SearchTerm: value
+                                };
+                            }
+                            else {
+                                const { SearchTerm, ...rest } = state.filters;
+                                state.filters = rest;
+                            }
+
+                            state.page = 1;
+                            loadData();
+                        }, 300);
+                    });
+                }
+
+                if (clearQuickSearchBtn) {
+                    clearQuickSearchBtn.addEventListener('click', function () {
+                        if (quickSearchInput) {
+                            quickSearchInput.value = '';
+                        }
+                        if (searchTermInput) {
+                            searchTermInput.value = '';
+                        }
+                        const { SearchTerm, ...rest } = state.filters;
+                        state.filters = rest;
+                        state.page = 1;
+                        loadData();
+                    });
+                }
+
+                if (filtersCollapseElement) {
+                    filtersCollapseElement.addEventListener('shown.bs.collapse', function () {
+                        updateFiltersToggleState(true);
+                    });
+
+                    filtersCollapseElement.addEventListener('hidden.bs.collapse', function () {
+                        updateFiltersToggleState(false);
+                    });
+                }
             }
 
-            if (exportButton) {
-                exportButton.addEventListener('click', function () {
-                    const query = buildQueryString();
-                    const url = query ? endpoints.export + '?' + query : endpoints.export;
-                    window.location.href = url;
-                });
+            function updateFiltersToggleState(expanded) {
+                if (!filtersToggleButton) {
+                    return;
+                }
+
+                const isExpanded = typeof expanded === 'boolean'
+                    ? expanded
+                    : filtersCollapseElement && filtersCollapseElement.classList.contains('show');
+
+                filtersToggleButton.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+                if (filtersToggleIcon) {
+                    filtersToggleIcon.classList.toggle('fa-angle-up', isExpanded);
+                    filtersToggleIcon.classList.toggle('fa-angle-down', !isExpanded);
+                }
+                if (filtersToggleText) {
+                    filtersToggleText.textContent = isExpanded ? 'إخفاء البحث المتقدم' : 'عرض البحث المتقدم';
+                }
             }
 
-            if (filtersToggleButton && filtersCollapseElement) {
-                const updateToggleState = function (expanded) {
-                    filtersToggleButton.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-                    if (filtersToggleIcon) {
-                        filtersToggleIcon.classList.toggle('fa-angle-up', expanded);
-                        filtersToggleIcon.classList.toggle('fa-angle-down', !expanded);
+            function collectFiltersFromForm() {
+                const filters = {};
+
+                const searchValue = searchTermInput ? searchTermInput.value.trim() : '';
+                if (searchValue) {
+                    filters.SearchTerm = searchValue;
+                }
+
+                const numberInput = document.getElementById('numberFilter');
+                if (numberInput) {
+                    const value = numberInput.value.trim();
+                    if (value) {
+                        filters.Number = value;
                     }
-                    if (filtersToggleText) {
-                        filtersToggleText.textContent = expanded ? 'إخفاء البحث المتقدم' : 'عرض البحث المتقدم';
+                }
+
+                const referenceInput = document.getElementById('referenceFilter');
+                if (referenceInput) {
+                    const value = referenceInput.value.trim();
+                    if (value) {
+                        filters.Reference = value;
                     }
-                };
+                }
 
-                updateToggleState(filtersCollapseElement.classList.contains('show'));
+                const descriptionInput = document.getElementById('descriptionFilter');
+                if (descriptionInput) {
+                    const value = descriptionInput.value.trim();
+                    if (value) {
+                        filters.Description = value;
+                    }
+                }
 
-                filtersCollapseElement.addEventListener('shown.bs.collapse', function () {
-                    updateToggleState(true);
+                const createdByInput = document.getElementById('createdByFilter');
+                if (createdByInput) {
+                    const value = createdByInput.value.trim();
+                    if (value) {
+                        filters.CreatedBy = value;
+                    }
+                }
+
+                const branchSelect = document.getElementById('branchFilter');
+                if (branchSelect && branchSelect.value) {
+                    const parsedBranch = parseInt(branchSelect.value, 10);
+                    if (!Number.isNaN(parsedBranch)) {
+                        filters.BranchId = parsedBranch;
+                    }
+                }
+
+                const statusSelect = document.getElementById('statusFilter');
+                if (statusSelect && statusSelect.value) {
+                    filters.Status = statusSelect.value;
+                }
+
+                const fromDateInput = document.getElementById('fromDate');
+                if (fromDateInput && fromDateInput.value) {
+                    filters.FromDate = fromDateInput.value;
+                }
+
+                const toDateInput = document.getElementById('toDate');
+                if (toDateInput && toDateInput.value) {
+                    filters.ToDate = toDateInput.value;
+                }
+
+                const minAmountInput = document.getElementById('minAmount');
+                if (minAmountInput && minAmountInput.value) {
+                    const parsedMin = parseFloat(minAmountInput.value);
+                    if (!Number.isNaN(parsedMin)) {
+                        filters.MinAmount = parsedMin;
+                    }
+                }
+
+                const maxAmountInput = document.getElementById('maxAmount');
+                if (maxAmountInput && maxAmountInput.value) {
+                    const parsedMax = parseFloat(maxAmountInput.value);
+                    if (!Number.isNaN(parsedMax)) {
+                        filters.MaxAmount = parsedMax;
+                    }
+                }
+
+                const unbalancedOnly = document.getElementById('unbalancedOnly');
+                if (unbalancedOnly && unbalancedOnly.checked) {
+                    filters.ShowUnbalancedOnly = true;
+                }
+
+                return filters;
+            }
+
+            function sanitizeFilters() {
+                const result = {};
+                Object.entries(state.filters).forEach(([key, value]) => {
+                    if (value === undefined || value === null || value === '') {
+                        return;
+                    }
+                    result[key] = value;
                 });
-
-                filtersCollapseElement.addEventListener('hidden.bs.collapse', function () {
-                    updateToggleState(false);
-                });
+                return result;
             }
 
             function updateSummary(summary, totalRecords) {
-                summaryTotal.textContent = totalRecords.toLocaleString();
-                summaryBalanced.textContent = (summary?.balanced || 0).toLocaleString();
-                summaryUnbalanced.textContent = (summary?.unbalanced || 0).toLocaleString();
+                const total = Number(totalRecords || 0);
+                const balanced = Number(summary?.balanced || 0);
+                const unbalanced = Number(summary?.unbalanced || 0);
+
+                summaryTotal.textContent = total.toLocaleString();
+                summaryBalanced.textContent = balanced.toLocaleString();
+                summaryUnbalanced.textContent = unbalanced.toLocaleString();
                 summaryDebit.textContent = formatNumber(summary?.totalDebit || 0);
                 summaryCredit.textContent = formatNumber(summary?.totalCredit || 0);
             }
 
             function updatePagination(totalPages, totalRecords) {
                 pagination.innerHTML = '';
-                if (totalPages <= 1) {
-                    rangeInfo.textContent = totalRecords === 0 ? '0-0' : '1-' + totalRecords;
+
+                const currentPage = state.page;
+                const safeTotalPages = Math.max(totalPages || 0, 0);
+
+                if (safeTotalPages <= 1) {
+                    const text = totalRecords === 0 ? '0-0' : '1-' + totalRecords;
+                    rangeInfo.textContent = text;
                     return;
                 }
 
-                const currentPage = state.page;
                 const maxButtons = 5;
                 let start = Math.max(1, currentPage - Math.floor(maxButtons / 2));
                 let end = start + maxButtons - 1;
-                if (end > totalPages) {
-                    end = totalPages;
+                if (end > safeTotalPages) {
+                    end = safeTotalPages;
                     start = Math.max(1, end - maxButtons + 1);
                 }
 
                 function addButton(page, label, disabled, active) {
                     const li = document.createElement('li');
-                    li.className = 'page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : '');
-                    const link = document.createElement('button');
-                    link.type = 'button';
-                    link.className = 'page-link';
-                    link.textContent = label;
-                    link.dataset.page = page;
-                    li.appendChild(link);
+                    li.className = 'page-item';
+                    if (disabled) {
+                        li.classList.add('disabled');
+                    }
+                    if (active) {
+                        li.classList.add('active');
+                    }
+
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'page-link';
+                    button.textContent = label;
+                    button.dataset.page = page;
+                    button.disabled = !!disabled;
+                    if (active) {
+                        button.setAttribute('aria-current', 'page');
+                    }
+
+                    li.appendChild(button);
                     pagination.appendChild(li);
                 }
 
@@ -916,7 +1123,7 @@
                 for (let page = start; page <= end; page++) {
                     addButton(page, page.toString(), false, page === currentPage);
                 }
-                addButton(currentPage + 1, 'التالي', currentPage === totalPages, false);
+                addButton(currentPage + 1, 'التالي', currentPage === safeTotalPages, false);
 
                 const startRecord = totalRecords === 0 ? 0 : (currentPage - 1) * state.pageSize + 1;
                 const endRecord = totalRecords === 0 ? 0 : Math.min(currentPage * state.pageSize, totalRecords);
@@ -944,7 +1151,7 @@
                             pageSize: state.pageSize,
                             sortColumn: state.sortColumn,
                             sortDirection: state.sortDirection,
-                            filters: state.filters
+                            filters: sanitizeFilters()
                         })
                     });
 
@@ -955,13 +1162,16 @@
                     const result = await response.json();
                     const items = result.items || [];
                     const summary = result.summary || {};
-                    const totalRecords = result.totalRecords || items.length;
-                    const totalPages = result.totalPages || 1;
+                    const totalRecords = result.totalRecords ?? items.length;
+                    const totalPages = result.totalPages ?? 0;
+
+                    state.page = result.page || state.page;
+                    state.pageSize = result.pageSize || state.pageSize;
 
                     if (grid) {
                         grid.dataSource = items;
-                        applyGrouping();
                         grid.refresh();
+                        applyGrouping();
                     }
 
                     updateSummary(summary, totalRecords);
@@ -983,206 +1193,7 @@
                     }
                 }
             }
-
-            function readFilters() {
-                const filters = {};
-
-                const searchValue = searchTermInput ? searchTermInput.value.trim() : '';
-                if (searchValue) {
-                    filters.searchTerm = searchValue;
-                }
-
-                const numberValue = document.getElementById('numberFilter').value.trim();
-                if (numberValue) {
-                    filters.number = numberValue;
-                }
-
-                const referenceValue = document.getElementById('referenceFilter').value.trim();
-                if (referenceValue) {
-                    filters.reference = referenceValue;
-                }
-
-                const descriptionValue = document.getElementById('descriptionFilter').value.trim();
-                if (descriptionValue) {
-                    filters.description = descriptionValue;
-                }
-
-                const createdByValue = document.getElementById('createdByFilter').value.trim();
-                if (createdByValue) {
-                    filters.createdBy = createdByValue;
-                }
-
-                const branchValue = document.getElementById('branchFilter').value;
-                if (branchValue) {
-                    const parsedBranch = parseInt(branchValue, 10);
-                    if (!isNaN(parsedBranch)) {
-                        filters.branchId = parsedBranch;
-                    }
-                }
-
-                const statusValue = document.getElementById('statusFilter').value;
-                if (statusValue) {
-                    filters.status = statusValue;
-                }
-
-                const fromDateValue = document.getElementById('fromDate').value;
-                if (fromDateValue) {
-                    filters.fromDate = fromDateValue;
-                }
-
-                const toDateValue = document.getElementById('toDate').value;
-                if (toDateValue) {
-                    filters.toDate = toDateValue;
-                }
-
-                const minAmountValue = document.getElementById('minAmount').value;
-                if (minAmountValue) {
-                    const parsedMin = parseFloat(minAmountValue);
-                    if (!isNaN(parsedMin)) {
-                        filters.minAmount = parsedMin;
-                    }
-                }
-
-                const maxAmountValue = document.getElementById('maxAmount').value;
-                if (maxAmountValue) {
-                    const parsedMax = parseFloat(maxAmountValue);
-                    if (!isNaN(parsedMax)) {
-                        filters.maxAmount = parsedMax;
-                    }
-                }
-
-                if (document.getElementById('unbalancedOnly').checked) {
-                    filters.showUnbalancedOnly = true;
-                }
-
-                return filters;
-            }
-
-            function applyFilters(filters, resetPage = true) {
-                state.filters = filters;
-                if (resetPage) {
-                    state.page = 1;
-                }
-                if (gridInstance) {
-                    gridInstance.pageSettings.currentPage = 1;
-                    gridInstance.query = buildQuery();
-                    gridInstance.refresh();
-                }
-                loadSummary();
-            }
-
-            function applyGrouping() {
-                if (!gridInstance) {
-                    return;
-                }
-
-                if (typeof gridInstance.clearGrouping === 'function') {
-                    gridInstance.clearGrouping();
-                }
-                else if (gridInstance.groupModule && typeof gridInstance.groupModule.clearGrouping === 'function') {
-                    gridInstance.groupModule.clearGrouping();
-                }
-
-                const mode = groupBySelect ? groupBySelect.value : '';
-                switch (mode) {
-                    case 'branch':
-                        gridInstance.groupColumn('BranchName');
-                        break;
-                    case 'status':
-                        gridInstance.groupColumn('StatusDisplay');
-                        break;
-                    case 'month':
-                        gridInstance.groupColumn('MonthGroupLabel');
-                        break;
-                    default:
-                        break;
-                }
-            }
-
-            function updateSummary(summary, totalRecords) {
-                const total = Number(totalRecords || 0);
-                const unbalanced = Number(summary?.unbalanced || 0);
-                const balanced = Math.max(0, total - unbalanced);
-
-                summaryTotal.textContent = total.toLocaleString();
-                summaryBalanced.textContent = balanced.toLocaleString();
-                summaryUnbalanced.textContent = unbalanced.toLocaleString();
-                summaryDebit.textContent = formatNumber(summary?.totalDebit || 0);
-                summaryCredit.textContent = formatNumber(summary?.totalCredit || 0);
-            }
-
-            async function loadSummary() {
-                if (!endpoints.data) {
-                    return;
-                }
-
-                try {
-                    const response = await fetch(endpoints.data, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'RequestVerificationToken': antiForgeryToken
-                        },
-                        credentials: 'same-origin',
-                        body: JSON.stringify({
-                            page: state.page,
-                            pageSize: state.pageSize,
-                            sortColumn: state.sortColumn,
-                            sortDirection: state.sortDirection,
-                            filters: state.filters
-                        })
-                    });
-
-                    if (!response.ok) {
-                        throw new Error('تعذر تحديث الملخص');
-                    }
-
-                    const data = await response.json();
-                    updateSummary(data.summary || {}, data.totalRecords || 0);
-                }
-                catch (error) {
-                    console.error(error);
-                }
-            }
-
-            refreshButton.addEventListener('click', function () {
-                loadData();
-            });
-
-                if (args.requestType === 'paging') {
-                    state.page = args.currentPage || gridInstance.pageSettings.currentPage || 1;
-                    updatePageSizeSelect();
-                    loadSummary();
-                }
-                else if (args.requestType === 'sorting') {
-                    const sortedColumns = gridInstance.sortSettings && gridInstance.sortSettings.columns ? gridInstance.sortSettings.columns : [];
-                    const sorted = sortedColumns.length > 0 ? sortedColumns[0] : null;
-                    if (sorted) {
-                        const mapped = sortColumnMap[sorted.field || sorted.columnName];
-                        if (mapped) {
-                            state.sortColumn = mapped;
-                            state.sortDirection = sorted.direction === 'Descending' ? 'desc' : 'asc';
-                        }
-                    }
-                    else {
-                        state.sortColumn = 'date';
-                        state.sortDirection = 'desc';
-                    }
-                    loadSummary();
-                }
-                else if (args.requestType === 'refresh') {
-                    updatePageSizeSelect();
-                }
-                else if (args.requestType === 'filtering' || args.requestType === 'searching') {
-                    loadSummary();
-                }
-            };
-
-            window.onJournalGridRowDataBound = function (args) {
-                if (args.data && args.data.IsBalanced === false) {
-                    args.row.classList.add('unbalanced');
-                }
-            };
         })();
     </script>
+
 }
