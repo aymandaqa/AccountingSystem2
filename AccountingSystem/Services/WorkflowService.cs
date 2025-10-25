@@ -272,6 +272,7 @@ namespace AccountingSystem.Services
                 UserId = userId,
                 Title = GetNotificationTitle(instance.DocumentType),
                 Message = message,
+                Icon = "fa-diagram-project",
                 Link = "/WorkflowApprovals",
                 WorkflowActionId = action.Id,
                 CreatedAt = DateTime.Now

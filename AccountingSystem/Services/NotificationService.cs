@@ -141,7 +141,8 @@ namespace AccountingSystem.Services
                 link = notification.Link,
                 isRead = notification.IsRead,
                 createdAt = notification.CreatedAt,
-                icon = notification.Icon
+                icon = notification.Icon,
+                workflowActionId = notification.WorkflowActionId
             };
 
             await _hubContext.Clients.User(notification.UserId).SendAsync("ReceiveNotification", payload, cancellationToken);
