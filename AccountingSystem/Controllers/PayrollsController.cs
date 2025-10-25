@@ -569,7 +569,7 @@ namespace AccountingSystem.Controllers
                     lines.Add(new JournalEntryLine
                     {
                         AccountId = line.Employee.AccountId,
-                        CreditAmount = line.Amount,
+                        CreditAmount = line.GrossAmount,
                         DebitAmount = 0,
                         Description = $"راتب {line.Employee.Name} عن {entryDate:dd/MM/yyyy}"
                     });
@@ -598,6 +598,14 @@ namespace AccountingSystem.Controllers
 
                         var salaryMonthText = periodDate.ToString("MM/yyyy");
                         var description = $"{deductionName} للموظف {line.Employee.Name} (رقم {employeeNumber}) عن راتب شهر {salaryMonthText}";
+
+                        lines.Add(new JournalEntryLine
+                        {
+                            AccountId = line.Employee.AccountId,
+                            DebitAmount = creditAmount,
+                            CreditAmount = 0,
+                            Description = $"خصم {deductionName} من راتب {line.Employee.Name}"
+                        });
 
                         lines.Add(new JournalEntryLine
                         {
