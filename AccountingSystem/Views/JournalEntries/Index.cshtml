@@ -521,7 +521,6 @@
             const pageSizeSelect = document.getElementById('pageSize');
             const groupBySelect = document.getElementById('groupBy');
             const exportButton = document.getElementById('exportExcel');
-            const refreshButton = document.getElementById('refreshButton');
             const filtersToggleButton = document.getElementById('filtersToggleButton');
             const filtersCollapseElement = document.getElementById('advancedFilters');
             const filtersToggleText = filtersToggleButton ? filtersToggleButton.querySelector('.toggle-text') : null;
@@ -533,7 +532,6 @@
             const summaryUnbalanced = document.getElementById('summaryUnbalanced');
             const summaryDebit = document.getElementById('summaryDebit');
             const summaryCredit = document.getElementById('summaryCredit');
-            const gridElement = document.getElementById('journalGrid');
 
             const tokenInput = filterForm.querySelector('input[name="__RequestVerificationToken"]');
             const antiForgeryToken = tokenInput ? tokenInput.value : '';
