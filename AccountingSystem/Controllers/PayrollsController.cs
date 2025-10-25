@@ -536,6 +536,11 @@ namespace AccountingSystem.Controllers
                 return BadRequest(new { message = "حساب مصروف الرواتب المحدد غير موجود." });
             }
 
+            var periodDate = new DateTime(
+                batch.Year == 0 ? DateTime.Today.Year : batch.Year,
+                batch.Month == 0 ? DateTime.Today.Month : batch.Month,
+                1);
+
             var branchLines = batch.Lines.GroupBy(l => l.BranchId);
             foreach (var group in branchLines)
             {
@@ -559,8 +564,6 @@ namespace AccountingSystem.Controllers
                 var entryDate = System.DateTime.Today;
                 var entryDescription = $"صرف رواتب الموظفين لفرع {batchBranch.NameAr} بتاريخ {entryDate:dd/MM/yyyy}";
                 var lines = new List<JournalEntryLine>();
-                var deductionCredits = new Dictionary<int, decimal>();
-                var deductionLabels = new Dictionary<int, HashSet<string>>();
                 foreach (var line in group)
                 {
                     lines.Add(new JournalEntryLine
@@ -585,46 +588,25 @@ namespace AccountingSystem.Controllers
                             continue;
                         }
 
-                        if (deductionCredits.TryGetValue(accountId.Value, out var existing))
-                        {
-                            deductionCredits[accountId.Value] = existing + creditAmount;
-                        }
-                        else
-                        {
-                            deductionCredits[accountId.Value] = creditAmount;
-                        }
+                        var deductionName = !string.IsNullOrWhiteSpace(deduction.Description)
+                            ? deduction.Description
+                            : deduction.DeductionType?.Name ?? deduction.Type ?? "خصم راتب";
 
-                        var label = deduction.DeductionType?.Name ?? deduction.Type ?? string.Empty;
-                        if (!string.IsNullOrWhiteSpace(label))
+                        var employeeNumber = !string.IsNullOrWhiteSpace(line.Employee.NationalId)
+                            ? line.Employee.NationalId!
+                            : line.Employee.Id.ToString();
+
+                        var salaryMonthText = periodDate.ToString("MM/yyyy");
+                        var description = $"{deductionName} للموظف {line.Employee.Name} (رقم {employeeNumber}) عن راتب شهر {salaryMonthText}";
+
+                        lines.Add(new JournalEntryLine
                         {
-                            if (!deductionLabels.TryGetValue(accountId.Value, out var set))
-                            {
-                                set = new HashSet<string>();
-                                deductionLabels[accountId.Value] = set;
-                            }
-                            set.Add(label);
-                        }
+                            AccountId = accountId.Value,
+                            DebitAmount = 0,
+                            CreditAmount = creditAmount,
+                            Description = description
+                        });
                     }
-                }
-
-                foreach (var kvp in deductionCredits)
-                {
-                    var creditAmount = Math.Round(kvp.Value, 2, MidpointRounding.AwayFromZero);
-                    if (creditAmount <= 0)
-                    {
-                        continue;
-                    }
-
-                    var labels = deductionLabels.TryGetValue(kvp.Key, out var labelSet) ? labelSet : new HashSet<string>();
-                    var labelText = labels.Count > 0 ? $" ({string.Join(", ", labels)})" : string.Empty;
-
-                    lines.Add(new JournalEntryLine
-                    {
-                        AccountId = kvp.Key,
-                        DebitAmount = 0,
-                        CreditAmount = creditAmount,
-                        Description = $"خصومات الرواتب{labelText} عن {entryDate:dd/MM/yyyy}"
-                    });
                 }
 
                 var groupGross = group.Sum(l => l.GrossAmount);
@@ -635,11 +617,6 @@ namespace AccountingSystem.Controllers
                     DebitAmount = groupGross,
                     Description = $"مصروف رواتب فرع {batchBranch.NameAr} عن {entryDate:dd/MM/yyyy}"
                 });
-
-                var periodDate = new DateTime(
-                    batch.Year == 0 ? DateTime.Today.Year : batch.Year,
-                    batch.Month == 0 ? DateTime.Today.Month : batch.Month,
-                    1);
 
                 var entry = await _journalEntryService.CreateJournalEntryAsync(
                     entryDate,
