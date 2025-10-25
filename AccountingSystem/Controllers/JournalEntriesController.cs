@@ -1390,7 +1390,7 @@ namespace AccountingSystem.Controllers
             public JournalEntryManagementFilters? Filters { get; set; }
         }
 
-        private sealed class JournalEntryManagementFilters
+        public sealed class JournalEntryManagementFilters
         {
             public string? SearchTerm { get; set; }
             public string? Number { get; set; }
