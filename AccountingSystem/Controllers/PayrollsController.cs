@@ -110,11 +110,47 @@ namespace AccountingSystem.Controllers
                     BranchId = e.BranchId,
                     Salary = e.Salary,
                     JobTitle = e.JobTitle,
-                    IsActive = e.IsActive
+                    IsActive = e.IsActive,
+                    Deductions = e.EmployeeDeductions
+                        .Where(d => d.IsActive && d.DeductionType != null && d.DeductionType.IsActive)
+                        .Select(d => new PayrollEmployeeDeductionSelection
+                        {
+                            DeductionTypeId = d.DeductionTypeId,
+                            Type = d.DeductionType.Name,
+                            Description = d.Description,
+                            Amount = d.Amount,
+                            AccountName = d.DeductionType.Account != null
+                                ? $"{d.DeductionType.Account.Code} - {d.DeductionType.Account.NameAr ?? d.DeductionType.Account.NameEn ?? string.Empty}"
+                                : null,
+                            AccountCode = d.DeductionType.Account != null ? d.DeductionType.Account.Code : null
+                        })
+                        .ToList()
                 })
                 .ToListAsync();
 
             return Json(employees);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DeductionTypes()
+        {
+            var types = await _context.DeductionTypes
+                .AsNoTracking()
+                .Include(d => d.Account)
+                .Where(d => d.IsActive)
+                .OrderBy(d => d.Name)
+                .Select(d => new
+                {
+                    d.Id,
+                    d.Name,
+                    AccountName = d.Account != null
+                        ? $"{d.Account.Code} - {d.Account.NameAr ?? d.Account.NameEn ?? string.Empty}"
+                        : string.Empty,
+                    AccountCode = d.Account != null ? d.Account.Code : null
+                })
+                .ToListAsync();
+
+            return Json(types);
         }
 
         [HttpPost]
@@ -137,6 +173,9 @@ namespace AccountingSystem.Controllers
                         .Where(d => d != null)
                         .Select(d => new PayrollEmployeeDeductionSelection
                         {
+                            DeductionTypeId = d.DeductionTypeId.HasValue && d.DeductionTypeId.Value > 0
+                                ? d.DeductionTypeId
+                                : null,
                             Amount = SanitizeAmount(d.Amount),
                             Type = TrimAndTruncate(d.Type, 100),
                             Description = TrimAndTruncate(d.Description, 250)
@@ -156,6 +195,27 @@ namespace AccountingSystem.Controllers
             if (requestedEmployees.Count == 0)
             {
                 return BadRequest(new { message = "الرجاء اختيار موظف واحد على الأقل" });
+            }
+
+            if (requestedEmployees.SelectMany(e => e.Deductions).Any(d => !d.DeductionTypeId.HasValue))
+            {
+                return BadRequest(new { message = "يجب اختيار نوع خصم صالح لكل خصم." });
+            }
+
+            var requestedTypeIds = requestedEmployees
+                .SelectMany(e => e.Deductions)
+                .Select(d => d.DeductionTypeId!.Value)
+                .Distinct()
+                .ToList();
+
+            var deductionTypeMap = await _context.DeductionTypes
+                .Include(d => d.Account)
+                .Where(d => requestedTypeIds.Contains(d.Id) && d.IsActive)
+                .ToDictionaryAsync(d => d.Id);
+
+            if (deductionTypeMap.Count != requestedTypeIds.Count)
+            {
+                return BadRequest(new { message = "بعض أنواع الخصومات المحددة غير متاحة أو غير نشطة." });
             }
 
             if (request.Month < 1 || request.Month > 12)
@@ -293,10 +353,31 @@ namespace AccountingSystem.Controllers
             {
                 var gross = employee.Salary;
                 var deductionEntries = new List<PayrollBatchLineDeduction>();
+                if (employee.Account == null)
+                {
+                    return BadRequest(new { message = $"لا يوجد حساب مرتبط بالموظف {employee.Name}." });
+                }
+
                 if (deductionMap.TryGetValue(employee.Id, out var employeeSelection))
                 {
                     foreach (var deductionItem in employeeSelection.Deductions)
                     {
+                        if (!deductionItem.DeductionTypeId.HasValue ||
+                            !deductionTypeMap.TryGetValue(deductionItem.DeductionTypeId.Value, out var deductionType))
+                        {
+                            return BadRequest(new { message = "أحد أنواع الخصومات المحددة غير متاح." });
+                        }
+
+                        if (deductionType.Account == null)
+                        {
+                            return BadRequest(new { message = $"نوع الخصم {deductionType.Name} لا يحتوي على حساب محدد." });
+                        }
+
+                        if (deductionType.Account.CurrencyId != employee.Account.CurrencyId)
+                        {
+                            return BadRequest(new { message = $"عملة حساب الخصم {deductionType.Name} لا تطابق عملة حساب الموظف {employee.Name}." });
+                        }
+
                         var amount = deductionItem.Amount;
                         if (amount <= 0)
                         {
@@ -312,7 +393,9 @@ namespace AccountingSystem.Controllers
                         deductionEntries.Add(new PayrollBatchLineDeduction
                         {
                             Amount = amount,
-                            Type = string.IsNullOrWhiteSpace(deductionItem.Type) ? null : deductionItem.Type,
+                            DeductionTypeId = deductionType.Id,
+                            AccountId = deductionType.AccountId,
+                            Type = deductionType.Name,
                             Description = string.IsNullOrWhiteSpace(deductionItem.Description) ? null : deductionItem.Description
                         });
                     }
@@ -414,6 +497,11 @@ namespace AccountingSystem.Controllers
                         .ThenInclude(e => e.Account)
                 .Include(b => b.Lines)
                     .ThenInclude(l => l.Deductions)
+                        .ThenInclude(d => d.DeductionType)
+                            .ThenInclude(dt => dt.Account)
+                .Include(b => b.Lines)
+                    .ThenInclude(l => l.Deductions)
+                        .ThenInclude(d => d.Account)
                 .FirstOrDefaultAsync(b => b.Id == request.BatchId);
 
             if (batch == null)
@@ -441,7 +529,7 @@ namespace AccountingSystem.Controllers
 
             var payrollExpenseAccount = await _context.Accounts
                 .Include(a => a.Currency)
-                .FirstOrDefaultAsync(a => a.Code == payrollExpenseAccountId.ToString());
+                .FirstOrDefaultAsync(a => a.Id == payrollExpenseAccountId);
 
             if (payrollExpenseAccount == null)
             {
@@ -471,6 +559,8 @@ namespace AccountingSystem.Controllers
                 var entryDate = System.DateTime.Today;
                 var entryDescription = $"صرف رواتب الموظفين لفرع {batchBranch.NameAr} بتاريخ {entryDate:dd/MM/yyyy}";
                 var lines = new List<JournalEntryLine>();
+                var deductionCredits = new Dictionary<int, decimal>();
+                var deductionLabels = new Dictionary<int, HashSet<string>>();
                 foreach (var line in group)
                 {
                     lines.Add(new JournalEntryLine
@@ -480,14 +570,69 @@ namespace AccountingSystem.Controllers
                         DebitAmount = 0,
                         Description = $"راتب {line.Employee.Name} عن {entryDate:dd/MM/yyyy}"
                     });
+
+                    foreach (var deduction in line.Deductions)
+                    {
+                        var accountId = deduction.AccountId ?? deduction.DeductionType?.AccountId;
+                        if (!accountId.HasValue)
+                        {
+                            continue;
+                        }
+
+                        var creditAmount = Math.Round(deduction.Amount, 2, MidpointRounding.AwayFromZero);
+                        if (creditAmount <= 0)
+                        {
+                            continue;
+                        }
+
+                        if (deductionCredits.TryGetValue(accountId.Value, out var existing))
+                        {
+                            deductionCredits[accountId.Value] = existing + creditAmount;
+                        }
+                        else
+                        {
+                            deductionCredits[accountId.Value] = creditAmount;
+                        }
+
+                        var label = deduction.DeductionType?.Name ?? deduction.Type ?? string.Empty;
+                        if (!string.IsNullOrWhiteSpace(label))
+                        {
+                            if (!deductionLabels.TryGetValue(accountId.Value, out var set))
+                            {
+                                set = new HashSet<string>();
+                                deductionLabels[accountId.Value] = set;
+                            }
+                            set.Add(label);
+                        }
+                    }
                 }
 
-                var groupTotal = group.Sum(l => l.Amount);
+                foreach (var kvp in deductionCredits)
+                {
+                    var creditAmount = Math.Round(kvp.Value, 2, MidpointRounding.AwayFromZero);
+                    if (creditAmount <= 0)
+                    {
+                        continue;
+                    }
+
+                    var labels = deductionLabels.TryGetValue(kvp.Key, out var labelSet) ? labelSet : new HashSet<string>();
+                    var labelText = labels.Count > 0 ? $" ({string.Join(", ", labels)})" : string.Empty;
+
+                    lines.Add(new JournalEntryLine
+                    {
+                        AccountId = kvp.Key,
+                        DebitAmount = 0,
+                        CreditAmount = creditAmount,
+                        Description = $"خصومات الرواتب{labelText} عن {entryDate:dd/MM/yyyy}"
+                    });
+                }
+
+                var groupGross = group.Sum(l => l.GrossAmount);
                 lines.Add(new JournalEntryLine
                 {
                     AccountId = payrollExpenseAccount.Id,
                     CreditAmount = 0,
-                    DebitAmount = groupTotal,
+                    DebitAmount = groupGross,
                     Description = $"مصروف رواتب فرع {batchBranch.NameAr} عن {entryDate:dd/MM/yyyy}"
                 });
 
@@ -560,6 +705,11 @@ namespace AccountingSystem.Controllers
                     .ThenInclude(l => l.Employee)
                 .Include(b => b.Lines)
                     .ThenInclude(l => l.Deductions)
+                        .ThenInclude(d => d.DeductionType)
+                            .ThenInclude(dt => dt.Account)
+                .Include(b => b.Lines)
+                    .ThenInclude(l => l.Deductions)
+                        .ThenInclude(d => d.Account)
                 .FirstOrDefaultAsync(b => b.Id == id);
 
             if (batch == null)
@@ -609,7 +759,18 @@ namespace AccountingSystem.Controllers
                         {
                             d.Type,
                             d.Description,
-                            d.Amount
+                            d.Amount,
+                            d.DeductionTypeId,
+                            AccountName = d.Account != null
+                                ? $"{d.Account.Code} - {d.Account.NameAr ?? d.Account.NameEn ?? string.Empty}"
+                                : d.DeductionType != null && d.DeductionType.Account != null
+                                    ? $"{d.DeductionType.Account.Code} - {d.DeductionType.Account.NameAr ?? d.DeductionType.Account.NameEn ?? string.Empty}"
+                                    : null,
+                            AccountCode = d.Account != null
+                                ? d.Account.Code
+                                : d.DeductionType != null && d.DeductionType.Account != null
+                                    ? d.DeductionType.Account.Code
+                                    : null
                         })
                         .ToList()
                 });
