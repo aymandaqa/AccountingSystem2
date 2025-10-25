@@ -642,6 +642,9 @@
                     return;
                 }
 
+                const renderDebitCell = amountTemplate('TotalDebit', 'TotalDebitFormatted');
+                const renderCreditCell = amountTemplate('TotalCredit', 'TotalCreditFormatted');
+
                 grid = new ej.grids.Grid({
                     dataSource: [],
                     enableRtl: true,
@@ -665,15 +668,15 @@
                         { field: 'Number', headerText: 'رقم القيد', width: 110, textAlign: 'Center' },
                         { field: 'DateFormatted', headerText: 'التاريخ', width: 120, textAlign: 'Center' },
                         { field: 'BranchName', headerText: 'الفرع', width: 150 },
-                        { field: 'Description', headerText: 'الوصف', width: 220, template: descriptionTemplate },
+                        { field: 'Description', headerText: 'الوصف', width: 220 },
                         { field: 'Reference', headerText: 'المرجع', width: 140 },
                         { field: 'CreatedByName', headerText: 'أنشئ بواسطة', width: 150 },
-                        { field: 'TotalDebit', headerText: 'إجمالي المدين', width: 140, textAlign: 'Right', template: amountTemplate('TotalDebit', 'TotalDebitFormatted') },
-                        { field: 'TotalCredit', headerText: 'إجمالي الدائن', width: 140, textAlign: 'Right', template: amountTemplate('TotalCredit', 'TotalCreditFormatted') },
+                        { field: 'TotalDebit', headerText: 'إجمالي المدين', width: 140, textAlign: 'Right' },
+                        { field: 'TotalCredit', headerText: 'إجمالي الدائن', width: 140, textAlign: 'Right' },
                         { field: 'LinesCount', headerText: 'عدد البنود', width: 110, textAlign: 'Center' },
-                        { field: 'StatusDisplay', headerText: 'الحالة', width: 130, textAlign: 'Center', template: statusTemplate },
+                        { field: 'StatusDisplay', headerText: 'الحالة', width: 130, textAlign: 'Center' },
                         { field: 'UpdatedAtFormatted', headerText: 'آخر تحديث', width: 160 },
-                        { headerText: 'العمليات', width: 220, textAlign: 'Center', template: actionsTemplate },
+                        { headerText: 'العمليات', width: 220, textAlign: 'Center', customAttributes: { columnType: 'actions' } },
                         { field: 'MonthGroupLabel', visible: false }
                     ]
                 });
@@ -681,6 +684,28 @@
                 grid.rowDataBound = function (args) {
                     if (args.data && args.data.IsBalanced === false) {
                         args.row.classList.add('unbalanced');
+                    }
+                };
+
+                grid.queryCellInfo = function (args) {
+                    if (!args || !args.data) {
+                        return;
+                    }
+
+                    if (args.column.field === 'Description') {
+                        args.cell.innerHTML = descriptionTemplate(args.data);
+                    }
+                    else if (args.column.field === 'TotalDebit') {
+                        args.cell.innerHTML = renderDebitCell(args.data);
+                    }
+                    else if (args.column.field === 'TotalCredit') {
+                        args.cell.innerHTML = renderCreditCell(args.data);
+                    }
+                    else if (args.column.field === 'StatusDisplay') {
+                        args.cell.innerHTML = statusTemplate(args.data);
+                    }
+                    else if (args.column.customAttributes && args.column.customAttributes.columnType === 'actions') {
+                        args.cell.innerHTML = actionsTemplate(args.data);
                     }
                 };
 
