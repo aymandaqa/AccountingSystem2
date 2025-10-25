@@ -316,8 +316,27 @@ namespace AccountingSystem.Controllers
                 return BadRequest(new { message });
             }
 
+            var employeesWithoutAccounts = employees
+                .Where(e => e.Account == null)
+                .Select(e => e.Name)
+                .ToList();
+
+            if (employeesWithoutAccounts.Count > 0)
+            {
+                var missingNames = employeesWithoutAccounts.Count == 1
+                    ? employeesWithoutAccounts[0]
+                    : string.Join(", ", employeesWithoutAccounts);
+
+                return BadRequest(new
+                {
+                    message = employeesWithoutAccounts.Count == 1
+                        ? $"لا يوجد حساب مرتبط بالموظف {missingNames}."
+                        : $"لا يوجد حساب مرتبط بالموظفين التاليين: {missingNames}."
+                });
+            }
+
             var currencies = employees
-                .Select(e => e.Account.CurrencyId)
+                .Select(e => e.Account!.CurrencyId)
                 .Distinct()
                 .ToList();
 
