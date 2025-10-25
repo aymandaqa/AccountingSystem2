@@ -1184,10 +1184,10 @@ namespace Roadfn.Controllers
                             decimal AgenAmt = 0;
                             if (area != null)
                             {
-                                var agentCommission = await _context.AgentCommissions.FirstOrDefaultAsync(t => t.AreaId == area.Id && t.AgentId == user.AgentId);
+                                var agentCommission = await _context.Areas.FirstOrDefaultAsync(t => t.Id == area.Id);
                                 if (agentCommission != null)
                                 {
-                                    AgenAmt = Convert.ToDecimal(agentCommission.Amount);
+                                    AgenAmt = Convert.ToDecimal(agentCommission.CommissionBranch);
                                 }
                             }
                             var Paytxn = await _context.RptDriverPay.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(item.Id));
