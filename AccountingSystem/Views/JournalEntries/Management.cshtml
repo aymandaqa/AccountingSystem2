@@ -623,6 +623,13 @@
                     }
 
                     const result = await response.json();
+                    if (typeof result.page === 'number' && !Number.isNaN(result.page)) {
+                        state.page = result.page;
+                    }
+                    if (typeof result.pageSize === 'number' && !Number.isNaN(result.pageSize) && result.pageSize > 0) {
+                        state.pageSize = result.pageSize;
+                    }
+
                     const items = result.items || [];
                     const summary = result.summary || {};
                     const totalRecords = result.totalRecords || items.length;
