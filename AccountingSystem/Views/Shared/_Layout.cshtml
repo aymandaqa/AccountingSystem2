@@ -704,6 +704,14 @@
                                                 <i class="fa-solid fa-file-lines"></i><span>كشف حساب</span>
                                             </a>
                                         </li>
+                                        <li class="report-item">
+                                            <a class="dropdown-item"
+                                               asp-controller="Reports"
+                                               asp-action="AccountBalanceDiscrepancies"
+                                               asp-require-permission="reports.view">
+                                                <i class="fa-solid fa-triangle-exclamation"></i><span>فروقات أرصدة الحسابات</span>
+                                            </a>
+                                        </li>
                                         @if (hasCashBox)
                                         {
                                             <li class="report-item">
