@@ -15,6 +15,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AccountingSystem.Services;
+using AccountingSystem.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -101,6 +102,7 @@ builder.Services.AddScoped<IReceiptVoucherProcessor, ReceiptVoucherProcessor>();
 builder.Services.AddScoped<IDisbursementVoucherProcessor, DisbursementVoucherProcessor>();
 builder.Services.AddScoped<IAssetExpenseProcessor, AssetExpenseProcessor>();
 builder.Services.AddScoped<IUserSessionService, UserSessionService>();
+builder.Services.AddSignalR();
 
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
@@ -142,5 +144,7 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Dashboard}/{action=Index}/{id?}")
     .WithStaticAssets();
+
+app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.Run();
