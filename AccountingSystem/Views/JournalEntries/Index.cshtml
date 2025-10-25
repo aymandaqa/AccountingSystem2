@@ -473,48 +473,21 @@
             </div>
         </div>
         <div class="table-shell">
-            <ejs-grid id="journalGrid"
-                      enableStickyHeader="true"
-                      allowReordering="true"
-                      allowResizing="true"
-                      autoFit="true"
-                      showColumnChooser="true"
-                      allowExcelExport="true"
-                      allowPdfExport="true"
-                      allowTextWrap="true"
-                      allowSelection="true"
-                      enableRtl="true"
-                      allowGrouping="true"
-                      allowPaging="true"
-                      allowSorting="true"
-                      allowFiltering="true"
-                      locale="ar"
-                      gridLines="Both"
-                      height="auto"
-                      created="onJournalGridCreated"
-                      actionBegin="onJournalGridActionBegin"
-                      actionComplete="onJournalGridActionComplete"
-                      rowDataBound="onJournalGridRowDataBound">
-                <e-data-manager url="@Url.Action("UrlDatasourceJournalEntries", "JournalEntries")" adaptor="UrlAdaptor"></e-data-manager>
-                <e-grid-pagesettings pageCount="100" pageSize="@Model.DefaultPageSize" pageSizes="false"></e-grid-pagesettings>
-                <e-grid-groupSettings showDropArea="false" showGroupedColumn="false" captionTemplate="#journalGroupCaption"></e-grid-groupSettings>
-                <e-grid-filterSettings type="Excel"></e-grid-filterSettings>
-                <e-grid-columns>
-                    <e-grid-column field="Number" headerText="رقم القيد" width="120" textAlign="Center"></e-grid-column>
-                    <e-grid-column field="DateFormatted" headerText="التاريخ" width="140" textAlign="Center"></e-grid-column>
-                    <e-grid-column field="BranchName" headerText="الفرع" width="160"></e-grid-column>
-                    <e-grid-column field="Description" headerText="الوصف" width="220"></e-grid-column>
-                    <e-grid-column field="Reference" headerText="المرجع" width="150"></e-grid-column>
-                    <e-grid-column field="CreatedByName" headerText="أنشئ بواسطة" width="160"></e-grid-column>
-                    <e-grid-column field="TotalDebit" headerText="إجمالي المدين" width="150" textAlign="Right"></e-grid-column>
-                    <e-grid-column field="TotalCredit" headerText="إجمالي الدائن" width="150" textAlign="Right"></e-grid-column>
-                    <e-grid-column field="LinesCount" headerText="عدد البنود" width="120" textAlign="Center"></e-grid-column>
-                    <e-grid-column field="StatusDisplay" headerText="الحالة" width="140" textAlign="Center"></e-grid-column>
-                    <e-grid-column field="UpdatedAtFormatted" headerText="آخر تحديث" width="180"></e-grid-column>
-                    <e-grid-column headerText="العمليات" width="240" textAlign="Center"></e-grid-column>
-                    <e-grid-column field="MonthGroupLabel" visible="false"></e-grid-column>
-                </e-grid-columns>
-            </ejs-grid>
+            <div class="loading-overlay" id="tableLoading" hidden>
+                <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+                <span>جاري تحميل البيانات...</span>
+            </div>
+            <div class="table-responsive">
+                <div id="journalGrid"></div>
+            </div>
+        </div>
+        <div class="pagination-shell" aria-live="polite">
+            <div>
+                <span>عرض <span id="rangeInfo">0-0</span> من <span id="totalRecords">0</span> سجل</span>
+            </div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+            </nav>
         </div>
     </div>
 </div>
@@ -540,7 +513,11 @@
             const quickSearchInput = document.getElementById('quickSearch');
             const searchTermInput = document.getElementById('searchTerm');
             const clearQuickSearchBtn = document.getElementById('clearQuickSearch');
-            const resetFiltersButton = document.getElementById('resetFilters');
+            const loadingOverlay = document.getElementById('tableLoading');
+            const pagination = document.getElementById('pagination');
+            const rangeInfo = document.getElementById('rangeInfo');
+            const totalRecordsLabel = document.getElementById('totalRecords');
+            const refreshButton = document.getElementById('refreshButton');
             const pageSizeSelect = document.getElementById('pageSize');
             const groupBySelect = document.getElementById('groupBy');
             const exportButton = document.getElementById('exportExcel');
@@ -549,6 +526,8 @@
             const filtersCollapseElement = document.getElementById('advancedFilters');
             const filtersToggleText = filtersToggleButton ? filtersToggleButton.querySelector('.toggle-text') : null;
             const filtersToggleIcon = filtersToggleButton ? filtersToggleButton.querySelector('i') : null;
+            const gridElement = document.getElementById('journalGrid');
+
             const summaryTotal = document.getElementById('summaryTotal');
             const summaryBalanced = document.getElementById('summaryBalanced');
             const summaryUnbalanced = document.getElementById('summaryUnbalanced');
@@ -559,7 +538,7 @@
             const tokenInput = filterForm.querySelector('input[name="__RequestVerificationToken"]');
             const antiForgeryToken = tokenInput ? tokenInput.value : '';
 
-            let gridInstance = null;
+            let grid = null;
 
             const state = {
                 filters: {},
@@ -571,7 +550,6 @@
 
             const sortColumnMap = {
                 Number: 'number',
-                Date: 'date',
                 DateFormatted: 'date',
                 BranchName: 'branch',
                 Description: 'description',
@@ -583,6 +561,18 @@
                 StatusDisplay: 'status',
                 UpdatedAtFormatted: 'updatedAt'
             };
+
+            state.groupBy = groupBySelect ? groupBySelect.value : '';
+
+            initializeGrid();
+            applyGrouping();
+
+            function formatNumber(value) {
+                if (value === null || value === undefined) {
+                    return '0';
+                }
+                return Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
 
             function escapeHtml(value) {
                 if (value === null || value === undefined) {
@@ -645,34 +635,190 @@
                 return html;
             }
 
+            function toNumber(value) {
+                if (value === null || value === undefined) {
+                    return 0;
+                }
+                if (typeof value === 'number') {
+                    return isNaN(value) ? 0 : value;
+                }
+
+                const normalized = String(value)
+                    .replace(/[^0-9.,-]/g, '')
+                    .replace(/,/g, '');
+                const parsed = Number(normalized);
+                return isNaN(parsed) ? 0 : parsed;
+            }
+            function statusTemplate(args) {
+                const statusClass = 'badge ' + escapeHtml(args.StatusClass || 'bg-secondary');
+                const text = escapeHtml(args.StatusDisplay || '');
+                return '<span class="' + statusClass + '">' + text + '</span>';
+            }
+
+            function descriptionTemplate(args) {
+                const text = escapeHtml(args.Description || '');
+                return '<span class="text-truncate d-inline-block" style="max-width: 22ch;" title="' + text + '">' + text + '</span>';
+            }
+
+            function amountTemplate(field) {
+                return function (args) {
+                    const value = typeof args[field] === 'number' ? args[field] : toNumber(args[field]);
+                    return '<span class="d-block text-end">' + formatNumber(value) + '</span>';
+                };
+            }
+
             function actionsTemplate(args) {
                 return buildActions(args);
             }
 
-            function applyColumnTemplates() {
-                if (!gridInstance || !Array.isArray(gridInstance.columns)) {
+            function applyGrouping() {
+                if (!grid) {
                     return;
                 }
 
-                gridInstance.columns.forEach(function (column) {
-                    if (column.field === 'Description') {
-                        column.template = descriptionTemplate;
-                    }
-                    else if (column.field === 'TotalDebit') {
-                        column.template = amountTemplate('TotalDebit', 'TotalDebitFormatted');
-                    }
-                    else if (column.field === 'TotalCredit') {
-                        column.template = amountTemplate('TotalCredit', 'TotalCreditFormatted');
-                    }
-                    else if (column.field === 'StatusDisplay') {
-                        column.template = statusTemplate;
-                    }
-                    else if (!column.field && column.headerText === 'العمليات') {
-                        column.template = actionsTemplate;
-                    }
+                if (typeof grid.clearGrouping === 'function') {
+                    grid.clearGrouping();
+                }
+                else if (grid.groupModule && typeof grid.groupModule.clearGrouping === 'function') {
+                    grid.groupModule.clearGrouping();
+                }
+
+                switch (state.groupBy) {
+                    case 'branch':
+                        grid.groupColumn('BranchName');
+                        break;
+                    case 'status':
+                        grid.groupColumn('StatusDisplay');
+                        break;
+                    case 'month':
+                        grid.groupColumn('MonthGroupLabel');
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            function initializeGrid() {
+                if (!gridElement || grid) {
+                    return;
+                }
+
+                grid = new ej.grids.Grid({
+                    dataSource: [],
+                    enableRtl: true,
+                    allowSorting: true,
+                    allowGrouping: true,
+                    allowPaging: false,
+                    allowTextWrap: true,
+                    gridLines: 'Both',
+                    locale: 'ar',
+                    height: 'auto',
+                    sortSettings: {
+                        columns: [{ field: 'DateFormatted', direction: 'Descending' }]
+                    },
+                    noRecordsTemplate: '<div class="empty-state text-center py-4"><i class="fas fa-inbox fa-2x mb-3"></i><p class="mb-0">لا توجد بيانات مطابقة للبحث الحالي.</p></div>',
+                    groupSettings: {
+                        showDropArea: false,
+                        showGroupedColumn: false,
+                        captionTemplate: '#journalGroupCaption'
+                    },
+                    columns: [
+                        { field: 'Number', headerText: 'رقم القيد', width: 110, textAlign: 'Center' },
+                        { field: 'DateFormatted', headerText: 'التاريخ', width: 120, textAlign: 'Center' },
+                        { field: 'BranchName', headerText: 'الفرع', width: 150 },
+                        { field: 'Description', headerText: 'الوصف', width: 220, template: descriptionTemplate },
+                        { field: 'Reference', headerText: 'المرجع', width: 140 },
+                        { field: 'CreatedByName', headerText: 'أنشئ بواسطة', width: 150 },
+                        { field: 'TotalDebit', headerText: 'إجمالي المدين', width: 140, textAlign: 'Right', template: amountTemplate('TotalDebit') },
+                        { field: 'TotalCredit', headerText: 'إجمالي الدائن', width: 140, textAlign: 'Right', template: amountTemplate('TotalCredit') },
+                        { field: 'LinesCount', headerText: 'عدد البنود', width: 110, textAlign: 'Center' },
+                        { field: 'StatusDisplay', headerText: 'الحالة', width: 130, textAlign: 'Center', template: statusTemplate },
+                        { field: 'UpdatedAtFormatted', headerText: 'آخر تحديث', width: 160 },
+                        { headerText: 'العمليات', width: 220, textAlign: 'Center', template: actionsTemplate },
+                        { field: 'MonthGroupLabel', visible: false }
+                    ]
                 });
 
-                gridInstance.refreshColumns();
+                grid.rowDataBound = function (args) {
+                    if (args.data && args.data.IsBalanced === false) {
+                        args.row.classList.add('unbalanced');
+                    }
+                };
+
+                grid.actionBegin = function (args) {
+                    if (args.requestType === 'sorting') {
+                        const columnName = args.columnName;
+                        const mapped = sortColumnMap[columnName];
+                        if (mapped) {
+                            state.sortColumn = mapped;
+                            state.sortDirection = args.direction === 'Descending' ? 'desc' : 'asc';
+                            state.page = 1;
+                            loadData();
+                        }
+                    }
+                };
+
+                grid.appendTo(gridElement);
+
+                grid.element.addEventListener('click', async function (event) {
+                    const postBtn = event.target.closest('.btn-post');
+                    const deleteBtn = event.target.closest('.btn-delete');
+
+                    if (postBtn) {
+                        const id = postBtn.dataset.id;
+                        const number = postBtn.dataset.number;
+                        if (!confirm('هل تريد ترحيل القيد رقم ' + number + '؟')) {
+                            return;
+                        }
+
+                        try {
+                            const response = await fetch(endpoints.post + '/' + id, {
+                                method: 'POST',
+                                headers: {
+                                    'RequestVerificationToken': antiForgeryToken
+                                },
+                                credentials: 'same-origin'
+                            });
+
+                            if (!response.ok) {
+                                throw new Error('تعذر ترحيل القيد');
+                            }
+
+                            loadData(false);
+                        }
+                        catch (error) {
+                            alert(error.message);
+                        }
+                    }
+
+                    if (deleteBtn) {
+                        const id = deleteBtn.dataset.id;
+                        const number = deleteBtn.dataset.number;
+                        if (!confirm('هل تريد إلغاء القيد رقم ' + number + '؟')) {
+                            return;
+                        }
+
+                        try {
+                            const response = await fetch(endpoints.delete + '/' + id, {
+                                method: 'POST',
+                                headers: {
+                                    'RequestVerificationToken': antiForgeryToken
+                                },
+                                credentials: 'same-origin'
+                            });
+
+                            if (!response.ok) {
+                                const message = await response.text();
+                                throw new Error(message || 'تعذر إلغاء القيد');
+                            }
+
+                            loadData(false);
+                        }
+                        catch (error) {
+                            alert(error.message);
+                        }
+                    }
+                });
             }
 
             function buildQuery() {
@@ -681,9 +827,163 @@
                     if (value === undefined || value === null || value === '') {
                         return;
                     }
-                    query.addParams(key, value);
+                    params.append(key, value);
                 });
-                return query;
+
+                if (state.sortColumn) {
+                    params.append('sortColumn', state.sortColumn);
+                }
+                if (state.sortDirection) {
+                    params.append('sortDirection', state.sortDirection);
+                }
+
+                return params.toString();
+            }
+
+            if (groupBySelect) {
+                groupBySelect.addEventListener('change', function () {
+                    state.groupBy = groupBySelect.value;
+                    applyGrouping();
+                });
+            }
+
+            if (exportButton) {
+                exportButton.addEventListener('click', function () {
+                    const query = buildQueryString();
+                    const url = query ? endpoints.export + '?' + query : endpoints.export;
+                    window.location.href = url;
+                });
+            }
+
+            if (filtersToggleButton && filtersCollapseElement) {
+                const updateToggleState = function (expanded) {
+                    filtersToggleButton.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                    if (filtersToggleIcon) {
+                        filtersToggleIcon.classList.toggle('fa-angle-up', expanded);
+                        filtersToggleIcon.classList.toggle('fa-angle-down', !expanded);
+                    }
+                    if (filtersToggleText) {
+                        filtersToggleText.textContent = expanded ? 'إخفاء البحث المتقدم' : 'عرض البحث المتقدم';
+                    }
+                };
+
+                updateToggleState(filtersCollapseElement.classList.contains('show'));
+
+                filtersCollapseElement.addEventListener('shown.bs.collapse', function () {
+                    updateToggleState(true);
+                });
+
+                filtersCollapseElement.addEventListener('hidden.bs.collapse', function () {
+                    updateToggleState(false);
+                });
+            }
+
+            function updateSummary(summary, totalRecords) {
+                summaryTotal.textContent = totalRecords.toLocaleString();
+                summaryBalanced.textContent = (summary?.balanced || 0).toLocaleString();
+                summaryUnbalanced.textContent = (summary?.unbalanced || 0).toLocaleString();
+                summaryDebit.textContent = formatNumber(summary?.totalDebit || 0);
+                summaryCredit.textContent = formatNumber(summary?.totalCredit || 0);
+            }
+
+            function updatePagination(totalPages, totalRecords) {
+                pagination.innerHTML = '';
+                if (totalPages <= 1) {
+                    rangeInfo.textContent = totalRecords === 0 ? '0-0' : '1-' + totalRecords;
+                    return;
+                }
+
+                const currentPage = state.page;
+                const maxButtons = 5;
+                let start = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+                let end = start + maxButtons - 1;
+                if (end > totalPages) {
+                    end = totalPages;
+                    start = Math.max(1, end - maxButtons + 1);
+                }
+
+                function addButton(page, label, disabled, active) {
+                    const li = document.createElement('li');
+                    li.className = 'page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : '');
+                    const link = document.createElement('button');
+                    link.type = 'button';
+                    link.className = 'page-link';
+                    link.textContent = label;
+                    link.dataset.page = page;
+                    li.appendChild(link);
+                    pagination.appendChild(li);
+                }
+
+                addButton(currentPage - 1, 'السابق', currentPage === 1, false);
+                for (let page = start; page <= end; page++) {
+                    addButton(page, page.toString(), false, page === currentPage);
+                }
+                addButton(currentPage + 1, 'التالي', currentPage === totalPages, false);
+
+                const startRecord = totalRecords === 0 ? 0 : (currentPage - 1) * state.pageSize + 1;
+                const endRecord = totalRecords === 0 ? 0 : Math.min(currentPage * state.pageSize, totalRecords);
+                rangeInfo.textContent = startRecord + '-' + endRecord;
+            }
+
+            async function loadData(showLoading = true) {
+                if (showLoading) {
+                    loadingOverlay.hidden = false;
+                    if (grid && typeof grid.showSpinner === 'function') {
+                        grid.showSpinner();
+                    }
+                }
+
+                try {
+                    const response = await fetch(endpoints.data, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': antiForgeryToken
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({
+                            page: state.page,
+                            pageSize: state.pageSize,
+                            sortColumn: state.sortColumn,
+                            sortDirection: state.sortDirection,
+                            filters: state.filters
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('فشل في تحميل البيانات');
+                    }
+
+                    const result = await response.json();
+                    const items = result.items || [];
+                    const summary = result.summary || {};
+                    const totalRecords = result.totalRecords || items.length;
+                    const totalPages = result.totalPages || 1;
+
+                    if (grid) {
+                        grid.dataSource = items;
+                        applyGrouping();
+                        grid.refresh();
+                    }
+
+                    updateSummary(summary, totalRecords);
+                    updatePagination(totalPages, totalRecords);
+                    totalRecordsLabel.textContent = totalRecords.toLocaleString();
+                }
+                catch (error) {
+                    console.error(error);
+                    if (grid) {
+                        grid.dataSource = [];
+                        grid.refresh();
+                    }
+                    alert('حدث خطأ أثناء تحميل البيانات.');
+                }
+                finally {
+                    loadingOverlay.hidden = true;
+                    if (grid && typeof grid.hideSpinner === 'function') {
+                        grid.hideSpinner();
+                    }
+                }
             }
 
             function readFilters() {
@@ -847,247 +1147,9 @@
                 }
             }
 
-            function buildQueryString() {
-                const params = new URLSearchParams();
-                Object.entries(state.filters).forEach(function ([key, value]) {
-                    if (value === undefined || value === null || value === '') {
-                        return;
-                    }
-                    params.append(key, value);
-                });
-
-                if (state.sortColumn) {
-                    params.append('sortColumn', state.sortColumn);
-                }
-                if (state.sortDirection) {
-                    params.append('sortDirection', state.sortDirection);
-                }
-
-                return params.toString();
-            }
-
-            function updatePageSizeSelect() {
-                if (!pageSizeSelect || !gridInstance) {
-                    return;
-                }
-
-                const size = gridInstance.pageSettings.pageSize || state.pageSize;
-                state.pageSize = size;
-                pageSizeSelect.value = size.toString();
-            }
-
-            state.filters = readFilters();
-            if (pageSizeSelect) {
-                pageSizeSelect.value = state.pageSize.toString();
-            }
-
-            if (filtersToggleButton && filtersCollapseElement) {
-                const updateToggleState = function (expanded) {
-                    filtersToggleButton.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-                    if (filtersToggleIcon) {
-                        filtersToggleIcon.classList.toggle('fa-angle-up', expanded);
-                        filtersToggleIcon.classList.toggle('fa-angle-down', !expanded);
-                    }
-                    if (filtersToggleText) {
-                        filtersToggleText.textContent = expanded ? 'إخفاء البحث المتقدم' : 'عرض البحث المتقدم';
-                    }
-                };
-
-                updateToggleState(filtersCollapseElement.classList.contains('show'));
-
-                filtersCollapseElement.addEventListener('shown.bs.collapse', function () {
-                    updateToggleState(true);
-                });
-
-                filtersCollapseElement.addEventListener('hidden.bs.collapse', function () {
-                    updateToggleState(false);
-                });
-            }
-
-            if (filterForm) {
-                filterForm.addEventListener('submit', function (event) {
-                    event.preventDefault();
-                    applyFilters(readFilters());
-                });
-            }
-
-            if (resetFiltersButton) {
-                resetFiltersButton.addEventListener('click', function () {
-                    filterForm.reset();
-                    if (quickSearchInput) {
-                        quickSearchInput.value = '';
-                    }
-                    if (searchTermInput) {
-                        searchTermInput.value = '';
-                    }
-                    applyFilters({}, true);
-                });
-            }
-
-            if (quickSearchInput) {
-                quickSearchInput.addEventListener('input', function () {
-                    const value = quickSearchInput.value.trim();
-                    if (searchTermInput) {
-                        searchTermInput.value = value;
-                    }
-                    applyFilters(readFilters());
-                });
-            }
-
-            if (clearQuickSearchBtn) {
-                clearQuickSearchBtn.addEventListener('click', function () {
-                    if (quickSearchInput) {
-                        quickSearchInput.value = '';
-                    }
-                    if (searchTermInput) {
-                        searchTermInput.value = '';
-                    }
-                    applyFilters(readFilters());
-                });
-            }
-
-            if (pageSizeSelect) {
-                pageSizeSelect.addEventListener('change', function () {
-                    const value = parseInt(pageSizeSelect.value, 10);
-                    if (!isNaN(value)) {
-                        state.pageSize = value;
-                        state.page = 1;
-                        if (gridInstance) {
-                            gridInstance.pageSettings.pageSize = value;
-                            gridInstance.pageSettings.currentPage = 1;
-                            gridInstance.refresh();
-                        }
-                        loadSummary();
-                    }
-                });
-            }
-
-            if (groupBySelect) {
-                groupBySelect.addEventListener('change', function () {
-                    applyGrouping();
-                });
-            }
-
-            if (exportButton) {
-                exportButton.addEventListener('click', function () {
-                    const query = buildQueryString();
-                    const url = query ? endpoints.export + '?' + query : endpoints.export;
-                    window.location.href = url;
-                });
-            }
-
-            if (refreshButton) {
-                refreshButton.addEventListener('click', function () {
-                    if (gridInstance) {
-                        gridInstance.refresh();
-                    }
-                    loadSummary();
-                });
-            }
-
-            if (gridElement) {
-                gridElement.addEventListener('click', function (event) {
-                    const postBtn = event.target.closest('.btn-post');
-                    const deleteBtn = event.target.closest('.btn-delete');
-
-                    if (postBtn) {
-                        const id = postBtn.dataset.id;
-                        const number = postBtn.dataset.number;
-                        handlePost(id, number);
-                    }
-
-                    if (deleteBtn) {
-                        const id = deleteBtn.dataset.id;
-                        const number = deleteBtn.dataset.number;
-                        handleDelete(id, number);
-                    }
-                });
-            }
-
-            async function handlePost(id, number) {
-                if (!id || !endpoints.post) {
-                    return;
-                }
-                if (!confirm('هل تريد ترحيل القيد رقم ' + number + '؟')) {
-                    return;
-                }
-
-                try {
-                    const response = await fetch(endpoints.post + '/' + encodeURIComponent(id), {
-                        method: 'POST',
-                        headers: {
-                            'RequestVerificationToken': antiForgeryToken
-                        },
-                        credentials: 'same-origin'
-                    });
-
-                    if (!response.ok) {
-                        throw new Error('تعذر ترحيل القيد');
-                    }
-
-                    if (gridInstance) {
-                        gridInstance.refresh();
-                    }
-                    loadSummary();
-                }
-                catch (error) {
-                    alert(error.message || 'تعذر ترحيل القيد');
-                }
-            }
-
-            async function handleDelete(id, number) {
-                if (!id || !endpoints.delete) {
-                    return;
-                }
-                if (!confirm('هل تريد إلغاء القيد رقم ' + number + '؟')) {
-                    return;
-                }
-
-                try {
-                    const response = await fetch(endpoints.delete + '/' + encodeURIComponent(id), {
-                        method: 'POST',
-                        headers: {
-                            'RequestVerificationToken': antiForgeryToken
-                        },
-                        credentials: 'same-origin'
-                    });
-
-                    if (!response.ok) {
-                        const message = await response.text();
-                        throw new Error(message || 'تعذر إلغاء القيد');
-                    }
-
-                    if (gridInstance) {
-                        gridInstance.refresh();
-                    }
-                    loadSummary();
-                }
-                catch (error) {
-                    alert(error.message || 'تعذر إلغاء القيد');
-                }
-            }
-
-            window.onJournalGridCreated = function () {
-                gridInstance = this;
-                applyColumnTemplates();
-                gridInstance.pageSettings.pageSize = state.pageSize;
-                gridInstance.query = buildQuery();
-                applyGrouping();
-                updatePageSizeSelect();
-                gridInstance.refresh();
-                loadSummary();
-            };
-
-            window.onJournalGridActionBegin = function () {
-                if (gridInstance) {
-                    gridInstance.query = buildQuery();
-                }
-            };
-
-            window.onJournalGridActionComplete = function (args) {
-                if (!gridInstance) {
-                    gridInstance = this;
-                }
+            refreshButton.addEventListener('click', function () {
+                loadData();
+            });
 
                 if (args.requestType === 'paging') {
                     state.page = args.currentPage || gridInstance.pageSettings.currentPage || 1;

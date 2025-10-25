@@ -1,13 +1,10 @@
 @using System.Linq
 @model AccountingSystem.ViewComponents.NotificationViewModel
 
-<div class="dropdown">
+<div class="dropdown" id="notificationsDropdownWrapper">
     <a class="nav-link position-relative" href="#" id="notificationsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
         <i class="fa fa-bell"></i>
-        @if (Model.UnreadCount > 0)
-        {
-            <span class="badge bg-danger rounded-pill position-absolute top-0 start-0 translate-middle">@Model.UnreadCount</span>
-        }
+        <span id="notificationsBadge" class="badge bg-danger rounded-pill position-absolute top-0 start-0 translate-middle @(Model.UnreadCount > 0 ? string.Empty : "d-none")">@Model.UnreadCount</span>
     </a>
     <div class="dropdown-menu dropdown-menu-end p-0" aria-labelledby="notificationsDropdown" style="min-width: 320px;">
         <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
@@ -17,16 +14,16 @@
                 <button type="submit" class="btn btn-link btn-sm">تحديد كمقروء</button>
             </form>
         </div>
-        <div class="list-group list-group-flush" style="max-height: 320px; overflow:auto;">
+        <div class="list-group list-group-flush" id="notificationsList" data-max-items="5" data-empty-text="لا توجد إشعارات" style="max-height: 320px; overflow:auto;">
             @if (!Model.Notifications.Any())
             {
-                <div class="text-center text-muted py-3">لا توجد إشعارات</div>
+                <div id="notificationsEmptyMessage" class="text-center text-muted py-3">لا توجد إشعارات</div>
             }
             else
             {
                 foreach (var notification in Model.Notifications)
                 {
-                    <a class="list-group-item list-group-item-action @(notification.IsRead ? "" : "fw-bold")" href="@(string.IsNullOrEmpty(notification.Link) ? "#" : notification.Link)">
+                    <a class="list-group-item list-group-item-action fw-bold" data-notification-id="@notification.Id" href="@(string.IsNullOrEmpty(notification.Link) ? "#" : notification.Link)">
                         <div class="d-flex align-items-start">
                             @if (!string.IsNullOrWhiteSpace(notification.Icon))
                             {
@@ -43,6 +40,9 @@
                     </a>
                 }
             }
+        </div>
+        <div class="border-top px-3 py-2 text-center">
+            <a class="btn btn-link btn-sm" asp-controller="Notifications" asp-action="Index">عرض كل الإشعارات</a>
         </div>
     </div>
 </div>
