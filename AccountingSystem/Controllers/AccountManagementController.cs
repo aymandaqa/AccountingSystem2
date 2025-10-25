@@ -1181,9 +1181,18 @@ namespace Roadfn.Controllers
                                 }
                             }
 
-                            var Paytxn = item;
+                            decimal AgenAmt = 0;
+                            if (area != null)
+                            {
+                                var agentCommission = await _context.AgentCommissions.FirstOrDefaultAsync(t => t.AreaId == area.Id && t.AgentId == user.AgentId);
+                                if (agentCommission != null)
+                                {
+                                    AgenAmt = Convert.ToDecimal(agentCommission.Amount);
+                                }
+                            }
+                            var Paytxn = await _context.RptDriverPay.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(item.Id));
 
-                            var customerUser = await _context.Users.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(sh.BusinessUserId));
+                            var customerUser = await _context.Users.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(sh.UserId));
 
                             if (customerUser == null)
                             {
@@ -1494,7 +1503,7 @@ namespace Roadfn.Controllers
             var customerAccountsCache = new Dictionary<int, Account>();
 
             var executionStrategy = _context.Database.CreateExecutionStrategy();
-            return await executionStrategy.ExecuteAsync<(IActionResult? Result, BisnessUserPaymentHeader? Header)>(async () =>
+            return await executionStrategy.ExecuteAsync(async () =>
             {
                 using var transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
                 try
@@ -1647,14 +1656,14 @@ namespace Roadfn.Controllers
                     }
 
                     transactionScope.Complete();
-                    return ((IActionResult?)null, bisnessUserPaymentHeader);
+                    return (null, bisnessUserPaymentHeader);
                 }
                 catch (Exception ex)
                 {
                     _context.ChangeTracker.Clear();
                     _accontext.ChangeTracker.Clear();
                     _logger.LogError(ex, "فشل معالجة دفعة بزنس للسائق {DriverId} من قبل المستخدم {UserId}", driverId, user.Id);
-                    return (BadRequest("حدث خطأ أثناء معالجة العملية. تم التراجع عن جميع التغييرات."), (BisnessUserPaymentHeader?)null);
+                    return (BadRequest("حدث خطأ أثناء معالجة العملية. تم التراجع عن جميع التغييرات."), null);
                 }
             });
         }
