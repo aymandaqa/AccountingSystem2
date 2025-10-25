@@ -1518,7 +1518,7 @@ namespace Roadfn.Controllers
             var customerAccountsCache = new Dictionary<int, Account>();
 
             var executionStrategy = _context.Database.CreateExecutionStrategy();
-            return await executionStrategy.ExecuteAsync(async () =>
+            return await executionStrategy.ExecuteAsync<(IActionResult? Result, BisnessUserPaymentHeader? Header)>(async () =>
             {
                 using var transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
                 try
