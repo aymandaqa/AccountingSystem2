@@ -2712,14 +2712,6 @@ namespace AccountingSystem.Controllers
                 BuildReportAccounts(orphanAccount);
             }
 
-            foreach (var account in reportAccounts)
-            {
-                account.DebitBalance = Math.Round(account.DebitBalance, 2, MidpointRounding.AwayFromZero);
-                account.CreditBalance = Math.Round(account.CreditBalance, 2, MidpointRounding.AwayFromZero);
-                account.DebitBalanceBase = Math.Round(account.DebitBalanceBase, 2, MidpointRounding.AwayFromZero);
-                account.CreditBalanceBase = Math.Round(account.CreditBalanceBase, 2, MidpointRounding.AwayFromZero);
-            }
-
             var visibleChildrenCache = new Dictionary<int, bool>();
 
             bool HasVisibleChildrenWithinLevel(int accountId)
@@ -2759,6 +2751,32 @@ namespace AccountingSystem.Controllers
                 .Where(a => !HasVisibleChildrenWithinLevel(a.AccountId))
                 .ToList();
 
+            decimal totalDebitsSelectedRaw = 0m;
+            decimal totalCreditsSelectedRaw = 0m;
+            decimal totalDebitsBaseRaw = 0m;
+            decimal totalCreditsBaseRaw = 0m;
+
+            foreach (var account in totalsScope)
+            {
+                if (!aggregatedBalanceCache.TryGetValue(account.AccountId, out var rawBalance))
+                {
+                    rawBalance = (account.DebitBalance, account.CreditBalance, account.DebitBalanceBase, account.CreditBalanceBase);
+                }
+
+                totalDebitsSelectedRaw += rawBalance.DebitSelected;
+                totalCreditsSelectedRaw += rawBalance.CreditSelected;
+                totalDebitsBaseRaw += rawBalance.DebitBase;
+                totalCreditsBaseRaw += rawBalance.CreditBase;
+            }
+
+            foreach (var account in reportAccounts)
+            {
+                account.DebitBalance = Math.Round(account.DebitBalance, 2, MidpointRounding.AwayFromZero);
+                account.CreditBalance = Math.Round(account.CreditBalance, 2, MidpointRounding.AwayFromZero);
+                account.DebitBalanceBase = Math.Round(account.DebitBalanceBase, 2, MidpointRounding.AwayFromZero);
+                account.CreditBalanceBase = Math.Round(account.CreditBalanceBase, 2, MidpointRounding.AwayFromZero);
+            }
+
             var viewModel = new TrialBalanceViewModel
             {
                 FromDate = from,
@@ -2782,10 +2800,10 @@ namespace AccountingSystem.Controllers
                     .ToList()
             };
 
-            viewModel.TotalDebits = Math.Round(totalsScope.Sum(a => a.DebitBalance), 2, MidpointRounding.AwayFromZero);
-            viewModel.TotalCredits = Math.Round(totalsScope.Sum(a => a.CreditBalance), 2, MidpointRounding.AwayFromZero);
-            viewModel.TotalDebitsBase = Math.Round(totalsScope.Sum(a => a.DebitBalanceBase), 2, MidpointRounding.AwayFromZero);
-            viewModel.TotalCreditsBase = Math.Round(totalsScope.Sum(a => a.CreditBalanceBase), 2, MidpointRounding.AwayFromZero);
+            viewModel.TotalDebits = Math.Round(totalDebitsSelectedRaw, 2, MidpointRounding.AwayFromZero);
+            viewModel.TotalCredits = Math.Round(totalCreditsSelectedRaw, 2, MidpointRounding.AwayFromZero);
+            viewModel.TotalDebitsBase = Math.Round(totalDebitsBaseRaw, 2, MidpointRounding.AwayFromZero);
+            viewModel.TotalCreditsBase = Math.Round(totalCreditsBaseRaw, 2, MidpointRounding.AwayFromZero);
 
             var balanceDifference = Math.Abs(viewModel.TotalDebits - viewModel.TotalCredits);
             viewModel.IsBalanced = balanceDifference <= 0.05m;
