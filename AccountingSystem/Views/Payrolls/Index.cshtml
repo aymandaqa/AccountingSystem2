@@ -208,7 +208,7 @@
 
 @section Scripts {
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', async function () {
             const branchSelect = document.getElementById('branchSelect');
             const monthSelect = document.getElementById('monthSelect');
             const employeesTable = document.getElementById('employeesTable').querySelector('tbody');
@@ -234,6 +234,8 @@
             const addDeductionBtn = document.getElementById('addDeductionBtn');
             const saveDeductionBtn = document.getElementById('saveDeductionBtn');
             const employeeDeductions = new Map();
+            let deductionTypes = [];
+            const deductionTypeMap = new Map();
             let activeDeductionRow = null;
             let activeDeductionEmployeeId = null;
             let activeDeductionSalary = 0;
@@ -282,6 +284,105 @@
                     }
                 }
                 return undefined;
+            }
+
+            function setDeductionTypes(data) {
+                deductionTypes = Array.isArray(data) ? data : [];
+                deductionTypeMap.clear();
+                deductionTypes.forEach(item => {
+                    const idValue = getProperty(item, 'id', 'Id');
+                    const id = typeof idValue === 'number' ? idValue : parseInt(idValue ?? '', 10);
+                    if (!Number.isNaN(id)) {
+                        deductionTypeMap.set(id, item);
+                    }
+                });
+            }
+
+            async function loadDeductionTypes() {
+                try {
+                    const response = await fetch('@Url.Action("DeductionTypes")');
+                    if (!response.ok) {
+                        console.error('تعذر تحميل أنواع الخصومات');
+                        setDeductionTypes([]);
+                        return;
+                    }
+
+                    const data = await response.json();
+                    setDeductionTypes(data);
+                } catch (error) {
+                    console.error('تعذر تحميل أنواع الخصومات', error);
+                    setDeductionTypes([]);
+                }
+            }
+
+            function findDeductionType(id) {
+                if (id === null || id === undefined) {
+                    return null;
+                }
+
+                const numericId = typeof id === 'number' ? id : parseInt(id, 10);
+                if (Number.isNaN(numericId)) {
+                    return null;
+                }
+
+                return deductionTypeMap.get(numericId) ?? null;
+            }
+
+            function buildDeductionTypeOptions(selectedId) {
+                const options = ['<option value="">اختر نوع الخصم</option>'];
+                const selectedNumeric = typeof selectedId === 'number' ? selectedId : parseInt(selectedId ?? '', 10);
+
+                deductionTypes.forEach(item => {
+                    const idValue = getProperty(item, 'id', 'Id');
+                    const id = typeof idValue === 'number' ? idValue : parseInt(idValue ?? '', 10);
+                    if (Number.isNaN(id)) {
+                        return;
+                    }
+
+                    const name = getProperty(item, 'name', 'Name') ?? '';
+                    const selectedAttr = !Number.isNaN(selectedNumeric) && id === selectedNumeric ? ' selected' : '';
+                    options.push(`<option value="${id}"${selectedAttr}>${escapeHtml(name)}</option>`);
+                });
+
+                return options.join('');
+            }
+
+            function sanitizeDeduction(item) {
+                if (!item || typeof item !== 'object') {
+                    return null;
+                }
+
+                const typeIdValue = getProperty(item, 'deductionTypeId', 'DeductionTypeId');
+                const typeId = typeof typeIdValue === 'number' ? typeIdValue : parseInt(typeIdValue ?? '', 10);
+                if (Number.isNaN(typeId) || typeId <= 0) {
+                    return null;
+                }
+
+                const amountValue = getProperty(item, 'amount', 'Amount');
+                const amount = Number(amountValue ?? 0);
+                if (!Number.isFinite(amount) || amount <= 0) {
+                    return null;
+                }
+
+                const descriptionValue = getProperty(item, 'description', 'Description') ?? '';
+                const typeInfo = findDeductionType(typeId);
+                const typeName = getProperty(item, 'type', 'Type') ?? getProperty(typeInfo, 'name', 'Name') ?? '';
+
+                let accountName = getProperty(item, 'accountName', 'AccountName');
+                if (!accountName && typeInfo) {
+                    accountName = getProperty(typeInfo, 'accountName', 'AccountName') ?? null;
+                    if (!accountName) {
+                        accountName = getProperty(typeInfo, 'accountCode', 'AccountCode') ?? null;
+                    }
+                }
+
+                return {
+                    deductionTypeId: typeId,
+                    type: typeName || null,
+                    description: descriptionValue ? descriptionValue : null,
+                    amount: Number(amount.toFixed(2)),
+                    accountName: accountName || null
+                };
             }
 
             async function loadMonths() {
@@ -392,13 +493,21 @@
 
             function buildDeductionRow(data = {}) {
                 const row = document.createElement('tr');
-                const type = data?.type ?? '';
+                const typeIdValue = getProperty(data, 'deductionTypeId', 'DeductionTypeId');
+                const typeId = typeof typeIdValue === 'number' ? typeIdValue : parseInt(typeIdValue ?? '', 10);
                 const description = data?.description ?? '';
                 const amountValue = Number(data?.amount ?? 0);
                 const amount = Number.isFinite(amountValue) ? amountValue.toFixed(2) : '0.00';
+                const accountName = getProperty(data, 'accountName', 'AccountName') ?? '';
+                const options = buildDeductionTypeOptions(typeId);
 
                 row.innerHTML = `
-                    <td><input type="text" class="form-control form-control-sm deduction-type" maxlength="100" value="${escapeHtml(type)}" /></td>
+                    <td>
+                        <select class="form-select form-select-sm deduction-type">
+                            ${options}
+                        </select>
+                        <div class="form-text text-muted deduction-account">${escapeHtml(accountName)}</div>
+                    </td>
                     <td><input type="text" class="form-control form-control-sm deduction-description" maxlength="250" value="${escapeHtml(description)}" /></td>
                     <td class="text-end"><input type="number" class="form-control form-control-sm deduction-amount" min="0" step="0.01" value="${amount}" /></td>
                     <td class="text-center">
@@ -415,6 +524,28 @@
                     });
                 }
 
+                const accountLabel = row.querySelector('.deduction-account');
+                const typeSelect = row.querySelector('.deduction-type');
+                const updateAccountLabel = () => {
+                    if (!typeSelect || !accountLabel) {
+                        return;
+                    }
+                    const typeInfo = findDeductionType(typeSelect.value);
+                    const label = typeInfo
+                        ? (getProperty(typeInfo, 'accountName', 'AccountName') ?? getProperty(typeInfo, 'accountCode', 'AccountCode') ?? '')
+                        : '';
+                    accountLabel.textContent = label ?? '';
+                };
+
+                if (typeSelect && deductionTypes.length > 0 && Number.isFinite(typeId) && !Number.isNaN(typeId)) {
+                    typeSelect.value = String(typeId);
+                }
+
+                if (typeSelect) {
+                    typeSelect.addEventListener('change', updateAccountLabel);
+                }
+                updateAccountLabel();
+
                 return row;
             }
 
@@ -424,8 +555,10 @@
                 }
 
                 deductionTableBody.innerHTML = '';
-                deductions
-                    .filter(item => item && typeof item === 'object')
+                const items = Array.isArray(deductions) ? deductions : [];
+                items
+                    .map(item => sanitizeDeduction(item))
+                    .filter(item => item)
                     .forEach(item => {
                         deductionTableBody.appendChild(buildDeductionRow(item));
                     });
@@ -453,12 +586,8 @@
                 }
 
                 const existing = (employeeDeductions.get(employeeId) ?? [])
-                    .filter(item => item && typeof item === 'object')
-                    .map(item => ({
-                        type: item.type ?? '',
-                        description: item.description ?? '',
-                        amount: Number(item.amount ?? 0)
-                    }));
+                    .map(item => sanitizeDeduction(item))
+                    .filter(item => item);
 
                 renderDeductionTable(existing);
                 deductionModal.show();
@@ -466,30 +595,50 @@
 
             function collectDeductionsFromModal() {
                 if (!deductionTableBody) {
-                    return [];
+                    return { items: [], hasMissingType: false };
                 }
 
-                return Array.from(deductionTableBody.querySelectorAll('tr'))
+                let hasMissingType = false;
+                const items = Array.from(deductionTableBody.querySelectorAll('tr'))
                     .map(row => {
-                        const typeInput = row.querySelector('.deduction-type');
+                        const typeSelect = row.querySelector('.deduction-type');
                         const descriptionInput = row.querySelector('.deduction-description');
                         const amountInput = row.querySelector('.deduction-amount');
 
-                        const type = typeInput?.value?.trim() ?? '';
-                        const description = descriptionInput?.value?.trim() ?? '';
+                        const typeValue = typeSelect?.value ?? '';
+                        const typeId = parseInt(typeValue, 10);
+                        if (!typeSelect || Number.isNaN(typeId) || typeId <= 0) {
+                            hasMissingType = true;
+                            return null;
+                        }
+
                         let amount = parseFloat(amountInput?.value ?? '0');
                         if (!Number.isFinite(amount) || amount < 0) {
                             amount = 0;
                         }
                         amount = Number(amount.toFixed(2));
+                        if (amount <= 0) {
+                            return null;
+                        }
+
+                        const description = descriptionInput?.value?.trim() ?? '';
+                        const typeInfo = findDeductionType(typeId);
+                        const typeName = typeInfo ? getProperty(typeInfo, 'name', 'Name') ?? '' : '';
+                        const accountName = typeInfo
+                            ? (getProperty(typeInfo, 'accountName', 'AccountName') ?? getProperty(typeInfo, 'accountCode', 'AccountCode') ?? null)
+                            : null;
 
                         return {
-                            type: type || null,
+                            deductionTypeId: typeId,
+                            type: typeName || null,
                             description: description || null,
-                            amount
+                            amount,
+                            accountName
                         };
                     })
-                    .filter(item => Number.isFinite(item.amount) && item.amount > 0);
+                    .filter(item => item !== null);
+
+                return { items, hasMissingType };
             }
 
             function buildDeductionDetails(deductions) {
@@ -502,6 +651,7 @@
                     const amount = getProperty(item, 'amount', 'Amount');
                     const type = getProperty(item, 'type', 'Type') ?? '';
                     const description = getProperty(item, 'description', 'Description') ?? '';
+                    const accountName = getProperty(item, 'accountName', 'AccountName') ?? '';
                     const labelParts = [];
                     if (type) {
                         labelParts.push(type);
@@ -510,7 +660,11 @@
                         labelParts.push(description);
                     }
                     const label = labelParts.length ? `<span class="fw-semibold">${escapeHtml(labelParts.join(' - '))}</span>: ` : '';
-                    content += `<li>${label}${formatCurrency(amount)}</li>`;
+                    content += `<li>${label}${formatCurrency(amount)}`;
+                    if (accountName) {
+                        content += `<div class="text-muted small">${escapeHtml(accountName)}</div>`;
+                    }
+                    content += '</li>';
                 });
                 content += '</ul>';
                 return content;
@@ -539,10 +693,13 @@
                     const jobTitle = getProperty(emp, 'jobTitle', 'JobTitle') ?? '';
                     const salaryRaw = getProperty(emp, 'salary', 'Salary');
                     const salary = Number(salaryRaw ?? 0);
-                    const deductions = employeeDeductions.get(employeeId) ?? [];
-                    employeeDeductions.set(employeeId, deductions);
+                    const serverDeductions = getProperty(emp, 'deductions', 'Deductions');
+                    const sanitizedDeductions = Array.isArray(serverDeductions)
+                        ? serverDeductions.map(item => sanitizeDeduction(item)).filter(item => item)
+                        : [];
+                    employeeDeductions.set(employeeId, sanitizedDeductions);
 
-                    const totalDeduction = calculateDeductionTotal(deductions);
+                    const totalDeduction = calculateDeductionTotal(sanitizedDeductions);
                     const netAmount = Math.max(0, (Number.isFinite(salary) ? salary : 0) - totalDeduction);
 
                     row.dataset.id = String(employeeId);
@@ -635,6 +792,11 @@
                         return;
                     }
 
+                    if (!Array.isArray(deductionTypes) || deductionTypes.length === 0) {
+                        alert('يرجى تعريف أنواع الخصومات أولاً.');
+                        return;
+                    }
+
                     deductionTableBody.appendChild(buildDeductionRow({ amount: 0 }));
                     setDeductionTableVisibility();
                     const amountInput = deductionTableBody.querySelector('tr:last-child .deduction-amount');
@@ -649,7 +811,13 @@
                         return;
                     }
 
-                    const deductions = collectDeductionsFromModal();
+                    const result = collectDeductionsFromModal();
+                    if (result.hasMissingType) {
+                        alert('يرجى اختيار نوع الخصم لكل سطر.');
+                        return;
+                    }
+
+                    const deductions = result.items;
                     const total = calculateDeductionTotal(deductions);
                     if (activeDeductionSalary > 0 && total > activeDeductionSalary + 0.01) {
                         alert('إجمالي الخصومات يتجاوز الراتب الأساسي لهذا الموظف.');
@@ -661,6 +829,8 @@
                     deductionModal.hide();
                 });
             }
+
+            await loadDeductionTypes();
 
             branchSelect.addEventListener('change', () => {
                 currentBatchId = null;
@@ -725,10 +895,13 @@
                     const salary = Number(row?.dataset.salary ?? '0');
                     const name = row?.dataset.name ?? '';
                     const deductions = (employeeDeductions.get(id) ?? [])
+                        .map(item => sanitizeDeduction(item))
+                        .filter(item => item)
                         .map(item => ({
-                            type: item?.type?.toString().trim() || null,
-                            description: item?.description?.toString().trim() || null,
-                            amount: Number(Number(item?.amount ?? 0).toFixed(2))
+                            deductionTypeId: item.deductionTypeId,
+                            type: item.type ? item.type.toString().trim() : null,
+                            description: item.description ? item.description.toString().trim() : null,
+                            amount: Number(Number(item.amount ?? 0).toFixed(2))
                         }))
                         .filter(item => Number.isFinite(item.amount) && item.amount > 0);
 

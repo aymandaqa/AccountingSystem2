@@ -129,9 +129,11 @@
 
         var canEmployeesView = (await AuthorizationService.AuthorizeAsync(User, "employees.view")).Succeeded;
         var canPayrollView = (await AuthorizationService.AuthorizeAsync(User, "payroll.view")).Succeeded;
+        var canPayrollProcess = (await AuthorizationService.AuthorizeAsync(User, "payroll.process")).Succeeded;
         var canSalaryPaymentsView = (await AuthorizationService.AuthorizeAsync(User, "salarypayments.view")).Succeeded;
         var canEmployeeAdvancesView = (await AuthorizationService.AuthorizeAsync(User, "employeeadvances.view")).Succeeded;
-        var showHr = canEmployeesView || canPayrollView || canSalaryPaymentsView || canEmployeeAdvancesView;
+        var canEmployeesEdit = (await AuthorizationService.AuthorizeAsync(User, "employees.edit")).Succeeded;
+        var showHr = canEmployeesView || canPayrollView || canSalaryPaymentsView || canEmployeeAdvancesView || canPayrollProcess || canEmployeesEdit;
 
         var currentController = ViewContext.RouteData.Values["controller"]?.ToString()?.ToLower();
         var currentAction = ViewContext.RouteData.Values["action"]?.ToString()?.ToLower();
@@ -142,7 +144,7 @@
         var journalActive = currentController == "journalentries";
         var reportsActive = currentController == "reports";
         var settingsActive = currentController == "branches" || currentController == "costcenters" || currentController == "currencies" || currentController == "users" || currentController == "permissiongroups";
-        var hrActive = currentController == "employees" || currentController == "payrolls";
+        var hrActive = currentController == "employees" || currentController == "payrolls" || currentController == "deductiontypes" || currentController == "employeedeductions";
         var assetsActive = currentController == "assets" || currentController == "assetexpenses" || currentController == "assettypes";
     }
     <div id="wrapper" class="d-flex">
@@ -649,6 +651,17 @@
                                         </a>
                                     </li>
                                 }
+                                @if (canPayrollProcess)
+                                {
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="DeductionTypes"
+                                           asp-action="Index"
+                                           asp-require-permission="payroll.process">
+                                            <i class="fas fa-tags"></i> أنواع الخصومات
+                                        </a>
+                                    </li>
+                                }
                                 @if (canSalaryPaymentsView)
                                 {
                                     <li class="nav-item">
@@ -668,6 +681,17 @@
                                            asp-action="Index"
                                            asp-require-permission="employeeadvances.view">
                                             <i class="fas fa-hand-holding-usd"></i> سندات صرف السلف
+                                        </a>
+                                    </li>
+                                }
+                                @if (canEmployeesEdit)
+                                {
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="EmployeeDeductions"
+                                           asp-action="Index"
+                                           asp-require-permission="employees.edit">
+                                            <i class="fas fa-minus-circle"></i> خصومات الموظفين
                                         </a>
                                     </li>
                                 }

@@ -10,6 +10,10 @@ namespace AccountingSystem.Models
         [Required]
         public int PayrollBatchLineId { get; set; }
 
+        public int? DeductionTypeId { get; set; }
+
+        public int? AccountId { get; set; }
+
         [StringLength(100)]
         public string? Type { get; set; }
 
@@ -22,5 +26,9 @@ namespace AccountingSystem.Models
 
         [InverseProperty(nameof(PayrollBatchLine.Deductions))]
         public PayrollBatchLine PayrollLine { get; set; } = null!;
+
+        public DeductionType? DeductionType { get; set; }
+
+        public Account? Account { get; set; }
     }
 }

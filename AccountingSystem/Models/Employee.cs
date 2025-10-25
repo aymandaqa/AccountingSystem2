@@ -48,5 +48,8 @@ namespace AccountingSystem.Models
 
         [InverseProperty(nameof(PayrollBatchLine.Employee))]
         public virtual ICollection<PayrollBatchLine> PayrollLines { get; set; } = new List<PayrollBatchLine>();
+
+        [InverseProperty(nameof(EmployeeDeduction.Employee))]
+        public virtual ICollection<EmployeeDeduction> EmployeeDeductions { get; set; } = new List<EmployeeDeduction>();
     }
 }

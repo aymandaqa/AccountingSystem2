@@ -12,6 +12,7 @@ namespace AccountingSystem.ViewModels
         public decimal Salary { get; set; }
         public string? JobTitle { get; set; }
         public bool IsActive { get; set; }
+        public List<PayrollEmployeeDeductionSelection> Deductions { get; set; } = new();
     }
 
     public class PayrollBatchSummaryViewModel
@@ -59,9 +60,12 @@ namespace AccountingSystem.ViewModels
 
     public class PayrollEmployeeDeductionSelection
     {
+        public int? DeductionTypeId { get; set; }
         public string? Type { get; set; }
         public string? Description { get; set; }
         public decimal Amount { get; set; }
+        public string? AccountName { get; set; }
+        public string? AccountCode { get; set; }
     }
 
     public class CreatePayrollBatchRequest

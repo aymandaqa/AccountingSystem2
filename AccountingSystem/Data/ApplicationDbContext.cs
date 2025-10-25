@@ -58,6 +58,8 @@ namespace AccountingSystem.Data
         public DbSet<PayrollBatch> PayrollBatches { get; set; }
         public DbSet<PayrollBatchLine> PayrollBatchLines { get; set; }
         public DbSet<PayrollBatchLineDeduction> PayrollBatchLineDeductions { get; set; }
+        public DbSet<DeductionType> DeductionTypes { get; set; }
+        public DbSet<EmployeeDeduction> EmployeeDeductions { get; set; }
         public DbSet<SalaryPayment> SalaryPayments { get; set; }
         public DbSet<EmployeeAdvance> EmployeeAdvances { get; set; }
         public DbSet<WorkflowDefinition> WorkflowDefinitions { get; set; }
@@ -311,6 +313,11 @@ namespace AccountingSystem.Data
                     .WithOne(l => l.Employee)
                     .HasForeignKey(l => l.EmployeeId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(e => e.EmployeeDeductions)
+                    .WithOne(d => d.Employee)
+                    .HasForeignKey(d => d.EmployeeId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             builder.Entity<PayrollBatch>(entity =>
@@ -375,6 +382,45 @@ namespace AccountingSystem.Data
                 entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.Type).HasMaxLength(100);
                 entity.Property(e => e.Description).HasMaxLength(250);
+
+                entity.HasOne(e => e.DeductionType)
+                    .WithMany(d => d.PayrollDeductions)
+                    .HasForeignKey(e => e.DeductionTypeId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.Account)
+                    .WithMany()
+                    .HasForeignKey(e => e.AccountId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            builder.Entity<DeductionType>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Description).HasMaxLength(500);
+
+                entity.HasOne(e => e.Account)
+                    .WithMany()
+                    .HasForeignKey(e => e.AccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<EmployeeDeduction>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Description).HasMaxLength(250);
+
+                entity.HasOne(e => e.Employee)
+                    .WithMany(e => e.EmployeeDeductions)
+                    .HasForeignKey(e => e.EmployeeId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.DeductionType)
+                    .WithMany(d => d.EmployeeDeductions)
+                    .HasForeignKey(e => e.DeductionTypeId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<SalaryPayment>(entity =>
