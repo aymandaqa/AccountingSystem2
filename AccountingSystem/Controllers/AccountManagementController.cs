@@ -1070,7 +1070,8 @@ namespace Roadfn.Controllers
             if (rptDriverPay.Count > 0)
             {
                 var executionStrategy = _context.Database.CreateExecutionStrategy();
-                return await executionStrategy.ExecuteAsync(async () =>
+                IActionResult? executionResult = null;
+                await executionStrategy.ExecuteAsync(async () =>
                 {
                     using var transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
                     try
@@ -1080,31 +1081,36 @@ namespace Roadfn.Controllers
                             .FirstOrDefaultAsync();
                         if (cashAccount == null)
                         {
-                            return BadRequest("لا يوجد حساب صندوق مرتبط بالمستخدم الحالي");
+                            executionResult = BadRequest("لا يوجد حساب صندوق مرتبط بالمستخدم الحالي");
+                            return;
                         }
 
                         var driverParentSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "DriverParentAccountId");
                         if (driverParentSetting == null)
                         {
-                            return BadRequest("إعدادات حساب السائق غير متوفرة");
+                            executionResult = BadRequest("إعدادات حساب السائق غير متوفرة");
+                            return;
                         }
 
                         var driverParentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == driverParentSetting.Value);
                         if (driverParentAccount == null)
                         {
-                            return BadRequest("الحساب الرئيسي للسائق غير موجود");
+                            executionResult = BadRequest("الحساب الرئيسي للسائق غير موجود");
+                            return;
                         }
 
                         var revenueAccountSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "RevenueAccountCode");
                         if (revenueAccountSetting == null)
                         {
-                            return BadRequest("إعدادات حساب الإيرادات غير متوفرة");
+                            executionResult = BadRequest("إعدادات حساب الإيرادات غير متوفرة");
+                            return;
                         }
 
                         var revenueAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == revenueAccountSetting.Value);
                         if (revenueAccount == null)
                         {
-                            return BadRequest("حساب الإيرادات غير موجود");
+                            executionResult = BadRequest("حساب الإيرادات غير موجود");
+                            return;
                         }
 
                         var driverPaymentHeader = new DriverPaymentHeader();
@@ -1134,19 +1140,22 @@ namespace Roadfn.Controllers
                         var driverAccount = await EnsureDriverAccountAsync(listpay, driverParentAccount);
                         if (driverAccount == null)
                         {
-                            return BadRequest("تعذر تحديد حساب السائق");
+                            executionResult = BadRequest("تعذر تحديد حساب السائق");
+                            return;
                         }
 
                         var customerParentSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "CustomerParentAccountId");
                         if (customerParentSetting == null)
                         {
-                            return BadRequest("إعدادات حساب العميل غير متوفرة");
+                            executionResult = BadRequest("إعدادات حساب العميل غير متوفرة");
+                            return;
                         }
 
                         var customerParentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == customerParentSetting.Value);
                         if (customerParentAccount == null)
                         {
-                            return BadRequest("الحساب الرئيسي للعميل غير موجود");
+                            executionResult = BadRequest("الحساب الرئيسي للعميل غير موجود");
+                            return;
                         }
 
                         await _context.DriverPaymentDetails.AddRangeAsync(driverPayments);
@@ -1181,13 +1190,13 @@ namespace Roadfn.Controllers
                                 }
                             }
 
-                            decimal AgenAmt = 0;
+                            decimal agentAmount = 0;
                             if (area != null)
                             {
                                 var agentCommission = await _context.Areas.FirstOrDefaultAsync(t => t.Id == area.Id);
                                 if (agentCommission != null)
                                 {
-                                    AgenAmt = Convert.ToDecimal(agentCommission.CommissionBranch);
+                                    agentAmount = Convert.ToDecimal(agentCommission.CommissionBranch);
                                 }
                             }
                             var Paytxn = await _context.RptDriverPay.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(item.Id));
@@ -1208,7 +1217,8 @@ namespace Roadfn.Controllers
                             var customerAccount = await EnsureCustomerAccountAsync(customerUser, customerAccountsCache, customerParentAccount);
                             if (customerAccount == null)
                             {
-                                return BadRequest("تعذر تحديد حساب العميل");
+                                executionResult = BadRequest("تعذر تحديد حساب العميل");
+                                return;
                             }
                             var lines = new List<JournalEntryLine>();
 
@@ -1266,7 +1276,7 @@ namespace Roadfn.Controllers
                             {
                                 var rev = Convert.ToDecimal((Paytxn.ShipmentTotal - Paytxn.ShipmentPrice) - area.CommissionBranch);
 
-                                var AgenAmt = Convert.ToDecimal(area.CommissionBranch) - Convert.ToDecimal(Paytxn.CommissionPerItem);
+                                agentAmount = Convert.ToDecimal(area.CommissionBranch) - Convert.ToDecimal(Paytxn.CommissionPerItem);
 
                                 #region RevenueAccounttxn txn
 
@@ -1297,13 +1307,13 @@ namespace Roadfn.Controllers
                                     agentAccounttxn.AccountId = agentAccount.Id;
                                     agentAccounttxn.DebitAmount = 0;
                                     agentAccounttxn.CreditAmount = 0;
-                                    if (AgenAmt <= 0)
+                                    if (agentAmount <= 0)
                                     {
-                                        agentAccounttxn.DebitAmount = AgenAmt * -1;
+                                        agentAccounttxn.DebitAmount = agentAmount * -1;
                                     }
                                     else
                                     {
-                                        agentAccounttxn.CreditAmount = AgenAmt;
+                                        agentAccounttxn.CreditAmount = agentAmount;
                                     }
                                     agentAccounttxn.Reference = driverPaymentHeader.Id.ToString();
                                     agentAccounttxn.Description = $"عمولة وكيل  {sh.ShipmentTrackingNo}";
@@ -1407,16 +1417,21 @@ namespace Roadfn.Controllers
                         }
 
                         transactionScope.Complete();
-                        return Ok(driverPaymentHeader);
+                        executionResult = Ok(driverPaymentHeader);
                     }
                     catch (Exception ex)
                     {
                         _context.ChangeTracker.Clear();
                         _accontext.ChangeTracker.Clear();
                         _logger.LogError(ex, "فشل معالجة دفعة السائق بواسطة المستخدم {UserId}", user.Id);
-                        return BadRequest("حدث خطأ أثناء معالجة العملية. تم التراجع عن جميع التغييرات.");
+                        executionResult = BadRequest("حدث خطأ أثناء معالجة العملية. تم التراجع عن جميع التغييرات.");
                     }
                 });
+
+                if (executionResult != null)
+                {
+                    return executionResult;
+                }
             }
             return Ok();
         }
