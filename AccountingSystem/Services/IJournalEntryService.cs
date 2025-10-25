@@ -15,6 +15,9 @@ namespace AccountingSystem.Services
             JournalEntryStatus status,
             string? reference = null,
             string? number = null);
+
+        Task<string> GenerateJournalEntryNumber();
+
     }
 }
 

@@ -1050,7 +1050,7 @@ namespace AccountingSystem.Controllers
             var viewModel = new CreateJournalEntryViewModel
             {
                 Date = DateTime.Now,
-                Number = await GenerateJournalEntryNumber()
+                Number = await _journalEntryService.GenerateJournalEntryNumber()
             };
 
             await PopulateDropdowns(viewModel);
@@ -1136,23 +1136,7 @@ namespace AccountingSystem.Controllers
             return View(model);
         }
 
-        private async Task<string> GenerateJournalEntryNumber()
-        {
-            var year = DateTime.Now.Year;
-            var lastEntry = await _context.JournalEntries
-                .Where(j => j.Date.Year == year)
-                .OrderByDescending(j => j.Number)
-                .FirstOrDefaultAsync();
 
-            if (lastEntry == null)
-                return $"JE{year}001";
-
-            var lastNumber = lastEntry.Number.Substring(6);
-            if (int.TryParse(lastNumber, out int number))
-                return $"JE{year}{(number + 1):D3}";
-
-            return $"JE{year}001";
-        }
 
         private async Task PopulateDropdowns(CreateJournalEntryViewModel model)
         {

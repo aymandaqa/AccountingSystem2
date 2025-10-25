@@ -134,7 +134,7 @@ namespace AccountingSystem.Services
             return entry;
         }
 
-        private async Task<string> GenerateJournalEntryNumber()
+        public async Task<string> GenerateJournalEntryNumber()
         {
             var year = System.DateTime.Now.Year;
             var prefix = $"JE{year}";
