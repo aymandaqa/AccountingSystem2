@@ -65,7 +65,7 @@
         };
 
         const showToastNotification = (notification) => {
-            if (!notification) {
+            if (!notification || !notification.workflowActionId) {
                 return;
             }
 
@@ -84,19 +84,30 @@
             toastElement.dataset.bsDelay = '8000';
 
             const toastContent = document.createElement('div');
-            toastContent.className = 'toast-body';
+            toastContent.className = 'toast-body d-flex align-items-start gap-3';
+
+            const iconClass = notification.icon || 'fa-diagram-project';
+            if (iconClass) {
+                const iconElement = document.createElement('i');
+                iconElement.className = `fa ${iconClass} fs-4 text-warning flex-shrink-0`;
+                toastContent.appendChild(iconElement);
+            }
+
+            const textWrapper = document.createElement('div');
 
             const titleElement = document.createElement('strong');
             titleElement.className = 'd-block mb-1';
             titleElement.textContent = notification.title || 'إشعار جديد';
-            toastContent.appendChild(titleElement);
+            textWrapper.appendChild(titleElement);
 
             if (notification.message) {
                 const messageElement = document.createElement('div');
                 messageElement.className = 'small text-muted';
                 messageElement.textContent = notification.message;
-                toastContent.appendChild(messageElement);
+                textWrapper.appendChild(messageElement);
             }
+
+            toastContent.appendChild(textWrapper);
 
             toastElement.appendChild(toastContent);
 
@@ -203,14 +214,18 @@
             const item = document.createElement('a');
             item.className = 'list-group-item list-group-item-action fw-bold';
             item.dataset.notificationId = notification.id;
+            if (notification.workflowActionId) {
+                item.dataset.workflowActionId = notification.workflowActionId;
+            }
             item.href = notification.link || '#';
 
             const container = document.createElement('div');
             container.className = 'd-flex align-items-start';
 
-            if (notification.icon) {
+            const iconClass = notification.icon || (notification.workflowActionId ? 'fa-diagram-project' : '');
+            if (iconClass) {
                 const icon = document.createElement('i');
-                icon.className = `fa ${notification.icon} me-2 text-primary`;
+                icon.className = `fa ${iconClass} me-2 text-primary`;
                 container.appendChild(icon);
             }
 
