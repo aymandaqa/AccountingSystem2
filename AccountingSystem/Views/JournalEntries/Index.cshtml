@@ -16,7 +16,8 @@
         details = Url.Action("Details", "JournalEntries", new { id = "__id__" }),
         edit = Url.Action("Edit", "JournalEntries", new { id = "__id__" }),
         print = Url.Action("Print", "JournalEntries", new { id = "__id__" }),
-        export = Url.Action("ExportManagementExcel", "JournalEntries")
+        export = Url.Action("ExportManagementExcel", "JournalEntries"),
+        summary = Url.Action("Summary", "JournalEntries")
     };
     var endpointsJson = JsonSerializer.Serialize(endpoints);
     var permissionsJson = JsonSerializer.Serialize(new
@@ -25,7 +26,6 @@
         canApprove,
         canDelete
     });
-    var pageSizesJson = JsonSerializer.Serialize(Model.PageSizes);
 }
 
 @section Styles {
@@ -228,7 +228,8 @@
                 white-space: nowrap;
             }
 
-            table.management-table tbody tr.unbalanced td {
+            table.management-table tbody tr.unbalanced td,
+            .e-grid .e-row.unbalanced .e-rowcell {
                 background-color: #fdeaea;
                 color: #b71c1c;
             }
@@ -295,18 +296,6 @@
             color: #0b4d94;
             z-index: 2;
         }
-
-        .pagination-shell {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-        }
-
-            .pagination-shell .pagination {
-                margin: 0;
-            }
 
         .empty-state {
             padding: 2rem 1rem;
@@ -502,8 +491,6 @@
         </div>
     </div>
 </div>
-
-
 @section Scripts {
     <script type="text/x-template" id="journalGroupCaption">
         <div class="group-header">
@@ -521,7 +508,6 @@
             const endpoints = @Html.Raw(endpointsJson);
             const permissions = @Html.Raw(permissionsJson);
             const defaultPageSize = @Model.DefaultPageSize;
-            const pageSizes = @Html.Raw(pageSizesJson);
 
             const filterForm = document.getElementById('filterForm');
             const quickSearchInput = document.getElementById('quickSearch');
@@ -535,6 +521,7 @@
             const pageSizeSelect = document.getElementById('pageSize');
             const groupBySelect = document.getElementById('groupBy');
             const exportButton = document.getElementById('exportExcel');
+            const refreshButton = document.getElementById('refreshButton');
             const filtersToggleButton = document.getElementById('filtersToggleButton');
             const filtersCollapseElement = document.getElementById('advancedFilters');
             const filtersToggleText = filtersToggleButton ? filtersToggleButton.querySelector('.toggle-text') : null;
@@ -546,6 +533,7 @@
             const summaryUnbalanced = document.getElementById('summaryUnbalanced');
             const summaryDebit = document.getElementById('summaryDebit');
             const summaryCredit = document.getElementById('summaryCredit');
+            const gridElement = document.getElementById('journalGrid');
 
             const tokenInput = filterForm.querySelector('input[name="__RequestVerificationToken"]');
             const antiForgeryToken = tokenInput ? tokenInput.value : '';
@@ -553,12 +541,11 @@
             let grid = null;
 
             const state = {
+                filters: {},
                 page: 1,
                 pageSize: defaultPageSize,
                 sortColumn: 'date',
-                sortDirection: 'desc',
-                filters: {},
-                groupBy: ''
+                sortDirection: 'desc'
             };
 
             const sortColumnMap = {
@@ -597,6 +584,32 @@
                     .replace(/>/g, '&gt;')
                     .replace(/"/g, '&quot;')
                     .replace(/'/g, '&#39;');
+            }
+
+            function formatNumber(value) {
+                if (value === null || value === undefined || isNaN(Number(value))) {
+                    return '0.00';
+                }
+                return Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            function descriptionTemplate(args) {
+                const text = escapeHtml(args.Description || '');
+                return '<span class="text-truncate d-inline-block" style="max-width: 22ch;" title="' + text + '">' + text + '</span>';
+            }
+
+            function statusTemplate(args) {
+                const cssClass = escapeHtml(args.StatusClass || 'bg-secondary');
+                const text = escapeHtml(args.StatusDisplay || '');
+                return '<span class="badge ' + cssClass + '">' + text + '</span>';
+            }
+
+            function amountTemplate(field, formattedField) {
+                return function (args) {
+                    const formatted = args[formattedField];
+                    const value = formatted ? escapeHtml(formatted) : formatNumber(args[field] || 0);
+                    return '<span class="d-block text-end">' + value + '</span>';
+                };
             }
 
             function buildActions(entry) {
@@ -808,8 +821,8 @@
                 });
             }
 
-            function buildQueryString() {
-                const params = new URLSearchParams();
+            function buildQuery() {
+                const query = new ej.data.Query();
                 Object.entries(state.filters).forEach(function ([key, value]) {
                     if (value === undefined || value === null || value === '') {
                         return;
@@ -975,6 +988,7 @@
 
             function readFilters() {
                 const filters = {};
+
                 const searchValue = searchTermInput ? searchTermInput.value.trim() : '';
                 if (searchValue) {
                     filters.searchTerm = searchValue;
@@ -1002,9 +1016,9 @@
 
                 const branchValue = document.getElementById('branchFilter').value;
                 if (branchValue) {
-                    const parsed = parseInt(branchValue, 10);
-                    if (!isNaN(parsed)) {
-                        filters.branchId = parsed;
+                    const parsedBranch = parseInt(branchValue, 10);
+                    if (!isNaN(parsedBranch)) {
+                        filters.branchId = parsedBranch;
                     }
                 }
 
@@ -1039,8 +1053,7 @@
                     }
                 }
 
-                const unbalancedOnly = document.getElementById('unbalancedOnly').checked;
-                if (unbalancedOnly) {
+                if (document.getElementById('unbalancedOnly').checked) {
                     filters.showUnbalancedOnly = true;
                 }
 
@@ -1052,74 +1065,126 @@
                 if (resetPage) {
                     state.page = 1;
                 }
-                loadData();
+                if (gridInstance) {
+                    gridInstance.pageSettings.currentPage = 1;
+                    gridInstance.query = buildQuery();
+                    gridInstance.refresh();
+                }
+                loadSummary();
             }
 
-            filterForm.addEventListener('submit', function (event) {
-                event.preventDefault();
-                const filters = readFilters();
-                applyFilters(filters);
-            });
-
-            document.getElementById('resetFilters').addEventListener('click', function () {
-                filterForm.reset();
-                quickSearchInput.value = '';
-                state.filters = {};
-                state.page = 1;
-                loadData();
-            });
-
-            quickSearchInput.addEventListener('input', function () {
-                const value = quickSearchInput.value.trim();
-                if (searchTermInput) {
-                    searchTermInput.value = value;
-                }
-                if (!value) {
-                    delete state.filters.searchTerm;
-                    state.page = 1;
-                    loadData(false);
+            function applyGrouping() {
+                if (!gridInstance) {
                     return;
                 }
-                state.filters.searchTerm = value;
-                state.page = 1;
-                loadData(false);
-            });
 
-            clearQuickSearchBtn.addEventListener('click', function () {
-                quickSearchInput.value = '';
-                if (searchTermInput) {
-                    searchTermInput.value = '';
+                if (typeof gridInstance.clearGrouping === 'function') {
+                    gridInstance.clearGrouping();
                 }
-                delete state.filters.searchTerm;
-                state.page = 1;
-                loadData();
-            });
-
-            pageSizeSelect.addEventListener('change', function () {
-                const value = parseInt(pageSizeSelect.value, 10);
-                if (!isNaN(value)) {
-                    state.pageSize = value;
-                    state.page = 1;
-                    loadData();
+                else if (gridInstance.groupModule && typeof gridInstance.groupModule.clearGrouping === 'function') {
+                    gridInstance.groupModule.clearGrouping();
                 }
-            });
 
-            pagination.addEventListener('click', function (event) {
-                if (event.target.matches('button.page-link')) {
-                    const page = parseInt(event.target.dataset.page, 10);
-                    if (!isNaN(page) && page >= 1) {
-                        state.page = page;
-                        loadData(false);
+                const mode = groupBySelect ? groupBySelect.value : '';
+                switch (mode) {
+                    case 'branch':
+                        gridInstance.groupColumn('BranchName');
+                        break;
+                    case 'status':
+                        gridInstance.groupColumn('StatusDisplay');
+                        break;
+                    case 'month':
+                        gridInstance.groupColumn('MonthGroupLabel');
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            function updateSummary(summary, totalRecords) {
+                const total = Number(totalRecords || 0);
+                const unbalanced = Number(summary?.unbalanced || 0);
+                const balanced = Math.max(0, total - unbalanced);
+
+                summaryTotal.textContent = total.toLocaleString();
+                summaryBalanced.textContent = balanced.toLocaleString();
+                summaryUnbalanced.textContent = unbalanced.toLocaleString();
+                summaryDebit.textContent = formatNumber(summary?.totalDebit || 0);
+                summaryCredit.textContent = formatNumber(summary?.totalCredit || 0);
+            }
+
+            async function loadSummary() {
+                if (!endpoints.data) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(endpoints.data, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': antiForgeryToken
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({
+                            page: state.page,
+                            pageSize: state.pageSize,
+                            sortColumn: state.sortColumn,
+                            sortDirection: state.sortDirection,
+                            filters: state.filters
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('تعذر تحديث الملخص');
                     }
+
+                    const data = await response.json();
+                    updateSummary(data.summary || {}, data.totalRecords || 0);
                 }
-            });
+                catch (error) {
+                    console.error(error);
+                }
+            }
 
             refreshButton.addEventListener('click', function () {
                 loadData();
             });
 
-            // Initial load
-            applyFilters({});
+                if (args.requestType === 'paging') {
+                    state.page = args.currentPage || gridInstance.pageSettings.currentPage || 1;
+                    updatePageSizeSelect();
+                    loadSummary();
+                }
+                else if (args.requestType === 'sorting') {
+                    const sortedColumns = gridInstance.sortSettings && gridInstance.sortSettings.columns ? gridInstance.sortSettings.columns : [];
+                    const sorted = sortedColumns.length > 0 ? sortedColumns[0] : null;
+                    if (sorted) {
+                        const mapped = sortColumnMap[sorted.field || sorted.columnName];
+                        if (mapped) {
+                            state.sortColumn = mapped;
+                            state.sortDirection = sorted.direction === 'Descending' ? 'desc' : 'asc';
+                        }
+                    }
+                    else {
+                        state.sortColumn = 'date';
+                        state.sortDirection = 'desc';
+                    }
+                    loadSummary();
+                }
+                else if (args.requestType === 'refresh') {
+                    updatePageSizeSelect();
+                }
+                else if (args.requestType === 'filtering' || args.requestType === 'searching') {
+                    loadSummary();
+                }
+            };
+
+            window.onJournalGridRowDataBound = function (args) {
+                if (args.data && args.data.IsBalanced === false) {
+                    args.row.classList.add('unbalanced');
+                }
+            };
         })();
     </script>
 }
