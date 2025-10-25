@@ -1,5 +1,6 @@
 using AccountingSystem.Models;
 using AccountingSystem.Services;
+using AccountingSystem.ViewModels.Notifications;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -17,6 +18,42 @@ namespace AccountingSystem.Controllers
         {
             _notificationService = notificationService;
             _userManager = userManager;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Index()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Challenge();
+            }
+
+            var notifications = await _notificationService.GetUserNotificationsAsync(user.Id);
+            var unread = await _notificationService.GetUnreadCountAsync(user.Id);
+
+            var model = new NotificationsIndexViewModel
+            {
+                Notifications = notifications,
+                UnreadCount = unread
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarkAsRead(int id)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Challenge();
+            }
+
+            await _notificationService.MarkAsReadAsync(id, user.Id);
+
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]
