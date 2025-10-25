@@ -14,7 +14,6 @@ using System.Data;
 using System.Security.Claims;
 using System.Text;
 using System.Linq;
-using System.Transactions;
 using Microsoft.Extensions.Logging;
 using User = AccountingSystem.Models.User;
 
@@ -1069,44 +1068,45 @@ namespace Roadfn.Controllers
 
             if (rptDriverPay.Count > 0)
             {
+                var cashAccount = await _accontext.UserPaymentAccounts
+                    .Where(u => u.UserId == user.Id && u.CurrencyId == 1)
+                    .FirstOrDefaultAsync();
+                if (cashAccount == null)
+                {
+                    return BadRequest("لا يوجد حساب صندوق مرتبط بالمستخدم الحالي");
+                }
+
+                var driverParentSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "DriverParentAccountId");
+                if (driverParentSetting == null)
+                {
+                    return BadRequest("إعدادات حساب السائق غير متوفرة");
+                }
+
+                var driverParentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == driverParentSetting.Value);
+                if (driverParentAccount == null)
+                {
+                    return BadRequest("الحساب الرئيسي للسائق غير موجود");
+                }
+
+                var revenueAccountSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "RevenueAccountCode");
+                if (revenueAccountSetting == null)
+                {
+                    return BadRequest("إعدادات حساب الإيرادات غير متوفرة");
+                }
+
+                var revenueAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == revenueAccountSetting.Value);
+                if (revenueAccount == null)
+                {
+                    return BadRequest("حساب الإيرادات غير موجود");
+                }
+
                 var executionStrategy = _context.Database.CreateExecutionStrategy();
                 return await executionStrategy.ExecuteAsync(async () =>
                 {
-                    using var transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+                    await using var appTransaction = await _context.Database.BeginTransactionAsync();
+                    await using var accountingTransaction = await _accontext.Database.BeginTransactionAsync();
                     try
                     {
-                        var cashAccount = await _accontext.UserPaymentAccounts
-                            .Where(u => u.UserId == user.Id && u.CurrencyId == 1)
-                            .FirstOrDefaultAsync();
-                        if (cashAccount == null)
-                        {
-                            return BadRequest("لا يوجد حساب صندوق مرتبط بالمستخدم الحالي");
-                        }
-
-                        var driverParentSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "DriverParentAccountId");
-                        if (driverParentSetting == null)
-                        {
-                            return BadRequest("إعدادات حساب السائق غير متوفرة");
-                        }
-
-                        var driverParentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == driverParentSetting.Value);
-                        if (driverParentAccount == null)
-                        {
-                            return BadRequest("الحساب الرئيسي للسائق غير موجود");
-                        }
-
-                        var revenueAccountSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "RevenueAccountCode");
-                        if (revenueAccountSetting == null)
-                        {
-                            return BadRequest("إعدادات حساب الإيرادات غير متوفرة");
-                        }
-
-                        var revenueAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == revenueAccountSetting.Value);
-                        if (revenueAccount == null)
-                        {
-                            return BadRequest("حساب الإيرادات غير موجود");
-                        }
-
                         var driverPaymentHeader = new DriverPaymentHeader();
                         var driverPayments = new List<DriverPaymentDetail>();
                         await _context.DriverPaymentHeader.AddAsync(driverPaymentHeader);
@@ -1134,19 +1134,19 @@ namespace Roadfn.Controllers
                         var driverAccount = await EnsureDriverAccountAsync(listpay, driverParentAccount);
                         if (driverAccount == null)
                         {
-                            return BadRequest("تعذر تحديد حساب السائق");
+                            throw new InvalidOperationException("تعذر تحديد حساب السائق");
                         }
 
                         var customerParentSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "CustomerParentAccountId");
                         if (customerParentSetting == null)
                         {
-                            return BadRequest("إعدادات حساب العميل غير متوفرة");
+                            throw new InvalidOperationException("إعدادات حساب العميل غير متوفرة");
                         }
 
                         var customerParentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == customerParentSetting.Value);
                         if (customerParentAccount == null)
                         {
-                            return BadRequest("الحساب الرئيسي للعميل غير موجود");
+                            throw new InvalidOperationException("الحساب الرئيسي للعميل غير موجود");
                         }
 
                         await _context.DriverPaymentDetails.AddRangeAsync(driverPayments);
@@ -1208,7 +1208,7 @@ namespace Roadfn.Controllers
                             var customerAccount = await EnsureCustomerAccountAsync(customerUser, customerAccountsCache, customerParentAccount);
                             if (customerAccount == null)
                             {
-                                return BadRequest("تعذر تحديد حساب العميل");
+                                throw new InvalidOperationException("تعذر تحديد حساب العميل");
                             }
                             var lines = new List<JournalEntryLine>();
 
@@ -1406,11 +1406,22 @@ namespace Roadfn.Controllers
                             }
                         }
 
-                        transactionScope.Complete();
+                        await accountingTransaction.CommitAsync();
+                        await appTransaction.CommitAsync();
                         return Ok(driverPaymentHeader);
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        await accountingTransaction.RollbackAsync();
+                        await appTransaction.RollbackAsync();
+                        _context.ChangeTracker.Clear();
+                        _accontext.ChangeTracker.Clear();
+                        return BadRequest(ex.Message);
                     }
                     catch (Exception ex)
                     {
+                        await accountingTransaction.RollbackAsync();
+                        await appTransaction.RollbackAsync();
                         _context.ChangeTracker.Clear();
                         _accontext.ChangeTracker.Clear();
                         _logger.LogError(ex, "فشل معالجة دفعة السائق بواسطة المستخدم {UserId}", user.Id);
@@ -1505,7 +1516,8 @@ namespace Roadfn.Controllers
             var executionStrategy = _context.Database.CreateExecutionStrategy();
             return await executionStrategy.ExecuteAsync(async () =>
             {
-                using var transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+                await using var appTransaction = await _context.Database.BeginTransactionAsync();
+                await using var accountingTransaction = await _accontext.Database.BeginTransactionAsync();
                 try
                 {
                     var bisnessUserPaymentHeader = new BisnessUserPaymentHeader
@@ -1655,11 +1667,22 @@ namespace Roadfn.Controllers
                         await _context.SaveChangesAsync();
                     }
 
-                    transactionScope.Complete();
+                    await accountingTransaction.CommitAsync();
+                    await appTransaction.CommitAsync();
                     return (null, bisnessUserPaymentHeader);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    await accountingTransaction.RollbackAsync();
+                    await appTransaction.RollbackAsync();
+                    _context.ChangeTracker.Clear();
+                    _accontext.ChangeTracker.Clear();
+                    return (BadRequest(ex.Message), null);
                 }
                 catch (Exception ex)
                 {
+                    await accountingTransaction.RollbackAsync();
+                    await appTransaction.RollbackAsync();
                     _context.ChangeTracker.Clear();
                     _accontext.ChangeTracker.Clear();
                     _logger.LogError(ex, "فشل معالجة دفعة بزنس للسائق {DriverId} من قبل المستخدم {UserId}", driverId, user.Id);
