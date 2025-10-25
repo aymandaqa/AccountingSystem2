@@ -14,8 +14,6 @@ using System.Data;
 using System.Security.Claims;
 using System.Text;
 using System.Linq;
-using System.Transactions;
-using Microsoft.Extensions.Logging;
 using User = AccountingSystem.Models.User;
 
 namespace Roadfn.Controllers
@@ -30,8 +28,7 @@ namespace Roadfn.Controllers
         private readonly IJournalEntryService _journalEntryService;
         private readonly IAccountService _accountService;
         private readonly UserManager<User> _userManager;
-        private readonly ILogger<AccountManagementController> _logger;
-        public AccountManagementController(RoadFnDbContext context, UserManager<User> userManager, IWebHostEnvironment env, IConfiguration iConfig, IJournalEntryService journalEntryService, IAccountService accountService, ApplicationDbContext accontext, ILogger<AccountManagementController> logger)
+        public AccountManagementController(RoadFnDbContext context, UserManager<User> userManager, IWebHostEnvironment env, IConfiguration iConfig, IJournalEntryService journalEntryService, IAccountService accountService, ApplicationDbContext accontext)
         {
             _context = context;
             _env = env;
@@ -40,7 +37,6 @@ namespace Roadfn.Controllers
             _accountService = accountService;
             _accontext = accontext;
             _userManager = userManager;
-            _logger = logger;
 
         }
 
@@ -1069,355 +1065,338 @@ namespace Roadfn.Controllers
 
             if (rptDriverPay.Count > 0)
             {
-                var executionStrategy = _context.Database.CreateExecutionStrategy();
-                return await executionStrategy.ExecuteAsync(async () =>
+
+
+                var cashAccount = await _accontext.UserPaymentAccounts
+                    .Where(u => u.UserId == user.Id && u.CurrencyId == 1)
+                    .FirstOrDefaultAsync();
+                if (cashAccount == null)
                 {
-                    using var transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
-                    try
+                    return BadRequest("لا يوجد حساب صندوق مرتبط بالمستخدم الحالي");
+                }
+
+                var driverParentSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "DriverParentAccountId");
+                if (driverParentSetting == null)
+                {
+                    return BadRequest("إعدادات حساب السائق غير متوفرة");
+                }
+
+                var driverParentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == driverParentSetting.Value);
+                if (driverParentAccount == null)
+                {
+                    return BadRequest("الحساب الرئيسي للسائق غير موجود");
+                }
+
+                var revenueAccountSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "RevenueAccountCode");
+                if (revenueAccountSetting == null)
+                {
+                    return BadRequest("إعدادات حساب الإيرادات غير متوفرة");
+                }
+
+                var revenueAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == revenueAccountSetting.Value);
+                if (revenueAccount == null)
+                {
+                    return BadRequest("حساب الإيرادات غير موجود");
+                }
+
+                var driverPaymentHeader = new DriverPaymentHeader();
+                var driverPayments = new List<DriverPaymentDetail>();
+                await _context.DriverPaymentHeader.AddAsync(driverPaymentHeader);
+                await _context.SaveChangesAsync();
+
+                var listpay = new List<RptDriverPay>();
+                foreach (var item in rptDriverPay)
+                {
+                    var shipmentsPay = await _context.RptDriverPay.Where(t => t.Id == Convert.ToInt64(item.Id)).FirstOrDefaultAsync();
+                    if (shipmentsPay != null)
                     {
-                        var cashAccount = await _accontext.UserPaymentAccounts
-                            .Where(u => u.UserId == user.Id && u.CurrencyId == 1)
-                            .FirstOrDefaultAsync();
-                        if (cashAccount == null)
+                        driverPayments.Add(new DriverPaymentDetail
                         {
-                            return BadRequest("لا يوجد حساب صندوق مرتبط بالمستخدم الحالي");
-                        }
-
-                        var driverParentSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "DriverParentAccountId");
-                        if (driverParentSetting == null)
-                        {
-                            return BadRequest("إعدادات حساب السائق غير متوفرة");
-                        }
-
-                        var driverParentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == driverParentSetting.Value);
-                        if (driverParentAccount == null)
-                        {
-                            return BadRequest("الحساب الرئيسي للسائق غير موجود");
-                        }
-
-                        var revenueAccountSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "RevenueAccountCode");
-                        if (revenueAccountSetting == null)
-                        {
-                            return BadRequest("إعدادات حساب الإيرادات غير متوفرة");
-                        }
-
-                        var revenueAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == revenueAccountSetting.Value);
-                        if (revenueAccount == null)
-                        {
-                            return BadRequest("حساب الإيرادات غير موجود");
-                        }
-
-                        var driverPaymentHeader = new DriverPaymentHeader();
-                        var driverPayments = new List<DriverPaymentDetail>();
-                        await _context.DriverPaymentHeader.AddAsync(driverPaymentHeader);
-                        await _context.SaveChangesAsync();
-
-                        var listpay = new List<RptDriverPay>();
-                        foreach (var item in rptDriverPay)
-                        {
-                            var shipmentsPay = await _context.RptDriverPay.Where(t => t.Id == Convert.ToInt64(item.Id)).FirstOrDefaultAsync();
-                            if (shipmentsPay != null)
-                            {
-                                driverPayments.Add(new DriverPaymentDetail
-                                {
-                                    HeaderId = driverPaymentHeader.Id,
-                                    ComisionValue = shipmentsPay.CommissionPerItem,
-                                    ShipmentId = shipmentsPay.ShipmentId,
-                                    ShipmentTrackingNo = shipmentsPay.ShipmentTrackingNo,
-                                    DriverExtraComisionValue = shipmentsPay.DriverExtraComisionValue,
-                                    CompanyRevenueValue = shipmentsPay.ShipmentCod - shipmentsPay.ShipmentPrice,
-                                });
-                                listpay.Add(shipmentsPay);
-                            }
-                        }
-
-                        var driverAccount = await EnsureDriverAccountAsync(listpay, driverParentAccount);
-                        if (driverAccount == null)
-                        {
-                            return BadRequest("تعذر تحديد حساب السائق");
-                        }
-
-                        var customerParentSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "CustomerParentAccountId");
-                        if (customerParentSetting == null)
-                        {
-                            return BadRequest("إعدادات حساب العميل غير متوفرة");
-                        }
-
-                        var customerParentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == customerParentSetting.Value);
-                        if (customerParentAccount == null)
-                        {
-                            return BadRequest("الحساب الرئيسي للعميل غير موجود");
-                        }
-
-                        await _context.DriverPaymentDetails.AddRangeAsync(driverPayments);
-                        await _context.SaveChangesAsync();
-                        driverPaymentHeader.PaymentValue = listpay.Sum(t => t.CommissionPerItem) + listpay.Sum(t => t.DriverExtraComisionValue);
-                        driverPaymentHeader.SumOfComison = listpay.Sum(t => t.CommissionPerItem) + listpay.Sum(t => t.DriverExtraComisionValue);
-                        driverPaymentHeader.TotalCod = listpay.Sum(t => t.ShipmentTotal) - (listpay.Sum(t => t.CommissionPerItem) + listpay.Sum(t => t.DriverExtraComisionValue));
-                        driverPaymentHeader.DriverId = listpay.DistinctBy(t => t.DriverId).FirstOrDefault().DriverId;
-                        driverPaymentHeader.PaymentDate = DateTime.Now;
-                        driverPaymentHeader.EntryUserId = 0;// Convert.ToInt32(user.Id);
-                        _context.DriverPaymentHeader.Update(driverPaymentHeader);
-                        await _context.SaveChangesAsync();
-
-                        var customerAccountsCache = new Dictionary<int, Account>();
-
-                        foreach (var item in listpay)
-                        {
-                            var id1 = item.ShipmentId;
-
-                            var sh = await _context.Shipments.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(id1));
-
-                            var area = await _context.Areas.FirstOrDefaultAsync(t => t.Id == sh.ClientAreaId);
-
-                            Agent? agent = null;
-                            Account? agentAccount = null;
-                            if (user.AgentId.HasValue)
-                            {
-                                agent = await _accontext.Agents.FirstOrDefaultAsync(s => s.Id == user.AgentId.Value);
-                                if (agent?.AccountId != null)
-                                {
-                                    agentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Id == agent.AccountId);
-                                }
-                            }
-
-                            decimal AgenAmt = 0;
-                            if (area != null)
-                            {
-                                var agentCommission = await _context.Areas.FirstOrDefaultAsync(t => t.Id == area.Id);
-                                if (agentCommission != null)
-                                {
-                                    AgenAmt = Convert.ToDecimal(agentCommission.CommissionBranch);
-                                }
-                            }
-                            var Paytxn = await _context.RptDriverPay.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(item.Id));
-
-                            var customerUser = await _context.Users.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(sh.UserId));
-
-                            if (customerUser == null)
-                            {
-                                continue;
-                            }
-
-                            var Accbrn = await _accontext.Branches.FirstOrDefaultAsync(t => t.Code == customerUser.CompanyBranchId.ToString());
-                            if (Accbrn == null)
-                            {
-                                continue;
-                            }
-
-                            var customerAccount = await EnsureCustomerAccountAsync(customerUser, customerAccountsCache, customerParentAccount);
-                            if (customerAccount == null)
-                            {
-                                return BadRequest("تعذر تحديد حساب العميل");
-                            }
-                            var lines = new List<JournalEntryLine>();
-
-                            #region CashAccounts txn
-                            var tottxn = new JournalEntryLine();
-                            tottxn.AccountId = cashAccount.AccountId;
-                            tottxn.DebitAmount = 0;
-                            tottxn.CreditAmount = 0;
-                            if (Convert.ToDecimal(Paytxn.ShipmentTotal) <= 0)
-                            {
-
-                                tottxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentTotal) * -1;
-
-                            }
-                            else
-                            {
-                                tottxn.DebitAmount = Convert.ToDecimal(Paytxn.ShipmentTotal);
-                            }
-                            tottxn.Reference = driverPaymentHeader.Id.ToString();
-                            tottxn.Description = $"قبض من سائق مبلغ تحصيل {sh.ShipmentTrackingNo}";
-                            lines.Add(tottxn);
-                            #endregion
-
-                            #region DriverAttxn txn
-                            var DriverAttxn = new JournalEntryLine();
-                            DriverAttxn.AccountId = driverAccount.Id;
-                            DriverAttxn.CreditAmount = Convert.ToDecimal(Paytxn.CommissionPerItem);
-                            DriverAttxn.Reference = driverPaymentHeader.Id.ToString();
-                            DriverAttxn.Description = $"ذمة سائق عمولة {sh.ShipmentTrackingNo}";
-
-                            lines.Add(DriverAttxn);
-                            #endregion
-
-                            #region CustomerAccounttxn txn
-                            var CustomerAccounttxn = new JournalEntryLine();
-                            CustomerAccounttxn.AccountId = customerAccount.Id;
-                            CustomerAccounttxn.DebitAmount = 0;
-                            CustomerAccounttxn.CreditAmount = 0;
-                            if (Convert.ToDecimal(Paytxn.ShipmentPrice) <= 0)
-                            {
-                                CustomerAccounttxn.DebitAmount = Convert.ToDecimal(Paytxn.ShipmentPrice) * -1;
-                            }
-                            else
-                            {
-                                CustomerAccounttxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentPrice);
-                            }
-                            CustomerAccounttxn.Reference = driverPaymentHeader.Id.ToString();
-                            CustomerAccounttxn.Description = $"ذمة مورد مبلغ تحصيل {sh.ShipmentTrackingNo}";
-                            lines.Add(CustomerAccounttxn);
-                            #endregion
-
-
-
-                            if (area?.CommissionBranch > 0)
-                            {
-                                var rev = Convert.ToDecimal((Paytxn.ShipmentTotal - Paytxn.ShipmentPrice) - area.CommissionBranch);
-
-                                var AgenAmt = Convert.ToDecimal(area.CommissionBranch) - Convert.ToDecimal(Paytxn.CommissionPerItem);
-
-                                #region RevenueAccounttxn txn
-
-                                var RevenueAccounttxn = new JournalEntryLine();
-                                RevenueAccounttxn.AccountId = revenueAccount.Id;
-                                RevenueAccounttxn.DebitAmount = 0;
-                                RevenueAccounttxn.CreditAmount = 0;
-                                if (rev <= 0)
-                                {
-                                    RevenueAccounttxn.DebitAmount = rev * -1;
-                                }
-                                else
-                                {
-                                    RevenueAccounttxn.CreditAmount = rev;
-                                }
-                                RevenueAccounttxn.Reference = driverPaymentHeader.Id.ToString();
-                                RevenueAccounttxn.Description = $"ايراد خدمة  {sh.ShipmentTrackingNo}";
-                                lines.Add(RevenueAccounttxn);
-
-                                #endregion
-
-
-                                if (agentAccount != null)
-                                {
-                                    #region agent Accounttxn txn
-
-                                    var agentAccounttxn = new JournalEntryLine();
-                                    agentAccounttxn.AccountId = agentAccount.Id;
-                                    agentAccounttxn.DebitAmount = 0;
-                                    agentAccounttxn.CreditAmount = 0;
-                                    if (AgenAmt <= 0)
-                                    {
-                                        agentAccounttxn.DebitAmount = AgenAmt * -1;
-                                    }
-                                    else
-                                    {
-                                        agentAccounttxn.CreditAmount = AgenAmt;
-                                    }
-                                    agentAccounttxn.Reference = driverPaymentHeader.Id.ToString();
-                                    agentAccounttxn.Description = $"عمولة وكيل  {sh.ShipmentTrackingNo}";
-                                    lines.Add(agentAccounttxn);
-
-                                    #endregion
-                                }
-
-                            }
-
-                            else
-                            {
-                                #region RevenueAccounttxn txn
-                                var RevenueAccounttxn = new JournalEntryLine();
-                                RevenueAccounttxn.AccountId = revenueAccount.Id;
-                                RevenueAccounttxn.DebitAmount = 0;
-                                RevenueAccounttxn.CreditAmount = 0;
-                                if (Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice) <= 0)
-                                {
-                                    RevenueAccounttxn.DebitAmount = Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice) * -1;
-                                }
-                                else
-                                {
-                                    RevenueAccounttxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice);
-                                }
-                                RevenueAccounttxn.Reference = driverPaymentHeader.Id.ToString();
-                                RevenueAccounttxn.Description = $"ايراد خدمة  {sh.ShipmentTrackingNo}";
-                                lines.Add(RevenueAccounttxn);
-                                #endregion
-                            }
-                            #region pay DriverAttxn txn
-                            var PayDriverAttxn = new JournalEntryLine();
-                            PayDriverAttxn.AccountId = driverAccount.Id;
-                            PayDriverAttxn.DebitAmount = Convert.ToDecimal(Paytxn.CommissionPerItem);
-                            PayDriverAttxn.Reference = driverPaymentHeader.Id.ToString();
-                            PayDriverAttxn.Description = $"دفع عمولة سائق  {sh.ShipmentTrackingNo}";
-                            lines.Add(PayDriverAttxn);
-                            #endregion
-
-                            #region pay DriverAttxn CashAccounts txn
-                            var PayCashAccountsDriverAttxn = new JournalEntryLine();
-                            PayCashAccountsDriverAttxn.AccountId = cashAccount.AccountId;
-                            PayCashAccountsDriverAttxn.CreditAmount = Convert.ToDecimal(Paytxn.CommissionPerItem);
-                            PayCashAccountsDriverAttxn.Reference = driverPaymentHeader.Id.ToString();
-                            PayCashAccountsDriverAttxn.Description = $"دفع عمولة سائق  {sh.ShipmentTrackingNo}";
-                            lines.Add(PayCashAccountsDriverAttxn);
-                            #endregion
-
-                            await _journalEntryService.CreateJournalEntryAsync(
-                                DateTime.Now,
-                                "DriverInvoice_" + driverPaymentHeader.Id + "_" + sh.ShipmentTrackingNo,
-                                Accbrn.Id,
-                                user.Id,
-                                lines,
-                                JournalEntryStatus.Posted,
-                                reference: $"DriverInvoice:{driverPaymentHeader.Id}");
-
-                        }
-
-                        foreach (var item in listpay)
-                        {
-                            var ship = await _context.Shipments.FindAsync(Convert.ToInt32(item.ShipmentId));
-                            if (ship != null)
-                            {
-
-                                //add Submitted status
-                                ShipmentLog shipmentLog = new ShipmentLog();
-                                shipmentLog.ShipmentId = ship.Id;
-                                shipmentLog.EntryDate = DateTime.Now;
-                                shipmentLog.EntryDateTine = DateTime.Now;
-                                shipmentLog.UserId = 0;// Convert.ToInt32(userId);
-                                shipmentLog.Status = ship.Status;
-                                shipmentLog.ClientName = ship.ClientName;
-                                shipmentLog.ClientPhone = ship.ClientPhone;
-                                shipmentLog.FromCityId = ship.FromCityId;
-                                shipmentLog.ClientCityId = ship.ClientCityId;
-                                shipmentLog.ClientAreaId = ship.ClientAreaId;
-                                shipmentLog.IsUserBusiness = ship.IsUserBusiness;
-                                shipmentLog.SenderName = ship.SenderName;
-                                shipmentLog.SenderTel = ship.SenderTel;
-                                shipmentLog.BusinessUserId = ship.BusinessUserId;
-                                shipmentLog.Status = Convert.ToInt32(StatusEnum.InAccounting);
-                                await _context.ShipmentLogs.AddAsync(shipmentLog);
-                                await _context.SaveChangesAsync();
-                                SessionAddRemark sessionAddRemark = new SessionAddRemark();
-                                sessionAddRemark.ShipmentId = ship.Id;
-                                sessionAddRemark.UserId = 0;// Convert.ToInt32(userId);
-                                sessionAddRemark.EntryDateTime = DateTime.Now;
-                                sessionAddRemark.OldStatus = ship.Status;
-                                sessionAddRemark.NewStatus = Convert.ToInt32(StatusEnum.InAccounting);
-                                sessionAddRemark.EntryDate = DateTime.Now;
-                                ship.LastUpdate = DateTime.Now;
-                                ship.Status = Convert.ToInt32(StatusEnum.InAccounting);
-                                ship.DriverId = 0;
-                                _context.Shipments.Update(ship);
-                                await _context.SaveChangesAsync();
-                                await _context.Session_Add_Remarks.AddAsync(sessionAddRemark);
-                                await _context.SaveChangesAsync();
-
-                            }
-                        }
-
-                        transactionScope.Complete();
-                        return Ok(driverPaymentHeader);
+                            HeaderId = driverPaymentHeader.Id,
+                            ComisionValue = shipmentsPay.CommissionPerItem,
+                            ShipmentId = shipmentsPay.ShipmentId,
+                            ShipmentTrackingNo = shipmentsPay.ShipmentTrackingNo,
+                            DriverExtraComisionValue = shipmentsPay.DriverExtraComisionValue,
+                            CompanyRevenueValue = shipmentsPay.ShipmentCod - shipmentsPay.ShipmentPrice,
+                        });
+                        listpay.Add(shipmentsPay);
                     }
-                    catch (Exception ex)
+                }
+
+                var driverAccount = await EnsureDriverAccountAsync(listpay, driverParentAccount);
+                if (driverAccount == null)
+                {
+                    return BadRequest("تعذر تحديد حساب السائق");
+                }
+
+                var customerParentSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "CustomerParentAccountId");
+                if (customerParentSetting == null)
+                {
+                    return BadRequest("إعدادات حساب العميل غير متوفرة");
+                }
+
+                var customerParentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == customerParentSetting.Value);
+                if (customerParentAccount == null)
+                {
+                    return BadRequest("الحساب الرئيسي للعميل غير موجود");
+                }
+
+
+                await _context.DriverPaymentDetails.AddRangeAsync(driverPayments);
+                await _context.SaveChangesAsync();
+                driverPaymentHeader.PaymentValue = listpay.Sum(t => t.CommissionPerItem) + listpay.Sum(t => t.DriverExtraComisionValue);
+                driverPaymentHeader.SumOfComison = listpay.Sum(t => t.CommissionPerItem) + listpay.Sum(t => t.DriverExtraComisionValue);
+                driverPaymentHeader.TotalCod = listpay.Sum(t => t.ShipmentTotal) - (listpay.Sum(t => t.CommissionPerItem) + listpay.Sum(t => t.DriverExtraComisionValue));
+                driverPaymentHeader.DriverId = listpay.DistinctBy(t => t.DriverId).FirstOrDefault().DriverId;
+                driverPaymentHeader.PaymentDate = DateTime.Now;
+                driverPaymentHeader.EntryUserId = 0;// Convert.ToInt32(user.Id);
+                _context.DriverPaymentHeader.Update(driverPaymentHeader);
+                await _context.SaveChangesAsync();
+
+
+                var customerAccountsCache = new Dictionary<int, Account>();
+
+                foreach (var item in listpay)
+                {
+                    var id1 = item.ShipmentId;
+
+                    var sh = await _context.Shipments.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(id1));
+
+                    var area = await _context.Areas.FirstOrDefaultAsync(t => t.Id == sh.ClientAreaId);
+
+                    Agent? agent = null;
+                    Account? agentAccount = null;
+                    if (user.AgentId.HasValue)
                     {
-                        _context.ChangeTracker.Clear();
-                        _accontext.ChangeTracker.Clear();
-                        _logger.LogError(ex, "فشل معالجة دفعة السائق بواسطة المستخدم {UserId}", user.Id);
-                        return BadRequest("حدث خطأ أثناء معالجة العملية. تم التراجع عن جميع التغييرات.");
+                        agent = await _accontext.Agents.FirstOrDefaultAsync(s => s.Id == user.AgentId.Value);
+                        if (agent?.AccountId != null)
+                        {
+                            agentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Id == agent.AccountId);
+                        }
                     }
-                });
+
+                    var customerUser = await _context.Users.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(sh.BusinessUserId));
+                    if (customerUser == null)
+                    {
+                        continue;
+                    }
+
+                    var Accbrn = await _accontext.Branches.FirstOrDefaultAsync(t => t.Code == customerUser.CompanyBranchId.ToString());
+                    if (Accbrn == null)
+                    {
+                        continue;
+                    }
+
+                    var customerAccount = await EnsureCustomerAccountAsync(customerUser, customerAccountsCache, customerParentAccount);
+                    if (customerAccount == null)
+                    {
+                        return BadRequest("تعذر تحديد حساب العميل");
+                    }
+
+                    var Paytxn = item;
+                    var lines = new List<JournalEntryLine>();
+
+
+
+                    #region CashAccounts txn
+                    var tottxn = new JournalEntryLine();
+                    tottxn.AccountId = cashAccount.AccountId;
+                    tottxn.DebitAmount = 0;
+                    tottxn.CreditAmount = 0;
+                    if (Convert.ToDecimal(Paytxn.ShipmentTotal) <= 0)
+                    {
+
+                        tottxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentTotal) * -1;
+
+                    }
+                    else
+                    {
+                        tottxn.DebitAmount = Convert.ToDecimal(Paytxn.ShipmentTotal);
+                    }
+                    tottxn.Reference = driverPaymentHeader.Id.ToString();
+                    tottxn.Description = $"قبض من سائق مبلغ تحصيل {sh.ShipmentTrackingNo}";
+                    lines.Add(tottxn);
+                    #endregion
+
+                    #region DriverAttxn txn
+                    var DriverAttxn = new JournalEntryLine();
+                    DriverAttxn.AccountId = driverAccount.Id;
+                    DriverAttxn.CreditAmount = Convert.ToDecimal(Paytxn.CommissionPerItem);
+                    DriverAttxn.Reference = driverPaymentHeader.Id.ToString();
+                    DriverAttxn.Description = $"ذمة سائق عمولة {sh.ShipmentTrackingNo}";
+
+                    lines.Add(DriverAttxn);
+                    #endregion
+
+                    #region CustomerAccounttxn txn
+                    var CustomerAccounttxn = new JournalEntryLine();
+                    CustomerAccounttxn.AccountId = customerAccount.Id;
+                    CustomerAccounttxn.DebitAmount = 0;
+                    CustomerAccounttxn.CreditAmount = 0;
+                    if (Convert.ToDecimal(Paytxn.ShipmentPrice) <= 0)
+                    {
+                        CustomerAccounttxn.DebitAmount = Convert.ToDecimal(Paytxn.ShipmentPrice) * -1;
+                    }
+                    else
+                    {
+                        CustomerAccounttxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentPrice);
+                    }
+                    CustomerAccounttxn.Reference = driverPaymentHeader.Id.ToString();
+                    CustomerAccounttxn.Description = $"ذمة مورد مبلغ تحصيل {sh.ShipmentTrackingNo}";
+                    lines.Add(CustomerAccounttxn);
+                    #endregion
+
+
+
+                    if (area?.CommissionBranch > 0)
+                    {
+                        var rev = Convert.ToDecimal((Paytxn.ShipmentTotal - Paytxn.ShipmentPrice) - area.CommissionBranch);
+
+                        var AgenAmt = Convert.ToDecimal(area.CommissionBranch) - Convert.ToDecimal(Paytxn.CommissionPerItem);
+
+                        #region RevenueAccounttxn txn
+
+                        var RevenueAccounttxn = new JournalEntryLine();
+                        RevenueAccounttxn.AccountId = revenueAccount.Id;
+                        RevenueAccounttxn.DebitAmount = 0;
+                        RevenueAccounttxn.CreditAmount = 0;
+                        if (rev <= 0)
+                        {
+                            RevenueAccounttxn.DebitAmount = rev * -1;
+                        }
+                        else
+                        {
+                            RevenueAccounttxn.CreditAmount = rev;
+                        }
+                        RevenueAccounttxn.Reference = driverPaymentHeader.Id.ToString();
+                        RevenueAccounttxn.Description = $"ايراد خدمة  {sh.ShipmentTrackingNo}";
+                        lines.Add(RevenueAccounttxn);
+
+                        #endregion
+
+
+                        if (agentAccount != null)
+                        {
+                            #region agent Accounttxn txn
+
+                            var agentAccounttxn = new JournalEntryLine();
+                            agentAccounttxn.AccountId = agentAccount.Id;
+                            agentAccounttxn.DebitAmount = 0;
+                            agentAccounttxn.CreditAmount = 0;
+                            if (AgenAmt <= 0)
+                            {
+                                agentAccounttxn.DebitAmount = AgenAmt * -1;
+                            }
+                            else
+                            {
+                                agentAccounttxn.CreditAmount = AgenAmt;
+                            }
+                            agentAccounttxn.Reference = driverPaymentHeader.Id.ToString();
+                            agentAccounttxn.Description = $"عمولة وكيل  {sh.ShipmentTrackingNo}";
+                            lines.Add(agentAccounttxn);
+
+                            #endregion
+                        }
+
+                    }
+
+                    else
+                    {
+                        #region RevenueAccounttxn txn
+                        var RevenueAccounttxn = new JournalEntryLine();
+                        RevenueAccounttxn.AccountId = revenueAccount.Id;
+                        RevenueAccounttxn.DebitAmount = 0;
+                        RevenueAccounttxn.CreditAmount = 0;
+                        if (Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice) <= 0)
+                        {
+                            RevenueAccounttxn.DebitAmount = Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice) * -1;
+                        }
+                        else
+                        {
+                            RevenueAccounttxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice);
+                        }
+                        RevenueAccounttxn.Reference = driverPaymentHeader.Id.ToString();
+                        RevenueAccounttxn.Description = $"ايراد خدمة  {sh.ShipmentTrackingNo}";
+                        lines.Add(RevenueAccounttxn);
+                        #endregion
+                    }
+                    #region pay DriverAttxn txn
+                    var PayDriverAttxn = new JournalEntryLine();
+                    PayDriverAttxn.AccountId = driverAccount.Id;
+                    PayDriverAttxn.DebitAmount = Convert.ToDecimal(Paytxn.CommissionPerItem);
+                    PayDriverAttxn.Reference = driverPaymentHeader.Id.ToString();
+                    PayDriverAttxn.Description = $"دفع عمولة سائق  {sh.ShipmentTrackingNo}";
+                    lines.Add(PayDriverAttxn);
+                    #endregion
+
+                    #region pay DriverAttxn CashAccounts txn
+                    var PayCashAccountsDriverAttxn = new JournalEntryLine();
+                    PayCashAccountsDriverAttxn.AccountId = cashAccount.AccountId;
+                    PayCashAccountsDriverAttxn.CreditAmount = Convert.ToDecimal(Paytxn.CommissionPerItem);
+                    PayCashAccountsDriverAttxn.Reference = driverPaymentHeader.Id.ToString();
+                    PayCashAccountsDriverAttxn.Description = $"دفع عمولة سائق  {sh.ShipmentTrackingNo}";
+                    lines.Add(PayCashAccountsDriverAttxn);
+                    #endregion
+
+                    await _journalEntryService.CreateJournalEntryAsync(
+                        DateTime.Now,
+                        "DriverInvoice_" + driverPaymentHeader.Id + "_" + sh.ShipmentTrackingNo,
+                        Accbrn.Id,
+                        user.Id,
+                        lines,
+                        JournalEntryStatus.Posted,
+                        reference: $"DriverInvoice:{driverPaymentHeader.Id}");
+
+                }
+
+
+
+
+                foreach (var item in listpay)
+                {
+                    var ship = await _context.Shipments.FindAsync(Convert.ToInt32(item.ShipmentId));
+                    if (ship != null)
+                    {
+
+                        //add Submitted status
+                        ShipmentLog shipmentLog = new ShipmentLog();
+                        shipmentLog.ShipmentId = ship.Id;
+                        shipmentLog.EntryDate = DateTime.Now;
+                        shipmentLog.EntryDateTine = DateTime.Now;
+                        shipmentLog.UserId = 0;// Convert.ToInt32(userId);
+                        shipmentLog.Status = ship.Status;
+                        shipmentLog.ClientName = ship.ClientName;
+                        shipmentLog.ClientPhone = ship.ClientPhone;
+                        shipmentLog.FromCityId = ship.FromCityId;
+                        shipmentLog.ClientCityId = ship.ClientCityId;
+                        shipmentLog.ClientAreaId = ship.ClientAreaId;
+                        shipmentLog.IsUserBusiness = ship.IsUserBusiness;
+                        shipmentLog.SenderName = ship.SenderName;
+                        shipmentLog.SenderTel = ship.SenderTel;
+                        shipmentLog.BusinessUserId = ship.BusinessUserId;
+                        shipmentLog.Status = Convert.ToInt32(StatusEnum.InAccounting);
+                        await _context.ShipmentLogs.AddAsync(shipmentLog);
+                        await _context.SaveChangesAsync();
+                        SessionAddRemark sessionAddRemark = new SessionAddRemark();
+                        sessionAddRemark.ShipmentId = ship.Id;
+                        sessionAddRemark.UserId = 0;// Convert.ToInt32(userId);
+                        sessionAddRemark.EntryDateTime = DateTime.Now;
+                        sessionAddRemark.OldStatus = ship.Status;
+                        sessionAddRemark.NewStatus = Convert.ToInt32(StatusEnum.InAccounting);
+                        sessionAddRemark.EntryDate = DateTime.Now;
+                        ship.LastUpdate = DateTime.Now;
+                        ship.Status = Convert.ToInt32(StatusEnum.InAccounting); ;
+                        ship.DriverId = 0;
+                        _context.Shipments.Update(ship);
+                        await _context.SaveChangesAsync();
+                        await _context.Session_Add_Remarks.AddAsync(sessionAddRemark);
+                        await _context.SaveChangesAsync();
+
+                    }
+                }
+                return Ok(driverPaymentHeader);
             }
+
             return Ok();
         }
 
@@ -1458,35 +1437,70 @@ namespace Roadfn.Controllers
             }
 
             var cashAccount = await _accontext.UserPaymentAccounts
-                .Where(u => u.UserId == user.Id && u.CurrencyId == 1)
-                .FirstOrDefaultAsync();
+                             .Where(u => u.UserId == user.Id && u.CurrencyId == 1)
+                             .FirstOrDefaultAsync();
             if (cashAccount == null)
             {
                 return (BadRequest("لا يوجد حساب صندوق مرتبط بالمستخدم الحالي"), null);
             }
 
-            var shipmentIds = payToBus
-                .Select(p => Convert.ToInt64(p.Id))
-                .Distinct()
-                .ToList();
-
-            var listpay = await _context.Shipments
-                .Where(t => shipmentIds.Contains(t.Id))
-                .ToListAsync();
+            var bisnessUserPaymentHeader = new BisnessUserPaymentHeader
+            {
+                StatusId = statusinv.Id
+            };
+            var bisnessUserPaymentDetail = new List<BisnessUserPaymentDetail>();
+            await _context.BisnessUserPaymentHeader.AddAsync(bisnessUserPaymentHeader);
+            await _context.SaveChangesAsync();
+            var listpay = new List<Shipment>();
+            foreach (var item in payToBus)
+            {
+                var shipmentsPay = await _context.Shipments.Where(t => t.Id == Convert.ToInt64(item.Id)).FirstOrDefaultAsync();
+                if (shipmentsPay != null)
+                {
+                    bisnessUserPaymentDetail.Add(new BisnessUserPaymentDetail
+                    {
+                        HeaderId = bisnessUserPaymentHeader.Id,
+                        ShipmentId = shipmentsPay.Id,
+                        ShipmentTrackingNo = shipmentsPay.ShipmentTrackingNo
+                    });
+                    listpay.Add(shipmentsPay);
+                }
+            }
 
             if (!listpay.Any())
             {
+                _context.BisnessUserPaymentHeader.Remove(bisnessUserPaymentHeader);
+                await _context.SaveChangesAsync();
                 return (Ok(), null);
             }
 
             var shipmentTotals = listpay.Sum(t => t.ShipmentTotal);
             var shipmentFees = listpay.Sum(t => t.ShipmentFees);
-            var shipmentExtraFees = listpay.Sum(t => t.ShipmentExtraFees);
-
             if (shipmentTotals - shipmentFees < 0)
             {
+                _context.BisnessUserPaymentHeader.Remove(bisnessUserPaymentHeader);
+                await _context.SaveChangesAsync();
                 return (Ok($"لايمكن دفع الفاتورة المجموع {shipmentTotals - shipmentFees}"), null);
             }
+
+            await _context.BisnessUserPaymentDetails.AddRangeAsync(bisnessUserPaymentDetail);
+            await _context.SaveChangesAsync();
+
+            bisnessUserPaymentHeader.PaymentValue = shipmentTotals - shipmentFees - listpay.Sum(t => t.ShipmentExtraFees);
+            bisnessUserPaymentHeader.LoginUserId = loginUserId;
+            bisnessUserPaymentHeader.UserId = listpay.DistinctBy(t => t.BusinessUserId).FirstOrDefault().BusinessUserId;
+            bisnessUserPaymentHeader.PaymentDate = DateTime.Now;
+            bisnessUserPaymentHeader.DriverId = driverId;
+            _context.BisnessUserPaymentHeader.Update(bisnessUserPaymentHeader);
+            await _context.SaveChangesAsync();
+
+            BussPaymentsHist bussPaymentsHist = new BussPaymentsHist();
+            bussPaymentsHist.StatusId = 1;
+            bussPaymentsHist.DriverId = driverId;
+            bussPaymentsHist.BisnessUserPaymentHeader = bisnessUserPaymentHeader.Id;
+            bussPaymentsHist.Iuser = loginUserId;
+            await _context.BussPaymentsHist.AddAsync(bussPaymentsHist);
+            await _context.SaveChangesAsync();
 
             var customerParentSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "CustomerParentAccountId");
             if (customerParentSetting == null)
@@ -1499,173 +1513,128 @@ namespace Roadfn.Controllers
             {
                 return (BadRequest("الحساب الرئيسي للعميل غير موجود"), null);
             }
-
             var customerAccountsCache = new Dictionary<int, Account>();
 
-            var executionStrategy = _context.Database.CreateExecutionStrategy();
-            return await executionStrategy.ExecuteAsync(async () =>
+            foreach (var sh in listpay)
             {
-                using var transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
-                try
+                var customerUser = await _context.Users.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(sh.BusinessUserId));
+                if (customerUser == null)
                 {
-                    var bisnessUserPaymentHeader = new BisnessUserPaymentHeader
-                    {
-                        StatusId = statusinv.Id
-                    };
-
-                    await _context.BisnessUserPaymentHeader.AddAsync(bisnessUserPaymentHeader);
-                    await _context.SaveChangesAsync();
-
-                    var bisnessUserPaymentDetail = listpay
-                        .Select(sh => new BisnessUserPaymentDetail
-                        {
-                            HeaderId = bisnessUserPaymentHeader.Id,
-                            ShipmentId = sh.Id,
-                            ShipmentTrackingNo = sh.ShipmentTrackingNo
-                        })
-                        .ToList();
-
-                    await _context.BisnessUserPaymentDetails.AddRangeAsync(bisnessUserPaymentDetail);
-                    await _context.SaveChangesAsync();
-
-                    var headerUser = listpay.DistinctBy(t => t.BusinessUserId).FirstOrDefault();
-                    bisnessUserPaymentHeader.PaymentValue = (shipmentTotals ?? 0) - (shipmentFees ?? 0) - (shipmentExtraFees ?? 0);
-                    bisnessUserPaymentHeader.LoginUserId = loginUserId;
-                    bisnessUserPaymentHeader.UserId = headerUser?.BusinessUserId;
-                    bisnessUserPaymentHeader.PaymentDate = DateTime.Now;
-                    bisnessUserPaymentHeader.DriverId = driverId;
-                    _context.BisnessUserPaymentHeader.Update(bisnessUserPaymentHeader);
-                    await _context.SaveChangesAsync();
-
-                    var bussPaymentsHist = new BussPaymentsHist
-                    {
-                        StatusId = 1,
-                        DriverId = driverId,
-                        BisnessUserPaymentHeader = bisnessUserPaymentHeader.Id,
-                        Iuser = loginUserId
-                    };
-                    await _context.BussPaymentsHist.AddAsync(bussPaymentsHist);
-                    await _context.SaveChangesAsync();
-
-                    foreach (var sh in listpay)
-                    {
-                        var customerUser = await _context.Users.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(sh.BusinessUserId));
-                        if (customerUser == null)
-                        {
-                            continue;
-                        }
-
-                        var accBranch = await _accontext.Branches.FirstOrDefaultAsync(t => t.Code == customerUser.CompanyBranchId.ToString());
-                        if (accBranch == null)
-                        {
-                            continue;
-                        }
-
-                        var customerAccount = await EnsureCustomerAccountAsync(customerUser, customerAccountsCache, customerParentAccount);
-                        if (customerAccount == null)
-                        {
-                            throw new InvalidOperationException("تعذر تحديد حساب العميل");
-                        }
-
-                        var lines = new List<JournalEntryLine>();
-
-                        var cashLine = new JournalEntryLine
-                        {
-                            AccountId = cashAccount.AccountId,
-                            DebitAmount = 0,
-                            CreditAmount = 0,
-                            Reference = bisnessUserPaymentHeader.Id.ToString(),
-                            Description = sh.ShipmentTrackingNo + "دفع ذمة مورد "
-                        };
-
-                        if (Convert.ToDecimal(sh.ShipmentPrice) <= 0)
-                        {
-                            cashLine.DebitAmount = Convert.ToDecimal(sh.ShipmentPrice) * -1;
-                        }
-                        else
-                        {
-                            cashLine.CreditAmount = Convert.ToDecimal(sh.ShipmentPrice);
-                        }
-                        lines.Add(cashLine);
-
-                        var customerLine = new JournalEntryLine
-                        {
-                            AccountId = customerAccount.Id,
-                            DebitAmount = 0,
-                            CreditAmount = 0,
-                            Reference = bisnessUserPaymentHeader.Id.ToString(),
-                            Description = sh.ShipmentTrackingNo + "دفع ذمة مورد "
-                        };
-
-                        if (Convert.ToDecimal(sh.ShipmentPrice) <= 0)
-                        {
-                            customerLine.CreditAmount = Convert.ToDecimal(sh.ShipmentPrice) * -1;
-                        }
-                        else
-                        {
-                            customerLine.DebitAmount = Convert.ToDecimal(sh.ShipmentPrice);
-                        }
-                        lines.Add(customerLine);
-
-                        await _journalEntryService.CreateJournalEntryAsync(
-                            DateTime.Now,
-                            "Business_" + bisnessUserPaymentHeader.Id,
-                            accBranch.Id,
-                            user.Id,
-                            lines,
-                            JournalEntryStatus.Posted,
-                            reference: $"PaymenToBusiness:{bisnessUserPaymentHeader.Id}");
-
-                        var shipmentLog = new ShipmentLog
-                        {
-                            ShipmentId = sh.Id,
-                            EntryDate = DateTime.Now,
-                            EntryDateTine = DateTime.Now,
-                            UserId = loginUserId,
-                            Status = statusinv.TransferShipmentStatusTo,
-                            ClientName = sh.ClientName,
-                            ClientPhone = sh.ClientPhone,
-                            FromCityId = sh.FromCityId,
-                            ClientCityId = sh.ClientCityId,
-                            ClientAreaId = sh.ClientAreaId,
-                            IsUserBusiness = sh.IsUserBusiness,
-                            SenderName = sh.SenderName,
-                            SenderTel = sh.SenderTel,
-                            BusinessUserId = sh.BusinessUserId
-                        };
-                        await _context.ShipmentLogs.AddAsync(shipmentLog);
-                        await _context.SaveChangesAsync();
-
-                        var sessionAddRemark = new SessionAddRemark
-                        {
-                            ShipmentId = sh.Id,
-                            UserId = loginUserId,
-                            EntryDateTime = DateTime.Now,
-                            OldStatus = sh.Status,
-                            NewStatus = statusinv.TransferShipmentStatusTo,
-                            EntryDate = DateTime.Now
-                        };
-
-                        sh.LastUpdate = DateTime.Now;
-                        sh.Status = statusinv.TransferShipmentStatusTo;
-                        sh.DriverId = 0;
-                        _context.Shipments.Update(sh);
-                        await _context.SaveChangesAsync();
-                        await _context.Session_Add_Remarks.AddAsync(sessionAddRemark);
-                        await _context.SaveChangesAsync();
-                    }
-
-                    transactionScope.Complete();
-                    return (null, bisnessUserPaymentHeader);
+                    continue;
                 }
-                catch (Exception ex)
+                var Accbrn = await _accontext.Branches.FirstOrDefaultAsync(t => t.Code == customerUser.CompanyBranchId.ToString());
+                if (Accbrn == null)
                 {
-                    _context.ChangeTracker.Clear();
-                    _accontext.ChangeTracker.Clear();
-                    _logger.LogError(ex, "فشل معالجة دفعة بزنس للسائق {DriverId} من قبل المستخدم {UserId}", driverId, user.Id);
-                    return (BadRequest("حدث خطأ أثناء معالجة العملية. تم التراجع عن جميع التغييرات."), null);
+                    continue;
                 }
-            });
+
+                var customerAccount = await EnsureCustomerAccountAsync(customerUser, customerAccountsCache, customerParentAccount);
+                if (customerAccount == null)
+                {
+                    return (BadRequest("تعذر تحديد حساب العميل"), null);
+                }
+                var lines = new List<JournalEntryLine>();
+
+                #region CashAccounts txn
+                var tottxn = new JournalEntryLine();
+                tottxn.AccountId = cashAccount.AccountId;
+                tottxn.DebitAmount = 0;
+                tottxn.CreditAmount = 0;
+                if (Convert.ToDecimal(sh.ShipmentPrice) <= 0)
+                {
+                    tottxn.DebitAmount = Convert.ToDecimal(sh.ShipmentPrice) * -1;
+                }
+                else
+                {
+                    tottxn.CreditAmount = Convert.ToDecimal(sh.ShipmentPrice);
+                }
+                tottxn.Reference = bisnessUserPaymentHeader.Id.ToString();
+                tottxn.Description = sh.ShipmentTrackingNo + "دفع ذمة مورد ";
+                lines.Add(tottxn);
+                #endregion
+
+
+                #region CustomerAccounttxn txn
+                var CustomerAccounttxn = new JournalEntryLine();
+                CustomerAccounttxn.AccountId = customerAccount.Id;
+                CustomerAccounttxn.DebitAmount = 0;
+                CustomerAccounttxn.CreditAmount = 0;
+                if (Convert.ToDecimal(sh.ShipmentPrice) <= 0)
+                {
+                    CustomerAccounttxn.CreditAmount = Convert.ToDecimal(sh.ShipmentPrice) * -1;
+                }
+                else
+                {
+                    CustomerAccounttxn.DebitAmount = Convert.ToDecimal(sh.ShipmentPrice);
+                }
+                CustomerAccounttxn.Reference = bisnessUserPaymentHeader.Id.ToString();
+                CustomerAccounttxn.Description = sh.ShipmentTrackingNo + "دفع ذمة مورد "; ;
+                lines.Add(CustomerAccounttxn);
+                #endregion
+                await _journalEntryService.CreateJournalEntryAsync(
+                    DateTime.Now,
+                    "Business_" + bisnessUserPaymentHeader.Id,
+                    Accbrn.Id,
+                    user.Id,
+                    lines,
+                    JournalEntryStatus.Posted,
+                    reference: $"PaymenToBusiness:{bisnessUserPaymentHeader.Id}");
+
+            }
+
+
+            foreach (var item in listpay)
+            {
+                var ship = await _context.Shipments.FindAsync(Convert.ToInt32(item.Id));
+                if (ship != null)
+                {
+
+                    //add Submitted status
+                    ShipmentLog shipmentLog = new ShipmentLog();
+                    shipmentLog.ShipmentId = ship.Id;
+                    shipmentLog.EntryDate = DateTime.Now;
+                    shipmentLog.EntryDateTine = DateTime.Now;
+                    shipmentLog.UserId = loginUserId;
+
+                    shipmentLog.Status = statusinv.TransferShipmentStatusTo;
+
+
+                    shipmentLog.ClientName = ship.ClientName;
+                    shipmentLog.ClientPhone = ship.ClientPhone;
+                    shipmentLog.FromCityId = ship.FromCityId;
+                    shipmentLog.ClientCityId = ship.ClientCityId;
+                    shipmentLog.ClientAreaId = ship.ClientAreaId;
+                    shipmentLog.IsUserBusiness = ship.IsUserBusiness;
+                    shipmentLog.SenderName = ship.SenderName;
+                    shipmentLog.SenderTel = ship.SenderTel;
+                    shipmentLog.BusinessUserId = ship.BusinessUserId;
+                    shipmentLog.Status = statusinv.TransferShipmentStatusTo;
+                    await _context.ShipmentLogs.AddAsync(shipmentLog);
+                    await _context.SaveChangesAsync();
+
+                    SessionAddRemark sessionAddRemark = new SessionAddRemark();
+                    sessionAddRemark.ShipmentId = ship.Id;
+                    sessionAddRemark.UserId = loginUserId;
+                    sessionAddRemark.EntryDateTime = DateTime.Now;
+                    sessionAddRemark.OldStatus = ship.Status;
+
+                    sessionAddRemark.NewStatus = statusinv.TransferShipmentStatusTo;
+
+                    sessionAddRemark.EntryDate = DateTime.Now;
+                    ship.LastUpdate = DateTime.Now;
+
+                    ship.Status = statusinv.TransferShipmentStatusTo;
+
+
+                    ship.DriverId = 0;
+                    _context.Shipments.Update(ship);
+                    await _context.SaveChangesAsync();
+                    await _context.Session_Add_Remarks.AddAsync(sessionAddRemark);
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            return (null, bisnessUserPaymentHeader);
         }
 
         private async Task<Account?> EnsureDriverAccountAsync(IEnumerable<RptDriverPay> driverPayments, Account driverParentAccount)
