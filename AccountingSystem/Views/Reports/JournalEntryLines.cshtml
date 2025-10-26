@@ -1,8 +1,47 @@
 @model AccountingSystem.ViewModels.JournalEntryLineReportViewModel
+@using System
 @using System.Globalization
-@{
+@using Microsoft.AspNetCore.Routing
+@{ 
     ViewData["Title"] = "تقرير تفاصيل قيود اليومية";
     var culture = CultureInfo.CurrentCulture;
+    var baseRouteValues = new RouteValueDictionary
+    {
+        ["fromDate"] = Model.FromDate.ToString("yyyy-MM-dd"),
+        ["toDate"] = Model.ToDate.ToString("yyyy-MM-dd")
+    };
+
+    if (Model.BranchId.HasValue)
+    {
+        baseRouteValues["branchId"] = Model.BranchId.Value;
+    }
+
+    if (Model.AccountId.HasValue)
+    {
+        baseRouteValues["accountId"] = Model.AccountId.Value;
+    }
+
+    if (Model.CostCenterId.HasValue)
+    {
+        baseRouteValues["costCenterId"] = Model.CostCenterId.Value;
+    }
+
+    if (Model.StatusFilterProvided)
+    {
+        baseRouteValues["status"] = Model.Status.HasValue ? ((int)Model.Status.Value).ToString() : string.Empty;
+    }
+
+    if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+    {
+        baseRouteValues["searchTerm"] = Model.SearchTerm;
+    }
+
+    Func<int, RouteValueDictionary> buildRouteValues = pageNumber =>
+    {
+        var values = new RouteValueDictionary(baseRouteValues);
+        values["page"] = pageNumber;
+        return values;
+    };
 }
 
 <div class="container-fluid">
@@ -110,6 +149,10 @@
                                 }
                             </div>
                             <div class="text-md-end">
+                                @if (Model.ResultCount > 0)
+                                {
+                                    <div>عرض النتائج: <strong>@Model.FirstItemIndex</strong> - <strong>@Model.LastItemIndex</strong></div>
+                                }
                                 <div>عدد الأسطر: <strong>@Model.ResultCount</strong></div>
                                 <div>إجمالي المدين: <strong>@Model.TotalDebit.ToString("N2", culture)</strong></div>
                                 <div>إجمالي الدائن: <strong>@Model.TotalCredit.ToString("N2", culture)</strong></div>
@@ -169,6 +212,89 @@
                                 </tfoot>
                             </table>
                         </div>
+
+                        @if (Model.TotalPages > 1)
+                        {
+                            var maxPagesToShow = 7;
+                            var startPage = 1;
+                            var endPage = Model.TotalPages;
+                            if (Model.TotalPages > maxPagesToShow)
+                            {
+                                var halfRange = maxPagesToShow / 2;
+                                startPage = Math.Max(1, Model.PageNumber - halfRange);
+                                endPage = startPage + maxPagesToShow - 1;
+                                if (endPage > Model.TotalPages)
+                                {
+                                    endPage = Model.TotalPages;
+                                    startPage = endPage - maxPagesToShow + 1;
+                                }
+                            }
+
+                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mt-3">
+                                <div class="text-muted">صفحة <strong>@Model.PageNumber</strong> من <strong>@Model.TotalPages</strong></div>
+                                <nav aria-label="Journal entry lines pagination">
+                                    <ul class="pagination mb-0">
+                                        <li class="page-item @(Model.HasPreviousPage ? string.Empty : "disabled")">
+                                            @if (Model.HasPreviousPage)
+                                            {
+                                                <a class="page-link" asp-action="JournalEntryLines" asp-all-route-data="@buildRouteValues(Model.PageNumber - 1)">السابق</a>
+                                            }
+                                            else
+                                            {
+                                                <span class="page-link">السابق</span>
+                                            }
+                                        </li>
+
+                                        @if (startPage > 1)
+                                        {
+                                            <li class="page-item">
+                                                <a class="page-link" asp-action="JournalEntryLines" asp-all-route-data="@buildRouteValues(1)">1</a>
+                                            </li>
+                                            @if (startPage > 2)
+                                            {
+                                                <li class="page-item disabled"><span class="page-link">…</span></li>
+                                            }
+                                        }
+
+                                        @for (var pageNumber = startPage; pageNumber <= endPage; pageNumber++)
+                                        {
+                                            <li class="page-item @(pageNumber == Model.PageNumber ? "active" : string.Empty)">
+                                                @if (pageNumber == Model.PageNumber)
+                                                {
+                                                    <span class="page-link">@pageNumber</span>
+                                                }
+                                                else
+                                                {
+                                                    <a class="page-link" asp-action="JournalEntryLines" asp-all-route-data="@buildRouteValues(pageNumber)">@pageNumber</a>
+                                                }
+                                            </li>
+                                        }
+
+                                        @if (endPage < Model.TotalPages)
+                                        {
+                                            @if (endPage < Model.TotalPages - 1)
+                                            {
+                                                <li class="page-item disabled"><span class="page-link">…</span></li>
+                                            }
+                                            <li class="page-item">
+                                                <a class="page-link" asp-action="JournalEntryLines" asp-all-route-data="@buildRouteValues(Model.TotalPages)">@Model.TotalPages</a>
+                                            </li>
+                                        }
+
+                                        <li class="page-item @(Model.HasNextPage ? string.Empty : "disabled")">
+                                            @if (Model.HasNextPage)
+                                            {
+                                                <a class="page-link" asp-action="JournalEntryLines" asp-all-route-data="@buildRouteValues(Model.PageNumber + 1)">التالي</a>
+                                            }
+                                            else
+                                            {
+                                                <span class="page-link">التالي</span>
+                                            }
+                                        </li>
+                                    </ul>
+                                </nav>
+                            </div>
+                        }
                     }
                     else
                     {

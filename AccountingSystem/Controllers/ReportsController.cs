@@ -33,6 +33,7 @@ namespace AccountingSystem.Controllers
         private readonly ICurrencyService _currencyService;
 
         private const int JournalEntryLinesRowsPerWorksheet = 50000;
+        private const int JournalEntryLinesPageSize = 50;
 
         public ReportsController(ApplicationDbContext context, RoadFnDbContext roadContext, ICurrencyService currencyService)
         {
@@ -4143,17 +4144,18 @@ namespace AccountingSystem.Controllers
             return View(viewModel);
         }
 
-        public async Task<IActionResult> JournalEntryLines(DateTime? fromDate, DateTime? toDate, int? branchId, int? accountId, int? costCenterId, JournalEntryStatus? status, string? searchTerm)
+        public async Task<IActionResult> JournalEntryLines(DateTime? fromDate, DateTime? toDate, int? branchId, int? accountId, int? costCenterId, JournalEntryStatus? status, string? searchTerm, int page = 1)
         {
             var statusFilterProvided = Request.Query.ContainsKey(nameof(status));
-            var model = await BuildJournalEntryLineReportViewModel(fromDate, toDate, branchId, accountId, costCenterId, status, searchTerm, statusFilterProvided, includeOptions: true);
+            var normalizedPage = page < 1 ? 1 : page;
+            var model = await BuildJournalEntryLineReportViewModel(fromDate, toDate, branchId, accountId, costCenterId, status, searchTerm, statusFilterProvided, includeOptions: true, includeAllLines: false, pageNumber: normalizedPage, pageSize: JournalEntryLinesPageSize);
             return View(model);
         }
 
         public async Task<IActionResult> JournalEntryLinesExcel(DateTime? fromDate, DateTime? toDate, int? branchId, int? accountId, int? costCenterId, JournalEntryStatus? status, string? searchTerm)
         {
             var statusFilterProvided = Request.Query.ContainsKey(nameof(status));
-            var model = await BuildJournalEntryLineReportViewModel(fromDate, toDate, branchId, accountId, costCenterId, status, searchTerm, statusFilterProvided, includeOptions: false);
+            var model = await BuildJournalEntryLineReportViewModel(fromDate, toDate, branchId, accountId, costCenterId, status, searchTerm, statusFilterProvided, includeOptions: false, includeAllLines: true);
 
             using var workbook = new XLWorkbook();
 
@@ -4311,7 +4313,7 @@ namespace AccountingSystem.Controllers
             return currentRow;
         }
 
-        private async Task<JournalEntryLineReportViewModel> BuildJournalEntryLineReportViewModel(DateTime? fromDate, DateTime? toDate, int? branchId, int? accountId, int? costCenterId, JournalEntryStatus? status, string? searchTerm, bool statusFilterProvided, bool includeOptions)
+        private async Task<JournalEntryLineReportViewModel> BuildJournalEntryLineReportViewModel(DateTime? fromDate, DateTime? toDate, int? branchId, int? accountId, int? costCenterId, JournalEntryStatus? status, string? searchTerm, bool statusFilterProvided, bool includeOptions, bool includeAllLines, int pageNumber = 1, int pageSize = JournalEntryLinesPageSize)
         {
             var normalizedFrom = (fromDate ?? DateTime.Today.AddMonths(-1)).Date;
             var normalizedTo = (toDate ?? DateTime.Today).Date;
@@ -4360,11 +4362,34 @@ namespace AccountingSystem.Controllers
                 query = query.Where(l => l.JournalEntry.Status == statusValue);
             }
 
-            var lines = await query
+            if (pageSize <= 0)
+            {
+                pageSize = JournalEntryLinesPageSize;
+            }
+
+            var totalCount = await query.CountAsync();
+            var totalDebit = await query.SumAsync(l => (decimal?)l.DebitAmount) ?? 0m;
+            var totalCredit = await query.SumAsync(l => (decimal?)l.CreditAmount) ?? 0m;
+
+            var orderedQuery = query
                 .OrderBy(l => l.JournalEntry.Date)
                 .ThenBy(l => l.JournalEntry.Number)
-                .ThenBy(l => l.Id)
-                .ToListAsync();
+                .ThenBy(l => l.Id);
+
+            var totalPages = includeAllLines
+                ? 1
+                : Math.Max(1, (int)Math.Ceiling(totalCount / (double)pageSize));
+            var effectivePageNumber = includeAllLines
+                ? 1
+                : Math.Min(Math.Max(pageNumber, 1), totalPages);
+
+            var pagedQuery = includeAllLines
+                ? orderedQuery
+                : orderedQuery
+                    .Skip((effectivePageNumber - 1) * pageSize)
+                    .Take(pageSize);
+
+            var lines = await pagedQuery.ToListAsync();
 
             var model = new JournalEntryLineReportViewModel
             {
@@ -4376,7 +4401,10 @@ namespace AccountingSystem.Controllers
                 Status = effectiveStatus,
                 StatusFilterProvided = statusFilterProvided,
                 SearchTerm = trimmedSearch,
-                FiltersApplied = statusFilterProvided || branchId.HasValue || accountId.HasValue || costCenterId.HasValue || fromDate.HasValue || toDate.HasValue || !string.IsNullOrWhiteSpace(trimmedSearch)
+                FiltersApplied = statusFilterProvided || branchId.HasValue || accountId.HasValue || costCenterId.HasValue || fromDate.HasValue || toDate.HasValue || !string.IsNullOrWhiteSpace(trimmedSearch),
+                PageNumber = includeAllLines ? 1 : effectivePageNumber,
+                PageSize = includeAllLines ? (totalCount == 0 ? pageSize : totalCount) : pageSize,
+                TotalPages = includeAllLines ? 1 : totalPages
             };
 
             foreach (var line in lines)
@@ -4400,9 +4428,9 @@ namespace AccountingSystem.Controllers
                 });
             }
 
-            model.ResultCount = model.Lines.Count;
-            model.TotalDebit = model.Lines.Sum(l => l.DebitAmount);
-            model.TotalCredit = model.Lines.Sum(l => l.CreditAmount);
+            model.ResultCount = totalCount;
+            model.TotalDebit = totalDebit;
+            model.TotalCredit = totalCredit;
             model.SelectedStatusName = effectiveStatus.HasValue ? GetJournalStatusDisplay(effectiveStatus.Value) : "كل الحالات";
 
             if (branchId.HasValue)
