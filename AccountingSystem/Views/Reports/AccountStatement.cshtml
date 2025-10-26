@@ -3,414 +3,789 @@
 @using System.Linq
 @{
     ViewData["Title"] = "كشف الحساب";
+    var hasSelection = !string.IsNullOrWhiteSpace(Model?.AccountName);
+    var showBaseCurrency = hasSelection && !string.Equals(Model!.CurrencyCode, Model!.BaseCurrencyCode, StringComparison.OrdinalIgnoreCase);
+    var branchLabel = hasSelection
+        ? (string.IsNullOrWhiteSpace(Model!.SelectedBranchName) ? "جميع الفروع" : Model.SelectedBranchName!)
+        : "جميع الفروع";
+    var transactionsCount = Model?.Transactions?.Count ?? 0;
 }
 
 @section Styles {
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        .account-statement-page {
+            background-color: #f5f7fb;
+        }
+
+        .statement-card {
+            border: none;
+            border-radius: 1.5rem;
+            overflow: hidden;
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+        }
+
+        .statement-hero {
+            background: linear-gradient(115deg, #0ea5e9, #2563eb);
+            color: #fff;
+            padding: 2.5rem 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+        }
+
+        @media (min-width: 768px) {
+            .statement-hero {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+            }
+        }
+
+        .statement-hero .hero-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .statement-hero .hero-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.18);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+
+        .statement-hero .hero-title h2 {
+            font-size: 1.9rem;
+        }
+
+        .statement-hero p {
+            margin-bottom: 0;
+            opacity: 0.85;
+        }
+
+        .statement-hero .hero-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1.25rem;
+        }
+
+        .statement-hero .hero-tags .badge {
+            background: rgba(255, 255, 255, 0.25);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            font-weight: 600;
+            padding: 0.6rem 1rem;
+            border-radius: 999px;
+        }
+
+        .statement-hero .hero-meta {
+            text-align: right;
+        }
+
+        .statement-hero .hero-stat {
+            display: flex;
+            flex-direction: column;
+            font-weight: 600;
+        }
+
+        .statement-hero .hero-stat .label {
+            font-size: 0.9rem;
+            opacity: 0.85;
+        }
+
+        .statement-hero .hero-stat .value {
+            font-size: 1.35rem;
+            letter-spacing: 0.03em;
+        }
+
+        .filter-card {
+            border-radius: 1.25rem;
+            background-color: #fff;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+        }
+
+        .filter-card label {
+            font-weight: 600;
+            color: #475569;
+        }
+
+        .filter-card .btn {
+            min-width: 150px;
+            border-radius: 999px;
+        }
+
+        .filter-card select,
+        .filter-card input {
+            border-radius: 0.9rem;
+            border-color: rgba(148, 163, 184, 0.35);
+        }
+
+        .statement-meta .account-info-card {
+            background: #fff;
+            border-radius: 1.25rem;
+            border: 1px solid #e2e8f0;
+            padding: 1.5rem;
+            box-shadow: 0 12px 35px rgba(15, 23, 42, 0.07);
+            height: 100%;
+            position: relative;
+        }
+
+        .statement-meta .account-info-card.highlight {
+            background: linear-gradient(135deg, #eff6ff, #ffffff);
+            border-color: #c7d2fe;
+        }
+
+        .statement-meta .label {
+            font-size: 0.78rem;
+            color: #64748b;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            margin-bottom: 0.35rem;
+        }
+
+        .statement-meta .value {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .statement-meta .meta {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .statement-meta .badge {
+            border-radius: 999px;
+            padding: 0.45rem 0.9rem;
+            font-weight: 600;
+        }
+
+        .statement-summary .summary-panel {
+            border-radius: 1.25rem;
+            overflow: hidden;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+            height: 100%;
+        }
+
+        .statement-summary .summary-header {
+            padding: 1.5rem;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .summary-debit .summary-header {
+            background: linear-gradient(120deg, #16a34a, #22c55e);
+        }
+
+        .summary-credit .summary-header {
+            background: linear-gradient(120deg, #dc2626, #f87171);
+        }
+
+        .statement-summary .summary-header .title {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .statement-summary .summary-header .amount {
+            font-size: 1.55rem;
+            font-weight: 800;
+            display: flex;
+            gap: 0.35rem;
+            align-items: baseline;
+        }
+
+        .statement-summary .summary-body {
+            padding: 1.25rem 1.5rem 1.6rem;
+        }
+
+        .statement-summary .summary-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+            color: #0f172a;
+            font-weight: 600;
+        }
+
+        .statement-summary .summary-item .item-label {
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .statement-summary .summary-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .opening-balance-card {
+            background: #f8fafc;
+            border-radius: 1rem;
+            border: 1px dashed #bfdbfe;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.75rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .opening-balance-card .title {
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .opening-balance-card .amount {
+            font-weight: 700;
+            color: #1d4ed8;
+            font-size: 1.15rem;
+        }
+
+        .movement-table {
+            border-radius: 1.25rem;
+            overflow: hidden;
+            box-shadow: 0 22px 55px rgba(15, 23, 42, 0.08);
+        }
+
+        .movement-table thead th {
+            background: linear-gradient(120deg, #0ea5e9, #2563eb);
+            color: #fff;
+            border: none;
+            font-weight: 700;
+        }
+
+        .movement-table tbody tr.group-row td {
+            background: #f1f5f9;
+            border-top: 1px solid #e2e8f0;
+            font-weight: 600;
+        }
+
+        .movement-table tbody tr.group-row td .movement-name {
+            font-size: 1rem;
+            color: #0f172a;
+        }
+
+        .movement-table tbody tr.details-row td {
+            background: #fff;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        .movement-table tbody tr.details-row:hover td {
+            background: #f8fafc;
+        }
+
+        .movement-table .badge {
+            border-radius: 999px;
+        }
+
+        .empty-state i {
+            color: #cbd5f5;
+        }
+    </style>
 }
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow">
-                <div class="card-header bg-info text-white">
-                    <h4 class="mb-0">
-                        <i class="fas fa-file-alt me-2"></i>
-                        كشف الحساب
-                    </h4>
+<div class="container-fluid account-statement-page py-4">
+    <div class="statement-card card">
+        <div class="statement-hero">
+            <div>
+                <div class="hero-title">
+                    <div class="hero-icon">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </div>
+                    <div>
+                        <h2 class="mb-1 fw-bold">كشف الحساب</h2>
+                        <p>استعرض حركة الحساب مع الأرصدة الإجمالية والتفاصيل الدقيقة كما في النموذج المرفق.</p>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <!-- فلاتر التقرير -->
-                    <form method="get" class="row g-3 mb-4">
-                        <div class="col-md-3">
-                            <label for="accountId" class="form-label">الحساب:</label>
-                            <select name="accountId" id="accountId" class="form-select account-select" required>
-                                <option value="">اختر الحساب</option>
-                                @if (Model?.Accounts != null)
-                                {
-                                    @foreach (var account in Model.Accounts)
-                                    {
-                                        <option value="@account.Value" selected="@(account.Selected ? "selected" : null)">@account.Text</option>
-                                    }
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label for="branchId" class="form-label">الفرع:</label>
-                            <select name="branchId" id="branchId" class="form-select">
-                                <option value="">جميع الفروع</option>
-                                @if (Model?.Branches != null)
-                                {
-                                    @foreach (var branch in Model.Branches)
-                                    {
-                                        <option value="@branch.Value" selected="@(branch.Selected ? "selected" : null)">@branch.Text</option>
-                                    }
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label for="fromDate" class="form-label">من تاريخ:</label>
-                            <input type="date" name="fromDate" id="fromDate" class="form-control" value="@(Model != null ? Model.FromDate.ToString("yyyy-MM-dd") : DateTime.Now.AddMonths(-1).ToString("yyyy-MM-dd"))" />
-                        </div>
-                        <div class="col-md-2">
-                            <label for="toDate" class="form-label">إلى تاريخ:</label>
-                            <input type="date" name="toDate" id="toDate" class="form-control" value="@(Model != null ? Model.ToDate.ToString("yyyy-MM-dd") : DateTime.Now.ToString("yyyy-MM-dd"))" />
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">&nbsp;</label>
-                            <div>
-                                <button type="submit" class="btn btn-info">
-                                    <i class="fas fa-search me-1"></i>
-                                    عرض الكشف
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-
-                    @if (Model?.AccountName != null)
+                <div class="hero-tags">
+                    <span class="badge">
+                        <i class="fas fa-user ms-1"></i>
+                        @(hasSelection ? Model!.AccountName : "لم يتم اختيار حساب بعد")
+                    </span>
+                    <span class="badge">
+                        <i class="fas fa-code-branch ms-1"></i>
+                        @branchLabel
+                    </span>
+                    <span class="badge">
+                        <i class="fas fa-list-ol ms-1"></i>
+                        @(hasSelection ? $"عدد الحركات: {transactionsCount}" : "حدد فترة لعرض الحركات")
+                    </span>
+                </div>
+            </div>
+            <div class="hero-meta">
+                <div class="hero-stat">
+                    <span class="label">الرصيد الافتتاحي</span>
+                    <span class="value">
+                        @(hasSelection ? $"{Model!.OpeningBalance.ToString("N2")} {Model.CurrencyCode}" : "--")
+                    </span>
+                    @if (hasSelection && showBaseCurrency)
                     {
-                        var showBaseCurrency = !string.Equals(Model?.CurrencyCode, Model?.BaseCurrencyCode, System.StringComparison.OrdinalIgnoreCase);
-                        var branchLabel = string.IsNullOrWhiteSpace(Model?.SelectedBranchName)
-                        ? "جميع الفروع"
-                        : Model!.SelectedBranchName!;
-                        var transactionsCount = Model?.Transactions?.Count ?? 0;
-                        <!-- معلومات الحساب -->
-                        <div class="card border-info mb-4">
-                            <div class="card-header bg-light">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <h5 class="mb-0">@Model.AccountName</h5>
-                                        <small class="text-muted">رقم الحساب: @Model.AccountCode</small>
-                                        <div class="mt-2 d-flex flex-wrap gap-2">
-                                            <span class="badge bg-info text-dark">
-                                                <i class="fas fa-code-branch ms-1"></i>
-                                                @branchLabel
-                                            </span>
-                                            <span class="badge bg-secondary">
-                                                <i class="fas fa-list-ol ms-1"></i>
-                                                @transactionsCount حركة
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6 text-end">
-                                        <h6 class="mb-0">
-                                            الرصيد الافتتاحي:
-                                            <span class="badge bg-secondary">@Model.OpeningBalance.ToString("N2") @Model.CurrencyCode</span>
-                                            @if (showBaseCurrency)
-                                            {
-                                                <small class="text-muted">(@Model.OpeningBalanceBase.ToString("N2") @Model.BaseCurrencyCode)</small>
-                                            }
-                                        </h6>
-                                        <h6 class="mb-0">
-                                            الرصيد الختامي:
-                                            <span class="badge bg-primary">@Model.ClosingBalance.ToString("N2") @Model.CurrencyCode</span>
-                                            @if (showBaseCurrency)
-                                            {
-                                                <small class="text-muted">(@Model.ClosingBalanceBase.ToString("N2") @Model.BaseCurrencyCode)</small>
-                                            }
-                                        </h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-end mb-3">
-                            <a class="btn btn-outline-primary" target="_blank" href="@Url.Action("PrintAccountStatement", "Reports", new { accountId = Model.AccountId, branchId = Model.BranchId, fromDate = Model.FromDate.ToString("yyyy-MM-dd"), toDate = Model.ToDate.ToString("yyyy-MM-dd") })">
-                                <i class="fas fa-print me-1"></i>
-                                طباعة A4
-                            </a>
-                        </div>
-
-                        <!-- جدول الحركات -->
-                        <div class="card border-light mb-4">
-                            <div class="card-header bg-light fw-bold">
-                                <i class="fas fa-balance-scale me-2"></i>
-                                الرصيد الافتتاحي (@Model.FromDate.ToString("yyyy/MM/dd"))
-                            </div>
-                            <div class="card-body p-0">
-                                <div class="table-responsive mb-0">
-                                    <table class="table table-sm table-bordered mb-0">
-                                        <thead class="table-secondary">
-                                            <tr>
-                                                <th class="text-center">البيان</th>
-                                                <th class="text-end">الرصيد (@Model.CurrencyCode)</th>
-                                                @if (showBaseCurrency)
-                                                {
-                                                    <th class="text-end">الرصيد (@Model.BaseCurrencyCode)</th>
-                                                }
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td class="fw-bold text-center">الرصيد الافتتاحي</td>
-                                                <td class="text-end fw-bold">@Model.OpeningBalance.ToString("N2") @Model.CurrencyCode</td>
-                                                @if (showBaseCurrency)
-                                                {
-                                                    <td class="text-end text-muted">@Model.OpeningBalanceBase.ToString("N2") @Model.BaseCurrencyCode</td>
-                                                }
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-
-                        @if (Model.Transactions != null && Model.Transactions.Any())
-                        {
-                            var groupedTransactions = Model.Transactions
-                            .GroupBy(t => string.IsNullOrWhiteSpace(t.MovementType) ? "بدون تصنيف" : t.MovementType)
-                            .OrderBy(g => g.Key)
-                            .ToList();
-
-                            <div class="table-responsive mb-3" id="movementTypeAccordion">
-                                <table class="table table-hover align-middle mb-0">
-                                    <thead class="table-primary text-center">
-                                        <tr>
-                                            <th class="text-start">نوع الحركة</th>
-                                            <th>عدد الحركات</th>
-                                            <th class="text-end text-success">إجمالي المدين (@Model.CurrencyCode)</th>
-                                            <th class="text-end text-danger">إجمالي الدائن (@Model.CurrencyCode)</th>
-                                            <th class="text-end">صافي الحركة</th>
-                                            <th class="text-end">الرصيد النهائي</th>
-                                            <th>التفاصيل</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @for (int i = 0; i < groupedTransactions.Count; i++)
-                                        {
-                                            var grouping = groupedTransactions[i];
-                                            var transactions = grouping.ToList();
-                                            var collapseId = $"movementTypeCollapse{i}";
-                                            var totalDebit = transactions.Sum(t => t.DebitAmount);
-                                            var totalCredit = transactions.Sum(t => t.CreditAmount);
-                                            var totalDebitBase = transactions.Sum(t => t.DebitAmountBase);
-                                            var totalCreditBase = transactions.Sum(t => t.CreditAmountBase);
-                                            var netAmount = totalDebit - totalCredit;
-                                            var netAmountBase = totalDebitBase - totalCreditBase;
-                                            var lastBalance = transactions.Last().RunningBalance;
-                                            var lastBalanceBase = transactions.Last().RunningBalanceBase;
-                                            var isNetDebit = netAmount >= 0;
-                                            var netAmountDisplay = Math.Abs(netAmount);
-                                            var netAmountBaseDisplay = Math.Abs(netAmountBase);
-                                            var netAmountNature = isNetDebit ? "مدين" : "دائن";
-                                            var netAmountCssClass = isNetDebit ? "text-success" : "text-danger";
-
-                                            <tr class="table-light">
-                                                <td class="text-start">
-                                                    <div class="d-flex flex-column flex-md-row align-items-md-center gap-2">
-                                                        <span class="badge bg-info text-dark">
-                                                            <i class="fas fa-folder-open ms-1"></i>
-                                                            @grouping.Key
-                                                        </span>
-                                                        <div class="small text-muted">آخر رصيد: @lastBalance.ToString("N2") @Model.CurrencyCode</div>
-                                                    </div>
-                                                </td>
-                                                <td class="text-center">
-                                                    <span class="badge bg-secondary">@transactions.Count</span>
-                                                </td>
-                                                <td class="text-end">
-                                                    <span class="fw-bold text-success">@totalDebit.ToString("N2") @Model.CurrencyCode</span>
-                                                    @if (showBaseCurrency)
-                                                    {
-                                                        <div class="small text-muted">(@totalDebitBase.ToString("N2") @Model.BaseCurrencyCode)</div>
-                                                    }
-                                                </td>
-                                                <td class="text-end">
-                                                    <span class="fw-bold text-danger">@totalCredit.ToString("N2") @Model.CurrencyCode</span>
-                                                    @if (showBaseCurrency)
-                                                    {
-                                                        <div class="small text-muted">(@totalCreditBase.ToString("N2") @Model.BaseCurrencyCode)</div>
-                                                    }
-                                                </td>
-                                                <td class="text-end">
-                                                    <span class="fw-bold @netAmountCssClass">@netAmountDisplay.ToString("N2") @Model.CurrencyCode</span>
-                                                    <div class="small text-muted">صافي @netAmountNature</div>
-                                                    @if (showBaseCurrency && netAmountBaseDisplay > 0)
-                                                    {
-                                                        <div class="small text-muted">(@netAmountBaseDisplay.ToString("N2") @Model.BaseCurrencyCode)</div>
-                                                    }
-                                                </td>
-                                                <td class="text-end">
-                                                    <span class="fw-bold">@lastBalance.ToString("N2") @Model.CurrencyCode</span>
-                                                    @if (showBaseCurrency)
-                                                    {
-                                                        <div class="small text-muted">(@lastBalanceBase.ToString("N2") @Model.BaseCurrencyCode)</div>
-                                                    }
-                                                </td>
-                                                <td class="text-center">
-                                                    <button class="btn btn-sm btn-outline-primary collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId" aria-expanded="false" aria-controls="@collapseId">
-                                                        <i class="fas fa-list me-1"></i>
-                                                        عرض التفاصيل
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                            <tr id="@collapseId" class="collapse" data-bs-parent="#movementTypeAccordion">
-                                                <td colspan="7" class="p-0">
-                                                    <div class="table-responsive border-top">
-                                                        <table class="table table-sm table-striped mb-0">
-                                                            <thead class="table-light">
-                                                                <tr>
-                                                                    <th>التاريخ</th>
-                                                                    <th>رقم القيد</th>
-                                                                    <th>المرجع</th>
-                                                                    <th>الفرع</th>
-                                                                    <th>المستخدم</th>
-                                                                    <th>البيان</th>
-                                                                    <th class="text-end">مدين (@Model.CurrencyCode)</th>
-                                                                    <th class="text-end">دائن (@Model.CurrencyCode)</th>
-                                                                    <th class="text-end">الرصيد (@Model.CurrencyCode)</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                @foreach (var transaction in transactions)
-                                                                {
-                                                                    <tr>
-                                                                        <td>@transaction.Date.ToString("dd/MM/yyyy")</td>
-                                                                        <td>
-                                                                            <a href="@Url.Action("Details", "JournalEntries", new { id = transaction.JournalEntryId })" class="text-decoration-none" target="_blank">
-                                                                                @transaction.JournalEntryNumber
-                                                                            </a>
-                                                                        </td>
-                                                                        <td>
-                                                                            <a href="@Url.Action("Details", "JournalEntries", new { id = transaction.JournalEntryId })" class="btn btn-sm btn-outline-secondary" target="_blank">
-                                                                                <i class="fas fa-link me-1"></i>
-                                                                                @(string.IsNullOrWhiteSpace(transaction.Reference) ? "عرض القيد" : transaction.Reference)
-                                                                            </a>
-                                                                        </td>
-                                                                        <td>@(string.IsNullOrWhiteSpace(transaction.BranchName) ? "-" : transaction.BranchName)</td>
-                                                                        <td>@(string.IsNullOrWhiteSpace(transaction.CreatedByName) ? "-" : transaction.CreatedByName)</td>
-                                                                        <td>
-                                                                            <div class="fw-semibold">@transaction.MovementType</div>
-                                                                            @if (!string.IsNullOrWhiteSpace(transaction.Description))
-                                                                            {
-                                                                                <div class="text-muted small">@transaction.Description</div>
-                                                                            }
-                                                                        </td>
-                                                                        <td class="text-end">
-                                                                            @if (transaction.DebitAmount > 0)
-                                                                            {
-                                                                                <span class="text-success fw-bold">@transaction.DebitAmount.ToString("N2") @Model.CurrencyCode</span>
-                                                                                @if (showBaseCurrency)
-                                                                                {
-                                                                                    <small class="text-muted d-block">@transaction.DebitAmountBase.ToString("N2") @Model.BaseCurrencyCode</small>
-                                                                                }
-                                                                            }
-                                                                            else
-                                                                            {
-                                                                                <span class="text-muted">-</span>
-                                                                            }
-                                                                        </td>
-                                                                        <td class="text-end">
-                                                                            @if (transaction.CreditAmount > 0)
-                                                                            {
-                                                                                <span class="text-danger fw-bold">@transaction.CreditAmount.ToString("N2") @Model.CurrencyCode</span>
-                                                                                @if (showBaseCurrency)
-                                                                                {
-                                                                                    <small class="text-muted d-block">@transaction.CreditAmountBase.ToString("N2") @Model.BaseCurrencyCode</small>
-                                                                                }
-                                                                            }
-                                                                            else
-                                                                            {
-                                                                                <span class="text-muted">-</span>
-                                                                            }
-                                                                        </td>
-                                                                        <td class="text-end">
-                                                                            <span class="fw-bold">@transaction.RunningBalance.ToString("N2") @Model.CurrencyCode</span>
-                                                                            @if (showBaseCurrency)
-                                                                            {
-                                                                                <small class="text-muted d-block">@transaction.RunningBalanceBase.ToString("N2") @Model.BaseCurrencyCode</small>
-                                                                            }
-                                                                        </td>
-                                                                    </tr>
-                                                                }
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="text-center text-muted py-4">
-                                <i class="fas fa-inbox fa-2x mb-2"></i>
-                                <p class="mb-0">لا توجد حركات في الفترة المحددة</p>
-                            </div>
-                        }
-
-                        <!-- ملخص الحركات -->
-                        var summaryNetAmount = Model.TotalDebit - Model.TotalCredit;
-                        var summaryNetAmountBase = Model.TotalDebitBase - Model.TotalCreditBase;
-                        var isSummaryNetDebit = summaryNetAmount >= 0;
-                        var summaryNetAmountDisplay = Math.Abs(summaryNetAmount);
-                        var summaryNetAmountBaseDisplay = Math.Abs(summaryNetAmountBase);
-
-
-                        var summaryNetNature = isSummaryNetDebit ? "مدين" : "دائن";
-                        var summaryNetCssClass = isSummaryNetDebit ? "text-success" : "text-danger";
-
-                        <div class="row mt-4 g-3">
-                            <div class="col-md-6">
-                                <div class="card border-success">
-                                    <div class="card-body text-center">
-                                        <h6 class="card-title">إجمالي المدين</h6>
-                                        <h4 class="text-success">
-                                            (@Model.TotalDebit.ToString("N2") @Model.CurrencyCode)
-                                            @if (showBaseCurrency)
-                                            {
-                                                <small class="text-muted">(@Model.TotalDebitBase.ToString("N2") @Model.BaseCurrencyCode)</small>
-                                            }
-                                        </h4>
-                                        @if (summaryNetAmountDisplay > 0)
-                                        {
-                                            <p class="mb-0 @summaryNetCssClass">صافي الحركة (@summaryNetNature): @summaryNetAmountDisplay.ToString("N2") @Model.CurrencyCode</p>
-                                            @if (showBaseCurrency)
-                                            {
-                                                <small class="text-muted">(@summaryNetAmountBaseDisplay.ToString("N2") @Model.BaseCurrencyCode)</small>
-                                            }
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card border-danger">
-                                    <div class="card-body text-center">
-                                        <h6 class="card-title">إجمالي الدائن</h6>
-                                        <h4 class="text-danger">
-                                            (@Model.TotalCredit.ToString("N2") @Model.CurrencyCode)
-                                            @if (showBaseCurrency)
-                                            {
-                                                <small class="text-muted">(@Model.TotalCreditBase.ToString("N2") @Model.BaseCurrencyCode)</small>
-                                            }
-                                        </h4>
-                                        @if (summaryNetAmountDisplay > 0)
-                                        {
-                                            <p class="mb-0 @summaryNetCssClass">صافي الحركة (@summaryNetNature): @summaryNetAmountDisplay.ToString("N2") @Model.CurrencyCode</p>
-                                            @if (showBaseCurrency)
-                                            {
-                                                <small class="text-muted">(@summaryNetAmountBaseDisplay.ToString("N2") @Model.BaseCurrencyCode)</small>
-                                            }
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <span class="small text-white-50">(@Model.OpeningBalanceBase.ToString("N2") @Model.BaseCurrencyCode)</span>
                     }
-                    else
+                </div>
+                <div class="hero-stat mt-3">
+                    <span class="label">الرصيد الختامي</span>
+                    <span class="value">
+                        @(hasSelection ? $"{Model!.ClosingBalance.ToString("N2")} {Model.CurrencyCode}" : "--")
+                    </span>
+                    @if (hasSelection && showBaseCurrency)
                     {
-                        <div class="text-center py-5">
-                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
-                            <h5 class="text-muted">اختر الحساب لعرض الكشف</h5>
-                            <p class="text-muted">يرجى اختيار الحساب والفترة الزمنية المطلوبة</p>
-                        </div>
+                        <span class="small text-white-50">(@Model.ClosingBalanceBase.ToString("N2") @Model.BaseCurrencyCode)</span>
                     }
                 </div>
             </div>
         </div>
+        <div class="card-body p-4">
+            <div class="filter-card shadow-sm p-4 mb-4">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label for="accountId" class="form-label">الحساب</label>
+                        <select name="accountId" id="accountId" class="form-select account-select" required>
+                            <option value="">اختر الحساب</option>
+                            @if (Model?.Accounts != null)
+                            {
+                                foreach (var account in Model.Accounts)
+                                {
+                                    <option value="@account.Value" selected="@(account.Selected ? "selected" : null)">@account.Text</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="branchId" class="form-label">الفرع</label>
+                        <select name="branchId" id="branchId" class="form-select">
+                            <option value="">جميع الفروع</option>
+                            @if (Model?.Branches != null)
+                            {
+                                foreach (var branch in Model.Branches)
+                                {
+                                    <option value="@branch.Value" selected="@(branch.Selected ? "selected" : null)">@branch.Text</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="fromDate" class="form-label">من تاريخ</label>
+                        <input type="date" name="fromDate" id="fromDate" class="form-control" value="@(Model != null ? Model.FromDate.ToString("yyyy-MM-dd") : DateTime.Now.AddMonths(-1).ToString("yyyy-MM-dd"))" />
+                    </div>
+                    <div class="col-md-2">
+                        <label for="toDate" class="form-label">إلى تاريخ</label>
+                        <input type="date" name="toDate" id="toDate" class="form-control" value="@(Model != null ? Model.ToDate.ToString("yyyy-MM-dd") : DateTime.Now.ToString("yyyy-MM-dd"))" />
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-info text-white">
+                            <i class="fas fa-search me-1"></i>
+                            عرض الكشف
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            @if (hasSelection)
+            {
+                var summaryNetAmount = Model!.TotalDebit - Model!.TotalCredit;
+                var summaryNetAmountBase = Model.TotalDebitBase - Model.TotalCreditBase;
+                var isSummaryNetDebit = summaryNetAmount >= 0;
+                var summaryNetAmountDisplay = Math.Abs(summaryNetAmount);
+                var summaryNetAmountBaseDisplay = Math.Abs(summaryNetAmountBase);
+                var debitNetDisplay = isSummaryNetDebit ? summaryNetAmountDisplay : 0m;
+                var creditNetDisplay = isSummaryNetDebit ? 0m : summaryNetAmountDisplay;
+                var debitNetBaseDisplay = isSummaryNetDebit ? summaryNetAmountBaseDisplay : 0m;
+                var creditNetBaseDisplay = isSummaryNetDebit ? 0m : summaryNetAmountBaseDisplay;
+                var transactionGroupsSource = Model.Transactions ?? Enumerable.Empty<AccountingSystem.ViewModels.AccountTransactionViewModel>();
+                var groupedTransactions = transactionGroupsSource
+                    .GroupBy(t => string.IsNullOrWhiteSpace(t.MovementType) ? "بدون تصنيف" : t.MovementType)
+                    .OrderBy(g => g.Key)
+                    .ToList();
+
+                <div class="statement-meta row g-3 mb-4">
+                    <div class="col-xl-4 col-lg-6">
+                        <div class="account-info-card">
+                            <div class="label">الحساب</div>
+                            <div class="value">@Model.AccountName</div>
+                            <div class="meta">رقم الحساب: @Model.AccountCode</div>
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                <span class="badge bg-primary-subtle text-primary-emphasis">
+                                    <i class="fas fa-code-branch ms-1"></i>
+                                    @branchLabel
+                                </span>
+                                <span class="badge bg-info-subtle text-info-emphasis">
+                                    <i class="fas fa-database ms-1"></i>
+                                    @transactionsCount حركة
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-4 col-lg-6">
+                        <div class="account-info-card">
+                            <div class="label">الفترة الزمنية</div>
+                            <div class="value">@Model.FromDate.ToString("dd/MM/yyyy") - @Model.ToDate.ToString("dd/MM/yyyy")</div>
+                            <div class="meta mt-2">
+                                <i class="fas fa-coins ms-1"></i>
+                                العملة: @Model.CurrencyCode
+                            </div>
+                            @if (showBaseCurrency)
+                            {
+                                <div class="meta mt-1 text-muted">
+                                    <i class="fas fa-scale-balanced ms-1"></i>
+                                    العملة الأساسية: @Model.BaseCurrencyCode
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-xl-4 col-12">
+                        <div class="account-info-card highlight d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="label">خيارات العرض</div>
+                                <div class="value">إدارة التقرير</div>
+                                <div class="meta">يمكنك طباعة كشف الحساب أو فتح نسخة للطباعة في نافذة جديدة.</div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                <a class="btn btn-outline-primary" target="_blank" href="@Url.Action("PrintAccountStatement", "Reports", new { accountId = Model.AccountId, branchId = Model.BranchId, fromDate = Model.FromDate.ToString("yyyy-MM-dd"), toDate = Model.ToDate.ToString("yyyy-MM-dd") })">
+                                    <i class="fas fa-print me-1"></i>
+                                    طباعة A4
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 statement-summary mb-4">
+                    <div class="col-lg-6">
+                        <div class="summary-panel summary-debit">
+                            <div class="summary-header">
+                                <span class="title">
+                                    <i class="fas fa-arrow-trend-up ms-2"></i>
+                                    المدين
+                                </span>
+                                <span class="amount">
+                                    @Model.TotalDebit.ToString("N2")
+                                    <small class="fw-normal">@Model.CurrencyCode</small>
+                                </span>
+                            </div>
+                            <div class="summary-body">
+                                <div class="summary-item">
+                                    <span class="item-label">إجمالي المدين</span>
+                                    <div class="text-end">
+                                        <span class="fw-bold text-success">@Model.TotalDebit.ToString("N2") @Model.CurrencyCode</span>
+                                        @if (showBaseCurrency)
+                                        {
+                                            <div class="text-muted small">@Model.TotalDebitBase.ToString("N2") @Model.BaseCurrencyCode</div>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="item-label">الرصيد الافتتاحي</span>
+                                    <div class="text-end">
+                                        <span class="fw-bold">@Model.OpeningBalance.ToString("N2") @Model.CurrencyCode</span>
+                                        @if (showBaseCurrency)
+                                        {
+                                            <div class="text-muted small">@Model.OpeningBalanceBase.ToString("N2") @Model.BaseCurrencyCode</div>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="item-label">صافي الحركة</span>
+                                    <div class="d-flex flex-column text-end">
+                                        @if (debitNetDisplay > 0)
+                                        {
+                                            <span class="fw-bold text-success">@debitNetDisplay.ToString("N2") @Model.CurrencyCode</span>
+                                            @if (showBaseCurrency && debitNetBaseDisplay > 0)
+                                            {
+                                                <span class="text-muted small">@debitNetBaseDisplay.ToString("N2") @Model.BaseCurrencyCode</span>
+                                            }
+                                            <span class="badge bg-success-subtle text-success-emphasis align-self-end mt-2">صافي مدين</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">لا يوجد صافي مدين</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="summary-panel summary-credit">
+                            <div class="summary-header">
+                                <span class="title">
+                                    <i class="fas fa-arrow-trend-down ms-2"></i>
+                                    الدائن
+                                </span>
+                                <span class="amount">
+                                    @Model.TotalCredit.ToString("N2")
+                                    <small class="fw-normal">@Model.CurrencyCode</small>
+                                </span>
+                            </div>
+                            <div class="summary-body">
+                                <div class="summary-item">
+                                    <span class="item-label">إجمالي الدائن</span>
+                                    <div class="text-end">
+                                        <span class="fw-bold text-danger">@Model.TotalCredit.ToString("N2") @Model.CurrencyCode</span>
+                                        @if (showBaseCurrency)
+                                        {
+                                            <div class="text-muted small">@Model.TotalCreditBase.ToString("N2") @Model.BaseCurrencyCode</div>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="item-label">الرصيد الختامي</span>
+                                    <div class="text-end">
+                                        <span class="fw-bold">@Model.ClosingBalance.ToString("N2") @Model.CurrencyCode</span>
+                                        @if (showBaseCurrency)
+                                        {
+                                            <div class="text-muted small">@Model.ClosingBalanceBase.ToString("N2") @Model.BaseCurrencyCode</div>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="item-label">صافي الحركة</span>
+                                    <div class="d-flex flex-column text-end">
+                                        @if (creditNetDisplay > 0)
+                                        {
+                                            <span class="fw-bold text-danger">@creditNetDisplay.ToString("N2") @Model.CurrencyCode</span>
+                                            @if (showBaseCurrency && creditNetBaseDisplay > 0)
+                                            {
+                                                <span class="text-muted small">@creditNetBaseDisplay.ToString("N2") @Model.BaseCurrencyCode</span>
+                                            }
+                                            <span class="badge bg-danger-subtle text-danger-emphasis align-self-end mt-2">صافي دائن</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">لا يوجد صافي دائن</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="opening-balance-card">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-calendar-day text-primary fs-5 ms-1"></i>
+                        <span class="title">الرصيد الافتتاحي اعتباراً من @Model.FromDate.ToString("yyyy/MM/dd")</span>
+                    </div>
+                    <div class="d-flex flex-column text-end">
+                        <span class="amount">@Model.OpeningBalance.ToString("N2") @Model.CurrencyCode</span>
+                        @if (showBaseCurrency)
+                        {
+                            <span class="text-muted small">@Model.OpeningBalanceBase.ToString("N2") @Model.BaseCurrencyCode</span>
+                        }
+                    </div>
+                </div>
+
+                @if (groupedTransactions.Any())
+                {
+                    <div class="movement-table" id="movementTypeAccordion">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="text-center">
+                                    <tr>
+                                        <th class="text-start">نوع الحركة</th>
+                                        <th>عدد الحركات</th>
+                                        <th class="text-end text-success">إجمالي المدين (@Model.CurrencyCode)</th>
+                                        <th class="text-end text-danger">إجمالي الدائن (@Model.CurrencyCode)</th>
+                                        <th class="text-end">صافي الحركة</th>
+                                        <th class="text-end">الرصيد النهائي</th>
+                                        <th>التفاصيل</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (int i = 0; i < groupedTransactions.Count; i++)
+                                    {
+                                        var grouping = groupedTransactions[i];
+                                        var transactions = grouping.ToList();
+                                        var collapseId = $"movementTypeCollapse{i}";
+                                        var totalDebit = transactions.Sum(t => t.DebitAmount);
+                                        var totalCredit = transactions.Sum(t => t.CreditAmount);
+                                        var totalDebitBase = transactions.Sum(t => t.DebitAmountBase);
+                                        var totalCreditBase = transactions.Sum(t => t.CreditAmountBase);
+                                        var netAmount = totalDebit - totalCredit;
+                                        var netAmountBase = totalDebitBase - totalCreditBase;
+                                        var netAmountDisplay = Math.Abs(netAmount);
+                                        var netAmountBaseDisplay = Math.Abs(netAmountBase);
+                                        var netNature = netAmount >= 0 ? "مدين" : "دائن";
+                                        var netClass = netAmount >= 0 ? "text-success" : "text-danger";
+                                        var lastBalance = transactions.Last().RunningBalance;
+                                        var lastBalanceBase = transactions.Last().RunningBalanceBase;
+
+                                        <tr class="group-row">
+                                            <td class="text-start">
+                                                <div class="d-flex flex-column flex-md-row align-items-md-center gap-2 movement-name">
+                                                    <span class="badge bg-info-subtle text-info-emphasis px-3 py-2">
+                                                        <i class="fas fa-folder-open ms-1"></i>
+                                                        @grouping.Key
+                                                    </span>
+                                                    <span class="text-muted small">آخر رصيد: @lastBalance.ToString("N2") @Model.CurrencyCode</span>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-secondary text-white">@transactions.Count</span>
+                                            </td>
+                                            <td class="text-end">
+                                                <span class="fw-bold text-success">@totalDebit.ToString("N2") @Model.CurrencyCode</span>
+                                                @if (showBaseCurrency)
+                                                {
+                                                    <div class="text-muted small">@totalDebitBase.ToString("N2") @Model.BaseCurrencyCode</div>
+                                                }
+                                            </td>
+                                            <td class="text-end">
+                                                <span class="fw-bold text-danger">@totalCredit.ToString("N2") @Model.CurrencyCode</span>
+                                                @if (showBaseCurrency)
+                                                {
+                                                    <div class="text-muted small">@totalCreditBase.ToString("N2") @Model.BaseCurrencyCode</div>
+                                                }
+                                            </td>
+                                            <td class="text-end">
+                                                <div class="d-flex flex-column text-end">
+                                                    <span class="fw-bold @netClass">@netAmountDisplay.ToString("N2") @Model.CurrencyCode</span>
+                                                    @if (showBaseCurrency && netAmountBaseDisplay > 0)
+                                                    {
+                                                        <span class="text-muted small">@netAmountBaseDisplay.ToString("N2") @Model.BaseCurrencyCode</span>
+                                                    }
+                                                    <span class="badge @(netAmount >= 0 ? "bg-success-subtle text-success-emphasis" : "bg-danger-subtle text-danger-emphasis") align-self-end mt-2">صافي @netNature</span>
+                                                </div>
+                                            </td>
+                                            <td class="text-end">
+                                                <span class="fw-bold">@lastBalance.ToString("N2") @Model.CurrencyCode</span>
+                                                @if (showBaseCurrency)
+                                                {
+                                                    <div class="text-muted small">@lastBalanceBase.ToString("N2") @Model.BaseCurrencyCode</div>
+                                                }
+                                            </td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm btn-outline-primary collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId" aria-expanded="false" aria-controls="@collapseId">
+                                                    <i class="fas fa-list me-1"></i>
+                                                    عرض التفاصيل
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr id="@collapseId" class="collapse details-row" data-bs-parent="#movementTypeAccordion">
+                                            <td colspan="7" class="p-0">
+                                                <div class="table-responsive border-top">
+                                                    <table class="table table-sm table-striped mb-0">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th>التاريخ</th>
+                                                                <th>رقم القيد</th>
+                                                                <th>المرجع</th>
+                                                                <th>الفرع</th>
+                                                                <th>المستخدم</th>
+                                                                <th>نوع الحركة</th>
+                                                                <th>البيان</th>
+                                                                <th class="text-end">مدين (@Model.CurrencyCode)</th>
+                                                                <th class="text-end">دائن (@Model.CurrencyCode)</th>
+                                                                <th class="text-end">الرصيد (@Model.CurrencyCode)</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach (var transaction in transactions)
+                                                            {
+                                                                <tr>
+                                                                    <td>@transaction.Date.ToString("dd/MM/yyyy")</td>
+                                                                    <td>
+                                                                        <a href="@Url.Action("Details", "JournalEntries", new { id = transaction.JournalEntryId })" class="text-decoration-none" target="_blank">
+                                                                            @transaction.JournalEntryNumber
+                                                                        </a>
+                                                                    </td>
+                                                                    <td>
+                                                                        <a href="@Url.Action("Details", "JournalEntries", new { id = transaction.JournalEntryId })" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                                                            <i class="fas fa-link me-1"></i>
+                                                                            @(string.IsNullOrWhiteSpace(transaction.Reference) ? "عرض القيد" : transaction.Reference)
+                                                                        </a>
+                                                                    </td>
+                                                                    <td>@(string.IsNullOrWhiteSpace(transaction.BranchName) ? "-" : transaction.BranchName)</td>
+                                                                    <td>@(string.IsNullOrWhiteSpace(transaction.CreatedByName) ? "-" : transaction.CreatedByName)</td>
+                                                                    <td>@transaction.MovementType</td>
+                                                                    <td>
+                                                                        @if (!string.IsNullOrWhiteSpace(transaction.Description))
+                                                                        {
+                                                                            <div class="fw-semibold">@transaction.Description</div>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <span class="text-muted">-</span>
+                                                                        }
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        @if (transaction.DebitAmount > 0)
+                                                                        {
+                                                                            <span class="text-success fw-bold">@transaction.DebitAmount.ToString("N2") @Model.CurrencyCode</span>
+                                                                            @if (showBaseCurrency)
+                                                                            {
+                                                                                <div class="text-muted small">@transaction.DebitAmountBase.ToString("N2") @Model.BaseCurrencyCode</div>
+                                                                            }
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <span class="text-muted">-</span>
+                                                                        }
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        @if (transaction.CreditAmount > 0)
+                                                                        {
+                                                                            <span class="text-danger fw-bold">@transaction.CreditAmount.ToString("N2") @Model.CurrencyCode</span>
+                                                                            @if (showBaseCurrency)
+                                                                            {
+                                                                                <div class="text-muted small">@transaction.CreditAmountBase.ToString("N2") @Model.BaseCurrencyCode</div>
+                                                                            }
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <span class="text-muted">-</span>
+                                                                        }
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        <span class="fw-bold">@transaction.RunningBalance.ToString("N2") @Model.CurrencyCode</span>
+                                                                        @if (showBaseCurrency)
+                                                                        {
+                                                                            <div class="text-muted small">@transaction.RunningBalanceBase.ToString("N2") @Model.BaseCurrencyCode</div>
+                                                                        }
+                                                                    </td>
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state text-center py-5">
+                        <i class="fas fa-inbox fa-3x mb-3 text-muted"></i>
+                        <h5 class="text-muted">لا توجد حركات في الفترة المحددة</h5>
+                        <p class="text-muted mb-0">قم بتعديل الفلاتر أو تغيير الفترة الزمنية لعرض حركات أخرى.</p>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="empty-state text-center py-5">
+                    <i class="fas fa-search fa-3x mb-3"></i>
+                    <h5 class="text-muted">اختر الحساب لعرض الكشف</h5>
+                    <p class="text-muted mb-0">يرجى اختيار الحساب والفرع والفترة الزمنية المطلوبة ثم النقر على «عرض الكشف».</p>
+                </div>
+            }
+        }
     </div>
+</div>
+
 </div>
 
 @section Scripts {
