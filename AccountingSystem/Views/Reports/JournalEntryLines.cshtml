@@ -1,11 +1,11 @@
 @model AccountingSystem.ViewModels.JournalEntryLineReportViewModel
 @using System
 @using System.Globalization
-@using Microsoft.AspNetCore.Routing
+@using System.Collections.Generic
 @{ 
     ViewData["Title"] = "تقرير تفاصيل قيود اليومية";
     var culture = CultureInfo.CurrentCulture;
-    var baseRouteValues = new RouteValueDictionary
+    var baseRouteValues = new Dictionary<string, string>
     {
         ["fromDate"] = Model.FromDate.ToString("yyyy-MM-dd"),
         ["toDate"] = Model.ToDate.ToString("yyyy-MM-dd")
@@ -13,17 +13,17 @@
 
     if (Model.BranchId.HasValue)
     {
-        baseRouteValues["branchId"] = Model.BranchId.Value;
+        baseRouteValues["branchId"] = Model.BranchId.Value.ToString();
     }
 
     if (Model.AccountId.HasValue)
     {
-        baseRouteValues["accountId"] = Model.AccountId.Value;
+        baseRouteValues["accountId"] = Model.AccountId.Value.ToString();
     }
 
     if (Model.CostCenterId.HasValue)
     {
-        baseRouteValues["costCenterId"] = Model.CostCenterId.Value;
+        baseRouteValues["costCenterId"] = Model.CostCenterId.Value.ToString();
     }
 
     if (Model.StatusFilterProvided)
@@ -36,10 +36,10 @@
         baseRouteValues["searchTerm"] = Model.SearchTerm;
     }
 
-    Func<int, RouteValueDictionary> buildRouteValues = pageNumber =>
+    Func<int, IDictionary<string, string>> buildRouteValues = pageNumber =>
     {
-        var values = new RouteValueDictionary(baseRouteValues);
-        values["page"] = pageNumber;
+        var values = new Dictionary<string, string>(baseRouteValues);
+        values["page"] = pageNumber.ToString();
         return values;
     };
 }
