@@ -71,8 +71,8 @@
                     {
                         var showBaseCurrency = !string.Equals(Model?.CurrencyCode, Model?.BaseCurrencyCode, System.StringComparison.OrdinalIgnoreCase);
                         var branchLabel = string.IsNullOrWhiteSpace(Model?.SelectedBranchName)
-                            ? "جميع الفروع"
-                            : Model!.SelectedBranchName!;
+                        ? "جميع الفروع"
+                        : Model!.SelectedBranchName!;
                         var transactionsCount = Model?.Transactions?.Count ?? 0;
                         <!-- معلومات الحساب -->
                         <div class="card border-info mb-4">
@@ -158,9 +158,9 @@
                         @if (Model.Transactions != null && Model.Transactions.Any())
                         {
                             var groupedTransactions = Model.Transactions
-                                .GroupBy(t => string.IsNullOrWhiteSpace(t.MovementType) ? "بدون تصنيف" : t.MovementType)
-                                .OrderBy(g => g.Key)
-                                .ToList();
+                            .GroupBy(t => string.IsNullOrWhiteSpace(t.MovementType) ? "بدون تصنيف" : t.MovementType)
+                            .OrderBy(g => g.Key)
+                            .ToList();
 
                             <div class="table-responsive mb-3">
                                 <table class="table table-striped table-hover mb-0">
@@ -337,13 +337,12 @@
                         }
 
                         <!-- ملخص الحركات -->
-                        @{
-                            var summaryNetAmount = Model.TotalDebit - Model.TotalCredit;
-                            var summaryNetAmountBase = Model.TotalDebitBase - Model.TotalCreditBase;
-                            var isSummaryNetDebit = summaryNetAmount >= 0;
-                            var summaryNetAmountDisplay = Math.Abs(summaryNetAmount);
-                            var summaryNetAmountBaseDisplay = Math.Abs(summaryNetAmountBase);
-                        }
+                        var summaryNetAmount = Model.TotalDebit - Model.TotalCredit;
+                        var summaryNetAmountBase = Model.TotalDebitBase - Model.TotalCreditBase;
+                        var isSummaryNetDebit = summaryNetAmount >= 0;
+                        var summaryNetAmountDisplay = Math.Abs(summaryNetAmount);
+                        var summaryNetAmountBaseDisplay = Math.Abs(summaryNetAmountBase);
+
 
                         <div class="row mt-4 g-3">
                             <div class="col-md-6">
