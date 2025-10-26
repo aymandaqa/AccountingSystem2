@@ -1,4 +1,5 @@
 @model AccountingSystem.ViewModels.AccountStatementViewModel
+@using System
 @using System.Linq
 @{
     ViewData["Title"] = "كشف الحساب";
@@ -161,6 +162,25 @@
                                 .OrderBy(g => g.Key)
                                 .ToList();
 
+                            <div class="table-responsive mb-3">
+                                <table class="table table-striped table-hover mb-0">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>التاريخ</th>
+                                            <th>رقم القيد</th>
+                                            <th>المرجع</th>
+                                            <th>الفرع</th>
+                                            <th>المستخدم</th>
+                                            <th>البيان</th>
+                                            <th class="text-end">مدين (@Model.CurrencyCode)</th>
+                                            <th class="text-end">دائن (@Model.CurrencyCode)</th>
+                                            <th class="text-end">الرصيد (@Model.CurrencyCode)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+
                             <div class="accordion" id="movementTypeAccordion">
                                 @for (int i = 0; i < groupedTransactions.Count; i++)
                                 {
@@ -172,8 +192,15 @@
                                     var totalCredit = transactions.Sum(t => t.CreditAmount);
                                     var totalDebitBase = transactions.Sum(t => t.DebitAmountBase);
                                     var totalCreditBase = transactions.Sum(t => t.CreditAmountBase);
+                                    var netAmount = totalDebit - totalCredit;
+                                    var netAmountBase = totalDebitBase - totalCreditBase;
                                     var lastBalance = transactions.Last().RunningBalance;
                                     var lastBalanceBase = transactions.Last().RunningBalanceBase;
+                                    var isNetDebit = netAmount >= 0;
+                                    var netDirectionLabel = isNetDebit ? "مدين" : "دائن";
+                                    var netBadgeClass = isNetDebit ? "bg-success" : "bg-danger";
+                                    var netAmountDisplay = Math.Abs(netAmount);
+                                    var netAmountBaseDisplay = Math.Abs(netAmountBase);
 
                                     <div class="accordion-item mb-3">
                                         <h2 class="accordion-header" id="@headingId">
@@ -202,6 +229,13 @@
                                                             }
                                                         </div>
                                                         <div class="d-flex flex-column text-nowrap">
+                                                            <span class="badge @netBadgeClass text-white">صافي الحركة (@netDirectionLabel): @netAmountDisplay.ToString("N2") @Model.CurrencyCode</span>
+                                                            @if (showBaseCurrency)
+                                                            {
+                                                                <small class="text-muted">(@netAmountBaseDisplay.ToString("N2") @Model.BaseCurrencyCode)</small>
+                                                            }
+                                                        </div>
+                                                        <div class="d-flex flex-column text-nowrap">
                                                             <span class="badge bg-primary">الرصيد: @lastBalance.ToString("N2") @Model.CurrencyCode</span>
                                                             @if (showBaseCurrency)
                                                             {
@@ -216,19 +250,6 @@
                                             <div class="accordion-body p-0">
                                                 <div class="table-responsive">
                                                     <table class="table table-striped table-hover mb-0">
-                                                        <thead class="table-dark">
-                                                            <tr>
-                                                                <th>التاريخ</th>
-                                                                <th>رقم القيد</th>
-                                                                <th>المرجع</th>
-                                                                <th>الفرع</th>
-                                                                <th>المستخدم</th>
-                                                                <th>البيان</th>
-                                                                <th class="text-end">مدين (@Model.CurrencyCode)</th>
-                                                                <th class="text-end">دائن (@Model.CurrencyCode)</th>
-                                                                <th class="text-end">الرصيد (@Model.CurrencyCode)</th>
-                                                            </tr>
-                                                        </thead>
                                                         <tbody>
                                                             @foreach (var transaction in transactions)
                                                             {
