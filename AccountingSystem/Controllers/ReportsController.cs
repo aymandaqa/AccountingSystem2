@@ -4141,6 +4141,327 @@ namespace AccountingSystem.Controllers
             return View(viewModel);
         }
 
+        public async Task<IActionResult> JournalEntryLines(DateTime? fromDate, DateTime? toDate, int? branchId, int? accountId, int? costCenterId, JournalEntryStatus? status, string? searchTerm)
+        {
+            var statusFilterProvided = Request.Query.ContainsKey(nameof(status));
+            var model = await BuildJournalEntryLineReportViewModel(fromDate, toDate, branchId, accountId, costCenterId, status, searchTerm, statusFilterProvided, includeOptions: true);
+            return View(model);
+        }
+
+        public async Task<IActionResult> JournalEntryLinesExcel(DateTime? fromDate, DateTime? toDate, int? branchId, int? accountId, int? costCenterId, JournalEntryStatus? status, string? searchTerm)
+        {
+            var statusFilterProvided = Request.Query.ContainsKey(nameof(status));
+            var model = await BuildJournalEntryLineReportViewModel(fromDate, toDate, branchId, accountId, costCenterId, status, searchTerm, statusFilterProvided, includeOptions: false);
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.AddWorksheet("JournalEntryLines");
+
+            var currentRow = 1;
+            worksheet.Cell(currentRow, 1).Value = "تقرير تفاصيل قيود اليومية";
+            worksheet.Range(currentRow, 1, currentRow, 11).Merge();
+            worksheet.Row(currentRow).Style.Font.Bold = true;
+            worksheet.Row(currentRow).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            worksheet.Row(currentRow).Style.Font.FontSize = 14;
+            currentRow += 2;
+
+            worksheet.Cell(currentRow, 1).Value = "الفترة";
+            worksheet.Cell(currentRow, 2).Value = $"{model.FromDate:yyyy-MM-dd} - {model.ToDate:yyyy-MM-dd}";
+            currentRow++;
+
+            worksheet.Cell(currentRow, 1).Value = "الحالة";
+            worksheet.Cell(currentRow, 2).Value = model.SelectedStatusName;
+            currentRow++;
+
+            if (!string.IsNullOrWhiteSpace(model.SelectedBranchName))
+            {
+                worksheet.Cell(currentRow, 1).Value = "الفرع";
+                worksheet.Cell(currentRow, 2).Value = model.SelectedBranchName;
+                currentRow++;
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.SelectedAccountName))
+            {
+                worksheet.Cell(currentRow, 1).Value = "الحساب";
+                var accountDisplay = model.SelectedAccountName;
+                if (!string.IsNullOrWhiteSpace(model.SelectedAccountCurrencyCode))
+                {
+                    accountDisplay += $" ({model.SelectedAccountCurrencyCode})";
+                }
+                worksheet.Cell(currentRow, 2).Value = accountDisplay;
+                currentRow++;
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.SelectedCostCenterName))
+            {
+                worksheet.Cell(currentRow, 1).Value = "مركز التكلفة";
+                worksheet.Cell(currentRow, 2).Value = model.SelectedCostCenterName;
+                currentRow++;
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.SearchTerm))
+            {
+                worksheet.Cell(currentRow, 1).Value = "كلمة البحث";
+                worksheet.Cell(currentRow, 2).Value = model.SearchTerm;
+                currentRow++;
+            }
+
+            currentRow++;
+
+            var headerRow = currentRow;
+            worksheet.Cell(headerRow, 1).Value = "التاريخ";
+            worksheet.Cell(headerRow, 2).Value = "رقم القيد";
+            worksheet.Cell(headerRow, 3).Value = "الوصف العام";
+            worksheet.Cell(headerRow, 4).Value = "الفرع";
+            worksheet.Cell(headerRow, 5).Value = "الحساب";
+            worksheet.Cell(headerRow, 6).Value = "العملة";
+            worksheet.Cell(headerRow, 7).Value = "مركز التكلفة";
+            worksheet.Cell(headerRow, 8).Value = "وصف السطر";
+            worksheet.Cell(headerRow, 9).Value = "المرجع";
+            worksheet.Cell(headerRow, 10).Value = "الحالة";
+            worksheet.Cell(headerRow, 11).Value = "مدين";
+            worksheet.Cell(headerRow, 12).Value = "دائن";
+            worksheet.Row(headerRow).Style.Font.Bold = true;
+            worksheet.Row(headerRow).Style.Fill.BackgroundColor = XLColor.FromArgb(221, 235, 247);
+
+            currentRow++;
+
+            foreach (var line in model.Lines)
+            {
+                worksheet.Cell(currentRow, 1).Value = line.Date;
+                worksheet.Cell(currentRow, 1).Style.DateFormat.Format = "yyyy-MM-dd";
+                worksheet.Cell(currentRow, 2).Value = line.JournalEntryNumber;
+                worksheet.Cell(currentRow, 3).Value = line.JournalEntryDescription;
+                worksheet.Cell(currentRow, 4).Value = line.BranchName;
+                worksheet.Cell(currentRow, 5).Value = $"{line.AccountCode} - {line.AccountName}";
+                worksheet.Cell(currentRow, 6).Value = line.CurrencyCode;
+                worksheet.Cell(currentRow, 7).Value = line.CostCenterName ?? string.Empty;
+                worksheet.Cell(currentRow, 8).Value = line.LineDescription ?? string.Empty;
+                worksheet.Cell(currentRow, 9).Value = line.Reference ?? string.Empty;
+                worksheet.Cell(currentRow, 10).Value = line.StatusDisplay;
+                worksheet.Cell(currentRow, 11).Value = line.DebitAmount;
+                worksheet.Cell(currentRow, 12).Value = line.CreditAmount;
+                currentRow++;
+            }
+
+            worksheet.Cell(currentRow, 10).Value = "الإجمالي";
+            worksheet.Cell(currentRow, 11).Value = model.TotalDebit;
+            worksheet.Cell(currentRow, 12).Value = model.TotalCredit;
+            worksheet.Row(currentRow).Style.Font.Bold = true;
+
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+            var fileName = $"JournalEntryLines_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+            return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
+        private async Task<JournalEntryLineReportViewModel> BuildJournalEntryLineReportViewModel(DateTime? fromDate, DateTime? toDate, int? branchId, int? accountId, int? costCenterId, JournalEntryStatus? status, string? searchTerm, bool statusFilterProvided, bool includeOptions)
+        {
+            var normalizedFrom = (fromDate ?? DateTime.Today.AddMonths(-1)).Date;
+            var normalizedTo = (toDate ?? DateTime.Today).Date;
+            var normalizedToExclusive = normalizedTo.AddDays(1);
+
+            var query = _context.JournalEntryLines
+                .AsNoTracking()
+                .Include(l => l.JournalEntry)
+                    .ThenInclude(j => j.Branch)
+                .Include(l => l.Account)
+                    .ThenInclude(a => a.Currency)
+                .Include(l => l.CostCenter)
+                .Where(l => l.JournalEntry.Date >= normalizedFrom && l.JournalEntry.Date < normalizedToExclusive);
+
+            if (branchId.HasValue)
+            {
+                query = query.Where(l => l.JournalEntry.BranchId == branchId.Value);
+            }
+
+            if (accountId.HasValue)
+            {
+                query = query.Where(l => l.AccountId == accountId.Value);
+            }
+
+            if (costCenterId.HasValue)
+            {
+                query = query.Where(l => l.CostCenterId == costCenterId.Value);
+            }
+
+            string? trimmedSearch = null;
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                trimmedSearch = searchTerm.Trim();
+                var likeTerm = $"%{trimmedSearch}%";
+                query = query.Where(l =>
+                    (l.Description != null && EF.Functions.Like(l.Description, likeTerm)) ||
+                    (l.Reference != null && EF.Functions.Like(l.Reference, likeTerm)) ||
+                    (l.JournalEntry.Description != null && EF.Functions.Like(l.JournalEntry.Description, likeTerm)) ||
+                    EF.Functions.Like(l.JournalEntry.Number, likeTerm));
+            }
+
+            var effectiveStatus = statusFilterProvided ? status : JournalEntryStatus.Posted;
+            if (effectiveStatus.HasValue)
+            {
+                var statusValue = effectiveStatus.Value;
+                query = query.Where(l => l.JournalEntry.Status == statusValue);
+            }
+
+            var lines = await query
+                .OrderBy(l => l.JournalEntry.Date)
+                .ThenBy(l => l.JournalEntry.Number)
+                .ThenBy(l => l.Id)
+                .ToListAsync();
+
+            var model = new JournalEntryLineReportViewModel
+            {
+                FromDate = normalizedFrom,
+                ToDate = normalizedTo,
+                BranchId = branchId,
+                AccountId = accountId,
+                CostCenterId = costCenterId,
+                Status = effectiveStatus,
+                StatusFilterProvided = statusFilterProvided,
+                SearchTerm = trimmedSearch,
+                FiltersApplied = statusFilterProvided || branchId.HasValue || accountId.HasValue || costCenterId.HasValue || fromDate.HasValue || toDate.HasValue || !string.IsNullOrWhiteSpace(trimmedSearch)
+            };
+
+            foreach (var line in lines)
+            {
+                model.Lines.Add(new JournalEntryLineReportItemViewModel
+                {
+                    JournalEntryId = line.JournalEntryId,
+                    Date = line.JournalEntry.Date,
+                    JournalEntryNumber = line.JournalEntry.Number,
+                    JournalEntryDescription = line.JournalEntry.Description,
+                    BranchName = line.JournalEntry.Branch?.NameAr ?? string.Empty,
+                    AccountCode = line.Account.Code,
+                    AccountName = line.Account.NameAr,
+                    CurrencyCode = line.Account.Currency?.Code ?? string.Empty,
+                    CostCenterName = line.CostCenter?.NameAr ?? line.CostCenter?.NameEn,
+                    LineDescription = line.Description,
+                    Reference = line.Reference,
+                    StatusDisplay = GetJournalStatusDisplay(line.JournalEntry.Status),
+                    DebitAmount = line.DebitAmount,
+                    CreditAmount = line.CreditAmount
+                });
+            }
+
+            model.ResultCount = model.Lines.Count;
+            model.TotalDebit = model.Lines.Sum(l => l.DebitAmount);
+            model.TotalCredit = model.Lines.Sum(l => l.CreditAmount);
+            model.SelectedStatusName = effectiveStatus.HasValue ? GetJournalStatusDisplay(effectiveStatus.Value) : "كل الحالات";
+
+            if (branchId.HasValue)
+            {
+                var branch = await _context.Branches
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(b => b.Id == branchId.Value);
+                model.SelectedBranchName = branch?.NameAr ?? branch?.NameEn;
+            }
+
+            if (accountId.HasValue)
+            {
+                var account = await _context.Accounts
+                    .AsNoTracking()
+                    .Include(a => a.Currency)
+                    .FirstOrDefaultAsync(a => a.Id == accountId.Value);
+                if (account != null)
+                {
+                    model.SelectedAccountName = $"{account.Code} - {account.NameAr}";
+                    model.SelectedAccountCurrencyCode = account.Currency?.Code;
+                }
+            }
+
+            if (costCenterId.HasValue)
+            {
+                var costCenter = await _context.CostCenters
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.Id == costCenterId.Value);
+                if (costCenter != null)
+                {
+                    model.SelectedCostCenterName = !string.IsNullOrWhiteSpace(costCenter.NameAr)
+                        ? costCenter.NameAr
+                        : (!string.IsNullOrWhiteSpace(costCenter.NameEn) ? costCenter.NameEn : costCenter.Code);
+                }
+            }
+
+            if (includeOptions)
+            {
+                var branches = await GetBranchesSelectList();
+                foreach (var branch in branches)
+                {
+                    if (branchId.HasValue && branch.Value == branchId.Value.ToString())
+                    {
+                        branch.Selected = true;
+                        break;
+                    }
+                }
+                model.Branches = branches;
+
+                model.Accounts = await _context.Accounts
+                    .Where(a => a.CanPostTransactions)
+                    .OrderBy(a => a.Code)
+                    .Select(a => new SelectListItem
+                    {
+                        Value = a.Id.ToString(),
+                        Text = $"{a.Code} - {a.NameAr}",
+                        Selected = accountId.HasValue && a.Id == accountId.Value
+                    }).ToListAsync();
+
+                model.CostCenters = await _context.CostCenters
+                    .OrderBy(c => c.Code)
+                    .Select(c => new SelectListItem
+                    {
+                        Value = c.Id.ToString(),
+                        Text = !string.IsNullOrWhiteSpace(c.NameAr)
+                            ? c.NameAr
+                            : (!string.IsNullOrWhiteSpace(c.NameEn) ? c.NameEn : c.Code),
+                        Selected = costCenterId.HasValue && c.Id == costCenterId.Value
+                    }).ToListAsync();
+
+                model.StatusOptions = BuildJournalStatusOptions(model.Status, statusFilterProvided);
+            }
+
+            return model;
+        }
+
+        private static List<SelectListItem> BuildJournalStatusOptions(JournalEntryStatus? selectedStatus, bool statusFilterProvided)
+        {
+            var options = new List<SelectListItem>
+            {
+                new SelectListItem
+                {
+                    Value = string.Empty,
+                    Text = "كل الحالات",
+                    Selected = statusFilterProvided && !selectedStatus.HasValue
+                }
+            };
+
+            foreach (var status in Enum.GetValues<JournalEntryStatus>())
+            {
+                options.Add(new SelectListItem
+                {
+                    Value = ((int)status).ToString(),
+                    Text = GetJournalStatusDisplay(status),
+                    Selected = selectedStatus.HasValue && status == selectedStatus.Value
+                });
+            }
+
+            return options;
+        }
+
+        private static string GetJournalStatusDisplay(JournalEntryStatus status)
+        {
+            return status switch
+            {
+                JournalEntryStatus.Draft => "مسودة",
+                JournalEntryStatus.Posted => "مرحَّل",
+                JournalEntryStatus.Approved => "معتمد",
+                JournalEntryStatus.Cancelled => "ملغى",
+                _ => status.ToString()
+            };
+        }
+
         private class DriverPaymentHeaderInfo
         {
             public long Id { get; set; }

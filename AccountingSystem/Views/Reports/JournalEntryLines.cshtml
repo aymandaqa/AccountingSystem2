@@ -1,0 +1,185 @@
+@model AccountingSystem.ViewModels.JournalEntryLineReportViewModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "تقرير تفاصيل قيود اليومية";
+    var culture = CultureInfo.CurrentCulture;
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="fas fa-list-alt me-2"></i>تقرير تفاصيل قيود اليومية</h4>
+                    <a class="btn btn-outline-light" asp-action="JournalEntryLinesExcel" asp-route-fromDate="@Model.FromDate.ToString("yyyy-MM-dd")" asp-route-toDate="@Model.ToDate.ToString("yyyy-MM-dd")" asp-route-branchId="@Model.BranchId" asp-route-accountId="@Model.AccountId" asp-route-costCenterId="@Model.CostCenterId" asp-route-status="@(Model.Status.HasValue ? ((int)Model.Status.Value).ToString() : (Model.StatusFilterProvided ? string.Empty : null))" asp-route-searchTerm="@Model.SearchTerm">
+                        <i class="fas fa-file-excel me-1"></i>تصدير إلى Excel
+                    </a>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3 mb-4">
+                        <div class="col-lg-2 col-md-3">
+                            <label class="form-label">من تاريخ</label>
+                            <input type="date" name="fromDate" class="form-control" value="@Model.FromDate.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-lg-2 col-md-3">
+                            <label class="form-label">إلى تاريخ</label>
+                            <input type="date" name="toDate" class="form-control" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <label class="form-label">الفرع</label>
+                            <select name="branchId" class="form-select">
+                                <option value="">كل الفروع</option>
+                                @foreach (var branch in Model.Branches)
+                                {
+                                    <option value="@branch.Value" selected="@(branch.Selected ? "selected" : null)">@branch.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <label class="form-label">الحساب</label>
+                            <select name="accountId" class="form-select">
+                                <option value="">كل الحسابات</option>
+                                @foreach (var account in Model.Accounts)
+                                {
+                                    <option value="@account.Value" selected="@(account.Selected ? "selected" : null)">@account.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-lg-2 col-md-4">
+                            <label class="form-label">مركز التكلفة</label>
+                            <select name="costCenterId" class="form-select">
+                                <option value="">كل المراكز</option>
+                                @foreach (var costCenter in Model.CostCenters)
+                                {
+                                    <option value="@costCenter.Value" selected="@(costCenter.Selected ? "selected" : null)">@costCenter.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-lg-2 col-md-4">
+                            <label class="form-label">الحالة</label>
+                            <select name="status" class="form-select">
+                                @foreach (var status in Model.StatusOptions)
+                                {
+                                    <option value="@status.Value" selected="@(status.Selected ? "selected" : null)">@status.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-lg-3 col-md-4">
+                            <label class="form-label">بحث</label>
+                            <input type="text" name="searchTerm" class="form-control" value="@Model.SearchTerm" placeholder="رقم القيد أو الوصف أو المرجع" />
+                        </div>
+                        <div class="col-lg-3 col-md-12 align-self-end">
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary flex-grow-1">
+                                    <i class="fas fa-search me-1"></i>عرض التقرير
+                                </button>
+                                <a asp-action="JournalEntryLines" class="btn btn-outline-secondary">
+                                    <i class="fas fa-undo me-1"></i>إعادة تعيين
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+
+                    @if (Model.HasResults)
+                    {
+                        <div class="alert alert-info d-flex flex-column flex-md-row justify-content-between gap-3">
+                            <div>
+                                <div>الفترة: <strong>@Model.FromDate.ToString("dd/MM/yyyy")</strong> - <strong>@Model.ToDate.ToString("dd/MM/yyyy")</strong></div>
+                                <div>الحالة: <strong>@Model.SelectedStatusName</strong></div>
+                                @if (!string.IsNullOrWhiteSpace(Model.SelectedBranchName))
+                                {
+                                    <div>الفرع: <strong>@Model.SelectedBranchName</strong></div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Model.SelectedAccountName))
+                                {
+                                    <div>
+                                        الحساب: <strong>@Model.SelectedAccountName</strong>
+                                        @if (!string.IsNullOrWhiteSpace(Model.SelectedAccountCurrencyCode))
+                                        {
+                                            <span class="badge bg-light text-dark ms-2">@Model.SelectedAccountCurrencyCode</span>
+                                        }
+                                    </div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Model.SelectedCostCenterName))
+                                {
+                                    <div>مركز التكلفة: <strong>@Model.SelectedCostCenterName</strong></div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+                                {
+                                    <div>البحث: <strong>@Model.SearchTerm</strong></div>
+                                }
+                            </div>
+                            <div class="text-md-end">
+                                <div>عدد الأسطر: <strong>@Model.ResultCount</strong></div>
+                                <div>إجمالي المدين: <strong>@Model.TotalDebit.ToString("N2", culture)</strong></div>
+                                <div>إجمالي الدائن: <strong>@Model.TotalCredit.ToString("N2", culture)</strong></div>
+                                <div>صافي الفرق: <strong>@Model.NetBalance.ToString("N2", culture)</strong></div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-striped table-bordered align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>التاريخ</th>
+                                        <th>رقم القيد</th>
+                                        <th>الوصف العام</th>
+                                        <th>الفرع</th>
+                                        <th>الحساب</th>
+                                        <th>العملة</th>
+                                        <th>مركز التكلفة</th>
+                                        <th>وصف السطر</th>
+                                        <th>المرجع</th>
+                                        <th>الحالة</th>
+                                        <th class="text-end">مدين</th>
+                                        <th class="text-end">دائن</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var line in Model.Lines)
+                                    {
+                                        <tr>
+                                            <td>@line.Date.ToString("dd/MM/yyyy")</td>
+                                            <td>
+                                                <a asp-controller="JournalEntries" asp-action="Details" asp-route-id="@line.JournalEntryId" class="text-decoration-none">
+                                                    @line.JournalEntryNumber
+                                                </a>
+                                            </td>
+                                            <td>@line.JournalEntryDescription</td>
+                                            <td>@line.BranchName</td>
+                                            <td>
+                                                <div>@line.AccountCode - @line.AccountName</div>
+                                            </td>
+                                            <td>@line.CurrencyCode</td>
+                                            <td>@line.CostCenterName</td>
+                                            <td>@line.LineDescription</td>
+                                            <td>@line.Reference</td>
+                                            <td>@line.StatusDisplay</td>
+                                            <td class="text-end">@line.DebitAmount.ToString("N2", culture)</td>
+                                            <td class="text-end">@line.CreditAmount.ToString("N2", culture)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot class="table-secondary">
+                                    <tr class="fw-bold">
+                                        <td colspan="10" class="text-end">الإجمالي</td>
+                                        <td class="text-end">@Model.TotalDebit.ToString("N2", culture)</td>
+                                        <td class="text-end">@Model.TotalCredit.ToString("N2", culture)</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-inbox fa-2x mb-3"></i>
+                            <p class="mb-1">لا توجد بيانات ضمن المعايير المحددة.</p>
+                            <p class="mb-0">يرجى تعديل الفلاتر أعلاه للحصول على نتائج.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
