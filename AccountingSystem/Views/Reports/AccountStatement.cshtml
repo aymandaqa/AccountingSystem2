@@ -219,7 +219,7 @@
                                                             <span class="badge bg-success text-white">مدين: @totalDebit.ToString("N2") @Model.CurrencyCode</span>
                                                             @if (showBaseCurrency)
                                                             {
-                                                                <small class="text-muted">(@totalDebitBase.ToString("N2") @Model.BaseCurrencyCode)</small>
+                                                                <small class="text-muted">صافي: @netAmountBaseDisplay.ToString("N2") @Model.BaseCurrencyCode</small>
                                                             }
                                                             @if (netAmountDisplay > 0)
                                                             {
@@ -234,7 +234,7 @@
                                                             <span class="badge bg-danger text-white">دائن: @totalCredit.ToString("N2") @Model.CurrencyCode</span>
                                                             @if (showBaseCurrency)
                                                             {
-                                                                <small class="text-muted">(@totalCreditBase.ToString("N2") @Model.BaseCurrencyCode)</small>
+                                                                <small class="text-muted">صافي: @netAmountBaseDisplay.ToString("N2") @Model.BaseCurrencyCode</small>
                                                             }
                                                             @if (netAmountDisplay > 0)
                                                             {
