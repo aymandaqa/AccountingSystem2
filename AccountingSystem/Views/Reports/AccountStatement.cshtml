@@ -200,6 +200,9 @@
                                     var netAmountDisplay = Math.Abs(netAmount);
                                     var netAmountBaseDisplay = Math.Abs(netAmountBase);
 
+                                    var netAmountNature = isNetDebit ? "مدين" : "دائن";
+                                    var netAmountCssClass = isNetDebit ? "text-success" : "text-danger";
+
                                     <div class="accordion-item mb-3">
                                         <h2 class="accordion-header" id="@headingId">
                                             <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId" aria-expanded="true" aria-controls="@collapseId">
@@ -218,9 +221,9 @@
                                                             {
                                                                 <small class="text-muted">(@totalDebitBase.ToString("N2") @Model.BaseCurrencyCode)</small>
                                                             }
-                                                            @if (isNetDebit && netAmountDisplay > 0)
+                                                            @if (netAmountDisplay > 0)
                                                             {
-                                                                <small class="text-success mt-1 d-block">صافي الحركة: @netAmountDisplay.ToString("N2") @Model.CurrencyCode</small>
+                                                                <small class="@netAmountCssClass mt-1 d-block">صافي الحركة (@netAmountNature): @netAmountDisplay.ToString("N2") @Model.CurrencyCode</small>
                                                                 @if (showBaseCurrency)
                                                                 {
                                                                     <small class="text-muted">(@netAmountBaseDisplay.ToString("N2") @Model.BaseCurrencyCode)</small>
@@ -233,9 +236,9 @@
                                                             {
                                                                 <small class="text-muted">(@totalCreditBase.ToString("N2") @Model.BaseCurrencyCode)</small>
                                                             }
-                                                            @if (!isNetDebit && netAmountDisplay > 0)
+                                                            @if (netAmountDisplay > 0)
                                                             {
-                                                                <small class="text-danger mt-1 d-block">صافي الحركة: @netAmountDisplay.ToString("N2") @Model.CurrencyCode</small>
+                                                                <small class="@netAmountCssClass mt-1 d-block">صافي الحركة (@netAmountNature): @netAmountDisplay.ToString("N2") @Model.CurrencyCode</small>
                                                                 @if (showBaseCurrency)
                                                                 {
                                                                     <small class="text-muted">(@netAmountBaseDisplay.ToString("N2") @Model.BaseCurrencyCode)</small>
@@ -344,6 +347,9 @@
                         var summaryNetAmountBaseDisplay = Math.Abs(summaryNetAmountBase);
 
 
+                        var summaryNetNature = isSummaryNetDebit ? "مدين" : "دائن";
+                        var summaryNetCssClass = isSummaryNetDebit ? "text-success" : "text-danger";
+
                         <div class="row mt-4 g-3">
                             <div class="col-md-6">
                                 <div class="card border-success">
@@ -356,9 +362,9 @@
                                                 <small class="text-muted">(@Model.TotalDebitBase.ToString("N2") @Model.BaseCurrencyCode)</small>
                                             }
                                         </h4>
-                                        @if (isSummaryNetDebit && summaryNetAmountDisplay > 0)
+                                        @if (summaryNetAmountDisplay > 0)
                                         {
-                                            <p class="mb-0 text-success">صافي الحركة: @summaryNetAmountDisplay.ToString("N2") @Model.CurrencyCode</p>
+                                            <p class="mb-0 @summaryNetCssClass">صافي الحركة (@summaryNetNature): @summaryNetAmountDisplay.ToString("N2") @Model.CurrencyCode</p>
                                             @if (showBaseCurrency)
                                             {
                                                 <small class="text-muted">(@summaryNetAmountBaseDisplay.ToString("N2") @Model.BaseCurrencyCode)</small>
@@ -378,9 +384,9 @@
                                                 <small class="text-muted">(@Model.TotalCreditBase.ToString("N2") @Model.BaseCurrencyCode)</small>
                                             }
                                         </h4>
-                                        @if (!isSummaryNetDebit && summaryNetAmountDisplay > 0)
+                                        @if (summaryNetAmountDisplay > 0)
                                         {
-                                            <p class="mb-0 text-danger">صافي الحركة: @summaryNetAmountDisplay.ToString("N2") @Model.CurrencyCode</p>
+                                            <p class="mb-0 @summaryNetCssClass">صافي الحركة (@summaryNetNature): @summaryNetAmountDisplay.ToString("N2") @Model.CurrencyCode</p>
                                             @if (showBaseCurrency)
                                             {
                                                 <small class="text-muted">(@summaryNetAmountBaseDisplay.ToString("N2") @Model.BaseCurrencyCode)</small>
