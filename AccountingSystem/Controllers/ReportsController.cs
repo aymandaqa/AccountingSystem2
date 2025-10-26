@@ -2501,7 +2501,7 @@ namespace AccountingSystem.Controllers
 
             var currentRow = headerRow + 1;
             var excelAccounts = viewModel.Accounts
-                .Where(a => a.Level == viewModel.SelectedLevel)
+                .Where(a => a.Level <= viewModel.SelectedLevel)
                 .OrderBy(a => a.AccountCode)
                 .ToList();
 
@@ -2509,6 +2509,7 @@ namespace AccountingSystem.Controllers
             {
                 worksheet.Cell(currentRow, 1).Value = account.AccountCode;
                 worksheet.Cell(currentRow, 2).Value = account.AccountName;
+                worksheet.Cell(currentRow, 2).Style.Alignment.SetIndent(Math.Max(account.Level - 1, 0));
                 worksheet.Cell(currentRow, 3).Value = Math.Round(account.DebitBalance, 2, MidpointRounding.AwayFromZero);
                 worksheet.Cell(currentRow, 4).Value = Math.Round(account.CreditBalance, 2, MidpointRounding.AwayFromZero);
                 worksheet.Cell(currentRow, 5).Value = Math.Round(account.DebitBalanceBase, 2, MidpointRounding.AwayFromZero);
