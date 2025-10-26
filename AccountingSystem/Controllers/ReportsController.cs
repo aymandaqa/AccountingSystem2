@@ -2490,14 +2490,18 @@ namespace AccountingSystem.Controllers
             var headerRow = 6;
             worksheet.Cell(headerRow, 1).Value = "رمز الحساب";
             worksheet.Cell(headerRow, 2).Value = "اسم الحساب";
-            worksheet.Cell(headerRow, 3).Value = $"الرصيد المدين ({viewModel.SelectedCurrencyCode})";
-            worksheet.Cell(headerRow, 4).Value = $"الرصيد الدائن ({viewModel.SelectedCurrencyCode})";
-            worksheet.Cell(headerRow, 5).Value = $"الرصيد المدين ({viewModel.BaseCurrencyCode})";
-            worksheet.Cell(headerRow, 6).Value = $"الرصيد الدائن ({viewModel.BaseCurrencyCode})";
+            worksheet.Cell(headerRow, 3).Value = $"الرصيد المدين الفعلي ({viewModel.SelectedCurrencyCode})";
+            worksheet.Cell(headerRow, 4).Value = $"الرصيد الدائن الفعلي ({viewModel.SelectedCurrencyCode})";
+            worksheet.Cell(headerRow, 5).Value = $"الرصيد المدين التجميعي ({viewModel.SelectedCurrencyCode})";
+            worksheet.Cell(headerRow, 6).Value = $"الرصيد الدائن التجميعي ({viewModel.SelectedCurrencyCode})";
+            worksheet.Cell(headerRow, 7).Value = $"الرصيد المدين الفعلي ({viewModel.BaseCurrencyCode})";
+            worksheet.Cell(headerRow, 8).Value = $"الرصيد الدائن الفعلي ({viewModel.BaseCurrencyCode})";
+            worksheet.Cell(headerRow, 9).Value = $"الرصيد المدين التجميعي ({viewModel.BaseCurrencyCode})";
+            worksheet.Cell(headerRow, 10).Value = $"الرصيد الدائن التجميعي ({viewModel.BaseCurrencyCode})";
 
-            worksheet.Range(headerRow, 1, headerRow, 6).Style.Font.Bold = true;
-            worksheet.Range(headerRow, 1, headerRow, 6).Style.Fill.BackgroundColor = XLColor.FromHtml("#1F487C");
-            worksheet.Range(headerRow, 1, headerRow, 6).Style.Font.FontColor = XLColor.White;
+            worksheet.Range(headerRow, 1, headerRow, 10).Style.Font.Bold = true;
+            worksheet.Range(headerRow, 1, headerRow, 10).Style.Fill.BackgroundColor = XLColor.FromHtml("#1F487C");
+            worksheet.Range(headerRow, 1, headerRow, 10).Style.Font.FontColor = XLColor.White;
 
             var currentRow = headerRow + 1;
             var excelAccounts = viewModel.Accounts
@@ -2510,20 +2514,34 @@ namespace AccountingSystem.Controllers
                 worksheet.Cell(currentRow, 1).Value = account.AccountCode;
                 worksheet.Cell(currentRow, 2).Value = account.AccountName;
                 worksheet.Cell(currentRow, 2).Style.Alignment.SetIndent(Math.Max(account.Level - 1, 0));
-                worksheet.Cell(currentRow, 3).Value = Math.Round(account.DebitBalance, 2, MidpointRounding.AwayFromZero);
-                worksheet.Cell(currentRow, 4).Value = Math.Round(account.CreditBalance, 2, MidpointRounding.AwayFromZero);
-                worksheet.Cell(currentRow, 5).Value = Math.Round(account.DebitBalanceBase, 2, MidpointRounding.AwayFromZero);
-                worksheet.Cell(currentRow, 6).Value = Math.Round(account.CreditBalanceBase, 2, MidpointRounding.AwayFromZero);
+                worksheet.Cell(currentRow, 3).Value = Math.Round(account.PostingDebitBalance, 2, MidpointRounding.AwayFromZero);
+                worksheet.Cell(currentRow, 4).Value = Math.Round(account.PostingCreditBalance, 2, MidpointRounding.AwayFromZero);
+                worksheet.Cell(currentRow, 5).Value = Math.Round(account.DebitBalance, 2, MidpointRounding.AwayFromZero);
+                worksheet.Cell(currentRow, 6).Value = Math.Round(account.CreditBalance, 2, MidpointRounding.AwayFromZero);
+                worksheet.Cell(currentRow, 7).Value = Math.Round(account.PostingDebitBalanceBase, 2, MidpointRounding.AwayFromZero);
+                worksheet.Cell(currentRow, 8).Value = Math.Round(account.PostingCreditBalanceBase, 2, MidpointRounding.AwayFromZero);
+                worksheet.Cell(currentRow, 9).Value = Math.Round(account.DebitBalanceBase, 2, MidpointRounding.AwayFromZero);
+                worksheet.Cell(currentRow, 10).Value = Math.Round(account.CreditBalanceBase, 2, MidpointRounding.AwayFromZero);
                 currentRow++;
             }
 
             worksheet.Cell(currentRow, 1).Value = "الإجمالي";
             worksheet.Cell(currentRow, 1).Style.Font.Bold = true;
-            worksheet.Cell(currentRow, 3).Value = Math.Round(viewModel.TotalDebits, 2, MidpointRounding.AwayFromZero);
-            worksheet.Cell(currentRow, 4).Value = Math.Round(viewModel.TotalCredits, 2, MidpointRounding.AwayFromZero);
-            worksheet.Cell(currentRow, 5).Value = Math.Round(viewModel.TotalDebitsBase, 2, MidpointRounding.AwayFromZero);
-            worksheet.Cell(currentRow, 6).Value = Math.Round(viewModel.TotalCreditsBase, 2, MidpointRounding.AwayFromZero);
-            worksheet.Range(currentRow, 1, currentRow, 6).Style.Font.Bold = true;
+            var postingTotalsScope = excelAccounts.Where(a => a.IsVisibleLeaf).ToList();
+            var totalPostingDebits = postingTotalsScope.Sum(a => a.PostingDebitBalance);
+            var totalPostingCredits = postingTotalsScope.Sum(a => a.PostingCreditBalance);
+            var totalPostingDebitsBase = postingTotalsScope.Sum(a => a.PostingDebitBalanceBase);
+            var totalPostingCreditsBase = postingTotalsScope.Sum(a => a.PostingCreditBalanceBase);
+
+            worksheet.Cell(currentRow, 3).Value = Math.Round(totalPostingDebits, 2, MidpointRounding.AwayFromZero);
+            worksheet.Cell(currentRow, 4).Value = Math.Round(totalPostingCredits, 2, MidpointRounding.AwayFromZero);
+            worksheet.Cell(currentRow, 5).Value = Math.Round(viewModel.TotalDebits, 2, MidpointRounding.AwayFromZero);
+            worksheet.Cell(currentRow, 6).Value = Math.Round(viewModel.TotalCredits, 2, MidpointRounding.AwayFromZero);
+            worksheet.Cell(currentRow, 7).Value = Math.Round(totalPostingDebitsBase, 2, MidpointRounding.AwayFromZero);
+            worksheet.Cell(currentRow, 8).Value = Math.Round(totalPostingCreditsBase, 2, MidpointRounding.AwayFromZero);
+            worksheet.Cell(currentRow, 9).Value = Math.Round(viewModel.TotalDebitsBase, 2, MidpointRounding.AwayFromZero);
+            worksheet.Cell(currentRow, 10).Value = Math.Round(viewModel.TotalCreditsBase, 2, MidpointRounding.AwayFromZero);
+            worksheet.Range(currentRow, 1, currentRow, 10).Style.Font.Bold = true;
 
             worksheet.Columns().AdjustToContents();
 
@@ -2681,6 +2699,10 @@ namespace AccountingSystem.Controllers
                 }
 
                 var balance = CalculateAggregatedBalance(account.Id);
+                var postingBalance = account.CanPostTransactions
+                    ? CalculatePostingBalance(account)
+                    : (0m, 0m, 0m, 0m);
+                var (postingDebitSelected, postingCreditSelected, postingDebitBase, postingCreditBase) = postingBalance;
                 var hasChildren = childrenLookup.TryGetValue(account.Id, out var childAccounts) && childAccounts.Any();
 
                 reportAccounts.Add(new TrialBalanceAccountViewModel
@@ -2692,6 +2714,10 @@ namespace AccountingSystem.Controllers
                     CreditBalance = balance.CreditSelected,
                     DebitBalanceBase = balance.DebitBase,
                     CreditBalanceBase = balance.CreditBase,
+                    PostingDebitBalance = postingDebitSelected,
+                    PostingCreditBalance = postingCreditSelected,
+                    PostingDebitBalanceBase = postingDebitBase,
+                    PostingCreditBalanceBase = postingCreditBase,
                     Level = account.Level,
                     ParentAccountId = account.ParentId,
                     HasChildren = hasChildren
@@ -2750,9 +2776,13 @@ namespace AccountingSystem.Controllers
                 return false;
             }
 
+            foreach (var account in reportAccounts)
+            {
+                account.IsVisibleLeaf = account.Level <= normalizedLevel && !HasVisibleChildrenWithinLevel(account.AccountId);
+            }
+
             var totalsScope = reportAccounts
-                .Where(a => a.Level <= normalizedLevel)
-                .Where(a => !HasVisibleChildrenWithinLevel(a.AccountId))
+                .Where(a => a.IsVisibleLeaf)
                 .ToList();
 
             decimal totalDebitsSelectedRaw = 0m;
@@ -2779,6 +2809,10 @@ namespace AccountingSystem.Controllers
                 account.CreditBalance = Math.Round(account.CreditBalance, 2, MidpointRounding.AwayFromZero);
                 account.DebitBalanceBase = Math.Round(account.DebitBalanceBase, 2, MidpointRounding.AwayFromZero);
                 account.CreditBalanceBase = Math.Round(account.CreditBalanceBase, 2, MidpointRounding.AwayFromZero);
+                account.PostingDebitBalance = Math.Round(account.PostingDebitBalance, 2, MidpointRounding.AwayFromZero);
+                account.PostingCreditBalance = Math.Round(account.PostingCreditBalance, 2, MidpointRounding.AwayFromZero);
+                account.PostingDebitBalanceBase = Math.Round(account.PostingDebitBalanceBase, 2, MidpointRounding.AwayFromZero);
+                account.PostingCreditBalanceBase = Math.Round(account.PostingCreditBalanceBase, 2, MidpointRounding.AwayFromZero);
             }
 
             var viewModel = new TrialBalanceViewModel
