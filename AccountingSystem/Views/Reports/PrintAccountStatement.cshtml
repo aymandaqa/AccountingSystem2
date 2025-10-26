@@ -135,8 +135,16 @@
                 </div>
             </div>
         </div>
-        <div class="row mb-4">
-            <div class="col-4">
+        @{ 
+            var summaryNetAmount = Model.TotalDebit - Model.TotalCredit;
+            var summaryNetAmountBase = Model.TotalDebitBase - Model.TotalCreditBase;
+            var isSummaryNetDebit = summaryNetAmount >= 0;
+            var summaryNetAmountDisplay = Math.Abs(summaryNetAmount);
+            var summaryNetAmountBaseDisplay = Math.Abs(summaryNetAmountBase);
+        }
+
+        <div class="row mb-4 g-3">
+            <div class="col-6">
                 <div class="summary-box text-center">
                     <div class="summary-title">إجمالي المدين</div>
                     <div class="fw-bold fs-5">@Model.TotalDebit.ToString("N2") @Model.CurrencyCode</div>
@@ -144,9 +152,17 @@
                     {
                         <div class="text-muted">@Model.TotalDebitBase.ToString("N2") @Model.BaseCurrencyCode</div>
                     }
+                    @if (isSummaryNetDebit && summaryNetAmountDisplay > 0)
+                    {
+                        <div class="text-success mt-2">صافي الحركة: @summaryNetAmountDisplay.ToString("N2") @Model.CurrencyCode</div>
+                        @if (showBaseCurrency)
+                        {
+                            <div class="text-muted">@summaryNetAmountBaseDisplay.ToString("N2") @Model.BaseCurrencyCode</div>
+                        }
+                    }
                 </div>
             </div>
-            <div class="col-4">
+            <div class="col-6">
                 <div class="summary-box text-center">
                     <div class="summary-title">إجمالي الدائن</div>
                     <div class="fw-bold fs-5">@Model.TotalCredit.ToString("N2") @Model.CurrencyCode</div>
@@ -154,15 +170,13 @@
                     {
                         <div class="text-muted">@Model.TotalCreditBase.ToString("N2") @Model.BaseCurrencyCode</div>
                     }
-                </div>
-            </div>
-            <div class="col-4">
-                <div class="summary-box text-center">
-                    <div class="summary-title">صافي الحركة</div>
-                    <div class="fw-bold fs-5">@((Model.TotalDebit - Model.TotalCredit).ToString("N2")) @Model.CurrencyCode</div>
-                    @if (showBaseCurrency)
+                    @if (!isSummaryNetDebit && summaryNetAmountDisplay > 0)
                     {
-                        <div class="text-muted">@((Model.TotalDebitBase - Model.TotalCreditBase).ToString("N2")) @Model.BaseCurrencyCode</div>
+                        <div class="text-danger mt-2">صافي الحركة: @summaryNetAmountDisplay.ToString("N2") @Model.CurrencyCode</div>
+                        @if (showBaseCurrency)
+                        {
+                            <div class="text-muted">@summaryNetAmountBaseDisplay.ToString("N2") @Model.BaseCurrencyCode</div>
+                        }
                     }
                 </div>
             </div>
