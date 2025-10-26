@@ -1,3 +1,4 @@
+using System;
 using AccountingSystem.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -22,6 +23,9 @@ namespace AccountingSystem.ViewModels
         public decimal TotalCredit { get; set; }
         public int ResultCount { get; set; }
         public bool FiltersApplied { get; set; }
+        public int PageNumber { get; set; } = 1;
+        public int PageSize { get; set; } = 50;
+        public int TotalPages { get; set; }
         public List<JournalEntryLineReportItemViewModel> Lines { get; set; } = new();
         public List<SelectListItem> Branches { get; set; } = new();
         public List<SelectListItem> Accounts { get; set; } = new();
@@ -30,6 +34,10 @@ namespace AccountingSystem.ViewModels
 
         public bool HasResults => Lines.Count > 0;
         public decimal NetBalance => TotalDebit - TotalCredit;
+        public int FirstItemIndex => !HasResults ? 0 : ((PageNumber - 1) * PageSize) + 1;
+        public int LastItemIndex => !HasResults ? 0 : Math.Min(PageNumber * PageSize, ResultCount);
+        public bool HasPreviousPage => PageNumber > 1;
+        public bool HasNextPage => TotalPages > 0 && PageNumber < TotalPages;
     }
 
     public class JournalEntryLineReportItemViewModel
