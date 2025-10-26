@@ -374,11 +374,6 @@ namespace AccountingSystem.Data
                 context.SystemSettings.Add(new SystemSetting { Key = "DashboardParentAccountId", Value = null });
             }
 
-            if (!context.SystemSettings.Any(s => s.Key == "TransferIntermediaryAccountId"))
-            {
-                context.SystemSettings.Add(new SystemSetting { Key = "TransferIntermediaryAccountId", Value = null });
-            }
-
             await context.SaveChangesAsync();
         }
 

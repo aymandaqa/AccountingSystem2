@@ -19,7 +19,7 @@ namespace AccountingSystem.Controllers
         private readonly ApplicationDbContext _context;
         private readonly UserManager<User> _userManager;
         private readonly IAuthorizationService _authorizationService;
-        private const string IntermediaryAccountSettingKey = "TransferIntermediaryAccountId";
+        private const string IntermediaryAccountSettingKeyPrefix = "TransferIntermediaryAccountId";
 
         public TransfersController(ApplicationDbContext context, UserManager<User> userManager, IAuthorizationService authorizationService)
         {
@@ -131,17 +131,17 @@ namespace AccountingSystem.Controllers
                 return View(model);
             }
 
-            var (intermediaryAccount, intermediaryError) = await GetIntermediaryAccountAsync();
-            if (intermediaryAccount == null)
+            if (senderAccount.Account == null)
             {
-                ModelState.AddModelError(string.Empty, intermediaryError ?? "لم يتم إعداد حساب الوسيط للحوالات.");
+                ModelState.AddModelError(string.Empty, "تعذر تحميل حساب الإرسال المحدد.");
                 await PopulateCreateViewModelAsync(model, sender.Id);
                 return View(model);
             }
 
-            if (senderAccount.Account == null)
+            var (intermediaryAccount, intermediaryError) = await GetIntermediaryAccountAsync(senderAccount.Account.CurrencyId);
+            if (intermediaryAccount == null)
             {
-                ModelState.AddModelError(string.Empty, "تعذر تحميل حساب الإرسال المحدد.");
+                ModelState.AddModelError(string.Empty, intermediaryError ?? "لم يتم إعداد حساب الوسيط للحوالات.");
                 await PopulateCreateViewModelAsync(model, sender.Id);
                 return View(model);
             }
@@ -294,7 +294,7 @@ namespace AccountingSystem.Controllers
                     return RedirectAfterAction(returnUrl);
                 }
 
-                var (intermediaryAccount, intermediaryError) = await GetIntermediaryAccountAsync();
+                var (intermediaryAccount, intermediaryError) = await GetIntermediaryAccountAsync(receiverAccount.CurrencyId);
                 if (intermediaryAccount == null)
                 {
                     TempData["ErrorMessage"] = intermediaryError ?? "لم يتم إعداد حساب الوسيط للحوالات.";
@@ -490,7 +490,7 @@ namespace AccountingSystem.Controllers
             transfer.Notes = model.Notes;
             transfer.CurrencyBreakdownJson = breakdownJson;
 
-            await UpdateSenderJournalEntryAsync(transfer, receiver, finalAmount, model.Notes ?? string.Empty);
+            await UpdateSenderJournalEntryAsync(transfer, receiver, finalAmount, model.Notes ?? string.Empty, fromAccount.CurrencyId);
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -554,7 +554,12 @@ namespace AccountingSystem.Controllers
 
             var breakdown = ParseBreakdown(transfer.CurrencyBreakdownJson);
             var unitNames = await LoadCurrencyUnitNamesAsync(breakdown);
-            var (intermediaryAccount, _) = await GetIntermediaryAccountAsync();
+            Account? intermediaryAccount = null;
+            var sendCurrencyId = transfer.FromPaymentAccount?.CurrencyId ?? transfer.ToPaymentAccount?.CurrencyId;
+            if (sendCurrencyId.HasValue)
+            {
+                (intermediaryAccount, _) = await GetIntermediaryAccountAsync(sendCurrencyId.Value);
+            }
 
             var model = new TransferPrintViewModel
             {
@@ -592,7 +597,12 @@ namespace AccountingSystem.Controllers
 
             var breakdown = ParseBreakdown(transfer.CurrencyBreakdownJson);
             var unitNames = await LoadCurrencyUnitNamesAsync(breakdown);
-            var (intermediaryAccount, _) = await GetIntermediaryAccountAsync();
+            Account? intermediaryAccount = null;
+            var receiveCurrencyId = transfer.ToPaymentAccount?.CurrencyId ?? transfer.FromPaymentAccount?.CurrencyId;
+            if (receiveCurrencyId.HasValue)
+            {
+                (intermediaryAccount, _) = await GetIntermediaryAccountAsync(receiveCurrencyId.Value);
+            }
 
             var model = new TransferPrintViewModel
             {
@@ -829,11 +839,59 @@ namespace AccountingSystem.Controllers
             ViewBag.CurrencyUnitNames = unitNames;
         }
 
-        private async Task<(Account? Account, string? ErrorMessage)> GetIntermediaryAccountAsync()
+        private async Task<(Account? Account, string? ErrorMessage)> GetIntermediaryAccountAsync(int currencyId)
         {
-            var setting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == IntermediaryAccountSettingKey);
-            if (setting == null || string.IsNullOrWhiteSpace(setting.Value))
-                return (null, "لم يتم إعداد حساب الوسيط للحوالات.");
+            var currency = await _context.Currencies.FirstOrDefaultAsync(c => c.Id == currencyId);
+            var currencyDisplay = currency?.Name ?? currency?.Code ?? currencyId.ToString();
+
+            var candidateKeys = new List<string>();
+            var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            void AddKey(string key)
+            {
+                if (seenKeys.Add(key))
+                    candidateKeys.Add(key);
+            }
+
+            if (currency != null && !string.IsNullOrWhiteSpace(currency.Code))
+            {
+                var trimmedCode = currency.Code.Trim();
+                if (!string.IsNullOrEmpty(trimmedCode))
+                {
+                    var lowerCode = trimmedCode.ToLowerInvariant();
+                    AddKey($"{IntermediaryAccountSettingKeyPrefix}_{lowerCode}");
+
+                    if (!string.Equals(trimmedCode, lowerCode, StringComparison.Ordinal))
+                        AddKey($"{IntermediaryAccountSettingKeyPrefix}_{trimmedCode}");
+
+                    var upperCode = trimmedCode.ToUpperInvariant();
+                    if (!string.Equals(upperCode, lowerCode, StringComparison.Ordinal))
+                        AddKey($"{IntermediaryAccountSettingKeyPrefix}_{upperCode}");
+                }
+            }
+
+            AddKey($"{IntermediaryAccountSettingKeyPrefix}:{currencyId}");
+            AddKey(IntermediaryAccountSettingKeyPrefix);
+
+            SystemSetting? setting = null;
+            foreach (var key in candidateKeys)
+            {
+                var candidate = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == key);
+                if (candidate != null && !string.IsNullOrWhiteSpace(candidate.Value))
+                {
+                    setting = candidate;
+                    break;
+                }
+            }
+
+            if (setting == null)
+            {
+                var expectedSuffix = currency != null && !string.IsNullOrWhiteSpace(currency.Code)
+                    ? currency.Code.Trim().ToLowerInvariant()
+                    : currencyId.ToString();
+
+                return (null, $"لم يتم إعداد حساب الوسيط للحوالات لعملة {currencyDisplay}. الرجاء إعداد الإعداد {IntermediaryAccountSettingKeyPrefix}_{expectedSuffix}.");
+            }
 
             if (!int.TryParse(setting.Value, out var accountId))
                 return (null, "قيمة حساب الوسيط للحوالات غير صحيحة في الإعدادات.");
@@ -843,6 +901,9 @@ namespace AccountingSystem.Controllers
                 .FirstOrDefaultAsync(a => a.Id == accountId);
             if (account == null)
                 return (null, "حساب الوسيط المحدد في الإعدادات غير موجود.");
+
+            if (account.CurrencyId != currencyId)
+                return (null, $"حساب الوسيط المحدد لعملة {currencyDisplay} يجب أن يكون بنفس العملة.");
 
             return (account, null);
         }
@@ -962,9 +1023,9 @@ namespace AccountingSystem.Controllers
             }
         }
 
-        private async Task UpdateSenderJournalEntryAsync(PaymentTransfer transfer, User receiver, decimal amount, string notes)
+        private async Task UpdateSenderJournalEntryAsync(PaymentTransfer transfer, User receiver, decimal amount, string notes, int currencyId)
         {
-            var (intermediaryAccount, intermediaryError) = await GetIntermediaryAccountAsync();
+            var (intermediaryAccount, intermediaryError) = await GetIntermediaryAccountAsync(currencyId);
             if (intermediaryAccount == null)
                 throw new InvalidOperationException(intermediaryError ?? "لم يتم إعداد حساب الوسيط للحوالات.");
 
