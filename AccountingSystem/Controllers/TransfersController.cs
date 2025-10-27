@@ -10,6 +10,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Text.Json;
+using AccountingSystem.Services;
 
 namespace AccountingSystem.Controllers
 {
@@ -19,13 +20,15 @@ namespace AccountingSystem.Controllers
         private readonly ApplicationDbContext _context;
         private readonly UserManager<User> _userManager;
         private readonly IAuthorizationService _authorizationService;
+        private readonly IJournalEntryService _journalEntryService;
         private const string IntermediaryAccountSettingKeyPrefix = "TransferIntermediaryAccountId";
 
-        public TransfersController(ApplicationDbContext context, UserManager<User> userManager, IAuthorizationService authorizationService)
+        public TransfersController(ApplicationDbContext context, UserManager<User> userManager, IAuthorizationService authorizationService, IJournalEntryService journalEntryService)
         {
             _context = context;
             _userManager = userManager;
             _authorizationService = authorizationService;
+            _journalEntryService = journalEntryService;
         }
 
         public async Task<IActionResult> Index()
@@ -314,6 +317,7 @@ namespace AccountingSystem.Controllers
                 var entry = await CreateReceiverJournalEntryAsync(transfer, intermediaryAccount, createdBy, receiverDescription);
 
                 transfer.JournalEntry = entry;
+                transfer.JournalEntryId = entry.Id;
                 transfer.Status = TransferStatus.Accepted;
 
                 await _context.SaveChangesAsync();
@@ -943,67 +947,59 @@ namespace AccountingSystem.Controllers
 
         private async Task<JournalEntry> CreateSenderJournalEntryAsync(PaymentTransfer transfer, Account intermediaryAccount, string createdById, string description)
         {
-            var entry = new JournalEntry
+            var lines = new List<JournalEntryLine>
             {
-                Number = await GenerateJournalEntryNumber(),
-                Date = DateTime.Now,
-                Description = description,
-                BranchId = transfer.FromBranchId ?? transfer.ToBranchId ?? 0,
-                CreatedById = createdById,
-                TotalDebit = transfer.Amount,
-                TotalCredit = transfer.Amount,
-                Status = JournalEntryStatus.Posted
+                new JournalEntryLine
+                {
+                    AccountId = intermediaryAccount.Id,
+                    DebitAmount = transfer.Amount,
+                    Description = description
+                },
+                new JournalEntryLine
+                {
+                    AccountId = transfer.FromPaymentAccountId,
+                    CreditAmount = transfer.Amount,
+                    Description = description
+                }
             };
 
-            entry.Lines.Add(new JournalEntryLine
-            {
-                AccountId = intermediaryAccount.Id,
-                DebitAmount = transfer.Amount,
-                Description = description
-            });
+            var entry = await _journalEntryService.CreateJournalEntryAsync(
+                DateTime.Now,
+                description,
+                transfer.FromBranchId ?? transfer.ToBranchId ?? 0,
+                createdById,
+                lines,
+                JournalEntryStatus.Posted);
 
-            entry.Lines.Add(new JournalEntryLine
-            {
-                AccountId = transfer.FromPaymentAccountId,
-                CreditAmount = transfer.Amount,
-                Description = description
-            });
-
-            _context.JournalEntries.Add(entry);
-            await UpdateAccountBalances(entry);
             return entry;
         }
 
         private async Task<JournalEntry> CreateReceiverJournalEntryAsync(PaymentTransfer transfer, Account intermediaryAccount, string createdById, string description)
         {
-            var entry = new JournalEntry
+            var lines = new List<JournalEntryLine>
             {
-                Number = await GenerateJournalEntryNumber(),
-                Date = DateTime.Now,
-                Description = description,
-                BranchId = transfer.ToBranchId ?? transfer.FromBranchId ?? 0,
-                CreatedById = createdById,
-                TotalDebit = transfer.Amount,
-                TotalCredit = transfer.Amount,
-                Status = JournalEntryStatus.Posted
+                new JournalEntryLine
+                {
+                    AccountId = transfer.ToPaymentAccountId,
+                    DebitAmount = transfer.Amount,
+                    Description = description
+                },
+                new JournalEntryLine
+                {
+                    AccountId = intermediaryAccount.Id,
+                    CreditAmount = transfer.Amount,
+                    Description = description
+                }
             };
 
-            entry.Lines.Add(new JournalEntryLine
-            {
-                AccountId = transfer.ToPaymentAccountId,
-                DebitAmount = transfer.Amount,
-                Description = description
-            });
+            var entry = await _journalEntryService.CreateJournalEntryAsync(
+                DateTime.Now,
+                description,
+                transfer.ToBranchId ?? transfer.FromBranchId ?? 0,
+                createdById,
+                lines,
+                JournalEntryStatus.Posted);
 
-            entry.Lines.Add(new JournalEntryLine
-            {
-                AccountId = intermediaryAccount.Id,
-                CreditAmount = transfer.Amount,
-                Description = description
-            });
-
-            _context.JournalEntries.Add(entry);
-            await UpdateAccountBalances(entry);
             return entry;
         }
 
@@ -1041,41 +1037,41 @@ namespace AccountingSystem.Controllers
                 ? BuildSenderEntryDescription(receiver, transfer.Notes)
                 : notes;
 
-            if (entry == null)
+            if (entry != null)
             {
-                var createdEntry = await CreateSenderJournalEntryAsync(transfer, intermediaryAccount, transfer.SenderId, description);
-                transfer.SenderJournalEntry = createdEntry;
-                transfer.SenderJournalEntryId = createdEntry.Id;
-                return;
+                await ReverseAccountBalances(entry);
+                _context.JournalEntryLines.RemoveRange(entry.Lines);
+                _context.JournalEntries.Remove(entry);
+                transfer.SenderJournalEntry = null;
+                transfer.SenderJournalEntryId = null;
             }
 
-            await ReverseAccountBalances(entry);
-            _context.JournalEntryLines.RemoveRange(entry.Lines);
-            entry.Lines.Clear();
-
-            entry.Description = description;
-            entry.TotalDebit = amount;
-            entry.TotalCredit = amount;
-            entry.BranchId = transfer.FromBranchId ?? transfer.ToBranchId ?? 0;
-            entry.Date = DateTime.Now;
-            entry.UpdatedAt = DateTime.Now;
-
-            entry.Lines.Add(new JournalEntryLine
+            var lines = new List<JournalEntryLine>
             {
-                AccountId = intermediaryAccount.Id,
-                DebitAmount = amount,
-                Description = description
-            });
+                new JournalEntryLine
+                {
+                    AccountId = intermediaryAccount.Id,
+                    DebitAmount = amount,
+                    Description = description
+                },
+                new JournalEntryLine
+                {
+                    AccountId = transfer.FromPaymentAccountId,
+                    CreditAmount = amount,
+                    Description = description
+                }
+            };
 
-            entry.Lines.Add(new JournalEntryLine
-            {
-                AccountId = transfer.FromPaymentAccountId,
-                CreditAmount = amount,
-                Description = description
-            });
+            var createdEntry = await _journalEntryService.CreateJournalEntryAsync(
+                DateTime.Now,
+                description,
+                transfer.FromBranchId ?? transfer.ToBranchId ?? 0,
+                transfer.SenderId,
+                lines,
+                JournalEntryStatus.Posted);
 
-            await UpdateAccountBalances(entry);
-            transfer.SenderJournalEntry = entry;
+            transfer.SenderJournalEntry = createdEntry;
+            transfer.SenderJournalEntryId = createdEntry.Id;
         }
 
         private IActionResult RedirectAfterAction(string? returnUrl)
@@ -1114,37 +1110,6 @@ namespace AccountingSystem.Controllers
                 .Where(u => unitIds.Contains(u.Id))
                 .OrderByDescending(u => u.ValueInBaseUnit)
                 .ToDictionaryAsync(u => u.Id, u => $"{u.Name} ({u.ValueInBaseUnit:N2})");
-        }
-
-        private async Task UpdateAccountBalances(JournalEntry entry)
-        {
-            foreach (var line in entry.Lines)
-            {
-                var account = await _context.Accounts.FindAsync(line.AccountId);
-                if (account == null) continue;
-
-                var netAmount = account.Nature == AccountNature.Debit
-                    ? line.DebitAmount - line.CreditAmount
-                    : line.CreditAmount - line.DebitAmount;
-
-                account.CurrentBalance += netAmount;
-                account.UpdatedAt = DateTime.Now;
-            }
-        }
-
-        private async Task<string> GenerateJournalEntryNumber()
-        {
-            var year = DateTime.Now.Year;
-            var lastEntry = await _context.JournalEntries
-                .Where(j => j.Date.Year == year)
-                .OrderByDescending(j => j.Number)
-                .FirstOrDefaultAsync();
-            if (lastEntry == null)
-                return $"JE{year}001";
-            var lastNumber = lastEntry.Number.Substring(6);
-            if (int.TryParse(lastNumber, out int number))
-                return $"JE{year}{(number + 1):D3}";
-            return $"JE{year}001";
         }
     }
 }
