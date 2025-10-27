@@ -4670,9 +4670,7 @@ namespace AccountingSystem.Controllers
 
                     var priorDebitTotal = await priorLinesQuery.SumAsync(line => line.DebitAmount);
                     var priorCreditTotal = await priorLinesQuery.SumAsync(line => line.CreditAmount);
-                    var priorNet = account.Nature == AccountNature.Debit
-                        ? priorDebitTotal - priorCreditTotal
-                        : priorCreditTotal - priorDebitTotal;
+                    var priorNet = priorDebitTotal - priorCreditTotal;
                     var priorNetBase = _currencyService.Convert(priorNet, account.Currency, baseCurrency);
 
                     running += priorNet;
@@ -4699,12 +4697,8 @@ namespace AccountingSystem.Controllers
                     {
                         var debitBase = _currencyService.Convert(line.DebitAmount, account.Currency, baseCurrency);
                         var creditBase = _currencyService.Convert(line.CreditAmount, account.Currency, baseCurrency);
-                        running += account.Nature == AccountNature.Debit
-                            ? line.DebitAmount - line.CreditAmount
-                            : line.CreditAmount - line.DebitAmount;
-                        runningBase += account.Nature == AccountNature.Debit
-                            ? debitBase - creditBase
-                            : creditBase - debitBase;
+                        running += line.DebitAmount - line.CreditAmount;
+                        runningBase += debitBase - creditBase;
                         viewModel.Transactions.Add(new AccountTransactionViewModel
                         {
                             Date = line.JournalEntry.Date,
