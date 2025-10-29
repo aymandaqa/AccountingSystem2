@@ -457,13 +457,13 @@ namespace AccountingSystem.Controllers
 
             model.Closures = closures.Select(c =>
             {
-                var expectedBalance = c.ClosingBalance - c.OpeningBalance;
-                var difference = c.CountedAmount - expectedBalance;
+                var cashBalance = c.ClosingBalance;
+                var difference = c.CountedAmount - cashBalance;
                 var differenceType = difference switch
                 {
                     > 0 => "زيادة",
                     < 0 => "نقص",
-                    _ => "بدون فرق"
+                    _ => "مطابق"
                 };
 
                 return new CashBoxClosureReportItemViewModel
@@ -475,6 +475,7 @@ namespace AccountingSystem.Controllers
                     BranchName = c.Branch?.NameAr ?? string.Empty,
                     OpeningBalance = c.OpeningBalance,
                     CountedAmount = c.CountedAmount,
+                    CashBalance = cashBalance,
                     ClosingBalance = c.ClosingBalance,
                     Difference = difference,
                     DifferenceType = differenceType,
@@ -530,7 +531,7 @@ namespace AccountingSystem.Controllers
                 "الفرع",
                 "الرصيد الافتتاحي",
                 "المبلغ المعدود",
-                "الرصيد المتوقع",
+                "رصيد الصندوق",
                 "الرصيد الختامي",
                 "قيمة الفرق",
                 "نوع الفرق",
@@ -548,13 +549,13 @@ namespace AccountingSystem.Controllers
             var row = 2;
             foreach (var closure in closures)
             {
-                var expectedBalance = closure.ClosingBalance - closure.OpeningBalance;
-                var difference = closure.CountedAmount - expectedBalance;
+                var cashBalance = closure.ClosingBalance;
+                var difference = closure.CountedAmount - cashBalance;
                 var differenceType = difference switch
                 {
                     > 0 => "زيادة",
                     < 0 => "نقص",
-                    _ => "بدون فرق"
+                    _ => "مطابق"
                 };
 
                 worksheet.Cell(row, 1).Value = closure.CreatedAt;
@@ -568,7 +569,7 @@ namespace AccountingSystem.Controllers
                 worksheet.Cell(row, 6).Style.NumberFormat.Format = "#,##0.00";
                 worksheet.Cell(row, 7).Value = closure.CountedAmount;
                 worksheet.Cell(row, 7).Style.NumberFormat.Format = "#,##0.00";
-                worksheet.Cell(row, 8).Value = expectedBalance;
+                worksheet.Cell(row, 8).Value = cashBalance;
                 worksheet.Cell(row, 8).Style.NumberFormat.Format = "#,##0.00";
                 worksheet.Cell(row, 9).Value = closure.ClosingBalance;
                 worksheet.Cell(row, 9).Style.NumberFormat.Format = "#,##0.00";

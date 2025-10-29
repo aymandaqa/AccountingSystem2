@@ -82,6 +82,7 @@ namespace AccountingSystem.ViewModels
         public string BranchName { get; set; } = string.Empty;
         public decimal OpeningBalance { get; set; }
         public decimal CountedAmount { get; set; }
+        public decimal CashBalance { get; set; }
         public decimal ClosingBalance { get; set; }
         public decimal Difference { get; set; }
         public string DifferenceType { get; set; } = string.Empty;
