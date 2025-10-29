@@ -280,7 +280,7 @@ namespace AccountingSystem.Controllers
                 dashboardParentAccountId = parsedDashboardParentId;
             }
 
-            var startDate = fromDate?.Date ?? DateTime.Today;
+            var startDate = fromDate?.Date ?? DateTime.Now.AddDays(-30);
             var toDateValue = toDate?.Date ?? DateTime.Today;
             var endDate = toDateValue.Date.AddDays(1).AddTicks(-1);
 
