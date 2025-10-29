@@ -56,6 +56,26 @@ namespace AccountingSystem.Services
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<IReadOnlyList<Notification>> GetRecentWorkflowNotificationsAsync(string userId, int count = 5, CancellationToken cancellationToken = default)
+        {
+            return await _context.Notifications
+                .Where(n => n.UserId == userId && !n.IsRead && n.WorkflowActionId.HasValue)
+                .OrderByDescending(n => n.CreatedAt)
+                .Take(count)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<IReadOnlyList<Notification>> GetRecentLoginNotificationsAsync(string userId, int count = 5, CancellationToken cancellationToken = default)
+        {
+            return await _context.Notifications
+                .Where(n => n.UserId == userId && !n.IsRead && !n.WorkflowActionId.HasValue)
+                .OrderByDescending(n => n.CreatedAt)
+                .Take(count)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task<IReadOnlyList<Notification>> GetUserNotificationsAsync(string userId, CancellationToken cancellationToken = default)
         {
             return await _context.Notifications
@@ -68,6 +88,16 @@ namespace AccountingSystem.Services
         public async Task<int> GetUnreadCountAsync(string userId, CancellationToken cancellationToken = default)
         {
             return await _context.Notifications.CountAsync(n => n.UserId == userId && !n.IsRead, cancellationToken);
+        }
+
+        public async Task<int> GetUnreadWorkflowCountAsync(string userId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Notifications.CountAsync(n => n.UserId == userId && !n.IsRead && n.WorkflowActionId.HasValue, cancellationToken);
+        }
+
+        public async Task<int> GetUnreadLoginCountAsync(string userId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Notifications.CountAsync(n => n.UserId == userId && !n.IsRead && !n.WorkflowActionId.HasValue, cancellationToken);
         }
 
         public async Task MarkAsReadAsync(int notificationId, string userId, CancellationToken cancellationToken = default)
@@ -84,7 +114,7 @@ namespace AccountingSystem.Services
             await _context.SaveChangesAsync(cancellationToken);
 
             await _hubContext.Clients.User(userId).SendAsync("NotificationMarkedAsRead", notification.Id, cancellationToken);
-            await NotifyUnreadCountAsync(userId, cancellationToken);
+            await NotifyUnreadCountsAsync(userId, cancellationToken);
         }
 
         public async Task MarkWorkflowActionNotificationsAsReadAsync(int workflowActionId, string userId, CancellationToken cancellationToken = default)
@@ -108,7 +138,7 @@ namespace AccountingSystem.Services
                 await _hubContext.Clients.User(userId).SendAsync("NotificationMarkedAsRead", notification.Id, cancellationToken);
             }
 
-            await NotifyUnreadCountAsync(userId, cancellationToken);
+            await NotifyUnreadCountsAsync(userId, cancellationToken);
         }
 
         public async Task MarkAllAsReadAsync(string userId, CancellationToken cancellationToken = default)
@@ -128,7 +158,7 @@ namespace AccountingSystem.Services
             await _context.SaveChangesAsync(cancellationToken);
 
             await _hubContext.Clients.User(userId).SendAsync("NotificationsCleared", cancellationToken);
-            await NotifyUnreadCountAsync(userId, cancellationToken);
+            await NotifyUnreadCountsAsync(userId, cancellationToken);
         }
 
         private async Task SendNotificationAsync(Notification notification, CancellationToken cancellationToken)
@@ -142,17 +172,28 @@ namespace AccountingSystem.Services
                 isRead = notification.IsRead,
                 createdAt = notification.CreatedAt,
                 icon = notification.Icon,
-                workflowActionId = notification.WorkflowActionId
+                workflowActionId = notification.WorkflowActionId,
+                category = notification.WorkflowActionId.HasValue ? "workflow" : "login"
             };
 
             await _hubContext.Clients.User(notification.UserId).SendAsync("ReceiveNotification", payload, cancellationToken);
-            await NotifyUnreadCountAsync(notification.UserId, cancellationToken);
+            await NotifyUnreadCountsAsync(notification.UserId, cancellationToken);
         }
 
-        private async Task NotifyUnreadCountAsync(string userId, CancellationToken cancellationToken)
+        private async Task NotifyUnreadCountsAsync(string userId, CancellationToken cancellationToken)
         {
-            var count = await GetUnreadCountAsync(userId, cancellationToken);
-            await _hubContext.Clients.User(userId).SendAsync("UnreadCountUpdated", count, cancellationToken);
+            var workflowCount = await GetUnreadWorkflowCountAsync(userId, cancellationToken);
+            var loginCount = await GetUnreadLoginCountAsync(userId, cancellationToken);
+            var total = workflowCount + loginCount;
+
+            await _hubContext.Clients.User(userId).SendAsync("UnreadCountsUpdated", new
+            {
+                workflow = workflowCount,
+                login = loginCount,
+                total
+            }, cancellationToken);
+
+            await _hubContext.Clients.User(userId).SendAsync("UnreadCountUpdated", total, cancellationToken);
         }
     }
 }
