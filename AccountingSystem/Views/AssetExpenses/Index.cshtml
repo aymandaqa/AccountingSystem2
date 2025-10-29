@@ -32,6 +32,7 @@
                                 <th>ملاحظات</th>
                                 <th>الحالة</th>
                                 <th class="text-center">القيد المحاسبي</th>
+                                <th class="text-center">الإجراءات</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -84,6 +85,18 @@
                                         {
                                             <span class="text-muted">-</span>
                                         }
+                                    </td>
+                                    <td class="text-center">
+                                        <form asp-action="Delete"
+                                              asp-route-id="@item.Id"
+                                              method="post"
+                                              class="d-inline"
+                                              asp-require-permission="assetexpenses.delete"
+                                              onsubmit="return confirm('هل أنت متأكد من حذف مصروف الأصل؟');">
+                                            <button type="submit" class="btn btn-sm btn-danger">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
                                     </td>
                                 </tr>
                             }

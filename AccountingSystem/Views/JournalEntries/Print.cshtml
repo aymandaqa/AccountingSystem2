@@ -75,7 +75,7 @@
                 <tr>
                     <td><strong>التاريخ:</strong> @Model.Date.ToString("dd/MM/yyyy")</td>
                     <td><strong>الفرع:</strong> @Model.BranchName</td>
-                    <td><strong>المرجع:</strong> @Model.Reference</td>
+                    <td><strong>المرجع:</strong> @(string.IsNullOrWhiteSpace(Model.Reference) ? "-" : Model.Reference)</td>
                 </tr>
                 <tr>
                     <td colspan="2"><strong>الوصف:</strong> @Model.Description</td>
@@ -101,6 +101,22 @@
                         }
                     </td>
                 </tr>
+                <tr>
+                    <td><strong>أنشئ بواسطة:</strong> @(!string.IsNullOrWhiteSpace(Model.CreatedByName) ? Model.CreatedByName : "-")</td>
+                    <td><strong>اسم المستخدم:</strong> @(!string.IsNullOrWhiteSpace(Model.CreatedByUserName) ? Model.CreatedByUserName : "-")</td>
+                    <td><strong>تاريخ الإنشاء:</strong> @Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                </tr>
+                <tr>
+                    <td><strong>آخر تحديث:</strong> @(Model.UpdatedAt.HasValue ? Model.UpdatedAt.Value.ToString("dd/MM/yyyy HH:mm") : "-")</td>
+                    <td><strong>الاعتماد:</strong> @(!string.IsNullOrWhiteSpace(Model.ApprovedByName) ? Model.ApprovedByName : "-")</td>
+                    <td><strong>تاريخ الاعتماد:</strong> @(Model.ApprovedAt.HasValue ? Model.ApprovedAt.Value.ToString("dd/MM/yyyy HH:mm") : "-")</td>
+                </tr>
+                @if (!string.IsNullOrWhiteSpace(Model.Notes))
+                {
+                    <tr>
+                        <td colspan="3"><strong>ملاحظات إضافية:</strong> @Model.Notes</td>
+                    </tr>
+                }
             </tbody>
         </table>
 

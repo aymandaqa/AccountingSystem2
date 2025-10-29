@@ -1226,6 +1226,7 @@ namespace AccountingSystem.Data
                 new Permission { Id = 51, Name = "assets.delete", DisplayName = "حذف الأصول", Category = "الأصول", CreatedAt = createdAt },
                 new Permission { Id = 52, Name = "assetexpenses.view", DisplayName = "عرض مصاريف الأصول", Category = "الأصول", CreatedAt = createdAt },
                 new Permission { Id = 53, Name = "assetexpenses.create", DisplayName = "إنشاء مصروف أصل", Category = "الأصول", CreatedAt = createdAt },
+                new Permission { Id = 114, Name = "assetexpenses.delete", DisplayName = "حذف مصروف أصل", Category = "الأصول", CreatedAt = createdAt },
                 new Permission { Id = 54, Name = "reports.pending", DisplayName = "عرض الحركات غير المرحلة", Category = "التقارير", CreatedAt = createdAt },
                 new Permission { Id = 55, Name = "reports.dynamic", DisplayName = "التقارير التفاعلية", Category = "التقارير", CreatedAt = createdAt },
                 new Permission { Id = 56, Name = "permissiongroups.view", DisplayName = "عرض مجموعات الصلاحيات", Category = "الصلاحيات", CreatedAt = createdAt },
