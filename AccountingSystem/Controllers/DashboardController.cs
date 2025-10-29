@@ -176,6 +176,7 @@ namespace AccountingSystem.Controllers
 
             ViewData["SelectedCurrencyCode"] = treeData.SelectedCurrency.Code;
             ViewData["BaseCurrencyCode"] = treeData.BaseCurrency.Code;
+            ViewData["ShowActualBalances"] = true;
 
             return PartialView("~/Views/Shared/_AccountBalanceTreeNode.cshtml", sanitizedNodes);
         }

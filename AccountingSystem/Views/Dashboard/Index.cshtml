@@ -408,10 +408,12 @@
                                                         ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode;
                                                         ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
                                                         ViewData["CollapseTreeNodes"] = true;
+                                                        ViewData["ShowActualBalances"] = true;
                                                     }
                                                     @await Html.PartialAsync("_AccountBalanceTreeNode", Model.ParentAccountTree)
                                                     @{
                                                         ViewData["CollapseTreeNodes"] = null;
+                                                        ViewData["ShowActualBalances"] = null;
                                                     }
                                                 </div>
                                             }

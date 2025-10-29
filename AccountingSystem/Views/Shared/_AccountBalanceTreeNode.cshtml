@@ -40,6 +40,9 @@
                 @{ 
                     var selectedCurrencyCode = ViewData["SelectedCurrencyCode"] as string ?? string.Empty;
                     var baseCurrencyCode = ViewData["BaseCurrencyCode"] as string ?? string.Empty;
+                    var baseActualText = string.IsNullOrWhiteSpace(baseCurrencyCode)
+                        ? string.Empty
+                        : $"{node.CurrentBalanceBase.ToString("N2")} {baseCurrencyCode}";
                 }
                 <span class="ms-auto text-nowrap">
                     @if (showActualBalances)
