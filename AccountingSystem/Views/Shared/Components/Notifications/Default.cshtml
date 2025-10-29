@@ -1,23 +1,23 @@
 @using System.Linq
 @model AccountingSystem.ViewComponents.NotificationViewModel
 
-<div class="dropdown" id="notificationsDropdownWrapper">
-    <a class="nav-link position-relative" href="#" id="notificationsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-        <i class="fa fa-bell"></i>
-        <span id="notificationsBadge" class="badge bg-danger rounded-pill position-absolute top-0 start-0 translate-middle @(Model.UnreadCount > 0 ? string.Empty : "d-none")">@Model.UnreadCount</span>
+<div class="dropdown notification-dropdown" id="@Model.WrapperId" data-notification-category="@Model.Category">
+    <a class="nav-link position-relative" href="#" id="@Model.DropdownId" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fa @Model.IconClass"></i>
+        <span id="@Model.BadgeId" data-role="notifications-badge" class="badge bg-danger rounded-pill position-absolute top-0 start-0 translate-middle @(Model.UnreadCount > 0 ? string.Empty : "d-none")">@Model.UnreadCount</span>
     </a>
-    <div class="dropdown-menu dropdown-menu-end p-0" aria-labelledby="notificationsDropdown" style="min-width: 320px;">
+    <div class="dropdown-menu dropdown-menu-end p-0" aria-labelledby="@Model.DropdownId" style="min-width: 320px;">
         <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
-            <span class="fw-bold">الإشعارات</span>
+            <span class="fw-bold">@Model.Title</span>
             <form asp-controller="Notifications" asp-action="MarkAllRead" method="post" class="m-0">
                 @Html.AntiForgeryToken()
                 <button type="submit" class="btn btn-link btn-sm">تحديد كمقروء</button>
             </form>
         </div>
-        <div class="list-group list-group-flush" id="notificationsList" data-max-items="5" data-empty-text="لا توجد إشعارات" style="max-height: 320px; overflow:auto;">
+        <div class="list-group list-group-flush" id="@Model.ListId" data-role="notifications-list" data-max-items="5" data-empty-text="@Model.EmptyMessage" data-empty-id="@Model.EmptyMessageId" style="max-height: 320px; overflow:auto;">
             @if (!Model.Notifications.Any())
             {
-                <div id="notificationsEmptyMessage" class="text-center text-muted py-3">لا توجد إشعارات</div>
+                <div id="@Model.EmptyMessageId" class="text-center text-muted py-3">@Model.EmptyMessage</div>
             }
             else
             {

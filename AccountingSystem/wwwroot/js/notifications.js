@@ -9,10 +9,38 @@
 
     ready(function () {
         const hubUrl = '/hubs/notifications';
-        const wrapper = document.getElementById('notificationsDropdownWrapper');
-        const list = document.getElementById('notificationsList');
-        const badge = document.getElementById('notificationsBadge');
+        const dropdownWrappers = Array.from(document.querySelectorAll('.notification-dropdown[data-notification-category]'));
         const toastContainer = document.getElementById('notificationToastContainer');
+
+        if (dropdownWrappers.length === 0 || typeof signalR === 'undefined') {
+            return;
+        }
+
+        const states = dropdownWrappers.map((wrapper) => {
+            const category = (wrapper.dataset.notificationCategory || 'workflow').toLowerCase();
+            const list = wrapper.querySelector('[data-role="notifications-list"]');
+            const badge = wrapper.querySelector('[data-role="notifications-badge"]');
+
+            if (!list) {
+                return null;
+            }
+
+            return {
+                category,
+                wrapper,
+                list,
+                badge,
+                emptyText: list.dataset.emptyText || 'لا توجد إشعارات',
+                emptyId: list.dataset.emptyId || `notificationsEmptyMessage-${category}`,
+                maxItems: parseInt(list.dataset.maxItems || '5', 10)
+            };
+        }).filter(Boolean);
+
+        if (states.length === 0) {
+            return;
+        }
+
+        const findState = (category) => states.find((state) => state.category === category);
 
         const audioContextType = window.AudioContext || window.webkitAudioContext;
         let audioContext;
@@ -153,61 +181,69 @@
             toastInstance.show();
         };
 
-        if (!wrapper || !list || typeof signalR === 'undefined') {
-            return;
-        }
+        const ensureEmptyMessage = (state) => {
+            if (!state.list) {
+                return;
+            }
 
-        const emptyText = list.dataset.emptyText || '';
-        const maxItems = parseInt(list.dataset.maxItems || '5', 10);
-
-        const ensureEmptyMessage = () => {
-            if (list.querySelector('[data-notification-id]')) {
-                const existing = document.getElementById('notificationsEmptyMessage');
+            if (state.list.querySelector('[data-notification-id]')) {
+                const existing = document.getElementById(state.emptyId);
                 if (existing) {
                     existing.remove();
                 }
                 return;
             }
 
-            if (!document.getElementById('notificationsEmptyMessage')) {
+            if (!document.getElementById(state.emptyId)) {
                 const emptyElement = document.createElement('div');
-                emptyElement.id = 'notificationsEmptyMessage';
+                emptyElement.id = state.emptyId;
                 emptyElement.className = 'text-center text-muted py-3';
-                emptyElement.textContent = emptyText || 'لا توجد إشعارات';
-                list.appendChild(emptyElement);
+                emptyElement.textContent = state.emptyText || 'لا توجد إشعارات';
+                state.list.appendChild(emptyElement);
             }
         };
 
-        ensureEmptyMessage();
+        states.forEach(ensureEmptyMessage);
 
-        const updateBadge = (count) => {
-            if (!badge) {
+        const updateBadge = (state, count) => {
+            if (!state.badge) {
                 return;
             }
 
             if (count > 0) {
-                badge.textContent = count;
-                badge.classList.remove('d-none');
+                state.badge.textContent = count;
+                state.badge.classList.remove('d-none');
             } else {
-                badge.classList.add('d-none');
+                state.badge.classList.add('d-none');
             }
         };
 
         const removeNotification = (id) => {
-            const item = list.querySelector(`[data-notification-id="${id}"]`);
-            if (item) {
-                item.remove();
-            }
-            ensureEmptyMessage();
+            states.forEach((state) => {
+                const item = state.list.querySelector(`[data-notification-id="${id}"]`);
+                if (item) {
+                    item.remove();
+                }
+                ensureEmptyMessage(state);
+            });
         };
 
         const clearNotifications = () => {
-            list.querySelectorAll('[data-notification-id]').forEach((item) => item.remove());
-            ensureEmptyMessage();
+            states.forEach((state) => {
+                state.list.querySelectorAll('[data-notification-id]').forEach((item) => item.remove());
+                ensureEmptyMessage(state);
+            });
         };
 
         const renderNotification = (notification) => {
             if (!notification) {
+                return;
+            }
+
+            const category = (notification.category || (notification.workflowActionId ? 'workflow' : 'login')).toLowerCase();
+            const state = findState(category);
+
+            if (!state || !state.list) {
                 return;
             }
 
@@ -244,16 +280,16 @@
             container.appendChild(content);
             item.appendChild(container);
 
-            list.insertBefore(item, list.firstChild);
+            state.list.insertBefore(item, state.list.firstChild);
 
-            const items = list.querySelectorAll('[data-notification-id]');
-            if (items.length > maxItems) {
-                for (let i = maxItems; i < items.length; i += 1) {
+            const items = state.list.querySelectorAll('[data-notification-id]');
+            if (items.length > state.maxItems) {
+                for (let i = state.maxItems; i < items.length; i += 1) {
                     items[i].remove();
                 }
             }
 
-            const existingEmpty = document.getElementById('notificationsEmptyMessage');
+            const existingEmpty = document.getElementById(state.emptyId);
             if (existingEmpty) {
                 existingEmpty.remove();
             }
@@ -270,8 +306,17 @@
             renderNotification(notification);
         });
 
-        connection.on('UnreadCountUpdated', (count) => {
-            updateBadge(parseInt(count, 10) || 0);
+        connection.on('UnreadCountsUpdated', (counts) => {
+            states.forEach((state) => {
+                const value = counts && Object.prototype.hasOwnProperty.call(counts, state.category)
+                    ? parseInt(counts[state.category], 10) || 0
+                    : 0;
+                updateBadge(state, value);
+            });
+        });
+
+        connection.on('UnreadCountUpdated', () => {
+            // Legacy event retained for backward compatibility - handled by UnreadCountsUpdated.
         });
 
         connection.on('NotificationMarkedAsRead', (id) => {

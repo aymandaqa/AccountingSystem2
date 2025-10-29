@@ -1,3 +1,4 @@
+@using AccountingSystem.ViewComponents
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
@@ -946,7 +947,10 @@
                         }
                         @await Component.InvokeAsync("UserAccountBalances")
                         <li class="nav-item">
-                            @await Component.InvokeAsync("Notifications")
+                            @await Component.InvokeAsync("Notifications", new { category = NotificationCategories.Workflow })
+                        </li>
+                        <li class="nav-item">
+                            @await Component.InvokeAsync("Notifications", new { category = NotificationCategories.Login })
                         </li>
                         @if (User.Identity.IsAuthenticated)
                         {
