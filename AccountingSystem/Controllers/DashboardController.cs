@@ -160,6 +160,9 @@ namespace AccountingSystem.Controllers
                     CurrencyCode = n.CurrencyCode,
                     OpeningBalance = n.OpeningBalance,
                     Balance = n.Balance,
+                    CurrentBalance = n.CurrentBalance,
+                    CurrentBalanceSelected = n.CurrentBalanceSelected,
+                    CurrentBalanceBase = n.CurrentBalanceBase,
                     BalanceSelected = n.BalanceSelected,
                     BalanceBase = n.BalanceBase,
                     IsActive = n.IsActive,
@@ -209,6 +212,8 @@ namespace AccountingSystem.Controllers
                         CurrencyCode = n.CurrencyCode,
                         OpeningBalance = n.OpeningBalance,
                         CurrentBalance = n.CurrentBalance,
+                        CurrentBalanceSelected = n.CurrentBalanceSelected,
+                        CurrentBalanceBase = n.CurrentBalanceBase,
                         Balance = n.Balance,
                         BalanceSelected = n.BalanceSelected,
                         BalanceBase = n.BalanceBase,
@@ -226,6 +231,7 @@ namespace AccountingSystem.Controllers
 
             ViewData["SelectedCurrencyCode"] = treeData.SelectedCurrency.Code;
             ViewData["BaseCurrencyCode"] = treeData.BaseCurrency.Code;
+            ViewData["ShowActualBalances"] = true;
 
             var viewModel = new CashBoxTreeViewModel
             {
@@ -331,6 +337,8 @@ namespace AccountingSystem.Controllers
                     CurrencyCode = a.Currency.Code,
                     OpeningBalance = a.OpeningBalance,
                     CurrentBalance = a.CurrentBalance,
+                    CurrentBalanceSelected = _currencyService.Convert(a.CurrentBalance, a.Currency, selectedCurrency),
+                    CurrentBalanceBase = _currencyService.Convert(a.CurrentBalance, a.Currency, baseCurrency),
                     Balance = balance,
                     BalanceSelected = _currencyService.Convert(balance, a.Currency, selectedCurrency),
                     BalanceBase = _currencyService.Convert(balance, a.Currency, baseCurrency),
@@ -378,6 +386,9 @@ namespace AccountingSystem.Controllers
                     node.Balance = node.Children.Sum(c => c.Balance);
                     node.BalanceSelected = node.Children.Sum(c => c.BalanceSelected);
                     node.BalanceBase = node.Children.Sum(c => c.BalanceBase);
+                    node.CurrentBalance = node.Children.Sum(c => c.CurrentBalance);
+                    node.CurrentBalanceSelected = node.Children.Sum(c => c.CurrentBalanceSelected);
+                    node.CurrentBalanceBase = node.Children.Sum(c => c.CurrentBalanceBase);
                 }
             }
 
@@ -416,6 +427,8 @@ namespace AccountingSystem.Controllers
                         CurrencyCode = source.CurrencyCode,
                         OpeningBalance = source.OpeningBalance,
                         CurrentBalance = source.CurrentBalance,
+                        CurrentBalanceSelected = source.CurrentBalanceSelected,
+                        CurrentBalanceBase = source.CurrentBalanceBase,
                         Balance = source.Balance,
                         BalanceSelected = source.BalanceSelected,
                         BalanceBase = source.BalanceBase,
@@ -454,6 +467,8 @@ namespace AccountingSystem.Controllers
                     CurrencyCode = source.CurrencyCode,
                     OpeningBalance = source.OpeningBalance,
                     CurrentBalance = source.CurrentBalance,
+                    CurrentBalanceSelected = source.CurrentBalanceSelected,
+                    CurrentBalanceBase = source.CurrentBalanceBase,
                     Balance = source.Balance,
                     BalanceSelected = source.BalanceSelected,
                     BalanceBase = source.BalanceBase,

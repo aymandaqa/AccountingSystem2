@@ -516,6 +516,8 @@ namespace AccountingSystem.ViewModels
         public string CurrencyCode { get; set; } = string.Empty;
         public decimal OpeningBalance { get; set; }
         public decimal CurrentBalance { get; set; }
+        public decimal CurrentBalanceSelected { get; set; }
+        public decimal CurrentBalanceBase { get; set; }
         public decimal Balance { get; set; }
         public decimal BalanceSelected { get; set; }
         public decimal BalanceBase { get; set; }

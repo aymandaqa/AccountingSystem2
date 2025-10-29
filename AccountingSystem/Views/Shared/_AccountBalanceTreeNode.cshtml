@@ -5,6 +5,7 @@
     var hasChildren = node.HasChildren;
     var hasPreloadedChildren = node.Children.Any();
     var collapseTreeNodes = (ViewData["CollapseTreeNodes"] as bool?) ?? false;
+    var showActualBalances = (ViewData["ShowActualBalances"] as bool?) ?? false;
     var shouldCollapseChildren = collapseTreeNodes && hasPreloadedChildren;
     var containerDisplay = shouldCollapseChildren
         ? "none"
@@ -36,11 +37,17 @@
                     <span class="account-name">@node.NameAr</span>
                     <span class="text-muted ms-1">(@node.CurrencyCode)</span>
                 }
-                @{
+                @{ 
                     var selectedCurrencyCode = ViewData["SelectedCurrencyCode"] as string ?? string.Empty;
                     var baseCurrencyCode = ViewData["BaseCurrencyCode"] as string ?? string.Empty;
                 }
                 <span class="ms-auto text-nowrap">
+                    @if (showActualBalances)
+                    {
+                        <span title="الرصيد الفعلي بالعملة المختارة" class="text-success fw-bold ms-3">
+                            <i class="fas fa-wallet ms-1"></i>@node.CurrentBalanceSelected.ToString("0") @selectedCurrencyCode
+                        </span>
+                    }
                     <span title="الرصيد بالعملة المختارة" class="text-primary">@node.BalanceSelected.ToString("0") @selectedCurrencyCode</span>
                 </span>
             </div>
