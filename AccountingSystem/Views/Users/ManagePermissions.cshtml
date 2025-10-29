@@ -67,10 +67,18 @@
                     </div>
 
                     <div class="mb-4">
-                        <label for="permissionSearch" class="form-label fw-semibold">ابحث في الصلاحيات</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
-                            <input type="search" id="permissionSearch" class="form-control" placeholder="ابحث باسم الصلاحية أو الفئة" autocomplete="off" />
+                        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                            <div class="flex-grow-1">
+                                <label for="permissionSearch" class="form-label fw-semibold">ابحث في الصلاحيات</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
+                                    <input type="search" id="permissionSearch" class="form-control" placeholder="ابحث باسم الصلاحية أو الفئة" autocomplete="off" />
+                                </div>
+                            </div>
+                            <div class="d-flex flex-column flex-sm-row gap-2">
+                                <button type="button" id="selectAllPermissions" class="btn btn-outline-primary"><i class="fas fa-check-double ms-1"></i> اختيار الكل</button>
+                                <button type="button" id="clearAllPermissions" class="btn btn-outline-danger"><i class="fas fa-ban ms-1"></i> إزالة الكل</button>
+                            </div>
                         </div>
                     </div>
 
@@ -135,6 +143,8 @@
             const noResultsMessage = document.getElementById('noResultsMessage');
             const groupOptions = Array.from(document.querySelectorAll('.permission-group-option input[type="checkbox"]'));
             const permissionItems = Array.from(document.querySelectorAll('.permission-item'));
+            const selectAllButton = document.getElementById('selectAllPermissions');
+            const clearAllButton = document.getElementById('clearAllPermissions');
 
             const permissionMap = new Map();
             permissionItems.forEach(item => {
@@ -268,6 +278,53 @@
             });
 
             updateInheritedFromGroups();
+
+            function markAsManual(checkbox) {
+                checkbox.dataset.manual = 'true';
+                checkbox.dataset.touched = 'true';
+                checkbox.checked = true;
+            }
+
+            function markAsCleared(checkbox) {
+                checkbox.dataset.manual = 'false';
+                checkbox.dataset.touched = 'true';
+                checkbox.checked = false;
+            }
+
+            if (selectAllButton) {
+                selectAllButton.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    permissionMap.forEach(value => {
+                        if (!value.checkbox) {
+                            return;
+                        }
+
+                        markAsManual(value.checkbox);
+                    });
+                    updateInheritedFromGroups();
+                });
+            }
+
+            if (clearAllButton) {
+                clearAllButton.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    permissionMap.forEach((value, permissionId) => {
+                        if (!value.checkbox) {
+                            return;
+                        }
+
+                        if (value.checkbox.dataset.inherited === 'true') {
+                            value.checkbox.dataset.manual = 'false';
+                            value.checkbox.dataset.touched = 'true';
+                            value.checkbox.checked = true;
+                            return;
+                        }
+
+                        markAsCleared(value.checkbox);
+                    });
+                    updateInheritedFromGroups();
+                });
+            }
         });
     </script>
 }
