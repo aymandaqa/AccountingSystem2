@@ -18,24 +18,33 @@ else
             <i class="fa-solid fa-wallet"></i>
         </a>
         <div class="dropdown-menu dropdown-menu-end p-3 user-balance-menu">
-            <h6 class="dropdown-header px-0">حساباتي</h6>
-            <div class="user-balance-list">
+            <div class="user-balance-header d-flex align-items-center justify-content-between">
+                <div>
+                    <h6 class="dropdown-header px-0 mb-1">أرصدة الصناديق</h6>
+                    <p class="text-muted small mb-0">عرض سريع للحسابات المرتبطة بك</p>
+                </div>
+                <span class="balance-count badge bg-primary-subtle text-primary">@Model.Count</span>
+            </div>
+            <div class="user-balance-grid mt-3">
                 @foreach (var account in Model)
                 {
-                    <div class="user-balance-item">
-                        <div class="d-flex justify-content-between align-items-center gap-3">
-                            <div class="flex-grow-1">
-                                <div class="fw-semibold text-truncate" title="@($"{account.AccountCode} - {account.AccountName}")">
-                                    @account.AccountCode - @account.AccountName
+                    <div class="user-balance-card">
+                        <div class="user-balance-card-body">
+                            <div class="d-flex align-items-start justify-content-between gap-3">
+                                <div class="flex-grow-1">
+                                    <div class="user-balance-name" title="@($"{account.AccountCode} - {account.AccountName}")">
+                                        <span class="account-code">@account.AccountCode</span>
+                                        <span class="account-name">@account.AccountName</span>
+                                    </div>
+                                    @if (account.IsAgentAccount)
+                                    {
+                                        <span class="badge bg-warning text-dark mt-2">حساب الوكيل</span>
+                                    }
                                 </div>
-                                @if (account.IsAgentAccount)
-                                {
-                                    <span class="badge bg-warning text-dark mt-1">حساب الوكيل</span>
-                                }
-                            </div>
-                            <div class="text-end">
-                                <div class="fw-bold text-primary">@account.CurrentBalance</div>
-                                <div class="text-muted small">@account.CurrencyCode</div>
+                                <div class="text-end">
+                                    <div class="user-balance-amount">@account.CurrentBalance</div>
+                                    <div class="user-balance-currency">@account.CurrencyCode</div>
+                                </div>
                             </div>
                         </div>
                     </div>
