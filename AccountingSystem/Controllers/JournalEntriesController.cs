@@ -1175,6 +1175,8 @@ namespace AccountingSystem.Controllers
         {
             var entry = await _context.JournalEntries
                 .Include(j => j.Branch)
+                .Include(j => j.CreatedBy)
+                .Include(j => j.ApprovedBy)
                 .Include(j => j.Lines)
                     .ThenInclude(l => l.Account).ThenInclude(c => c.Currency)
                 .Include(j => j.Lines)
@@ -1194,6 +1196,8 @@ namespace AccountingSystem.Controllers
         {
             var entry = await _context.JournalEntries
                 .Include(j => j.Branch)
+                .Include(j => j.CreatedBy)
+                .Include(j => j.ApprovedBy)
                 .Include(j => j.Lines)
                     .ThenInclude(l => l.Account)
                         .ThenInclude(a => a.Currency)
@@ -1508,6 +1512,28 @@ namespace AccountingSystem.Controllers
             };
         }
 
+        private static string GetUserDisplayName(User? user)
+        {
+            if (user == null)
+            {
+                return string.Empty;
+            }
+
+            var fullName = $"{user.FirstName} {user.LastName}".Trim();
+
+            if (!string.IsNullOrWhiteSpace(fullName))
+            {
+                return fullName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(user.UserName))
+            {
+                return user.UserName!;
+            }
+
+            return user.Email ?? string.Empty;
+        }
+
         private static JournalEntryDetailsViewModel MapToDetailsViewModel(JournalEntry entry)
         {
             return new JournalEntryDetailsViewModel
@@ -1517,8 +1543,16 @@ namespace AccountingSystem.Controllers
                 Date = entry.Date,
                 Description = entry.Description,
                 Reference = entry.Reference,
+                Notes = entry.Notes,
                 Status = entry.Status.ToString(),
                 BranchName = entry.Branch.NameAr,
+                CreatedAt = entry.CreatedAt,
+                UpdatedAt = entry.UpdatedAt,
+                CreatedByName = GetUserDisplayName(entry.CreatedBy),
+                CreatedByUserName = entry.CreatedBy?.UserName,
+                ApprovedByName = GetUserDisplayName(entry.ApprovedBy),
+                ApprovedByUserName = entry.ApprovedBy?.UserName,
+                ApprovedAt = entry.ApprovedAt,
                 Lines = entry.Lines.Select(l => new JournalEntryLineViewModel
                 {
                     AccountId = l.AccountId,
