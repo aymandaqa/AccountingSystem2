@@ -24,6 +24,8 @@
                                 <th>الفرع</th>
                                 <th>الحساب</th>
                                 <th>المورد</th>
+                                <th>المستخدم المدخل</th>
+                                <th>المستخدم المعتمد</th>
                                 <th>المبلغ</th>
                                 <th>نوع الدفع</th>
                                 <th>التاريخ</th>
@@ -40,6 +42,8 @@
                                     <td>@item.BranchName</td>
                                     <td>@item.ExpenseAccountName</td>
                                     <td>@item.SupplierName</td>
+                                    <td>@(string.IsNullOrWhiteSpace(item.CreatedByName) ? "-" : item.CreatedByName)</td>
+                                    <td>@(string.IsNullOrWhiteSpace(item.ApprovedByName) ? "-" : item.ApprovedByName)</td>
                                     <td>@item.Amount.ToString("N2")</td>
                                     <td>@(item.IsCash ? "نقدي" : "غير نقدي")</td>
                                     <td>@item.Date.ToString("dd/MM/yyyy")</td>
