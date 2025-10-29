@@ -492,28 +492,96 @@ body {
 }
 
 .user-balance-menu {
-    min-width: 18rem;
-    max-width: 22rem;
+    min-width: 22rem;
+    max-width: 28rem;
+    border-radius: 1rem;
+    box-shadow: 0 1rem 3rem rgba(15, 23, 42, 0.15);
 }
 
-.user-balance-list {
+.user-balance-header .dropdown-header {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.user-balance-header .balance-count {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+}
+
+.user-balance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.user-balance-card {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(14, 116, 144, 0.08));
+    border-radius: 0.85rem;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    overflow: hidden;
+}
+
+.user-balance-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0.75rem 1.5rem rgba(15, 23, 42, 0.12);
+}
+
+.user-balance-card-body {
+    padding: 1rem 1.1rem;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    max-height: 18rem;
-    overflow-y: auto;
+    gap: 0.65rem;
 }
 
-.user-balance-item .fw-semibold {
+.user-balance-name {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.user-balance-name .account-code {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #0ea5e9;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.user-balance-name .account-name {
     font-size: 0.95rem;
+    font-weight: 700;
+    color: #0f172a;
 }
 
-.user-balance-item .fw-bold {
-    font-size: 1rem;
+.user-balance-amount {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #0f172a;
+    white-space: nowrap;
 }
 
-.user-balance-item .badge {
-    font-size: 0.65rem;
+.user-balance-currency {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+.user-balance-card .badge {
+    font-size: 0.7rem;
+    border-radius: 999px;
+    padding: 0.3rem 0.6rem;
+}
+
+@media (max-width: 575.98px) {
+    .user-balance-menu {
+        width: calc(100vw - 2rem);
+        max-width: none;
+    }
+
+    .user-balance-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 #notificationToastContainer {
