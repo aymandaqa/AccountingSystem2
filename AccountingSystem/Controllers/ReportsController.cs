@@ -25,7 +25,7 @@ using System.IO;
 
 namespace AccountingSystem.Controllers
 {
-    [Authorize(Policy = "reports.view")]
+    [Authorize]
     public class ReportsController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -1194,7 +1194,7 @@ namespace AccountingSystem.Controllers
             return View(viewModel);
         }
 
-        [Authorize(Policy = "reports.view")]
+        [Authorize(Policy = "accounts.txn")]
         public async Task<IActionResult> UserDailyJournalEntries(DateTime? fromDate, DateTime? toDate, string? reference)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);

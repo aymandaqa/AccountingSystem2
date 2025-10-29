@@ -1113,7 +1113,7 @@ namespace AccountingSystem.Controllers
             {
                 await _journalEntryService.CreateJournalEntryAsync(
                     model.Date,
-                    model.Description,
+                   "قيد يدوي" + "  " + model.Description,
                     model.BranchId,
                     createdById,
                     lines,
