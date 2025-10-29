@@ -114,7 +114,7 @@
                     <div class="summary-title">بيانات الحساب</div>
                     <div><strong>الحساب:</strong> @Model.AccountName</div>
                     <div><strong>رقم الحساب:</strong> @Model.AccountCode</div>
-                    <div><strong>الفترة:</strong> @Model.FromDate.ToString("dd/MM/yyyy") - @Model.ToDate.ToString("dd/MM/yyyy")</div>
+                    <div><strong>الفترة:</strong> @Model.FromDate.ToString("dd/MM/yyyy HH:mm") - @Model.ToDate.ToString("dd/MM/yyyy HH:mm")</div>
                     <div><strong>الفرع:</strong> @branchLabel</div>
                     <div><strong>عدد الحركات:</strong> @transactionsCount</div>
                 </div>
@@ -198,12 +198,12 @@
             </thead>
             <tbody>
                 <tr class="table-light">
-                    <td>@Model.FromDate.ToString("yyyy/MM/dd")</td>
+                    <td>@Model.FromDate.ToString("yyyy/MM/dd HH:mm")</td>
                     <td colspan="6" class="fw-bold text-center">الرصيد الافتتاحي</td>
                     <td class="text-end">-</td>
                     <td class="text-end">-</td>
                     <td class="text-end">
-                        @Model.OpeningBalance.ToString("N2")
+                        @Model.OpeningBalance.ToString("N2") @Model.CurrencyCode
                         @if (showBaseCurrency)
                         {
                             <div class="text-muted">@Model.OpeningBalanceBase.ToString("N2") @Model.BaseCurrencyCode</div>
@@ -215,7 +215,7 @@
                     foreach (var transaction in Model.Transactions)
                     {
                         <tr>
-                            <td>@transaction.Date.ToString("dd/MM/yyyy")</td>
+                            <td>@transaction.Date.ToString("dd/MM/yyyy HH:mm")</td>
                             <td>@transaction.JournalEntryNumber</td>
                             <td>@(string.IsNullOrWhiteSpace(transaction.Reference) ? "-" : transaction.Reference)</td>
                             <td>@(string.IsNullOrWhiteSpace(transaction.BranchName) ? "-" : transaction.BranchName)</td>
@@ -252,6 +252,19 @@
                         <td colspan="10" class="text-center text-muted">لا توجد حركات في الفترة المحددة</td>
                     </tr>
                 }
+                <tr class="table-light">
+                    <td>@Model.ToDate.ToString("yyyy/MM/dd HH:mm")</td>
+                    <td colspan="6" class="fw-bold text-center">الرصيد الختامي</td>
+                    <td class="text-end">-</td>
+                    <td class="text-end">-</td>
+                    <td class="text-end">
+                        @Model.ClosingBalance.ToString("N2") @Model.CurrencyCode
+                        @if (showBaseCurrency)
+                        {
+                            <div class="text-muted">@Model.ClosingBalanceBase.ToString("N2") @Model.BaseCurrencyCode</div>
+                        }
+                    </td>
+                </tr>
             </tbody>
         </table>
         <div class="footer-signatures row text-center">
