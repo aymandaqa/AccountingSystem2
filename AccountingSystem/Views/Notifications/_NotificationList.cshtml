@@ -1,0 +1,54 @@
+@model IEnumerable<AccountingSystem.Models.Notification>
+
+@foreach (var notification in Model)
+{
+    <li class="list-group-item">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3">
+            <div class="d-flex align-items-start gap-3">
+                @if (!string.IsNullOrWhiteSpace(notification.Icon))
+                {
+                    <span class="rounded-circle bg-primary-subtle text-primary p-3">
+                        <i class="fa @notification.Icon fa-lg"></i>
+                    </span>
+                }
+                <div>
+                    <div class="d-flex align-items-center gap-2">
+                        <h6 class="mb-0">@notification.Title</h6>
+                        @if (!notification.IsRead)
+                        {
+                            <span class="badge bg-warning text-dark">غير مقروء</span>
+                        }
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(notification.Message))
+                    {
+                        <p class="mb-2 text-muted">@notification.Message</p>
+                    }
+                    <small class="text-muted">
+                        <i class="fa-regular fa-clock me-1"></i>
+                        @notification.CreatedAt.ToString("g")
+                    </small>
+                </div>
+            </div>
+            <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-2 ms-md-4">
+                @if (!string.IsNullOrWhiteSpace(notification.Link))
+                {
+                    <a href="@notification.Link" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">
+                        <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>
+                        عرض التفصيل
+                    </a>
+                }
+                @if (!notification.IsRead)
+                {
+                    <form asp-action="MarkAsRead" method="post" class="m-0">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@notification.Id" />
+                        <button type="submit" class="btn btn-sm btn-success">
+                            <i class="fa-solid fa-check me-1"></i>
+                            تعليم كمقروء
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+    </li>
+}

@@ -4,6 +4,7 @@ using AccountingSystem.ViewModels.Notifications;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace AccountingSystem.Controllers
@@ -30,12 +31,18 @@ namespace AccountingSystem.Controllers
             }
 
             var notifications = await _notificationService.GetUserNotificationsAsync(user.Id);
+            var workflowNotifications = notifications.Where(n => n.WorkflowActionId.HasValue).ToList();
+            var loginNotifications = notifications.Where(n => !n.WorkflowActionId.HasValue).ToList();
             var unread = await _notificationService.GetUnreadCountAsync(user.Id);
 
             var model = new NotificationsIndexViewModel
             {
                 Notifications = notifications,
-                UnreadCount = unread
+                WorkflowNotifications = workflowNotifications,
+                LoginNotifications = loginNotifications,
+                UnreadCount = unread,
+                WorkflowUnreadCount = workflowNotifications.Count(n => !n.IsRead),
+                LoginUnreadCount = loginNotifications.Count(n => !n.IsRead)
             };
 
             return View(model);
