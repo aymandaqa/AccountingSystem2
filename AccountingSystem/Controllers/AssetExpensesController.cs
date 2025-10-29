@@ -40,12 +40,15 @@ namespace AccountingSystem.Controllers
                 .Include(e => e.Asset).ThenInclude(a => a.Branch)
                 .Include(e => e.ExpenseAccount)
                 .Include(e => e.Supplier)
+                .Include(e => e.CreatedBy)
                 .OrderByDescending(e => e.Date)
                 .ToListAsync();
 
             var expenseIds = expenses.Select(e => e.Id).ToList();
             var workflowInstances = await _context.WorkflowInstances
                 .Where(i => i.DocumentType == WorkflowDocumentType.AssetExpense && expenseIds.Contains(i.DocumentId))
+                .Include(i => i.Actions)
+                    .ThenInclude(a => a.User)
                 .OrderByDescending(i => i.CreatedAt)
                 .ToListAsync();
 
@@ -86,6 +89,16 @@ namespace AccountingSystem.Controllers
                     BranchName = e.Asset.Branch.NameAr,
                     ExpenseAccountName = e.ExpenseAccount.NameAr,
                     SupplierName = e.Supplier.NameAr,
+                    CreatedByName = e.CreatedBy == null
+                        ? null
+                        : (string.IsNullOrWhiteSpace(e.CreatedBy.FullName) ? e.CreatedBy.UserName : e.CreatedBy.FullName),
+                    ApprovedByName = instance?.Actions?
+                        .Where(a => a.Status == WorkflowActionStatus.Approved)
+                        .OrderByDescending(a => a.ActionedAt)
+                        .Select(a => a.User == null
+                            ? null
+                            : (string.IsNullOrWhiteSpace(a.User.FullName) ? a.User.UserName : a.User.FullName))
+                        .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name)),
                     Amount = e.Amount,
                     IsCash = e.IsCash,
                     Date = e.Date,

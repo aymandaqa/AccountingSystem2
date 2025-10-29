@@ -72,6 +72,8 @@ namespace AccountingSystem.ViewModels
         public string BranchName { get; set; } = string.Empty;
         public string ExpenseAccountName { get; set; } = string.Empty;
         public string SupplierName { get; set; } = string.Empty;
+        public string? CreatedByName { get; set; }
+        public string? ApprovedByName { get; set; }
         public decimal Amount { get; set; }
         public bool IsCash { get; set; }
         public DateTime Date { get; set; }
