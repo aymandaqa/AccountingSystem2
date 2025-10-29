@@ -10,8 +10,16 @@
                 <h5 class="mb-1">الإشعارات</h5>
                 <small class="text-muted">تابع آخر التحديثات الخاصة بحسابك</small>
             </div>
-            <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center flex-wrap gap-2 gap-md-3">
                 <span class="badge bg-primary fs-6">@Model.UnreadCount إشعار غير مقروء</span>
+                @if (Model.WorkflowNotifications.Any())
+                {
+                    <span class="badge bg-info-subtle text-info">@Model.WorkflowUnreadCount غير مقروء في الموافقات</span>
+                }
+                @if (Model.LoginNotifications.Any())
+                {
+                    <span class="badge bg-secondary-subtle text-secondary">@Model.LoginUnreadCount غير مقروء للحساب</span>
+                }
                 <form asp-action="MarkAllRead" method="post" class="m-0">
                     @Html.AntiForgeryToken()
                     <button type="submit" class="btn btn-outline-secondary">
@@ -22,7 +30,7 @@
             </div>
         </div>
         <div class="card-body p-0">
-            @if (!Model.Notifications.Any())
+            @if (!Model.WorkflowNotifications.Any() && !Model.LoginNotifications.Any())
             {
                 <div class="text-center text-muted py-5">
                     <i class="fa-regular fa-bell fa-2x mb-3"></i>
@@ -32,57 +40,27 @@
             else
             {
                 <ul class="list-group list-group-flush">
-                    @foreach (var notification in Model.Notifications)
+                    @if (Model.WorkflowNotifications.Any())
                     {
-                        <li class="list-group-item">
-                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3">
-                                <div class="d-flex align-items-start gap-3">
-                                    @if (!string.IsNullOrWhiteSpace(notification.Icon))
-                                    {
-                                        <span class="rounded-circle bg-primary-subtle text-primary p-3">
-                                            <i class="fa @notification.Icon fa-lg"></i>
-                                        </span>
-                                    }
-                                    <div>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <h6 class="mb-0">@notification.Title</h6>
-                                            @if (!notification.IsRead)
-                                            {
-                                                <span class="badge bg-warning text-dark">غير مقروء</span>
-                                            }
-                                        </div>
-                                        @if (!string.IsNullOrWhiteSpace(notification.Message))
-                                        {
-                                            <p class="mb-2 text-muted">@notification.Message</p>
-                                        }
-                                        <small class="text-muted">
-                                            <i class="fa-regular fa-clock me-1"></i>
-                                            @notification.CreatedAt.ToString("g")
-                                        </small>
-                                    </div>
-                                </div>
-                                <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-2 ms-md-4">
-                                    @if (!string.IsNullOrWhiteSpace(notification.Link))
-                                    {
-                                        <a href="@notification.Link" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">
-                                            <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>
-                                            عرض التفاصيل
-                                        </a>
-                                    }
-                                    @if (!notification.IsRead)
-                                    {
-                                        <form asp-action="MarkAsRead" method="post" class="m-0">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="id" value="@notification.Id" />
-                                            <button type="submit" class="btn btn-sm btn-success">
-                                                <i class="fa-solid fa-check me-1"></i>
-                                                تعليم كمقروء
-                                            </button>
-                                        </form>
-                                    }
-                                </div>
-                            </div>
+                        <li class="list-group-item bg-body-tertiary fw-semibold d-flex justify-content-between align-items-center">
+                            <span>إشعارات الموافقات</span>
+                            @if (Model.WorkflowUnreadCount > 0)
+                            {
+                                <span class="badge bg-info text-white">@Model.WorkflowUnreadCount غير مقروء</span>
+                            }
                         </li>
+                        @await Html.PartialAsync("_NotificationList", Model.WorkflowNotifications)
+                    }
+                    @if (Model.LoginNotifications.Any())
+                    {
+                        <li class="list-group-item bg-body-tertiary fw-semibold d-flex justify-content-between align-items-center">
+                            <span>إشعارات الحساب والدخول</span>
+                            @if (Model.LoginUnreadCount > 0)
+                            {
+                                <span class="badge bg-secondary text-white">@Model.LoginUnreadCount غير مقروء</span>
+                            }
+                        </li>
+                        @await Html.PartialAsync("_NotificationList", Model.LoginNotifications)
                     }
                 </ul>
             }
