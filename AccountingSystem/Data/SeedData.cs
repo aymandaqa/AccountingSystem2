@@ -146,6 +146,7 @@ namespace AccountingSystem.Data
                 new Permission { Name = "assettypes.delete", DisplayName = "حذف نوع أصل", Category = "الأصول" },
                 new Permission { Name = "assetexpenses.view", DisplayName = "عرض مصاريف الأصول", Category = "الأصول" },
                 new Permission { Name = "assetexpenses.create", DisplayName = "إنشاء مصروف أصل", Category = "الأصول" },
+                new Permission { Name = "assetexpenses.delete", DisplayName = "حذف مصروف أصل", Category = "الأصول" },
                 new Permission { Name = "systemsettings.view", DisplayName = "عرض إعدادات النظام", Category = "إعدادات النظام" },
                 new Permission { Name = "systemsettings.create", DisplayName = "إنشاء إعدادات النظام", Category = "إعدادات النظام" },
                 new Permission { Name = "systemsettings.edit", DisplayName = "تعديل إعدادات النظام", Category = "إعدادات النظام" },

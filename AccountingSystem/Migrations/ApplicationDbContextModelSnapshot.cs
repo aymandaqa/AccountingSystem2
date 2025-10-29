@@ -2228,6 +2228,15 @@ namespace AccountingSystem.Migrations
                         },
                         new
                         {
+                            Id = 114,
+                            Category = "الأصول",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "حذف مصروف أصل",
+                            IsActive = true,
+                            Name = "assetexpenses.delete"
+                        },
+                        new
+                        {
                             Id = 54,
                             Category = "التقارير",
                             CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
