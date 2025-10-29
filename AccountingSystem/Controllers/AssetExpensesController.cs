@@ -267,6 +267,71 @@ namespace AccountingSystem.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "assetexpenses.delete")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var expense = await _context.AssetExpenses.FirstOrDefaultAsync(e => e.Id == id);
+            if (expense == null)
+            {
+                return NotFound();
+            }
+
+            var reference = $"ASSETEXP:{id}";
+            var journalEntries = await _context.JournalEntries
+                .Include(j => j.Lines)
+                    .ThenInclude(l => l.Account)
+                .Where(j => j.Reference == reference)
+                .ToListAsync();
+
+            foreach (var entry in journalEntries.Where(e => e.Status == JournalEntryStatus.Posted))
+            {
+                foreach (var line in entry.Lines)
+                {
+                    if (line.Account == null)
+                    {
+                        continue;
+                    }
+
+                    var account = line.Account;
+                    var netAmount = account.Nature == AccountNature.Debit
+                        ? line.DebitAmount - line.CreditAmount
+                        : line.CreditAmount - line.DebitAmount;
+
+                    account.CurrentBalance -= netAmount;
+                    account.UpdatedAt = DateTime.Now;
+                }
+            }
+
+            if (journalEntries.Any())
+            {
+                _context.JournalEntries.RemoveRange(journalEntries);
+            }
+
+            var workflowInstance = await _context.WorkflowInstances
+                .Include(i => i.Actions)
+                .FirstOrDefaultAsync(i => i.DocumentType == WorkflowDocumentType.AssetExpense && i.DocumentId == id);
+
+            if (workflowInstance != null)
+            {
+                if (workflowInstance.Actions?.Any() == true)
+                {
+                    _context.WorkflowActions.RemoveRange(workflowInstance.Actions);
+                }
+
+                _context.WorkflowInstances.Remove(workflowInstance);
+            }
+
+            _context.AssetExpenses.Remove(expense);
+
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "تم حذف مصروف الأصل والقيد المحاسبي المرتبط به.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
         private async Task<IEnumerable<AssetExpenseSupplierOption>> GetSuppliersAsync()
         {
             return await _context.Suppliers
