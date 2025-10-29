@@ -37,12 +37,12 @@
                     <span class="account-name">@node.NameAr</span>
                     <span class="text-muted ms-1">(@node.CurrencyCode)</span>
                 }
-                @{ 
+                @{
                     var selectedCurrencyCode = ViewData["SelectedCurrencyCode"] as string ?? string.Empty;
                     var baseCurrencyCode = ViewData["BaseCurrencyCode"] as string ?? string.Empty;
                     var baseActualText = string.IsNullOrWhiteSpace(baseCurrencyCode)
-                        ? string.Empty
-                        : $"{node.CurrentBalanceBase.ToString("N2")} {baseCurrencyCode}";
+                    ? string.Empty
+                    : $"{node.CurrentBalanceBase.ToString("N2")} {baseCurrencyCode}";
                 }
                 <span class="ms-auto text-nowrap">
                     @if (showActualBalances)
@@ -51,7 +51,7 @@
                             <i class="fas fa-wallet ms-1"></i>@node.CurrentBalanceSelected.ToString("0") @selectedCurrencyCode
                         </span>
                     }
-                    <span title="الرصيد بالعملة المختارة" class="text-primary">@node.BalanceSelected.ToString("0") @selectedCurrencyCode</span>
+                    @*<span title="الرصيد بالعملة المختارة" class="text-primary">@node.BalanceSelected.ToString("0") @selectedCurrencyCode</span>*@
                 </span>
             </div>
 
