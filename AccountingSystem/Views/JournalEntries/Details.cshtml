@@ -12,21 +12,39 @@
                         <i class="fas fa-eye me-2"></i>
                         تفاصيل القيد المالي: @Model.Number
                     </h3>
-                    <div class="btn-group">
-                        @if (Model.Status == "Draft")
-                        {
-                            <form asp-action="Post" asp-route-id="@Model.Id" method="post" class="d-inline">
-                                <button type="submit" class="btn btn-success">
-                                    <i class="fas fa-share"></i> ترحيل
-                                </button>
-                            </form>
-                        }
-                        <a asp-action="Index" class="btn btn-secondary">
-                            <i class="fas fa-arrow-right"></i> العودة للقائمة
-                        </a>
-                    </div>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="fas fa-arrow-right"></i> العودة للقائمة
+                    </a>
                 </div>
                 <div class="card-body">
+                    <div class="mb-4">
+                        <h5 class="fw-bold mb-3"><i class="fas fa-cogs me-2"></i>العمليات</h5>
+                        <div class="d-flex flex-wrap gap-2">
+                            @if (Model.Status == "Draft")
+                            {
+                                <form asp-action="Post" asp-route-id="@Model.Id" method="post" class="d-inline" asp-require-permission="journal.edit" onsubmit="return confirm('هل تريد ترحيل القيد رقم @Model.Number؟');">
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-share"></i> ترحيل
+                                    </button>
+                                </form>
+                                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary" asp-require-permission="journal.edit">
+                                    <i class="fas fa-edit"></i> تعديل
+                                </a>
+                            }
+                            <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" rel="noopener" class="btn btn-outline-secondary" asp-require-permission="journal.view">
+                                <i class="fas fa-print"></i> طباعة
+                            </a>
+                            @if (Model.Status == "Draft" || Model.Status == "Posted")
+                            {
+                                <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline" asp-require-permission="journal.delete" onsubmit="return confirm('هل تريد إلغاء القيد رقم @Model.Number؟');">
+                                    <button type="submit" class="btn btn-danger">
+                                        <i class="fas fa-trash"></i> إلغاء
+                                    </button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+
                     <div class="row mb-3">
                         <div class="col-md-3">
                             <strong>رقم القيد:</strong> @Model.Number
@@ -67,7 +85,45 @@
                         </div>
                         <div class="col-md-6">
                             <strong>المرجع:</strong>
-                            <p>@Model.Reference</p>
+                            <p>@(string.IsNullOrWhiteSpace(Model.Reference) ? "-" : Model.Reference)</p>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(Model.Notes))
+                    {
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <strong>ملاحظات إضافية:</strong>
+                                <p class="mb-0">@Model.Notes</p>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <strong>أنشئ بواسطة:</strong>
+                            <p class="mb-1">@(!string.IsNullOrWhiteSpace(Model.CreatedByName) ? Model.CreatedByName : "-")</p>
+                            @if (!string.IsNullOrWhiteSpace(Model.CreatedByUserName))
+                            {
+                                <p class="text-muted small mb-0">اسم المستخدم: @Model.CreatedByUserName</p>
+                            }
+                        </div>
+                        <div class="col-md-3">
+                            <strong>تاريخ الإنشاء:</strong>
+                            <p>@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</p>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>آخر تحديث:</strong>
+                            <p>@(Model.UpdatedAt.HasValue ? Model.UpdatedAt.Value.ToString("dd/MM/yyyy HH:mm") : "-")</p>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>الاعتماد:</strong>
+                            <p class="mb-1">@(!string.IsNullOrWhiteSpace(Model.ApprovedByName) ? Model.ApprovedByName : "-")</p>
+                            @if (!string.IsNullOrWhiteSpace(Model.ApprovedByUserName))
+                            {
+                                <p class="text-muted small mb-1">اسم المستخدم: @Model.ApprovedByUserName</p>
+                            }
+                            <p class="text-muted small mb-0">تاريخ الاعتماد: @(Model.ApprovedAt.HasValue ? Model.ApprovedAt.Value.ToString("dd/MM/yyyy HH:mm") : "-")</p>
                         </div>
                     </div>
 
