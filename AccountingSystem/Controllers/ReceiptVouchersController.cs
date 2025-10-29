@@ -60,14 +60,29 @@ namespace AccountingSystem.Controllers
         public async Task<IActionResult> Create()
         {
             var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Challenge();
+
+            if (user.PaymentBranchId == null)
+            {
+                TempData["ErrorMessage"] = "لم يتم إعداد فرع الصندوق للمستخدم.";
+                return RedirectToAction(nameof(Index));
+            }
+
             var paymentAccounts = await _context.UserPaymentAccounts
                 .AsNoTracking()
-                .Where(u => u.UserId == user!.Id)
+                .Where(u => u.UserId == user.Id)
                 .Include(u => u.Account).ThenInclude(a => a.Currency)
                 .Select(u => new { u.Account.Id, u.Account.Code, u.Account.NameAr, u.Account.CurrencyId, CurrencyCode = u.Account.Currency.Code })
                 .ToListAsync();
+            if (!paymentAccounts.Any())
+            {
+                TempData["ErrorMessage"] = "لم يتم ربط أي حسابات دفع بالمستخدم.";
+                return RedirectToAction(nameof(Index));
+            }
             ViewBag.PaymentAccounts = paymentAccounts;
-            ViewBag.Suppliers = await _context.Suppliers
+
+            var suppliers = await _context.Suppliers
                 .AsNoTracking()
                 .Include(s => s.Account).ThenInclude(a => a.Currency)
                 .Where(s => s.AccountId != null)
@@ -80,6 +95,12 @@ namespace AccountingSystem.Controllers
                     CurrencyCode = s.Account.Currency.Code
                 })
                 .ToListAsync();
+            if (!suppliers.Any())
+            {
+                TempData["ErrorMessage"] = "لا يوجد موردون مرتبطون بحسابات مالية.";
+                return RedirectToAction(nameof(Index));
+            }
+            ViewBag.Suppliers = suppliers;
             var model = new ReceiptVoucher { Date = DateTime.Now };
             var defaultPaymentAccount = user?.PaymentAccountId;
             if (defaultPaymentAccount.HasValue && paymentAccounts.Any(a => a.Id == defaultPaymentAccount.Value))
@@ -96,8 +117,14 @@ namespace AccountingSystem.Controllers
         public async Task<IActionResult> Create(ReceiptVoucher model)
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null || user.PaymentBranchId == null)
+            if (user == null)
                 return Challenge();
+
+            if (user.PaymentBranchId == null)
+            {
+                TempData["ErrorMessage"] = "لم يتم إعداد فرع الصندوق للمستخدم.";
+                return RedirectToAction(nameof(Index));
+            }
 
             ModelState.Remove(nameof(ReceiptVoucher.Account));
             ModelState.Remove(nameof(ReceiptVoucher.Currency));
@@ -165,13 +192,20 @@ namespace AccountingSystem.Controllers
 
             if (!ModelState.IsValid)
             {
-                ViewBag.PaymentAccounts = await _context.UserPaymentAccounts
+                var paymentAccounts = await _context.UserPaymentAccounts
                     .AsNoTracking()
                     .Where(u => u.UserId == user.Id)
                     .Include(u => u.Account).ThenInclude(a => a.Currency)
                     .Select(u => new { u.Account.Id, u.Account.Code, u.Account.NameAr, u.Account.CurrencyId, CurrencyCode = u.Account.Currency.Code })
                     .ToListAsync();
-                ViewBag.Suppliers = await _context.Suppliers
+                if (!paymentAccounts.Any())
+                {
+                    TempData["ErrorMessage"] = "لم يتم ربط أي حسابات دفع بالمستخدم.";
+                    return RedirectToAction(nameof(Index));
+                }
+                ViewBag.PaymentAccounts = paymentAccounts;
+
+                var suppliers = await _context.Suppliers
                     .AsNoTracking()
                     .Include(s => s.Account).ThenInclude(a => a.Currency)
                     .Where(s => s.AccountId != null)
@@ -184,6 +218,12 @@ namespace AccountingSystem.Controllers
                         CurrencyCode = s.Account.Currency.Code
                     })
                     .ToListAsync();
+                if (!suppliers.Any())
+                {
+                    TempData["ErrorMessage"] = "لا يوجد موردون مرتبطون بحسابات مالية.";
+                    return RedirectToAction(nameof(Index));
+                }
+                ViewBag.Suppliers = suppliers;
                 return View(model);
             }
 
