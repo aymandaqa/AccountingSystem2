@@ -5,6 +5,7 @@
     var hasChildren = node.HasChildren;
     var hasPreloadedChildren = node.Children.Any();
     var collapseTreeNodes = (ViewData["CollapseTreeNodes"] as bool?) ?? false;
+    var showActualBalances = (ViewData["ShowActualBalances"] as bool?) ?? false;
     var shouldCollapseChildren = collapseTreeNodes && hasPreloadedChildren;
     var containerDisplay = shouldCollapseChildren
         ? "none"
@@ -36,12 +37,32 @@
                     <span class="account-name">@node.NameAr</span>
                     <span class="text-muted ms-1">(@node.CurrencyCode)</span>
                 }
-                @{
+                @{ 
                     var selectedCurrencyCode = ViewData["SelectedCurrencyCode"] as string ?? string.Empty;
                     var baseCurrencyCode = ViewData["BaseCurrencyCode"] as string ?? string.Empty;
+                    var baseActualText = string.IsNullOrWhiteSpace(baseCurrencyCode)
+                        ? string.Empty
+                        : $"{node.CurrentBalanceBase.ToString("N2")} {baseCurrencyCode}";
                 }
-                <span class="ms-auto text-nowrap">
-                    <span title="الرصيد بالعملة المختارة" class="text-primary">@node.BalanceSelected.ToString("0") @selectedCurrencyCode</span>
+                <span class="ms-auto d-flex flex-column text-end gap-1">
+                    @if (showActualBalances)
+                    {
+                        <span class="text-success fw-bold" title="الرصيد الفعلي للحساب">
+                            <i class="fas fa-wallet ms-1"></i>
+                            الرصيد الفعلي:
+                            <span class="text-dark">@node.CurrentBalance.ToString("N2") @node.CurrencyCode</span>
+                            <small class="text-muted">
+                                (@node.CurrentBalanceSelected.ToString("N2") @selectedCurrencyCode
+                                @if (!string.IsNullOrEmpty(baseActualText))
+                                {
+                                    <text> • @baseActualText</text>
+                                })
+                            </small>
+                        </span>
+                    }
+                    <span class="text-primary" title="الرصيد خلال الفترة المحددة">
+                        رصيد الفترة: @node.BalanceSelected.ToString("N2") @selectedCurrencyCode
+                    </span>
                 </span>
             </div>
 
