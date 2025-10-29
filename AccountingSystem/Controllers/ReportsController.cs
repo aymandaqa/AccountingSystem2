@@ -4114,6 +4114,188 @@ namespace AccountingSystem.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> AccountStatementExcel(int? accountId, int? branchId, DateTime? fromDate, DateTime? toDate)
+        {
+            var viewModel = await BuildAccountStatementViewModel(accountId, branchId, fromDate, toDate);
+
+            if (viewModel.AccountId == null)
+            {
+                return RedirectToAction(nameof(AccountStatement), new { accountId, branchId, fromDate, toDate });
+            }
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.AddWorksheet("AccountStatement");
+
+            var showBaseCurrency = !string.IsNullOrWhiteSpace(viewModel.BaseCurrencyCode)
+                && !string.Equals(viewModel.CurrencyCode, viewModel.BaseCurrencyCode, StringComparison.OrdinalIgnoreCase);
+
+            var detailColumns = showBaseCurrency ? 13 : 10;
+
+            var currentRow = 1;
+
+            worksheet.Cell(currentRow, 1).Value = "كشف حساب";
+            worksheet.Range(currentRow, 1, currentRow, detailColumns).Merge();
+            worksheet.Row(currentRow).Style.Font.Bold = true;
+            worksheet.Row(currentRow).Style.Font.FontSize = 16;
+            worksheet.Row(currentRow).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            currentRow += 2;
+
+            worksheet.Cell(currentRow, 1).Value = $"الحساب: {viewModel.AccountName} ({viewModel.AccountCode})";
+            currentRow++;
+            var branchLabel = string.IsNullOrWhiteSpace(viewModel.SelectedBranchName) ? "جميع الفروع" : viewModel.SelectedBranchName;
+            worksheet.Cell(currentRow, 1).Value = $"الفرع: {branchLabel}";
+            currentRow++;
+            worksheet.Cell(currentRow, 1).Value = $"الفترة: {viewModel.FromDate:yyyy-MM-dd} - {viewModel.ToDate:yyyy-MM-dd}";
+            currentRow++;
+            worksheet.Cell(currentRow, 1).Value = $"العملة: {viewModel.CurrencyCode}";
+            if (showBaseCurrency)
+            {
+                worksheet.Cell(currentRow, 2).Value = $"العملة الأساسية: {viewModel.BaseCurrencyCode}";
+            }
+            currentRow += 2;
+
+            var summaryHeaderRow = currentRow;
+            worksheet.Cell(summaryHeaderRow, 1).Value = "المؤشر";
+            worksheet.Cell(summaryHeaderRow, 2).Value = $"القيمة ({viewModel.CurrencyCode})";
+            if (showBaseCurrency)
+            {
+                worksheet.Cell(summaryHeaderRow, 3).Value = $"القيمة ({viewModel.BaseCurrencyCode})";
+            }
+            worksheet.Row(summaryHeaderRow).Style.Font.Bold = true;
+            worksheet.Row(summaryHeaderRow).Style.Fill.BackgroundColor = XLColor.FromArgb(221, 235, 247);
+
+            var summaryItems = new List<(string Label, decimal Value, decimal BaseValue)>
+            {
+                ("الرصيد الافتتاحي", viewModel.OpeningBalance, viewModel.OpeningBalanceBase),
+                ("إجمالي المدين", viewModel.TotalDebit, viewModel.TotalDebitBase),
+                ("إجمالي الدائن", viewModel.TotalCredit, viewModel.TotalCreditBase),
+                ("صافي الحركة", viewModel.TotalDebit - viewModel.TotalCredit, viewModel.TotalDebitBase - viewModel.TotalCreditBase),
+                ("الرصيد الختامي", viewModel.ClosingBalance, viewModel.ClosingBalanceBase)
+            };
+
+            currentRow++;
+            foreach (var item in summaryItems)
+            {
+                worksheet.Cell(currentRow, 1).Value = item.Label;
+                worksheet.Cell(currentRow, 2).Value = item.Value;
+                worksheet.Cell(currentRow, 2).Style.NumberFormat.Format = "#,##0.00";
+                if (showBaseCurrency)
+                {
+                    worksheet.Cell(currentRow, 3).Value = item.BaseValue;
+                    worksheet.Cell(currentRow, 3).Style.NumberFormat.Format = "#,##0.00";
+                }
+                currentRow++;
+            }
+
+            currentRow++;
+
+            var tableHeaderRow = currentRow;
+            worksheet.Cell(tableHeaderRow, 1).Value = "التاريخ";
+            worksheet.Cell(tableHeaderRow, 2).Value = "رقم القيد";
+            worksheet.Cell(tableHeaderRow, 3).Value = "المرجع";
+            worksheet.Cell(tableHeaderRow, 4).Value = "الفرع";
+            worksheet.Cell(tableHeaderRow, 5).Value = "المستخدم";
+            worksheet.Cell(tableHeaderRow, 6).Value = "نوع الحركة";
+            worksheet.Cell(tableHeaderRow, 7).Value = "الوصف";
+            worksheet.Cell(tableHeaderRow, 8).Value = "مدين";
+            worksheet.Cell(tableHeaderRow, 9).Value = "دائن";
+            worksheet.Cell(tableHeaderRow, 10).Value = "الرصيد";
+            if (showBaseCurrency)
+            {
+                worksheet.Cell(tableHeaderRow, 11).Value = $"مدين ({viewModel.BaseCurrencyCode})";
+                worksheet.Cell(tableHeaderRow, 12).Value = $"دائن ({viewModel.BaseCurrencyCode})";
+                worksheet.Cell(tableHeaderRow, 13).Value = $"الرصيد ({viewModel.BaseCurrencyCode})";
+            }
+
+            worksheet.Row(tableHeaderRow).Style.Font.Bold = true;
+            worksheet.Row(tableHeaderRow).Style.Fill.BackgroundColor = XLColor.FromArgb(221, 235, 247);
+            worksheet.Row(tableHeaderRow).Style.Font.FontColor = XLColor.Black;
+
+            currentRow++;
+
+            if (!viewModel.Transactions.Any())
+            {
+                worksheet.Cell(currentRow, 1).Value = "لا توجد حركات ضمن الفترة المحددة.";
+                worksheet.Range(currentRow, 1, currentRow, detailColumns).Merge();
+                worksheet.Row(currentRow).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                worksheet.Row(currentRow).Style.Font.Italic = true;
+                worksheet.Row(currentRow).Style.Font.FontColor = XLColor.Gray;
+                currentRow++;
+            }
+            else
+            {
+                foreach (var transaction in viewModel.Transactions)
+                {
+                    worksheet.Cell(currentRow, 1).Value = transaction.Date;
+                    worksheet.Cell(currentRow, 1).Style.DateFormat.Format = "yyyy-MM-dd HH:mm";
+                    worksheet.Cell(currentRow, 2).Value = transaction.JournalEntryNumber;
+                    worksheet.Cell(currentRow, 3).Value = string.IsNullOrWhiteSpace(transaction.Reference) ? "-" : transaction.Reference;
+                    worksheet.Cell(currentRow, 4).Value = string.IsNullOrWhiteSpace(transaction.BranchName) ? "-" : transaction.BranchName;
+                    worksheet.Cell(currentRow, 5).Value = string.IsNullOrWhiteSpace(transaction.CreatedByName) ? "-" : transaction.CreatedByName;
+                    worksheet.Cell(currentRow, 6).Value = string.IsNullOrWhiteSpace(transaction.MovementType) ? "-" : transaction.MovementType;
+                    worksheet.Cell(currentRow, 7).Value = string.IsNullOrWhiteSpace(transaction.Description) ? "-" : transaction.Description;
+                    worksheet.Cell(currentRow, 8).Value = transaction.DebitAmount;
+                    worksheet.Cell(currentRow, 8).Style.NumberFormat.Format = "#,##0.00";
+                    worksheet.Cell(currentRow, 9).Value = transaction.CreditAmount;
+                    worksheet.Cell(currentRow, 9).Style.NumberFormat.Format = "#,##0.00";
+                    worksheet.Cell(currentRow, 10).Value = transaction.RunningBalance;
+                    worksheet.Cell(currentRow, 10).Style.NumberFormat.Format = "#,##0.00";
+
+                    if (showBaseCurrency)
+                    {
+                        worksheet.Cell(currentRow, 11).Value = transaction.DebitAmountBase;
+                        worksheet.Cell(currentRow, 11).Style.NumberFormat.Format = "#,##0.00";
+                        worksheet.Cell(currentRow, 12).Value = transaction.CreditAmountBase;
+                        worksheet.Cell(currentRow, 12).Style.NumberFormat.Format = "#,##0.00";
+                        worksheet.Cell(currentRow, 13).Value = transaction.RunningBalanceBase;
+                        worksheet.Cell(currentRow, 13).Style.NumberFormat.Format = "#,##0.00";
+                    }
+
+                    currentRow++;
+                }
+
+                worksheet.Cell(currentRow, 7).Value = "الإجمالي";
+                worksheet.Cell(currentRow, 7).Style.Font.Bold = true;
+                worksheet.Cell(currentRow, 8).Value = viewModel.TotalDebit;
+                worksheet.Cell(currentRow, 8).Style.NumberFormat.Format = "#,##0.00";
+                worksheet.Cell(currentRow, 8).Style.Font.Bold = true;
+                worksheet.Cell(currentRow, 9).Value = viewModel.TotalCredit;
+                worksheet.Cell(currentRow, 9).Style.NumberFormat.Format = "#,##0.00";
+                worksheet.Cell(currentRow, 9).Style.Font.Bold = true;
+                worksheet.Cell(currentRow, 10).Value = viewModel.ClosingBalance;
+                worksheet.Cell(currentRow, 10).Style.NumberFormat.Format = "#,##0.00";
+                worksheet.Cell(currentRow, 10).Style.Font.Bold = true;
+
+                if (showBaseCurrency)
+                {
+                    worksheet.Cell(currentRow, 11).Value = viewModel.TotalDebitBase;
+                    worksheet.Cell(currentRow, 11).Style.NumberFormat.Format = "#,##0.00";
+                    worksheet.Cell(currentRow, 11).Style.Font.Bold = true;
+                    worksheet.Cell(currentRow, 12).Value = viewModel.TotalCreditBase;
+                    worksheet.Cell(currentRow, 12).Style.NumberFormat.Format = "#,##0.00";
+                    worksheet.Cell(currentRow, 12).Style.Font.Bold = true;
+                    worksheet.Cell(currentRow, 13).Value = viewModel.ClosingBalanceBase;
+                    worksheet.Cell(currentRow, 13).Style.NumberFormat.Format = "#,##0.00";
+                    worksheet.Cell(currentRow, 13).Style.Font.Bold = true;
+                }
+
+                currentRow++;
+            }
+
+            worksheet.Columns(1, detailColumns).AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            var invalidChars = Path.GetInvalidFileNameChars();
+            var safeAccountCode = new string((viewModel.AccountCode ?? "Account").Select(c => invalidChars.Contains(c) ? '_' : c).ToArray());
+            var fileName = $"AccountStatement_{safeAccountCode}_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+
+            return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
+        [HttpGet]
         public async Task<IActionResult> PrintAccountStatement(int? accountId, int? branchId, DateTime? fromDate, DateTime? toDate)
         {
             var viewModel = await BuildAccountStatementViewModel(accountId, branchId, fromDate, toDate);
