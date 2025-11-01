@@ -51,13 +51,14 @@
                             <th>الاسم</th>
                             <th>المسمى الوظيفي</th>
                             <th>الراتب الأساسي</th>
+                            <th>البدلات</th>
                             <th>الخصومات</th>
                             <th>الصافي</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr class="text-center text-muted" id="employeesPlaceholder">
-                            <td colspan="6">اختر فرعاً لعرض الموظفين</td>
+                            <td colspan="7">اختر فرعاً لعرض الموظفين</td>
                         </tr>
                     </tbody>
                 </table>
@@ -203,6 +204,23 @@
             min-width: 90px;
             text-align: center;
         }
+
+        .allowance-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .allowance-total-badge {
+            align-self: flex-start;
+            min-width: 90px;
+            text-align: center;
+        }
+
+        .allowance-details {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
     </style>
 }
 
@@ -234,6 +252,7 @@
             const addDeductionBtn = document.getElementById('addDeductionBtn');
             const saveDeductionBtn = document.getElementById('saveDeductionBtn');
             const employeeDeductions = new Map();
+            const employeeAllowances = new Map();
             let deductionTypes = [];
             const deductionTypeMap = new Map();
             let activeDeductionRow = null;
@@ -385,6 +404,32 @@
                 };
             }
 
+            function sanitizeAllowance(item) {
+                if (!item || typeof item !== 'object') {
+                    return null;
+                }
+
+                const amountValue = getProperty(item, 'amount', 'Amount');
+                const amount = Number(amountValue ?? 0);
+                if (!Number.isFinite(amount) || amount <= 0) {
+                    return null;
+                }
+
+                const typeValue = getProperty(item, 'type', 'Type');
+                const descriptionValue = getProperty(item, 'description', 'Description');
+                const accountName = getProperty(item, 'accountName', 'AccountName');
+                const typeIdValue = getProperty(item, 'allowanceTypeId', 'AllowanceTypeId');
+                const typeId = typeof typeIdValue === 'number' ? typeIdValue : parseInt(typeIdValue ?? '', 10);
+
+                return {
+                    allowanceTypeId: Number.isNaN(typeId) ? null : typeId,
+                    type: typeValue ? typeValue.toString() : null,
+                    description: descriptionValue ? descriptionValue.toString() : null,
+                    amount: Number(amount.toFixed(2)),
+                    accountName: accountName ? accountName.toString() : null
+                };
+            }
+
             async function loadMonths() {
                 monthSelect.innerHTML = '<option value="">اختر شهر الرواتب</option>';
                 monthSelect.disabled = true;
@@ -446,6 +491,17 @@
                 }, 0);
             }
 
+            function calculateAllowanceTotal(allowances) {
+                if (!Array.isArray(allowances)) {
+                    return 0;
+                }
+
+                return allowances.reduce((sum, item) => {
+                    const amount = Number(item?.amount ?? 0);
+                    return sum + (Number.isFinite(amount) ? amount : 0);
+                }, 0);
+            }
+
             function getRowEmployeeId(row) {
                 if (!row) {
                     return null;
@@ -467,12 +523,21 @@
 
                 const salary = Number(row.dataset.salary ?? '0');
                 const deductions = employeeDeductions.get(employeeId) ?? [];
-                const total = Math.min(calculateDeductionTotal(deductions), Number.isFinite(salary) ? salary : 0);
-                const net = Math.max(0, (Number.isFinite(salary) ? salary : 0) - total);
+                const allowances = employeeAllowances.get(employeeId) ?? [];
+                const allowanceTotal = calculateAllowanceTotal(allowances);
+                const baseSalary = Number.isFinite(salary) ? salary : 0;
+                const rawDeduction = calculateDeductionTotal(deductions);
+                const total = Math.min(rawDeduction, Math.max(0, baseSalary + allowanceTotal));
+                const net = Math.max(0, baseSalary + allowanceTotal - total);
 
                 const totalBadge = row.querySelector('.deduction-total');
                 if (totalBadge) {
                     totalBadge.textContent = formatCurrency(total);
+                }
+
+                const allowanceBadge = row.querySelector('.allowance-total');
+                if (allowanceBadge) {
+                    allowanceBadge.textContent = formatCurrency(allowanceTotal);
                 }
 
                 const netCell = row.querySelector('.net-amount');
@@ -578,7 +643,9 @@
 
                 activeDeductionRow = row;
                 activeDeductionEmployeeId = employeeId;
-                activeDeductionSalary = Number(row.dataset.salary ?? '0');
+                const baseSalary = Number(row.dataset.salary ?? '0');
+                const allowanceTotal = Number(row.dataset.allowance ?? '0');
+                activeDeductionSalary = baseSalary + allowanceTotal;
 
                 const employeeName = row.dataset.name ?? '';
                 if (deductionModalTitle) {
@@ -670,6 +737,57 @@
                 return content;
             }
 
+            function buildAllowanceSummary(allowances) {
+                if (!Array.isArray(allowances) || allowances.length === 0) {
+                    return '<span class="text-muted">لا توجد بدلات</span>';
+                }
+
+                return allowances.map(item => {
+                    const type = getProperty(item, 'type', 'Type') ?? '';
+                    const description = getProperty(item, 'description', 'Description') ?? '';
+                    const amount = formatCurrency(getProperty(item, 'amount', 'Amount'));
+                    const labelParts = [];
+                    if (type) {
+                        labelParts.push(escapeHtml(type));
+                    }
+                    if (description) {
+                        labelParts.push(escapeHtml(description));
+                    }
+
+                    const label = labelParts.length ? labelParts.join(' - ') : '';
+                    return `<div>${label ? `<span class="fw-semibold">${label}</span>: ` : ''}${amount}</div>`;
+                }).join('');
+            }
+
+            function buildAllowanceDetails(allowances) {
+                if (!Array.isArray(allowances) || allowances.length === 0) {
+                    return '<span class="text-muted">---</span>';
+                }
+
+                let content = '<ul class="list-unstyled mb-0">';
+                allowances.forEach(item => {
+                    const amount = getProperty(item, 'amount', 'Amount');
+                    const type = getProperty(item, 'type', 'Type') ?? '';
+                    const description = getProperty(item, 'description', 'Description') ?? '';
+                    const accountName = getProperty(item, 'accountName', 'AccountName') ?? '';
+                    const labelParts = [];
+                    if (type) {
+                        labelParts.push(type);
+                    }
+                    if (description) {
+                        labelParts.push(description);
+                    }
+                    const label = labelParts.length ? `<span class="fw-semibold">${escapeHtml(labelParts.join(' - '))}</span>: ` : '';
+                    content += `<li>${label}${formatCurrency(amount)}`;
+                    if (accountName) {
+                        content += `<div class="text-muted small">${escapeHtml(accountName)}</div>`;
+                    }
+                    content += '</li>';
+                });
+                content += '</ul>';
+                return content;
+            }
+
             function renderEmployees(employees) {
                 employeesTable.innerHTML = '';
                 if (!employees.length) {
@@ -699,21 +817,36 @@
                         : [];
                     employeeDeductions.set(employeeId, sanitizedDeductions);
 
+                    const serverAllowances = getProperty(emp, 'allowances', 'Allowances');
+                    const sanitizedAllowances = Array.isArray(serverAllowances)
+                        ? serverAllowances.map(item => sanitizeAllowance(item)).filter(item => item)
+                        : [];
+                    employeeAllowances.set(employeeId, sanitizedAllowances);
+
+                    const allowanceTotal = calculateAllowanceTotal(sanitizedAllowances);
                     const totalDeduction = calculateDeductionTotal(sanitizedDeductions);
-                    const netAmount = Math.max(0, (Number.isFinite(salary) ? salary : 0) - totalDeduction);
+                    const netAmount = Math.max(0, (Number.isFinite(salary) ? salary : 0) + allowanceTotal - totalDeduction);
 
                     row.dataset.id = String(employeeId);
                     row.dataset.salary = String(Number.isFinite(salary) ? salary : 0);
+                    row.dataset.allowance = String(allowanceTotal);
                     row.dataset.name = employeeName;
 
                     const safeName = escapeHtml(employeeName);
                     const safeJobTitle = escapeHtml(jobTitle);
+                    const allowanceDetails = buildAllowanceSummary(sanitizedAllowances);
 
                     row.innerHTML = `
                         <td><input type="checkbox" class="form-check-input" value="${employeeId}" /></td>
                         <td><strong>${safeName}</strong><div class="text-muted small">${safeJobTitle}</div></td>
                         <td>${safeJobTitle}</td>
                         <td class="text-end">${formatCurrency(salary)}</td>
+                        <td>
+                            <div class="allowance-summary">
+                                <span class="badge bg-light text-dark allowance-total allowance-total-badge" dir="ltr">${formatCurrency(allowanceTotal)}</span>
+                                <div class="allowance-details">${allowanceDetails}</div>
+                            </div>
+                        </td>
                         <td>
                             <div class="deduction-summary">
                                 <span class="badge bg-light text-dark deduction-total deduction-total-badge" dir="ltr">${formatCurrency(totalDeduction)}</span>
@@ -748,14 +881,15 @@
                 const branchId = getSelectedBranchId();
                 employeesTable.innerHTML = '';
                 employeeDeductions.clear();
+                employeeAllowances.clear();
 
                 const row = document.createElement('tr');
                 row.className = 'text-center text-muted';
-                row.innerHTML = '<td colspan="6"><div class="spinner-border spinner-border-sm text-primary"></div> جاري تحميل الموظفين...</td>';
+                row.innerHTML = '<td colspan="7"><div class="spinner-border spinner-border-sm text-primary"></div> جاري تحميل الموظفين...</td>';
                 employeesTable.appendChild(row);
 
                 if (branchId === null) {
-                    row.innerHTML = '<td colspan="6">اختر فرعاً لعرض الموظفين</td>';
+                    row.innerHTML = '<td colspan="7">اختر فرعاً لعرض الموظفين</td>';
                     updateSelectedCount();
                     return;
                 }
@@ -820,7 +954,7 @@
                     const deductions = result.items;
                     const total = calculateDeductionTotal(deductions);
                     if (activeDeductionSalary > 0 && total > activeDeductionSalary + 0.01) {
-                        alert('إجمالي الخصومات يتجاوز الراتب الأساسي لهذا الموظف.');
+                        alert('إجمالي الخصومات يتجاوز إجمالي الراتب والبدلات لهذا الموظف.');
                         return;
                     }
 
@@ -893,6 +1027,7 @@
 
                     const row = cb.closest('tr');
                     const salary = Number(row?.dataset.salary ?? '0');
+                    const allowanceTotal = Number(row?.dataset.allowance ?? '0');
                     const name = row?.dataset.name ?? '';
                     const deductions = (employeeDeductions.get(id) ?? [])
                         .map(item => sanitizeDeduction(item))
@@ -906,7 +1041,7 @@
                         .filter(item => Number.isFinite(item.amount) && item.amount > 0);
 
                     const total = calculateDeductionTotal(deductions);
-                    if (Number.isFinite(salary) && salary > 0 && total > salary + 0.01) {
+                    if ((Number.isFinite(salary) || Number.isFinite(allowanceTotal)) && (salary + allowanceTotal) > 0 && total > salary + allowanceTotal + 0.01) {
                         invalidEmployeeName = name || `#${id}`;
                         return;
                     }
@@ -918,7 +1053,7 @@
                 });
 
                 if (invalidEmployeeName) {
-                    alert(`إجمالي الخصومات يتجاوز الراتب الأساسي للموظف ${invalidEmployeeName}. يرجى تعديل الخصومات.`);
+                    alert(`إجمالي الخصومات يتجاوز إجمالي الراتب والبدلات للموظف ${invalidEmployeeName}. يرجى تعديل الخصومات.`);
                     return;
                 }
 
@@ -960,13 +1095,19 @@
                     const totalAmountRaw = getProperty(summary, 'totalAmount', 'TotalAmount');
                     const totalGrossRaw = getProperty(summary, 'totalGrossAmount', 'TotalGrossAmount');
                     const totalDeductionRaw = getProperty(summary, 'totalDeductionAmount', 'TotalDeductionAmount');
+                    const totalAllowanceRaw = getProperty(summary, 'totalAllowanceAmount', 'TotalAllowanceAmount');
+                    const totalBaseRaw = getProperty(summary, 'totalBaseAmount', 'TotalBaseAmount');
                     const employeeCount = Number.isFinite(employeeCountRaw) ? employeeCountRaw : parseInt(employeeCountRaw ?? '0', 10) || 0;
                     const totalAmountValue = Number(totalAmountRaw ?? 0);
                     const totalGrossValue = Number(totalGrossRaw ?? 0);
                     const totalDeductionValue = Number(totalDeductionRaw ?? 0);
+                    const totalAllowanceValue = Number(totalAllowanceRaw ?? 0);
+                    const totalBaseValue = Number(totalBaseRaw ?? 0);
                     const totalAmount = Number.isNaN(totalAmountValue) ? 0 : totalAmountValue;
                     const totalGross = Number.isNaN(totalGrossValue) ? 0 : totalGrossValue;
                     const totalDeduction = Number.isNaN(totalDeductionValue) ? 0 : totalDeductionValue;
+                    const totalAllowance = Number.isNaN(totalAllowanceValue) ? 0 : totalAllowanceValue;
+                    const totalBase = Number.isNaN(totalBaseValue) ? 0 : totalBaseValue;
                     currentBatchId = typeof batchId === 'number' ? batchId : parseInt(batchId ?? '', 10);
                     if (Number.isNaN(currentBatchId)) {
                         currentBatchId = null;
@@ -983,6 +1124,14 @@
                             </div>
                             <div class="list-group-item d-flex justify-content-between">
                                 <span>إجمالي الرواتب الأساسية</span>
+                                <strong>${formatCurrency(totalBase)}</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between">
+                                <span>إجمالي البدلات</span>
+                                <strong>${formatCurrency(totalAllowance)}</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between">
+                                <span>إجمالي المستحقات</span>
                                 <strong>${formatCurrency(totalGross)}</strong>
                             </div>
                             <div class="list-group-item d-flex justify-content-between">
@@ -1072,15 +1221,18 @@
                         }
                         html += `<div class="mb-3"><strong>الحالة:</strong> ${data.status}</div>`;
                         html += `<div class="mb-3"><strong>المرجع:</strong> ${data.reference || '---'}</div>`;
-                        html += '<table class="table table-sm"><thead><tr><th>الموظف</th><th>المسمى الوظيفي</th><th class="text-end">الراتب الأساسي</th><th class="text-end">إجمالي الخصومات</th><th>تفاصيل الخصومات</th><th class="text-end">الصافي</th></tr></thead><tbody>';
+                        html += '<table class="table table-sm"><thead><tr><th>الموظف</th><th>المسمى الوظيفي</th><th class="text-end">الراتب الأساسي</th><th class="text-end">إجمالي البدلات</th><th>تفاصيل البدلات</th><th class="text-end">إجمالي الخصومات</th><th>تفاصيل الخصومات</th><th class="text-end">الصافي</th></tr></thead><tbody>';
                         (data.employees ?? []).forEach(emp => {
                             const name = getProperty(emp, 'name', 'Name') ?? '';
                             const title = getProperty(emp, 'jobTitle', 'JobTitle') ?? '';
                             const gross = getProperty(emp, 'grossAmount', 'GrossAmount');
                             const deduction = getProperty(emp, 'deductionAmount', 'DeductionAmount');
+                            const allowance = getProperty(emp, 'allowanceAmount', 'AllowanceAmount');
+                            const allowanceDetails = buildAllowanceDetails(getProperty(emp, 'allowances', 'Allowances'));
+                            const baseAmount = Math.max(0, Number(gross ?? 0) - Number(allowance ?? 0));
                             const amount = getProperty(emp, 'amount', 'Amount');
                             const deductionDetails = buildDeductionDetails(getProperty(emp, 'deductions', 'Deductions'));
-                            html += `<tr><td>${escapeHtml(name)}</td><td>${escapeHtml(title)}</td><td class="text-end">${formatCurrency(gross)}</td><td class="text-end">${formatCurrency(deduction)}</td><td>${deductionDetails}</td><td class="text-end">${formatCurrency(amount)}</td></tr>`;
+                            html += `<tr><td>${escapeHtml(name)}</td><td>${escapeHtml(title)}</td><td class="text-end">${formatCurrency(baseAmount)}</td><td class="text-end">${formatCurrency(allowance)}</td><td>${allowanceDetails}</td><td class="text-end">${formatCurrency(deduction)}</td><td>${deductionDetails}</td><td class="text-end">${formatCurrency(amount)}</td></tr>`;
                         });
                         html += '</tbody></table>';
                         detailsContent.innerHTML = html;

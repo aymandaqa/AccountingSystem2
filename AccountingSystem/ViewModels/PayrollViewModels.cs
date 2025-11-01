@@ -13,6 +13,7 @@ namespace AccountingSystem.ViewModels
         public string? JobTitle { get; set; }
         public bool IsActive { get; set; }
         public List<PayrollEmployeeDeductionSelection> Deductions { get; set; } = new();
+        public List<PayrollEmployeeAllowanceSelection> Allowances { get; set; } = new();
     }
 
     public class PayrollBatchSummaryViewModel
@@ -21,6 +22,8 @@ namespace AccountingSystem.ViewModels
         public decimal TotalAmount { get; set; }
         public decimal TotalGrossAmount { get; set; }
         public decimal TotalDeductionAmount { get; set; }
+        public decimal TotalAllowanceAmount { get; set; }
+        public decimal TotalBaseAmount { get; set; }
         public int EmployeeCount { get; set; }
         public int Year { get; set; }
         public int Month { get; set; }
@@ -35,6 +38,8 @@ namespace AccountingSystem.ViewModels
         public decimal TotalAmount { get; set; }
         public decimal TotalGrossAmount { get; set; }
         public decimal TotalDeductionAmount { get; set; }
+        public decimal TotalAllowanceAmount { get; set; }
+        public decimal TotalBaseAmount { get; set; }
     }
 
     public class PayrollBatchHistoryViewModel
@@ -56,11 +61,22 @@ namespace AccountingSystem.ViewModels
     {
         public int EmployeeId { get; set; }
         public List<PayrollEmployeeDeductionSelection> Deductions { get; set; } = new();
+        public List<PayrollEmployeeAllowanceSelection> Allowances { get; set; } = new();
     }
 
     public class PayrollEmployeeDeductionSelection
     {
         public int? DeductionTypeId { get; set; }
+        public string? Type { get; set; }
+        public string? Description { get; set; }
+        public decimal Amount { get; set; }
+        public string? AccountName { get; set; }
+        public string? AccountCode { get; set; }
+    }
+
+    public class PayrollEmployeeAllowanceSelection
+    {
+        public int? AllowanceTypeId { get; set; }
         public string? Type { get; set; }
         public string? Description { get; set; }
         public decimal Amount { get; set; }

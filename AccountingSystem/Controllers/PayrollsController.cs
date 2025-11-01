@@ -124,6 +124,20 @@ namespace AccountingSystem.Controllers
                                 : null,
                             AccountCode = d.DeductionType.Account != null ? d.DeductionType.Account.Code : null
                         })
+                        .ToList(),
+                    Allowances = e.EmployeeAllowances
+                        .Where(a => a.IsActive && a.AllowanceType != null && a.AllowanceType.IsActive)
+                        .Select(a => new PayrollEmployeeAllowanceSelection
+                        {
+                            AllowanceTypeId = a.AllowanceTypeId,
+                            Type = a.AllowanceType.Name,
+                            Description = a.Description,
+                            Amount = a.Amount,
+                            AccountName = a.AllowanceType.Account != null
+                                ? $"{a.AllowanceType.Account.Code} - {a.AllowanceType.Account.NameAr ?? a.AllowanceType.Account.NameEn ?? string.Empty}"
+                                : null,
+                            AccountCode = a.AllowanceType.Account != null ? a.AllowanceType.Account.Code : null
+                        })
                         .ToList()
                 })
                 .ToListAsync();
@@ -345,18 +359,74 @@ namespace AccountingSystem.Controllers
                 e => e.EmployeeId,
                 e => e);
 
+            var allowanceRecords = await _context.EmployeeAllowances
+                .Include(a => a.AllowanceType)
+                    .ThenInclude(t => t.Account)
+                .Where(a => employeeIds.Contains(a.EmployeeId)
+                    && a.IsActive
+                    && a.AllowanceType != null
+                    && a.AllowanceType.IsActive)
+                .ToListAsync();
+
+            var allowanceLookup = allowanceRecords
+                .GroupBy(a => a.EmployeeId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
             decimal totalGross = 0m;
             decimal totalDeduction = 0m;
             decimal totalNet = 0m;
+            decimal totalAllowance = 0m;
+            decimal totalBase = 0m;
 
             foreach (var employee in employees)
             {
-                var gross = employee.Salary;
+                var baseSalary = Math.Round(employee.Salary, 2, MidpointRounding.AwayFromZero);
+                var gross = baseSalary;
                 var deductionEntries = new List<PayrollBatchLineDeduction>();
+                var allowanceEntries = new List<PayrollBatchLineAllowance>();
                 if (employee.Account == null)
                 {
                     return BadRequest(new { message = $"لا يوجد حساب مرتبط بالموظف {employee.Name}." });
                 }
+
+                if (allowanceLookup.TryGetValue(employee.Id, out var employeeAllowances))
+                {
+                    foreach (var allowance in employeeAllowances)
+                    {
+                        if (allowance.AllowanceType == null)
+                        {
+                            return BadRequest(new { message = $"نوع البدل المرتبط بالموظف {employee.Name} غير متاح." });
+                        }
+
+                        if (allowance.AllowanceType.Account == null)
+                        {
+                            return BadRequest(new { message = $"نوع البدل {allowance.AllowanceType.Name} لا يحتوي على حساب محدد." });
+                        }
+
+                        if (allowance.AllowanceType.Account.CurrencyId != employee.Account.CurrencyId)
+                        {
+                            return BadRequest(new { message = $"عملة حساب البدل {allowance.AllowanceType.Name} لا تطابق عملة حساب الموظف {employee.Name}." });
+                        }
+
+                        var amount = Math.Round(allowance.Amount, 2, MidpointRounding.AwayFromZero);
+                        if (amount <= 0)
+                        {
+                            continue;
+                        }
+
+                        allowanceEntries.Add(new PayrollBatchLineAllowance
+                        {
+                            Amount = amount,
+                            AllowanceTypeId = allowance.AllowanceTypeId,
+                            AccountId = allowance.AllowanceType.AccountId,
+                            Type = allowance.AllowanceType.Name,
+                            Description = string.IsNullOrWhiteSpace(allowance.Description) ? null : allowance.Description
+                        });
+                    }
+                }
+
+                var allowanceTotal = allowanceEntries.Sum(a => a.Amount);
+                gross = Math.Round(baseSalary + allowanceTotal, 2, MidpointRounding.AwayFromZero);
 
                 if (deductionMap.TryGetValue(employee.Id, out var employeeSelection))
                 {
@@ -434,9 +504,11 @@ namespace AccountingSystem.Controllers
                     net = 0;
                 }
 
+                totalBase += baseSalary;
                 totalGross += gross;
                 totalDeduction += deduction;
                 totalNet += net;
+                totalAllowance += allowanceTotal;
 
                 batch.Lines.Add(new PayrollBatchLine
                 {
@@ -445,13 +517,17 @@ namespace AccountingSystem.Controllers
                     GrossAmount = gross,
                     DeductionAmount = deduction,
                     Amount = net,
-                    Deductions = deductionEntries
+                    AllowanceAmount = allowanceTotal,
+                    Deductions = deductionEntries,
+                    Allowances = allowanceEntries
                 });
             }
 
             totalGross = Math.Round(totalGross, 2, MidpointRounding.AwayFromZero);
             totalDeduction = Math.Round(totalDeduction, 2, MidpointRounding.AwayFromZero);
             totalNet = Math.Round(totalNet, 2, MidpointRounding.AwayFromZero);
+            totalAllowance = Math.Round(totalAllowance, 2, MidpointRounding.AwayFromZero);
+            totalBase = Math.Round(totalBase, 2, MidpointRounding.AwayFromZero);
 
             batch.TotalAmount = totalNet;
 
@@ -464,6 +540,8 @@ namespace AccountingSystem.Controllers
                 TotalAmount = totalNet,
                 TotalGrossAmount = totalGross,
                 TotalDeductionAmount = totalDeduction,
+                TotalAllowanceAmount = totalAllowance,
+                TotalBaseAmount = totalBase,
                 EmployeeCount = batch.Lines.Count,
                 Year = batch.Year,
                 Month = batch.Month,
@@ -476,7 +554,9 @@ namespace AccountingSystem.Controllers
                         EmployeeCount = batch.Lines.Count,
                         TotalAmount = totalNet,
                         TotalGrossAmount = totalGross,
-                        TotalDeductionAmount = totalDeduction
+                        TotalDeductionAmount = totalDeduction,
+                        TotalAllowanceAmount = totalAllowance,
+                        TotalBaseAmount = totalBase
                     }
                 }
             };
@@ -502,6 +582,13 @@ namespace AccountingSystem.Controllers
                 .Include(b => b.Lines)
                     .ThenInclude(l => l.Deductions)
                         .ThenInclude(d => d.Account)
+                .Include(b => b.Lines)
+                    .ThenInclude(l => l.Allowances)
+                        .ThenInclude(a => a.AllowanceType)
+                            .ThenInclude(at => at.Account)
+                .Include(b => b.Lines)
+                    .ThenInclude(l => l.Allowances)
+                        .ThenInclude(a => a.Account)
                 .FirstOrDefaultAsync(b => b.Id == request.BatchId);
 
             if (batch == null)
@@ -564,6 +651,7 @@ namespace AccountingSystem.Controllers
                 var entryDate = System.DateTime.Today;
                 var entryDescription = $"صرف رواتب الموظفين لفرع {batchBranch.NameAr} بتاريخ {entryDate:dd/MM/yyyy}";
                 var lines = new List<JournalEntryLine>();
+                decimal branchBaseAmount = 0m;
                 foreach (var line in group)
                 {
                     lines.Add(new JournalEntryLine
@@ -573,6 +661,43 @@ namespace AccountingSystem.Controllers
                         DebitAmount = 0,
                         Description = $"راتب {line.Employee.Name} عن {entryDate:dd/MM/yyyy}"
                     });
+
+                    var baseAmount = Math.Round(Math.Max(0, line.GrossAmount - line.AllowanceAmount), 2, MidpointRounding.AwayFromZero);
+                    branchBaseAmount += baseAmount;
+
+                    foreach (var allowance in line.Allowances)
+                    {
+                        var accountId = allowance.AccountId ?? allowance.AllowanceType?.AccountId;
+                        if (!accountId.HasValue)
+                        {
+                            continue;
+                        }
+
+                        var debitAmount = Math.Round(allowance.Amount, 2, MidpointRounding.AwayFromZero);
+                        if (debitAmount <= 0)
+                        {
+                            continue;
+                        }
+
+                        var allowanceName = !string.IsNullOrWhiteSpace(allowance.Description)
+                            ? allowance.Description
+                            : allowance.AllowanceType?.Name ?? allowance.Type ?? "بدل راتب";
+
+                        var employeeNumber = !string.IsNullOrWhiteSpace(line.Employee.NationalId)
+                            ? line.Employee.NationalId!
+                            : line.Employee.Id.ToString();
+
+                        var salaryMonthText = periodDate.ToString("MM/yyyy");
+                        var description = $"{allowanceName} للموظف {line.Employee.Name} (رقم {employeeNumber}) عن راتب شهر {salaryMonthText}";
+
+                        lines.Add(new JournalEntryLine
+                        {
+                            AccountId = accountId.Value,
+                            DebitAmount = debitAmount,
+                            CreditAmount = 0,
+                            Description = description
+                        });
+                    }
 
                     foreach (var deduction in line.Deductions)
                     {
@@ -617,12 +742,12 @@ namespace AccountingSystem.Controllers
                     }
                 }
 
-                var groupGross = group.Sum(l => l.GrossAmount);
+                var groupBase = Math.Round(branchBaseAmount, 2, MidpointRounding.AwayFromZero);
                 lines.Add(new JournalEntryLine
                 {
                     AccountId = payrollExpenseAccount.Id,
                     CreditAmount = 0,
-                    DebitAmount = groupGross,
+                    DebitAmount = groupBase,
                     Description = $"مصروف رواتب فرع {batchBranch.NameAr} عن {entryDate:dd/MM/yyyy}"
                 });
 
@@ -695,6 +820,13 @@ namespace AccountingSystem.Controllers
                 .Include(b => b.Lines)
                     .ThenInclude(l => l.Deductions)
                         .ThenInclude(d => d.Account)
+                .Include(b => b.Lines)
+                    .ThenInclude(l => l.Allowances)
+                        .ThenInclude(a => a.AllowanceType)
+                            .ThenInclude(at => at.Account)
+                .Include(b => b.Lines)
+                    .ThenInclude(l => l.Allowances)
+                        .ThenInclude(a => a.Account)
                 .FirstOrDefaultAsync(b => b.Id == id);
 
             if (batch == null)
@@ -705,6 +837,8 @@ namespace AccountingSystem.Controllers
             var totalGross = batch.Lines.Sum(l => l.GrossAmount);
             var totalDeduction = batch.Lines.Sum(l => l.DeductionAmount);
             var totalNet = batch.Lines.Sum(l => l.Amount);
+            var totalAllowance = batch.Lines.Sum(l => l.AllowanceAmount);
+            var totalBase = totalGross - totalAllowance;
 
             var summary = new PayrollBatchSummaryViewModel
             {
@@ -712,6 +846,8 @@ namespace AccountingSystem.Controllers
                 TotalAmount = totalNet,
                 TotalGrossAmount = totalGross,
                 TotalDeductionAmount = totalDeduction,
+                TotalAllowanceAmount = totalAllowance,
+                TotalBaseAmount = totalBase,
                 EmployeeCount = batch.Lines.Count,
                 Year = batch.Year,
                 Month = batch.Month,
@@ -724,7 +860,9 @@ namespace AccountingSystem.Controllers
                         EmployeeCount = batch.Lines.Count,
                         TotalAmount = totalNet,
                         TotalGrossAmount = totalGross,
-                        TotalDeductionAmount = totalDeduction
+                        TotalDeductionAmount = totalDeduction,
+                        TotalAllowanceAmount = totalAllowance,
+                        TotalBaseAmount = totalBase
                     }
                 }
             };
@@ -737,6 +875,7 @@ namespace AccountingSystem.Controllers
                     l.Amount,
                     l.GrossAmount,
                     l.DeductionAmount,
+                    l.AllowanceAmount,
                     l.Employee.JobTitle,
                     Deductions = l.Deductions
                         .OrderBy(d => d.Id)
@@ -755,6 +894,26 @@ namespace AccountingSystem.Controllers
                                 ? d.Account.Code
                                 : d.DeductionType != null && d.DeductionType.Account != null
                                     ? d.DeductionType.Account.Code
+                                    : null
+                        })
+                        .ToList(),
+                    Allowances = l.Allowances
+                        .OrderBy(a => a.Id)
+                        .Select(a => new
+                        {
+                            a.Type,
+                            a.Description,
+                            a.Amount,
+                            a.AllowanceTypeId,
+                            AccountName = a.Account != null
+                                ? $"{a.Account.Code} - {a.Account.NameAr ?? a.Account.NameEn ?? string.Empty}"
+                                : a.AllowanceType != null && a.AllowanceType.Account != null
+                                    ? $"{a.AllowanceType.Account.Code} - {a.AllowanceType.Account.NameAr ?? a.AllowanceType.Account.NameEn ?? string.Empty}"
+                                    : null,
+                            AccountCode = a.Account != null
+                                ? a.Account.Code
+                                : a.AllowanceType != null && a.AllowanceType.Account != null
+                                    ? a.AllowanceType.Account.Code
                                     : null
                         })
                         .ToList()

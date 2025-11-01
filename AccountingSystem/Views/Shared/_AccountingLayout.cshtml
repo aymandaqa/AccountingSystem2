@@ -676,6 +676,14 @@
                                             <i class="fas fa-tags"></i> أنواع الخصومات
                                         </a>
                                     </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="AllowanceTypes"
+                                           asp-action="Index"
+                                           asp-require-permission="payroll.process">
+                                            <i class="fas fa-gift"></i> أنواع البدلات
+                                        </a>
+                                    </li>
                                 }
                                 @if (canSalaryPaymentsView)
                                 {
@@ -707,6 +715,14 @@
                                            asp-action="Index"
                                            asp-require-permission="employees.edit">
                                             <i class="fas fa-minus-circle"></i> خصومات الموظفين
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="EmployeeAllowances"
+                                           asp-action="Index"
+                                           asp-require-permission="employees.edit">
+                                            <i class="fas fa-plus-circle"></i> بدلات الموظفين
                                         </a>
                                     </li>
                                 }
