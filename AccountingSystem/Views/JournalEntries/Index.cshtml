@@ -1435,8 +1435,12 @@
                     const totalRecords = result.totalRecords ?? items.length;
                     const totalPages = result.totalPages ?? 0;
 
-                    state.page = result.page || state.page;
-                    state.pageSize = result.pageSize || state.pageSize;
+                    state.page = payload.page ?? state.page;
+                    state.pageSize = payload.pageSize ?? state.pageSize;
+                    const items = payload.items;
+                    const summary = payload.summary;
+                    const totalRecords = payload.totalRecords ?? items.length;
+                    const totalPages = payload.totalPages ?? 0;
 
                     if (grid) {
                         grid.dataSource = items;
@@ -1447,7 +1451,7 @@
 
                     updateSummary(summary, totalRecords);
                     updatePagination(totalPages, totalRecords);
-                    totalRecordsLabel.textContent = totalRecords.toLocaleString();
+                    totalRecordsLabel.textContent = Number(totalRecords || 0).toLocaleString();
                 }
                 catch (error) {
                     console.error(error);
