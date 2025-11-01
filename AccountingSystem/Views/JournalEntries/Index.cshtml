@@ -1452,11 +1452,11 @@
                     state.pageSize = result.pageSize ?? state.pageSize;
 
                     if (grid) {
-                        grid.setProperties({ dataSource: items }, true);
+                        grid.dataSource = Array.isArray(items) ? items : [];
                         if (typeof grid.dataBind === 'function') {
                             grid.dataBind();
                         }
-                        else {
+                        else if (typeof grid.refresh === 'function') {
                             grid.refresh();
                         }
                         applyGrouping();
