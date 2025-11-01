@@ -664,14 +664,14 @@ namespace AccountingSystem.Controllers
 
             if (@operator == "isnull")
             {
-                var predicate = Expression.Lambda<Func<JournalEntry, bool>>(Expression.Equal(member, nullConstant), parameter);
-                return source.Where(predicate);
+                var nullPredicate = Expression.Lambda<Func<JournalEntry, bool>>(Expression.Equal(member, nullConstant), parameter);
+                return source.Where(nullPredicate);
             }
 
             if (@operator == "isnotnull")
             {
-                var predicate = Expression.Lambda<Func<JournalEntry, bool>>(Expression.NotEqual(member, nullConstant), parameter);
-                return source.Where(predicate);
+                var notNullPredicate = Expression.Lambda<Func<JournalEntry, bool>>(Expression.NotEqual(member, nullConstant), parameter);
+                return source.Where(notNullPredicate);
             }
 
             if (!TryParseDate(value, out var parsed))
