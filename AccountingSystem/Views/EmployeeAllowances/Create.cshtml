@@ -1,0 +1,58 @@
+@model AccountingSystem.ViewModels.EmployeeAllowanceFormViewModel
+@{
+    ViewData["Title"] = "إضافة بدل لموظف";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">إضافة بدل لموظف</h2>
+        <a class="btn btn-outline-secondary" asp-action="Index"><i class="fas fa-arrow-right"></i> الرجوع</a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form asp-action="Create" method="post">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                <div class="mb-3">
+                    <label asp-for="EmployeeId" class="form-label"></label>
+                    <select asp-for="EmployeeId" class="form-select" asp-items="Model.Employees">
+                        <option value="">اختر الموظف</option>
+                    </select>
+                    <span asp-validation-for="EmployeeId" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="AllowanceTypeId" class="form-label"></label>
+                    <select asp-for="AllowanceTypeId" class="form-select" asp-items="Model.AllowanceTypes">
+                        <option value="">اختر نوع البدل</option>
+                    </select>
+                    <span asp-validation-for="AllowanceTypeId" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Amount" class="form-label"></label>
+                    <input asp-for="Amount" class="form-control" />
+                    <span asp-validation-for="Amount" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Description" class="form-label"></label>
+                    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+
+                <div class="form-check form-switch mb-3">
+                    <input asp-for="IsActive" class="form-check-input" />
+                    <label asp-for="IsActive" class="form-check-label"></label>
+                </div>
+
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

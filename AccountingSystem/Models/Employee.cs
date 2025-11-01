@@ -51,5 +51,8 @@ namespace AccountingSystem.Models
 
         [InverseProperty(nameof(EmployeeDeduction.Employee))]
         public virtual ICollection<EmployeeDeduction> EmployeeDeductions { get; set; } = new List<EmployeeDeduction>();
+
+        [InverseProperty(nameof(EmployeeAllowance.Employee))]
+        public virtual ICollection<EmployeeAllowance> EmployeeAllowances { get; set; } = new List<EmployeeAllowance>();
     }
 }

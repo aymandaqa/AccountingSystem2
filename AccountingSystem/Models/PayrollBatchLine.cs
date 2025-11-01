@@ -29,6 +29,10 @@ namespace AccountingSystem.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal Amount { get; set; }
 
+        [Range(0, double.MaxValue)]
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal AllowanceAmount { get; set; }
+
         public virtual PayrollBatch PayrollBatch { get; set; } = null!;
 
         [InverseProperty(nameof(Employee.PayrollLines))]
@@ -37,5 +41,7 @@ namespace AccountingSystem.Models
         public virtual Branch Branch { get; set; } = null!;
 
         public virtual ICollection<PayrollBatchLineDeduction> Deductions { get; set; } = new List<PayrollBatchLineDeduction>();
+
+        public virtual ICollection<PayrollBatchLineAllowance> Allowances { get; set; } = new List<PayrollBatchLineAllowance>();
     }
 }
