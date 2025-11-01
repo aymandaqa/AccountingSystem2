@@ -601,106 +601,6 @@
                 return normalized;
             }
 
-            function normalizeResponsePayload(result, currentState) {
-                const fallbackPage = currentState?.page ?? 1;
-                const fallbackPageSize = currentState?.pageSize ?? 50;
-
-                if (Array.isArray(result)) {
-                    const normalizedItems = result.map(normalizeEntry);
-                    const totalRecords = normalizedItems.length;
-
-                    return {
-                        items: normalizedItems,
-                        summary: {},
-                        totalRecords,
-                        totalPages: fallbackPageSize ? Math.ceil(totalRecords / fallbackPageSize) : 0,
-                        page: fallbackPage,
-                        pageSize: fallbackPageSize
-                    };
-                }
-
-                const containers = [];
-                if (result && typeof result === 'object') {
-                    containers.push(result);
-
-                    const nestedKeys = ['data', 'Data', 'result', 'Result', 'payload', 'Payload', 'response', 'Response'];
-                    for (const key of nestedKeys) {
-                        const value = result[key];
-                        if (value && (typeof value === 'object' || Array.isArray(value))) {
-                            containers.push(value);
-                        }
-                    }
-                }
-
-                let rawItems = [];
-                const itemKeys = ['items', 'Items', 'data', 'Data', 'records', 'Records', 'result', 'Result', 'rows', 'Rows', 'list', 'List', 'entries', 'Entries'];
-
-                for (const container of containers) {
-                    if (!container) {
-                        continue;
-                    }
-
-                    if (Array.isArray(container)) {
-                        rawItems = container;
-                        break;
-                    }
-
-                    for (const key of itemKeys) {
-                        const value = container[key];
-                        if (Array.isArray(value)) {
-                            rawItems = value;
-                            break;
-                        }
-                    }
-
-                    if (rawItems.length) {
-                        break;
-                    }
-                }
-
-                const normalizedItems = rawItems.map(normalizeEntry);
-
-                function findFirstMetaValue(keys) {
-                    for (const container of containers) {
-                        if (!container || typeof container !== 'object' || Array.isArray(container)) {
-                            continue;
-                        }
-
-                        for (const key of keys) {
-                            if (container[key] !== undefined && container[key] !== null) {
-                                return container[key];
-                            }
-                        }
-                    }
-
-                    return undefined;
-                }
-
-                const summary = findFirstMetaValue(['summary', 'Summary', 'totals', 'Totals', 'aggregate', 'Aggregate']) || {};
-
-                const totalRecords = Number(
-                    findFirstMetaValue(['totalRecords', 'TotalRecords', 'count', 'Count', 'total', 'Total']) ??
-                    normalizedItems.length
-                );
-
-                const page = Number(findFirstMetaValue(['page', 'Page'])) || fallbackPage;
-                const pageSize = Number(findFirstMetaValue(['pageSize', 'PageSize', 'take', 'Take', 'limit', 'Limit'])) || fallbackPageSize;
-
-                let totalPages = Number(findFirstMetaValue(['totalPages', 'TotalPages']));
-                if (!Number.isFinite(totalPages) || totalPages < 0) {
-                    totalPages = pageSize ? Math.ceil((Number.isFinite(totalRecords) ? totalRecords : normalizedItems.length) / pageSize) : 0;
-                }
-
-                return {
-                    items: normalizedItems,
-                    summary,
-                    totalRecords: Number.isFinite(totalRecords) ? totalRecords : normalizedItems.length,
-                    totalPages,
-                    page,
-                    pageSize
-                };
-            }
-
             initializeGrid();
             registerEventHandlers();
             updateFiltersToggleState();
@@ -1529,7 +1429,11 @@
                     }
 
                     const result = await response.json();
-                    const payload = normalizeResponsePayload(result, state);
+                    const rawItems = result.items || [];
+                    const items = rawItems.map(normalizeEntry);
+                    const summary = result.summary || {};
+                    const totalRecords = result.totalRecords ?? items.length;
+                    const totalPages = result.totalPages ?? 0;
 
                     state.page = payload.page ?? state.page;
                     state.pageSize = payload.pageSize ?? state.pageSize;
