@@ -28,6 +28,7 @@
                             <th>الفرع</th>
                             <th>نوع البدل</th>
                             <th>الحساب</th>
+                            <th>الشهر</th>
                             <th class="text-end">المبلغ</th>
                             <th>الوصف</th>
                             <th class="text-center">الحالة</th>
@@ -44,6 +45,20 @@
                                     <td>@(string.IsNullOrWhiteSpace(item.EmployeeBranch) ? "---" : item.EmployeeBranch)</td>
                                     <td>@item.AllowanceTypeName</td>
                                     <td>@(string.IsNullOrWhiteSpace(item.AccountDisplay) ? "---" : item.AccountDisplay)</td>
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(item.PeriodName))
+                                        {
+                                            @item.PeriodName
+                                        }
+                                        else if (item.Year > 0 && item.Month > 0)
+                                        {
+                                            @(new System.DateTime(item.Year, item.Month, 1).ToString("MMMM yyyy", new System.Globalization.CultureInfo("ar")))
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">---</span>
+                                        }
+                                    </td>
                                     <td class="text-end">@item.Amount.ToString("N2")</td>
                                     <td>@(string.IsNullOrWhiteSpace(item.Description) ? "---" : item.Description)</td>
                                     <td class="text-center">
@@ -74,7 +89,7 @@
                         else
                         {
                             <tr>
-                                <td colspan="8" class="text-center text-muted py-4">لا توجد بدلات مضافة للموظفين حالياً.</td>
+                                <td colspan="9" class="text-center text-muted py-4">لا توجد بدلات مضافة للموظفين حالياً.</td>
                             </tr>
                         }
                     </tbody>

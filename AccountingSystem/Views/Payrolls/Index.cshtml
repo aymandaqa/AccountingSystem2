@@ -211,6 +211,12 @@
             gap: 0.25rem;
         }
 
+        .allowance-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
         .allowance-total-badge {
             align-self: flex-start;
             min-width: 90px;
@@ -251,13 +257,26 @@
             const deductionEmptyState = document.getElementById('deductionEmptyState');
             const addDeductionBtn = document.getElementById('addDeductionBtn');
             const saveDeductionBtn = document.getElementById('saveDeductionBtn');
+            const allowanceModalElement = document.getElementById('allowanceModal');
+            const allowanceModal = allowanceModalElement ? new bootstrap.Modal(allowanceModalElement) : null;
+            const allowanceModalTitle = document.getElementById('allowanceModalTitle');
+            const allowanceTable = document.getElementById('allowanceTable');
+            const allowanceTableBody = document.getElementById('allowanceTableBody');
+            const allowanceEmptyState = document.getElementById('allowanceEmptyState');
+            const addAllowanceBtn = document.getElementById('addAllowanceBtn');
+            const saveAllowanceBtn = document.getElementById('saveAllowanceBtn');
+            const holdBtn = document.getElementById('holdPayrollBtn');
             const employeeDeductions = new Map();
             const employeeAllowances = new Map();
             let deductionTypes = [];
             const deductionTypeMap = new Map();
+            let allowanceTypes = [];
+            const allowanceTypeMap = new Map();
             let activeDeductionRow = null;
             let activeDeductionEmployeeId = null;
             let activeDeductionSalary = 0;
+            let activeAllowanceRow = null;
+            let activeAllowanceEmployeeId = null;
             let currentBatchId = null;
 
             function escapeHtml(value) {
@@ -366,6 +385,67 @@
                 return options.join('');
             }
 
+            function setAllowanceTypes(data) {
+                allowanceTypes = Array.isArray(data) ? data : [];
+                allowanceTypeMap.clear();
+                allowanceTypes.forEach(item => {
+                    const idValue = getProperty(item, 'id', 'Id');
+                    const id = typeof idValue === 'number' ? idValue : parseInt(idValue ?? '', 10);
+                    if (!Number.isNaN(id)) {
+                        allowanceTypeMap.set(id, item);
+                    }
+                });
+            }
+
+            async function loadAllowanceTypes() {
+                try {
+                    const response = await fetch('@Url.Action("AllowanceTypes")');
+                    if (!response.ok) {
+                        console.error('تعذر تحميل أنواع البدلات');
+                        setAllowanceTypes([]);
+                        return;
+                    }
+
+                    const data = await response.json();
+                    setAllowanceTypes(data);
+                } catch (error) {
+                    console.error('تعذر تحميل أنواع البدلات', error);
+                    setAllowanceTypes([]);
+                }
+            }
+
+            function findAllowanceType(id) {
+                if (id === null || id === undefined) {
+                    return null;
+                }
+
+                const numericId = typeof id === 'number' ? id : parseInt(id, 10);
+                if (Number.isNaN(numericId)) {
+                    return null;
+                }
+
+                return allowanceTypeMap.get(numericId) ?? null;
+            }
+
+            function buildAllowanceTypeOptions(selectedId) {
+                const options = ['<option value="">اختر نوع البدل</option>'];
+                const selectedNumeric = typeof selectedId === 'number' ? selectedId : parseInt(selectedId ?? '', 10);
+
+                allowanceTypes.forEach(item => {
+                    const idValue = getProperty(item, 'id', 'Id');
+                    const id = typeof idValue === 'number' ? idValue : parseInt(idValue ?? '', 10);
+                    if (Number.isNaN(id)) {
+                        return;
+                    }
+
+                    const name = getProperty(item, 'name', 'Name') ?? '';
+                    const selectedAttr = !Number.isNaN(selectedNumeric) && id === selectedNumeric ? ' selected' : '';
+                    options.push(`<option value="${id}"${selectedAttr}>${escapeHtml(name)}</option>`);
+                });
+
+                return options.join('');
+            }
+
             function sanitizeDeduction(item) {
                 if (!item || typeof item !== 'object') {
                     return null;
@@ -409,21 +489,31 @@
                     return null;
                 }
 
+                const typeIdValue = getProperty(item, 'allowanceTypeId', 'AllowanceTypeId');
+                const typeId = typeof typeIdValue === 'number' ? typeIdValue : parseInt(typeIdValue ?? '', 10);
+
+                if (Number.isNaN(typeId) || typeId <= 0) {
+                    return null;
+                }
+
                 const amountValue = getProperty(item, 'amount', 'Amount');
                 const amount = Number(amountValue ?? 0);
                 if (!Number.isFinite(amount) || amount <= 0) {
                     return null;
                 }
 
-                const typeValue = getProperty(item, 'type', 'Type');
                 const descriptionValue = getProperty(item, 'description', 'Description');
-                const accountName = getProperty(item, 'accountName', 'AccountName');
-                const typeIdValue = getProperty(item, 'allowanceTypeId', 'AllowanceTypeId');
-                const typeId = typeof typeIdValue === 'number' ? typeIdValue : parseInt(typeIdValue ?? '', 10);
+                const typeInfo = findAllowanceType(typeId);
+                const typeName = getProperty(item, 'type', 'Type') ?? getProperty(typeInfo, 'name', 'Name') ?? '';
+
+                let accountName = getProperty(item, 'accountName', 'AccountName');
+                if (!accountName && typeInfo) {
+                    accountName = getProperty(typeInfo, 'accountName', 'AccountName') ?? getProperty(typeInfo, 'accountCode', 'AccountCode') ?? null;
+                }
 
                 return {
-                    allowanceTypeId: Number.isNaN(typeId) ? null : typeId,
-                    type: typeValue ? typeValue.toString() : null,
+                    allowanceTypeId: typeId,
+                    type: typeName ? typeName.toString() : null,
                     description: descriptionValue ? descriptionValue.toString() : null,
                     amount: Number(amount.toFixed(2)),
                     accountName: accountName ? accountName.toString() : null
@@ -539,6 +629,13 @@
                 if (allowanceBadge) {
                     allowanceBadge.textContent = formatCurrency(allowanceTotal);
                 }
+
+                const allowanceDetailsContainer = row.querySelector('.allowance-details');
+                if (allowanceDetailsContainer) {
+                    allowanceDetailsContainer.innerHTML = buildAllowanceSummary(allowances);
+                }
+
+                row.dataset.allowance = String(allowanceTotal);
 
                 const netCell = row.querySelector('.net-amount');
                 if (netCell) {
@@ -708,6 +805,166 @@
                 return { items, hasMissingType };
             }
 
+            function setAllowanceTableVisibility() {
+                if (!allowanceTable || !allowanceEmptyState) {
+                    return;
+                }
+
+                const hasRows = allowanceTableBody && allowanceTableBody.children.length > 0;
+                allowanceTable.classList.toggle('d-none', !hasRows);
+                allowanceEmptyState.classList.toggle('d-none', hasRows);
+            }
+
+            function buildAllowanceRow(data = {}) {
+                const row = document.createElement('tr');
+                const typeIdValue = getProperty(data, 'allowanceTypeId', 'AllowanceTypeId');
+                const typeId = typeof typeIdValue === 'number' ? typeIdValue : parseInt(typeIdValue ?? '', 10);
+                const description = data?.description ?? '';
+                const amountValue = Number(data?.amount ?? 0);
+                const amount = Number.isFinite(amountValue) ? amountValue.toFixed(2) : '0.00';
+                const accountName = getProperty(data, 'accountName', 'AccountName') ?? '';
+                const options = buildAllowanceTypeOptions(typeId);
+
+                row.innerHTML = `
+                    <td>
+                        <select class="form-select form-select-sm allowance-type">
+                            ${options}
+                        </select>
+                        <div class="form-text text-muted allowance-account">${escapeHtml(accountName)}</div>
+                    </td>
+                    <td><input type="text" class="form-control form-control-sm allowance-description" maxlength="250" value="${escapeHtml(description)}" /></td>
+                    <td class="text-end"><input type="number" class="form-control form-control-sm allowance-amount" min="0" step="0.01" value="${amount}" /></td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-allowance" title="حذف البدل">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>`;
+
+                const removeBtn = row.querySelector('.remove-allowance');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', () => {
+                        row.remove();
+                        setAllowanceTableVisibility();
+                    });
+                }
+
+                const accountLabel = row.querySelector('.allowance-account');
+                const typeSelect = row.querySelector('.allowance-type');
+                const updateAccountLabel = () => {
+                    if (!typeSelect || !accountLabel) {
+                        return;
+                    }
+
+                    const typeInfo = findAllowanceType(typeSelect.value);
+                    const label = typeInfo
+                        ? (getProperty(typeInfo, 'accountName', 'AccountName') ?? getProperty(typeInfo, 'accountCode', 'AccountCode') ?? '')
+                        : '';
+                    accountLabel.textContent = label ?? '';
+                };
+
+                if (typeSelect && allowanceTypes.length > 0 && Number.isFinite(typeId) && !Number.isNaN(typeId)) {
+                    typeSelect.value = String(typeId);
+                }
+
+                if (typeSelect) {
+                    typeSelect.addEventListener('change', updateAccountLabel);
+                }
+                updateAccountLabel();
+
+                return row;
+            }
+
+            function renderAllowanceTable(allowances) {
+                if (!allowanceTableBody) {
+                    return;
+                }
+
+                allowanceTableBody.innerHTML = '';
+                const items = Array.isArray(allowances) ? allowances : [];
+                items
+                    .map(item => sanitizeAllowance(item))
+                    .filter(item => item)
+                    .forEach(item => {
+                        allowanceTableBody.appendChild(buildAllowanceRow(item));
+                    });
+
+                setAllowanceTableVisibility();
+            }
+
+            function openAllowanceModal(row) {
+                if (!allowanceModal) {
+                    return;
+                }
+
+                const employeeId = getRowEmployeeId(row);
+                if (employeeId === null) {
+                    return;
+                }
+
+                activeAllowanceRow = row;
+                activeAllowanceEmployeeId = employeeId;
+
+                const employeeName = row.dataset.name ?? '';
+                if (allowanceModalTitle) {
+                    allowanceModalTitle.textContent = employeeName ? `البدلات - ${employeeName}` : 'البدلات';
+                }
+
+                const existing = (employeeAllowances.get(employeeId) ?? [])
+                    .map(item => sanitizeAllowance(item))
+                    .filter(item => item);
+
+                renderAllowanceTable(existing);
+                allowanceModal.show();
+            }
+
+            function collectAllowancesFromModal() {
+                if (!allowanceTableBody) {
+                    return { items: [], hasMissingType: false };
+                }
+
+                let hasMissingType = false;
+                const items = Array.from(allowanceTableBody.querySelectorAll('tr'))
+                    .map(row => {
+                        const typeSelect = row.querySelector('.allowance-type');
+                        const descriptionInput = row.querySelector('.allowance-description');
+                        const amountInput = row.querySelector('.allowance-amount');
+
+                        const typeValue = typeSelect?.value ?? '';
+                        const typeId = parseInt(typeValue, 10);
+                        if (!typeSelect || Number.isNaN(typeId) || typeId <= 0) {
+                            hasMissingType = true;
+                            return null;
+                        }
+
+                        let amount = parseFloat(amountInput?.value ?? '0');
+                        if (!Number.isFinite(amount) || amount < 0) {
+                            amount = 0;
+                        }
+                        amount = Number(amount.toFixed(2));
+                        if (amount <= 0) {
+                            return null;
+                        }
+
+                        const description = descriptionInput?.value?.trim() ?? '';
+                        const typeInfo = findAllowanceType(typeId);
+                        const typeName = typeInfo ? getProperty(typeInfo, 'name', 'Name') ?? '' : '';
+                        const accountName = typeInfo
+                            ? (getProperty(typeInfo, 'accountName', 'AccountName') ?? getProperty(typeInfo, 'accountCode', 'AccountCode') ?? null)
+                            : null;
+
+                        return {
+                            allowanceTypeId: typeId,
+                            type: typeName || null,
+                            description: description || null,
+                            amount,
+                            accountName
+                        };
+                    })
+                    .filter(item => item !== null);
+
+                return { items, hasMissingType };
+            }
+
             function buildDeductionDetails(deductions) {
                 if (!Array.isArray(deductions) || deductions.length === 0) {
                     return '<span class="text-muted">---</span>';
@@ -843,7 +1100,12 @@
                         <td class="text-end">${formatCurrency(salary)}</td>
                         <td>
                             <div class="allowance-summary">
-                                <span class="badge bg-light text-dark allowance-total allowance-total-badge" dir="ltr">${formatCurrency(allowanceTotal)}</span>
+                                <div class="allowance-header">
+                                    <span class="badge bg-light text-dark allowance-total allowance-total-badge" dir="ltr">${formatCurrency(allowanceTotal)}</span>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm manage-allowances">
+                                        <i class="fas fa-sliders-h"></i> إدارة
+                                    </button>
+                                </div>
                                 <div class="allowance-details">${allowanceDetails}</div>
                             </div>
                         </td>
@@ -863,6 +1125,11 @@
                             row.classList.toggle('selected', checkbox.checked);
                             updateSelectedCount();
                         });
+                    }
+
+                    const allowanceBtn = row.querySelector('.manage-allowances');
+                    if (allowanceBtn && allowanceModal) {
+                        allowanceBtn.addEventListener('click', () => openAllowanceModal(row));
                     }
 
                     const manageBtn = row.querySelector('.manage-deductions');
@@ -920,6 +1187,17 @@
                 });
             }
 
+            if (allowanceModalElement) {
+                allowanceModalElement.addEventListener('hidden.bs.modal', () => {
+                    activeAllowanceRow = null;
+                    activeAllowanceEmployeeId = null;
+                    if (allowanceTableBody) {
+                        allowanceTableBody.innerHTML = '';
+                    }
+                    setAllowanceTableVisibility();
+                });
+            }
+
             if (addDeductionBtn && deductionModal) {
                 addDeductionBtn.addEventListener('click', () => {
                     if (!deductionTableBody) {
@@ -934,6 +1212,24 @@
                     deductionTableBody.appendChild(buildDeductionRow({ amount: 0 }));
                     setDeductionTableVisibility();
                     const amountInput = deductionTableBody.querySelector('tr:last-child .deduction-amount');
+                    amountInput?.focus();
+                });
+            }
+
+            if (addAllowanceBtn && allowanceModal) {
+                addAllowanceBtn.addEventListener('click', () => {
+                    if (!allowanceTableBody) {
+                        return;
+                    }
+
+                    if (!Array.isArray(allowanceTypes) || allowanceTypes.length === 0) {
+                        alert('يرجى تعريف أنواع البدلات أولاً.');
+                        return;
+                    }
+
+                    allowanceTableBody.appendChild(buildAllowanceRow({ amount: 0 }));
+                    setAllowanceTableVisibility();
+                    const amountInput = allowanceTableBody.querySelector('tr:last-child .allowance-amount');
                     amountInput?.focus();
                 });
             }
@@ -964,6 +1260,27 @@
                 });
             }
 
+            if (saveAllowanceBtn && allowanceModal) {
+                saveAllowanceBtn.addEventListener('click', () => {
+                    if (!activeAllowanceRow || activeAllowanceEmployeeId === null) {
+                        allowanceModal.hide();
+                        return;
+                    }
+
+                    const result = collectAllowancesFromModal();
+                    if (result.hasMissingType) {
+                        alert('يرجى اختيار نوع البدل لكل سطر.');
+                        return;
+                    }
+
+                    const allowances = result.items;
+                    employeeAllowances.set(activeAllowanceEmployeeId, allowances);
+                    updateRowTotals(activeAllowanceRow);
+                    allowanceModal.hide();
+                });
+            }
+
+            await loadAllowanceTypes();
             await loadDeductionTypes();
 
             branchSelect.addEventListener('change', () => {
@@ -1017,6 +1334,7 @@
                 }
 
                 let invalidEmployeeName = null;
+                let invalidAllowanceName = null;
                 const employeesPayload = [];
 
                 selectedCheckboxes.forEach(cb => {
@@ -1029,6 +1347,33 @@
                     const salary = Number(row?.dataset.salary ?? '0');
                     const allowanceTotal = Number(row?.dataset.allowance ?? '0');
                     const name = row?.dataset.name ?? '';
+                    const allowanceSource = employeeAllowances.get(id) ?? [];
+                    let allowanceMissingType = false;
+                    const sanitizedAllowances = allowanceSource
+                        .map(item => {
+                            const sanitized = sanitizeAllowance(item);
+                            const rawAmount = Number(getProperty(item, 'amount', 'Amount') ?? 0);
+                            if ((!sanitized || !sanitized.allowanceTypeId) && Number.isFinite(rawAmount) && rawAmount > 0) {
+                                allowanceMissingType = true;
+                            }
+                            return sanitized;
+                        })
+                        .filter(item => item);
+
+                    if (allowanceMissingType) {
+                        invalidAllowanceName = name || `#${id}`;
+                        return;
+                    }
+
+                    const allowances = sanitizedAllowances
+                        .map(item => ({
+                            allowanceTypeId: item.allowanceTypeId,
+                            type: item.type ? item.type.toString().trim() : null,
+                            description: item.description ? item.description.toString().trim() : null,
+                            amount: Number(Number(item.amount ?? 0).toFixed(2))
+                        }))
+                        .filter(item => Number.isFinite(item.amount) && item.amount > 0 && item.allowanceTypeId);
+
                     const deductions = (employeeDeductions.get(id) ?? [])
                         .map(item => sanitizeDeduction(item))
                         .filter(item => item)
@@ -1048,12 +1393,18 @@
 
                     employeesPayload.push({
                         employeeId: id,
-                        deductions
+                        deductions,
+                        allowances
                     });
                 });
 
                 if (invalidEmployeeName) {
                     alert(`إجمالي الخصومات يتجاوز إجمالي الراتب والبدلات للموظف ${invalidEmployeeName}. يرجى تعديل الخصومات.`);
+                    return;
+                }
+
+                if (invalidAllowanceName) {
+                    alert(`يرجى اختيار نوع بدل صالح لكل بدل للموظف ${invalidAllowanceName}.`);
                     return;
                 }
 
@@ -1150,6 +1501,14 @@
                     toggleOverlay(false);
                 }
             });
+
+            if (holdBtn) {
+                holdBtn.addEventListener('click', () => {
+                    summaryModal.hide();
+                    alert('تم حفظ الدفعة كمسودة. يمكنك اعتمادها لاحقاً من القائمة.');
+                    window.location.reload();
+                });
+            }
 
             confirmBtn.addEventListener('click', async function () {
                 if (!currentBatchId) {
