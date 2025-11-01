@@ -16,6 +16,8 @@ using Syncfusion.EJ2.Base;
 using System.Text.Json;
 using ClosedXML.Excel;
 using System.IO;
+using System.Linq.Expressions;
+using System.Reflection;
 
 namespace AccountingSystem.Controllers
 {
@@ -24,6 +26,10 @@ namespace AccountingSystem.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IJournalEntryService _journalEntryService;
+
+        private static readonly MethodInfo StringContainsMethod = typeof(string).GetMethod(nameof(string.Contains), new[] { typeof(string) })!;
+        private static readonly MethodInfo StringStartsWithMethod = typeof(string).GetMethod(nameof(string.StartsWith), new[] { typeof(string) })!;
+        private static readonly MethodInfo StringEndsWithMethod = typeof(string).GetMethod(nameof(string.EndsWith), new[] { typeof(string) })!;
 
         public JournalEntriesController(ApplicationDbContext context, IJournalEntryService journalEntryService)
         {
@@ -350,6 +356,425 @@ namespace AccountingSystem.Controllers
             }
 
             return query;
+        }
+
+        private IQueryable<JournalEntry> ApplyColumnFilters(IQueryable<JournalEntry> query, IEnumerable<ColumnFilterCriterion>? columnFilters)
+        {
+            if (columnFilters == null)
+            {
+                return query;
+            }
+
+            foreach (var filter in columnFilters)
+            {
+                if (filter == null)
+                {
+                    continue;
+                }
+
+                var field = filter.Field;
+                if (string.IsNullOrWhiteSpace(field))
+                {
+                    continue;
+                }
+
+                var @operator = (filter.Operator ?? string.Empty).Trim().ToLowerInvariant();
+                if (string.IsNullOrEmpty(@operator))
+                {
+                    continue;
+                }
+
+                var value = filter.Value?.Trim() ?? string.Empty;
+
+                switch (field)
+                {
+                    case "Number":
+                        query = ApplyStringFilter(query, entry => entry.Number, @operator, value);
+                        break;
+                    case "BranchName":
+                        query = ApplyStringFilter(query, entry => entry.Branch != null ? entry.Branch.NameAr : null, @operator, value);
+                        break;
+                    case "Description":
+                        query = ApplyStringFilter(query, entry => entry.Description, @operator, value);
+                        break;
+                    case "Reference":
+                        query = ApplyStringFilter(query, entry => entry.Reference, @operator, value);
+                        break;
+                    case "CreatedByName":
+                        query = ApplyCreatedByFilter(query, @operator, value);
+                        break;
+                    case "StatusDisplay":
+                        query = ApplyStatusFilter(query, @operator, value);
+                        break;
+                    case "TotalDebit":
+                        query = ApplyDecimalFilter(query, entry => entry.TotalDebit, @operator, value);
+                        break;
+                    case "TotalCredit":
+                        query = ApplyDecimalFilter(query, entry => entry.TotalCredit, @operator, value);
+                        break;
+                    case "LinesCount":
+                        query = ApplyIntegerFilter(query, entry => entry.Lines.Count, @operator, value);
+                        break;
+                    case "DateFormatted":
+                        query = ApplyDateFilter(query, entry => entry.Date, @operator, value);
+                        break;
+                    case "UpdatedAtFormatted":
+                        query = ApplyNullableDateFilter(query, entry => entry.UpdatedAt, @operator, value);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            return query;
+        }
+
+        private static IQueryable<JournalEntry> ApplyStringFilter(IQueryable<JournalEntry> source, Expression<Func<JournalEntry, string?>> selector, string @operator, string value)
+        {
+            if (string.IsNullOrEmpty(value) && @operator != "isempty" && @operator != "isnotempty")
+            {
+                return source;
+            }
+
+            var parameter = selector.Parameters[0];
+            var member = selector.Body;
+            var constant = Expression.Constant(value);
+            var nullConstant = Expression.Constant(null, typeof(string));
+            var emptyString = Expression.Constant(string.Empty);
+
+            Expression? body = @operator switch
+            {
+                "contains" => Expression.AndAlso(Expression.NotEqual(member, nullConstant), Expression.Call(member, StringContainsMethod, constant)),
+                "startswith" => Expression.AndAlso(Expression.NotEqual(member, nullConstant), Expression.Call(member, StringStartsWithMethod, constant)),
+                "endswith" => Expression.AndAlso(Expression.NotEqual(member, nullConstant), Expression.Call(member, StringEndsWithMethod, constant)),
+                "equal" => Expression.AndAlso(Expression.NotEqual(member, nullConstant), Expression.Equal(member, constant)),
+                "notequal" => Expression.OrElse(Expression.Equal(member, nullConstant), Expression.NotEqual(member, constant)),
+                "isempty" => Expression.OrElse(Expression.Equal(member, nullConstant), Expression.Equal(member, emptyString)),
+                "isnotempty" => Expression.AndAlso(Expression.NotEqual(member, nullConstant), Expression.NotEqual(member, emptyString)),
+                _ => null
+            };
+
+            if (body == null)
+            {
+                return source;
+            }
+
+            var predicate = Expression.Lambda<Func<JournalEntry, bool>>(body, parameter);
+            return source.Where(predicate);
+        }
+
+        private static IQueryable<JournalEntry> ApplyCreatedByFilter(IQueryable<JournalEntry> source, string @operator, string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return source;
+            }
+
+            return @operator switch
+            {
+                "contains" => source.Where(entry => entry.CreatedBy != null && (
+                    (entry.CreatedBy.FirstName != null && entry.CreatedBy.FirstName.Contains(value)) ||
+                    (entry.CreatedBy.LastName != null && entry.CreatedBy.LastName.Contains(value)) ||
+                    (entry.CreatedBy.UserName != null && entry.CreatedBy.UserName.Contains(value))
+                )),
+                "startswith" => source.Where(entry => entry.CreatedBy != null && (
+                    (entry.CreatedBy.FirstName != null && entry.CreatedBy.FirstName.StartsWith(value)) ||
+                    (entry.CreatedBy.LastName != null && entry.CreatedBy.LastName.StartsWith(value)) ||
+                    (entry.CreatedBy.UserName != null && entry.CreatedBy.UserName.StartsWith(value))
+                )),
+                "endswith" => source.Where(entry => entry.CreatedBy != null && (
+                    (entry.CreatedBy.FirstName != null && entry.CreatedBy.FirstName.EndsWith(value)) ||
+                    (entry.CreatedBy.LastName != null && entry.CreatedBy.LastName.EndsWith(value)) ||
+                    (entry.CreatedBy.UserName != null && entry.CreatedBy.UserName.EndsWith(value))
+                )),
+                "equal" => source.Where(entry => entry.CreatedBy != null && (
+                    (entry.CreatedBy.FirstName != null && entry.CreatedBy.FirstName == value) ||
+                    (entry.CreatedBy.LastName != null && entry.CreatedBy.LastName == value) ||
+                    (entry.CreatedBy.UserName != null && entry.CreatedBy.UserName == value)
+                )),
+                "notequal" => source.Where(entry => entry.CreatedBy == null || (
+                    (entry.CreatedBy.FirstName == null || entry.CreatedBy.FirstName != value) &&
+                    (entry.CreatedBy.LastName == null || entry.CreatedBy.LastName != value) &&
+                    (entry.CreatedBy.UserName == null || entry.CreatedBy.UserName != value)
+                )),
+                "isempty" => source.Where(entry => entry.CreatedBy == null || (
+                    (entry.CreatedBy.FirstName == null || entry.CreatedBy.FirstName == string.Empty) &&
+                    (entry.CreatedBy.LastName == null || entry.CreatedBy.LastName == string.Empty) &&
+                    (entry.CreatedBy.UserName == null || entry.CreatedBy.UserName == string.Empty)
+                )),
+                "isnotempty" => source.Where(entry => entry.CreatedBy != null && (
+                    (entry.CreatedBy.FirstName != null && entry.CreatedBy.FirstName != string.Empty) ||
+                    (entry.CreatedBy.LastName != null && entry.CreatedBy.LastName != string.Empty) ||
+                    (entry.CreatedBy.UserName != null && entry.CreatedBy.UserName != string.Empty)
+                )),
+                _ => source
+            };
+        }
+
+        private static IQueryable<JournalEntry> ApplyStatusFilter(IQueryable<JournalEntry> source, string @operator, string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return source;
+            }
+
+            value = value.Trim();
+            var statuses = Enum.GetValues<JournalEntryStatus>();
+
+            if (@operator == "notequal")
+            {
+                var excluded = statuses
+                    .Where(status => string.Equals(GetStatusInfo(status).Text?.Trim(), value, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                if (excluded.Count == 0)
+                {
+                    return source;
+                }
+
+                return source.Where(entry => !excluded.Contains(entry.Status));
+            }
+
+            List<JournalEntryStatus> matches = @operator switch
+            {
+                "equal" => statuses
+                    .Where(status => string.Equals(GetStatusInfo(status).Text?.Trim(), value, StringComparison.OrdinalIgnoreCase))
+                    .ToList(),
+                "contains" => statuses
+                    .Where(status => ContainsIgnoreCase(GetStatusInfo(status).Text, value))
+                    .ToList(),
+                "startswith" => statuses
+                    .Where(status => StartsWithIgnoreCase(GetStatusInfo(status).Text, value))
+                    .ToList(),
+                "endswith" => statuses
+                    .Where(status => EndsWithIgnoreCase(GetStatusInfo(status).Text, value))
+                    .ToList(),
+                _ => new List<JournalEntryStatus>()
+            };
+
+            if (matches.Count == 0)
+            {
+                return source.Where(_ => false);
+            }
+
+            return source.Where(entry => matches.Contains(entry.Status));
+        }
+
+        private static IQueryable<JournalEntry> ApplyDecimalFilter(IQueryable<JournalEntry> source, Expression<Func<JournalEntry, decimal>> selector, string @operator, string value)
+        {
+            if (!TryParseDecimal(value, out var parsed))
+            {
+                return source;
+            }
+
+            var parameter = selector.Parameters[0];
+            var member = selector.Body;
+            var constant = Expression.Constant(parsed);
+
+            Expression? body = @operator switch
+            {
+                "equal" => Expression.Equal(member, constant),
+                "notequal" => Expression.NotEqual(member, constant),
+                "greaterthan" => Expression.GreaterThan(member, constant),
+                "greaterthanorequal" => Expression.GreaterThanOrEqual(member, constant),
+                "lessthan" => Expression.LessThan(member, constant),
+                "lessthanorequal" => Expression.LessThanOrEqual(member, constant),
+                _ => null
+            };
+
+            if (body == null)
+            {
+                return source;
+            }
+
+            var predicate = Expression.Lambda<Func<JournalEntry, bool>>(body, parameter);
+            return source.Where(predicate);
+        }
+
+        private static IQueryable<JournalEntry> ApplyIntegerFilter(IQueryable<JournalEntry> source, Expression<Func<JournalEntry, int>> selector, string @operator, string value)
+        {
+            if (!TryParseInteger(value, out var parsed))
+            {
+                return source;
+            }
+
+            var parameter = selector.Parameters[0];
+            var member = selector.Body;
+            var constant = Expression.Constant(parsed);
+
+            Expression? body = @operator switch
+            {
+                "equal" => Expression.Equal(member, constant),
+                "notequal" => Expression.NotEqual(member, constant),
+                "greaterthan" => Expression.GreaterThan(member, constant),
+                "greaterthanorequal" => Expression.GreaterThanOrEqual(member, constant),
+                "lessthan" => Expression.LessThan(member, constant),
+                "lessthanorequal" => Expression.LessThanOrEqual(member, constant),
+                _ => null
+            };
+
+            if (body == null)
+            {
+                return source;
+            }
+
+            var predicate = Expression.Lambda<Func<JournalEntry, bool>>(body, parameter);
+            return source.Where(predicate);
+        }
+
+        private static IQueryable<JournalEntry> ApplyDateFilter(IQueryable<JournalEntry> source, Expression<Func<JournalEntry, DateTime>> selector, string @operator, string value)
+        {
+            if (!TryParseDate(value, out var parsed))
+            {
+                return source;
+            }
+
+            var start = parsed.Date;
+            var end = start.AddDays(1);
+            var parameter = selector.Parameters[0];
+            var member = selector.Body;
+            var startConstant = Expression.Constant(start);
+            var endConstant = Expression.Constant(end);
+
+            Expression? body = @operator switch
+            {
+                "equal" => Expression.AndAlso(Expression.GreaterThanOrEqual(member, startConstant), Expression.LessThan(member, endConstant)),
+                "notequal" => Expression.OrElse(Expression.LessThan(member, startConstant), Expression.GreaterThanOrEqual(member, endConstant)),
+                "greaterthan" => Expression.GreaterThanOrEqual(member, endConstant),
+                "greaterthanorequal" => Expression.GreaterThanOrEqual(member, startConstant),
+                "lessthan" => Expression.LessThan(member, startConstant),
+                "lessthanorequal" => Expression.LessThan(member, endConstant),
+                _ => null
+            };
+
+            if (body == null)
+            {
+                return source;
+            }
+
+            var predicate = Expression.Lambda<Func<JournalEntry, bool>>(body, parameter);
+            return source.Where(predicate);
+        }
+
+        private static IQueryable<JournalEntry> ApplyNullableDateFilter(IQueryable<JournalEntry> source, Expression<Func<JournalEntry, DateTime?>> selector, string @operator, string value)
+        {
+            var parameter = selector.Parameters[0];
+            var member = selector.Body;
+            var nullConstant = Expression.Constant(null, typeof(DateTime?));
+
+            if (@operator == "isnull")
+            {
+                var predicate = Expression.Lambda<Func<JournalEntry, bool>>(Expression.Equal(member, nullConstant), parameter);
+                return source.Where(predicate);
+            }
+
+            if (@operator == "isnotnull")
+            {
+                var predicate = Expression.Lambda<Func<JournalEntry, bool>>(Expression.NotEqual(member, nullConstant), parameter);
+                return source.Where(predicate);
+            }
+
+            if (!TryParseDate(value, out var parsed))
+            {
+                return source;
+            }
+
+            var start = parsed.Date;
+            var end = start.AddDays(1);
+            var hasValue = Expression.Property(member, nameof(Nullable<DateTime>.HasValue));
+            var valueExpression = Expression.Property(member, nameof(Nullable<DateTime>.Value));
+            var startConstant = Expression.Constant(start);
+            var endConstant = Expression.Constant(end);
+
+            Expression? body = @operator switch
+            {
+                "equal" => Expression.AndAlso(hasValue, Expression.AndAlso(Expression.GreaterThanOrEqual(valueExpression, startConstant), Expression.LessThan(valueExpression, endConstant))),
+                "notequal" => Expression.OrElse(Expression.Not(hasValue), Expression.OrElse(Expression.LessThan(valueExpression, startConstant), Expression.GreaterThanOrEqual(valueExpression, endConstant))),
+                "greaterthan" => Expression.AndAlso(hasValue, Expression.GreaterThanOrEqual(valueExpression, endConstant)),
+                "greaterthanorequal" => Expression.AndAlso(hasValue, Expression.GreaterThanOrEqual(valueExpression, startConstant)),
+                "lessthan" => Expression.AndAlso(hasValue, Expression.LessThan(valueExpression, startConstant)),
+                "lessthanorequal" => Expression.AndAlso(hasValue, Expression.LessThan(valueExpression, endConstant)),
+                _ => null
+            };
+
+            if (body == null)
+            {
+                return source;
+            }
+
+            var predicate = Expression.Lambda<Func<JournalEntry, bool>>(body, parameter);
+            return source.Where(predicate);
+        }
+
+        private static bool TryParseDecimal(string? input, out decimal value)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                value = default;
+                return false;
+            }
+
+            var trimmed = input.Trim();
+            if (decimal.TryParse(trimmed, NumberStyles.Number, CultureInfo.InvariantCulture, out value))
+            {
+                return true;
+            }
+
+            return decimal.TryParse(trimmed, NumberStyles.Number, CultureInfo.CurrentCulture, out value);
+        }
+
+        private static bool TryParseInteger(string? input, out int value)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                value = default;
+                return false;
+            }
+
+            var trimmed = input.Trim();
+            if (int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
+            {
+                return true;
+            }
+
+            return int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.CurrentCulture, out value);
+        }
+
+        private static bool TryParseDate(string? input, out DateTime value)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                value = default;
+                return false;
+            }
+
+            var trimmed = input.Trim();
+            if (DateTime.TryParse(trimmed, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out value))
+            {
+                return true;
+            }
+
+            if (DateTime.TryParse(trimmed, CultureInfo.GetCultureInfo("ar-SA"), DateTimeStyles.None, out value))
+            {
+                return true;
+            }
+
+            return DateTime.TryParse(trimmed, CultureInfo.CurrentCulture, DateTimeStyles.None, out value);
+        }
+
+        private static bool ContainsIgnoreCase(string? source, string value)
+        {
+            return !string.IsNullOrWhiteSpace(source) && source.IndexOf(value, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool StartsWithIgnoreCase(string? source, string value)
+        {
+            return !string.IsNullOrWhiteSpace(source) && source.StartsWith(value, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool EndsWithIgnoreCase(string? source, string value)
+        {
+            return !string.IsNullOrWhiteSpace(source) && source.EndsWith(value, StringComparison.OrdinalIgnoreCase);
         }
 
         private IQueryable<JournalEntry> ApplyManagementOrdering(IQueryable<JournalEntry> query, string? sortColumn, string? sortDirection)
@@ -679,6 +1104,7 @@ namespace AccountingSystem.Controllers
                 .AsQueryable();
 
             query = ApplyManagementFilters(query, filters);
+            query = ApplyColumnFilters(query, request.ColumnFilters);
 
             var totalRecords = await query.CountAsync();
 
@@ -789,7 +1215,7 @@ namespace AccountingSystem.Controllers
 
         [HttpGet]
         [Authorize(Policy = "journal.view")]
-        public async Task<IActionResult> ExportManagementExcel([FromQuery] JournalEntryManagementFilters? filters, string? sortColumn, string? sortDirection)
+        public async Task<IActionResult> ExportManagementExcel([FromQuery] JournalEntryManagementFilters? filters, [FromQuery] List<ColumnFilterCriterion>? columnFilters, string? sortColumn, string? sortDirection)
         {
             filters ??= new JournalEntryManagementFilters();
 
@@ -801,6 +1227,7 @@ namespace AccountingSystem.Controllers
                 .AsQueryable();
 
             query = ApplyManagementFilters(query, filters);
+            query = ApplyColumnFilters(query, columnFilters);
 
             var orderedQuery = ApplyManagementOrdering(query, sortColumn, sortDirection);
 
@@ -1482,6 +1909,7 @@ namespace AccountingSystem.Controllers
             public string? SortColumn { get; set; }
             public string? SortDirection { get; set; }
             public JournalEntryManagementFilters? Filters { get; set; }
+            public List<ColumnFilterCriterion>? ColumnFilters { get; set; }
         }
 
         public sealed class JournalEntryManagementFilters
@@ -1498,6 +1926,14 @@ namespace AccountingSystem.Controllers
             public decimal? MinAmount { get; set; }
             public decimal? MaxAmount { get; set; }
             public bool ShowUnbalancedOnly { get; set; }
+        }
+
+        public sealed class ColumnFilterCriterion
+        {
+            public string? Field { get; set; }
+            public string? Operator { get; set; }
+            public string? Value { get; set; }
+            public string? Type { get; set; }
         }
 
         private static (string Text, string CssClass) GetStatusInfo(JournalEntryStatus status)

@@ -539,6 +539,8 @@
 
             let grid = null;
             let quickSearchDebounce = null;
+            const columnFilters = new Map();
+            let suppressFilterHandling = false;
 
             const state = {
                 filters: {},
@@ -637,6 +639,172 @@
                 return buildActions(args);
             }
 
+            function detectFilterType(value, explicitType, field) {
+                if (explicitType) {
+                    return explicitType;
+                }
+
+                if (field === 'TotalDebit' || field === 'TotalCredit' || field === 'LinesCount') {
+                    return 'number';
+                }
+
+                if (field === 'DateFormatted' || field === 'UpdatedAtFormatted') {
+                    return 'date';
+                }
+
+                if (value instanceof Date) {
+                    return 'date';
+                }
+
+                if (typeof value === 'number') {
+                    return 'number';
+                }
+
+                return 'string';
+            }
+
+            function normalizeFilterValue(value, type, field) {
+                if (value === null || value === undefined) {
+                    return '';
+                }
+
+                if (type === 'date') {
+                    const date = value instanceof Date ? value : new Date(value);
+                    if (Number.isNaN(date.getTime())) {
+                        return '';
+                    }
+
+                    if (field === 'DateFormatted') {
+                        return date.toISOString().split('T')[0];
+                    }
+
+                    return date.toISOString();
+                }
+
+                if (type === 'number') {
+                    if (typeof value === 'number' && Number.isFinite(value)) {
+                        return value.toString();
+                    }
+
+                    const numeric = Number(value);
+                    if (Number.isFinite(numeric)) {
+                        return numeric.toString();
+                    }
+
+                    return String(value);
+                }
+
+                return String(value);
+            }
+
+            function serializeColumnFilters() {
+                return Array.from(columnFilters.values()).map(filter => ({
+                    field: filter.field,
+                    operator: filter.operator,
+                    value: filter.value,
+                    type: filter.type
+                }));
+            }
+
+            function applyGridFilterState() {
+                if (!grid) {
+                    return;
+                }
+
+                const filters = Array.from(columnFilters.values()).map(filter => ({
+                    field: filter.field,
+                    operator: filter.operator,
+                    value: filter.rawValue,
+                    predicate: 'and',
+                    matchCase: false,
+                    ignoreAccent: true,
+                    type: filter.type
+                }));
+
+                suppressFilterHandling = true;
+                grid.setProperties({ filterSettings: { columns: filters } }, true);
+                suppressFilterHandling = false;
+            }
+
+            function clearColumnFilters() {
+                columnFilters.clear();
+                applyGridFilterState();
+            }
+
+            function handleFilterAction(args) {
+                const action = args?.action;
+                const filterObject = args?.currentFilterObject;
+                const columnName = (args?.columnName || filterObject?.field || '').trim();
+
+                if (action === 'clearFiltering') {
+                    if (columnFilters.size > 0) {
+                        columnFilters.clear();
+                        applyGridFilterState();
+                        state.page = 1;
+                        loadData();
+                    }
+                    return;
+                }
+
+                if (!columnName) {
+                    return;
+                }
+
+                if (action === 'remove' || action === 'clearFilter') {
+                    if (columnFilters.has(columnName)) {
+                        columnFilters.delete(columnName);
+                        applyGridFilterState();
+                        state.page = 1;
+                        loadData();
+                    }
+                    return;
+                }
+
+                if (action !== 'filter' || !filterObject) {
+                    return;
+                }
+
+                const operator = (filterObject.operator || 'contains').toLowerCase();
+                let rawValue = filterObject.value;
+                const type = detectFilterType(rawValue, filterObject.type, columnName);
+                const normalizedValue = normalizeFilterValue(rawValue, type, columnName);
+
+                if (type === 'date' && rawValue && !(rawValue instanceof Date)) {
+                    const parsed = new Date(rawValue);
+                    rawValue = Number.isNaN(parsed.getTime()) ? rawValue : parsed;
+                }
+
+                if (type === 'number' && rawValue !== null && rawValue !== undefined && typeof rawValue !== 'number') {
+                    const numeric = Number(rawValue);
+                    if (!Number.isNaN(numeric)) {
+                        rawValue = numeric;
+                    }
+                }
+
+                if ((normalizedValue === '' || normalizedValue === null || normalizedValue === undefined) &&
+                    operator !== 'isnull' && operator !== 'isnotnull' && operator !== 'isempty' && operator !== 'isnotempty') {
+                    if (columnFilters.has(columnName)) {
+                        columnFilters.delete(columnName);
+                        applyGridFilterState();
+                        state.page = 1;
+                        loadData();
+                    }
+                    return;
+                }
+
+                columnFilters.set(columnName, {
+                    field: columnName,
+                    operator,
+                    value: normalizedValue,
+                    rawValue,
+                    type
+                });
+
+                applyGridFilterState();
+                state.page = 1;
+                loadData();
+            }
+
             function initializeGrid() {
                 if (!gridElement || grid) {
                     return;
@@ -652,6 +820,11 @@
                     allowGrouping: true,
                     allowPaging: false,
                     allowTextWrap: true,
+                    allowFiltering: true,
+                    filterSettings: {
+                        type: 'Menu',
+                        showFilterBarStatus: false
+                    },
                     gridLines: 'Both',
                     locale: 'ar',
                     height: 'auto',
@@ -666,18 +839,18 @@
                     },
                     columns: [
                         { field: 'Number', headerText: 'رقم القيد', width: 110, textAlign: 'Center' },
-                        { field: 'DateFormatted', headerText: 'التاريخ', width: 120, textAlign: 'Center' },
+                        { field: 'DateFormatted', headerText: 'التاريخ', width: 120, textAlign: 'Center', type: 'string' },
                         { field: 'BranchName', headerText: 'الفرع', width: 150 },
                         { field: 'Description', headerText: 'الوصف', width: 220 },
                         { field: 'Reference', headerText: 'المرجع', width: 140 },
                         { field: 'CreatedByName', headerText: 'أنشئ بواسطة', width: 150 },
-                        { field: 'TotalDebit', headerText: 'إجمالي المدين', width: 140, textAlign: 'Right' },
-                        { field: 'TotalCredit', headerText: 'إجمالي الدائن', width: 140, textAlign: 'Right' },
-                        { field: 'LinesCount', headerText: 'عدد البنود', width: 110, textAlign: 'Center' },
+                        { field: 'TotalDebit', headerText: 'إجمالي المدين', width: 140, textAlign: 'Right', type: 'number' },
+                        { field: 'TotalCredit', headerText: 'إجمالي الدائن', width: 140, textAlign: 'Right', type: 'number' },
+                        { field: 'LinesCount', headerText: 'عدد البنود', width: 110, textAlign: 'Center', type: 'number' },
                         { field: 'StatusDisplay', headerText: 'الحالة', width: 130, textAlign: 'Center' },
-                        { field: 'UpdatedAtFormatted', headerText: 'آخر تحديث', width: 160 },
-                        { headerText: 'العمليات', width: 220, textAlign: 'Center', customAttributes: { columnType: 'actions' } },
-                        { field: 'MonthGroupLabel', visible: false }
+                        { field: 'UpdatedAtFormatted', headerText: 'آخر تحديث', width: 160, type: 'string' },
+                        { headerText: 'العمليات', width: 220, textAlign: 'Center', allowFiltering: false, customAttributes: { columnType: 'actions' } },
+                        { field: 'MonthGroupLabel', visible: false, allowFiltering: false }
                     ]
                 });
 
@@ -710,6 +883,20 @@
                 };
 
                 grid.actionBegin = function (args) {
+                    if (!args) {
+                        return;
+                    }
+
+                    if (args.requestType === 'filtering') {
+                        if (suppressFilterHandling) {
+                            return;
+                        }
+
+                        args.cancel = true;
+                        handleFilterAction(args);
+                        return;
+                    }
+
                     if (args.requestType === 'sorting') {
                         args.cancel = true;
                         const columnName = args.columnName;
@@ -725,6 +912,7 @@
                 };
 
                 grid.appendTo(gridElement);
+                applyGridFilterState();
 
                 grid.element.addEventListener('click', async function (event) {
                     const postBtn = event.target.closest('.btn-post');
@@ -831,6 +1019,22 @@
                     params.append('sortDirection', state.sortDirection);
                 }
 
+                serializeColumnFilters().forEach((filter, index) => {
+                    if (!filter.field) {
+                        return;
+                    }
+                    params.append(`columnFilters[${index}].Field`, filter.field);
+                    if (filter.operator) {
+                        params.append(`columnFilters[${index}].Operator`, filter.operator);
+                    }
+                    if (filter.value !== undefined && filter.value !== null) {
+                        params.append(`columnFilters[${index}].Value`, filter.value);
+                    }
+                    if (filter.type) {
+                        params.append(`columnFilters[${index}].Type`, filter.type);
+                    }
+                });
+
                 return params.toString();
             }
 
@@ -909,6 +1113,9 @@
                         }
                         if (searchTermInput) {
                             searchTermInput.value = '';
+                        }
+                        if (columnFilters.size > 0) {
+                            clearColumnFilters();
                         }
                         state.filters = {};
                         state.page = 1;
@@ -1176,7 +1383,8 @@
                             pageSize: state.pageSize,
                             sortColumn: state.sortColumn,
                             sortDirection: state.sortDirection,
-                            filters: sanitizeFilters()
+                            filters: sanitizeFilters(),
+                            columnFilters: serializeColumnFilters()
                         })
                     });
 
@@ -1197,6 +1405,7 @@
                         grid.dataSource = items;
                         grid.refresh();
                         applyGrouping();
+                        applyGridFilterState();
                     }
 
                     updateSummary(summary, totalRecords);
