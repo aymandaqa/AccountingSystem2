@@ -565,6 +565,42 @@
                 UpdatedAtFormatted: 'updatedAt'
             };
 
+            function normalizeEntry(entry) {
+                if (!entry || typeof entry !== 'object') {
+                    return entry;
+                }
+
+                const normalized = { ...entry };
+
+                normalized.Id = entry.Id ?? entry.id ?? null;
+                normalized.Number = entry.Number ?? entry.number ?? '';
+                normalized.Date = entry.Date ?? entry.date ?? null;
+                normalized.DateFormatted = entry.DateFormatted ?? entry.dateFormatted ?? '';
+                normalized.MonthGroup = entry.MonthGroup ?? entry.monthGroup ?? '';
+                normalized.MonthGroupLabel = entry.MonthGroupLabel ?? entry.monthGroupLabel ?? '';
+                normalized.Description = entry.Description ?? entry.description ?? '';
+                normalized.Reference = entry.Reference ?? entry.reference ?? '';
+                normalized.Status = entry.Status ?? entry.status ?? '';
+                normalized.StatusDisplay = entry.StatusDisplay ?? entry.statusDisplay ?? '';
+                normalized.StatusClass = entry.StatusClass ?? entry.statusClass ?? '';
+                normalized.BranchName = entry.BranchName ?? entry.branchName ?? '';
+                normalized.CreatedByName = entry.CreatedByName ?? entry.createdByName ?? '';
+                normalized.TotalDebit = entry.TotalDebit ?? entry.totalDebit ?? 0;
+                normalized.TotalDebitFormatted = entry.TotalDebitFormatted ?? entry.totalDebitFormatted ?? '';
+                normalized.TotalCredit = entry.TotalCredit ?? entry.totalCredit ?? 0;
+                normalized.TotalCreditFormatted = entry.TotalCreditFormatted ?? entry.totalCreditFormatted ?? '';
+                normalized.LinesCount = entry.LinesCount ?? entry.linesCount ?? 0;
+                normalized.IsDraft = entry.IsDraft ?? entry.isDraft ?? false;
+                normalized.CanDelete = entry.CanDelete ?? entry.canDelete ?? false;
+                normalized.IsBalanced = entry.IsBalanced ?? entry.isBalanced ?? false;
+                normalized.CreatedAt = entry.CreatedAt ?? entry.createdAt ?? null;
+                normalized.CreatedAtFormatted = entry.CreatedAtFormatted ?? entry.createdAtFormatted ?? '';
+                normalized.UpdatedAt = entry.UpdatedAt ?? entry.updatedAt ?? null;
+                normalized.UpdatedAtFormatted = entry.UpdatedAtFormatted ?? entry.updatedAtFormatted ?? '';
+
+                return normalized;
+            }
+
             initializeGrid();
             registerEventHandlers();
             updateFiltersToggleState();
@@ -1393,7 +1429,8 @@
                     }
 
                     const result = await response.json();
-                    const items = result.items || [];
+                    const rawItems = result.items || [];
+                    const items = rawItems.map(normalizeEntry);
                     const summary = result.summary || {};
                     const totalRecords = result.totalRecords ?? items.length;
                     const totalPages = result.totalPages ?? 0;
