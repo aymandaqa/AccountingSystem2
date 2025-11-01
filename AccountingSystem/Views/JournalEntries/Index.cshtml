@@ -565,6 +565,142 @@
                 UpdatedAtFormatted: 'updatedAt'
             };
 
+            function normalizeEntry(entry) {
+                if (!entry || typeof entry !== 'object') {
+                    return entry;
+                }
+
+                const normalized = { ...entry };
+
+                normalized.Id = entry.Id ?? entry.id ?? null;
+                normalized.Number = entry.Number ?? entry.number ?? '';
+                normalized.Date = entry.Date ?? entry.date ?? null;
+                normalized.DateFormatted = entry.DateFormatted ?? entry.dateFormatted ?? '';
+                normalized.MonthGroup = entry.MonthGroup ?? entry.monthGroup ?? '';
+                normalized.MonthGroupLabel = entry.MonthGroupLabel ?? entry.monthGroupLabel ?? '';
+                normalized.Description = entry.Description ?? entry.description ?? '';
+                normalized.Reference = entry.Reference ?? entry.reference ?? '';
+                normalized.Status = entry.Status ?? entry.status ?? '';
+                normalized.StatusDisplay = entry.StatusDisplay ?? entry.statusDisplay ?? '';
+                normalized.StatusClass = entry.StatusClass ?? entry.statusClass ?? '';
+                normalized.BranchName = entry.BranchName ?? entry.branchName ?? '';
+                normalized.CreatedByName = entry.CreatedByName ?? entry.createdByName ?? '';
+                normalized.TotalDebit = entry.TotalDebit ?? entry.totalDebit ?? 0;
+                normalized.TotalDebitFormatted = entry.TotalDebitFormatted ?? entry.totalDebitFormatted ?? '';
+                normalized.TotalCredit = entry.TotalCredit ?? entry.totalCredit ?? 0;
+                normalized.TotalCreditFormatted = entry.TotalCreditFormatted ?? entry.totalCreditFormatted ?? '';
+                normalized.LinesCount = entry.LinesCount ?? entry.linesCount ?? 0;
+                normalized.IsDraft = entry.IsDraft ?? entry.isDraft ?? false;
+                normalized.CanDelete = entry.CanDelete ?? entry.canDelete ?? false;
+                normalized.IsBalanced = entry.IsBalanced ?? entry.isBalanced ?? false;
+                normalized.CreatedAt = entry.CreatedAt ?? entry.createdAt ?? null;
+                normalized.CreatedAtFormatted = entry.CreatedAtFormatted ?? entry.createdAtFormatted ?? '';
+                normalized.UpdatedAt = entry.UpdatedAt ?? entry.updatedAt ?? null;
+                normalized.UpdatedAtFormatted = entry.UpdatedAtFormatted ?? entry.updatedAtFormatted ?? '';
+
+                return normalized;
+            }
+
+            function normalizeResponsePayload(result, currentState) {
+                const fallbackPage = currentState?.page ?? 1;
+                const fallbackPageSize = currentState?.pageSize ?? 50;
+
+                if (Array.isArray(result)) {
+                    const normalizedItems = result.map(normalizeEntry);
+                    const totalRecords = normalizedItems.length;
+
+                    return {
+                        items: normalizedItems,
+                        summary: {},
+                        totalRecords,
+                        totalPages: fallbackPageSize ? Math.ceil(totalRecords / fallbackPageSize) : 0,
+                        page: fallbackPage,
+                        pageSize: fallbackPageSize
+                    };
+                }
+
+                const containers = [];
+                if (result && typeof result === 'object') {
+                    containers.push(result);
+
+                    const nestedKeys = ['data', 'Data', 'result', 'Result', 'payload', 'Payload', 'response', 'Response'];
+                    for (const key of nestedKeys) {
+                        const value = result[key];
+                        if (value && (typeof value === 'object' || Array.isArray(value))) {
+                            containers.push(value);
+                        }
+                    }
+                }
+
+                let rawItems = [];
+                const itemKeys = ['items', 'Items', 'data', 'Data', 'records', 'Records', 'result', 'Result', 'rows', 'Rows', 'list', 'List', 'entries', 'Entries'];
+
+                for (const container of containers) {
+                    if (!container) {
+                        continue;
+                    }
+
+                    if (Array.isArray(container)) {
+                        rawItems = container;
+                        break;
+                    }
+
+                    for (const key of itemKeys) {
+                        const value = container[key];
+                        if (Array.isArray(value)) {
+                            rawItems = value;
+                            break;
+                        }
+                    }
+
+                    if (rawItems.length) {
+                        break;
+                    }
+                }
+
+                const normalizedItems = rawItems.map(normalizeEntry);
+
+                function findFirstMetaValue(keys) {
+                    for (const container of containers) {
+                        if (!container || typeof container !== 'object' || Array.isArray(container)) {
+                            continue;
+                        }
+
+                        for (const key of keys) {
+                            if (container[key] !== undefined && container[key] !== null) {
+                                return container[key];
+                            }
+                        }
+                    }
+
+                    return undefined;
+                }
+
+                const summary = findFirstMetaValue(['summary', 'Summary', 'totals', 'Totals', 'aggregate', 'Aggregate']) || {};
+
+                const totalRecords = Number(
+                    findFirstMetaValue(['totalRecords', 'TotalRecords', 'count', 'Count', 'total', 'Total']) ??
+                    normalizedItems.length
+                );
+
+                const page = Number(findFirstMetaValue(['page', 'Page'])) || fallbackPage;
+                const pageSize = Number(findFirstMetaValue(['pageSize', 'PageSize', 'take', 'Take', 'limit', 'Limit'])) || fallbackPageSize;
+
+                let totalPages = Number(findFirstMetaValue(['totalPages', 'TotalPages']));
+                if (!Number.isFinite(totalPages) || totalPages < 0) {
+                    totalPages = pageSize ? Math.ceil((Number.isFinite(totalRecords) ? totalRecords : normalizedItems.length) / pageSize) : 0;
+                }
+
+                return {
+                    items: normalizedItems,
+                    summary,
+                    totalRecords: Number.isFinite(totalRecords) ? totalRecords : normalizedItems.length,
+                    totalPages,
+                    page,
+                    pageSize
+                };
+            }
+
             initializeGrid();
             registerEventHandlers();
             updateFiltersToggleState();
@@ -1393,13 +1529,14 @@
                     }
 
                     const result = await response.json();
-                    const items = result.items || [];
-                    const summary = result.summary || {};
-                    const totalRecords = result.totalRecords ?? items.length;
-                    const totalPages = result.totalPages ?? 0;
+                    const payload = normalizeResponsePayload(result, state);
 
-                    state.page = result.page || state.page;
-                    state.pageSize = result.pageSize || state.pageSize;
+                    state.page = payload.page ?? state.page;
+                    state.pageSize = payload.pageSize ?? state.pageSize;
+                    const items = payload.items;
+                    const summary = payload.summary;
+                    const totalRecords = payload.totalRecords ?? items.length;
+                    const totalPages = payload.totalPages ?? 0;
 
                     if (grid) {
                         grid.dataSource = items;
@@ -1410,7 +1547,7 @@
 
                     updateSummary(summary, totalRecords);
                     updatePagination(totalPages, totalRecords);
-                    totalRecordsLabel.textContent = totalRecords.toLocaleString();
+                    totalRecordsLabel.textContent = Number(totalRecords || 0).toLocaleString();
                 }
                 catch (error) {
                     console.error(error);
