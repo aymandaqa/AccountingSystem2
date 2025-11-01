@@ -62,6 +62,7 @@ namespace AccountingSystem.ViewModels
         public int EmployeeId { get; set; }
         public List<PayrollEmployeeDeductionSelection> Deductions { get; set; } = new();
         public List<PayrollEmployeeAllowanceSelection> Allowances { get; set; } = new();
+        public bool HasAllowanceSelection { get; set; }
     }
 
     public class PayrollEmployeeDeductionSelection

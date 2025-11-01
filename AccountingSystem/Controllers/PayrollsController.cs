@@ -82,6 +82,10 @@ namespace AccountingSystem.Controllers
                 employeesQuery = employeesQuery.Where(e => e.BranchId == branchId);
             }
 
+            var hasPeriod = year.HasValue && month.HasValue && year.Value > 0 && month.Value > 0;
+            var targetYear = hasPeriod ? year!.Value : 0;
+            var targetMonth = hasPeriod ? month!.Value : 0;
+
             if (branchId > 0 && year.HasValue && month.HasValue && year.Value > 0 && month.Value > 0)
             {
                 var processedEmployeeIds = await _context.PayrollBatchLines
@@ -112,7 +116,9 @@ namespace AccountingSystem.Controllers
                     JobTitle = e.JobTitle,
                     IsActive = e.IsActive,
                     Deductions = e.EmployeeDeductions
-                        .Where(d => d.IsActive && d.DeductionType != null && d.DeductionType.IsActive)
+                        .Where(d => hasPeriod
+                            && d.IsActive && d.DeductionType != null && d.DeductionType.IsActive
+                            && d.Year == targetYear && d.Month == targetMonth)
                         .Select(d => new PayrollEmployeeDeductionSelection
                         {
                             DeductionTypeId = d.DeductionTypeId,
@@ -126,7 +132,9 @@ namespace AccountingSystem.Controllers
                         })
                         .ToList(),
                     Allowances = e.EmployeeAllowances
-                        .Where(a => a.IsActive && a.AllowanceType != null && a.AllowanceType.IsActive)
+                        .Where(a => hasPeriod
+                            && a.IsActive && a.AllowanceType != null && a.AllowanceType.IsActive
+                            && a.Year == targetYear && a.Month == targetMonth)
                         .Select(a => new PayrollEmployeeAllowanceSelection
                         {
                             AllowanceTypeId = a.AllowanceTypeId,
@@ -167,6 +175,28 @@ namespace AccountingSystem.Controllers
             return Json(types);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> AllowanceTypes()
+        {
+            var types = await _context.AllowanceTypes
+                .AsNoTracking()
+                .Include(a => a.Account)
+                .Where(a => a.IsActive)
+                .OrderBy(a => a.Name)
+                .Select(a => new
+                {
+                    a.Id,
+                    a.Name,
+                    AccountName = a.Account != null
+                        ? $"{a.Account.Code} - {a.Account.NameAr ?? a.Account.NameEn ?? string.Empty}"
+                        : string.Empty,
+                    AccountCode = a.Account != null ? a.Account.Code : null
+                })
+                .ToListAsync();
+
+            return Json(types);
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = "payroll.process")]
@@ -198,10 +228,28 @@ namespace AccountingSystem.Controllers
                         .Take(20)
                         .ToList();
 
+                    var hasAllowanceSelection = selection.Allowances != null;
+                    var sanitizedAllowances = (selection.Allowances ?? new List<PayrollEmployeeAllowanceSelection>())
+                        .Where(a => a != null)
+                        .Select(a => new PayrollEmployeeAllowanceSelection
+                        {
+                            AllowanceTypeId = a.AllowanceTypeId.HasValue && a.AllowanceTypeId.Value > 0
+                                ? a.AllowanceTypeId
+                                : null,
+                            Amount = SanitizeAmount(a.Amount),
+                            Type = TrimAndTruncate(a.Type, 100),
+                            Description = TrimAndTruncate(a.Description, 250)
+                        })
+                        .Where(a => a.Amount > 0)
+                        .Take(20)
+                        .ToList();
+
                     return new PayrollEmployeeSelection
                     {
                         EmployeeId = g.Key,
-                        Deductions = sanitizedDeductions
+                        Deductions = sanitizedDeductions,
+                        Allowances = sanitizedAllowances,
+                        HasAllowanceSelection = hasAllowanceSelection
                     };
                 })
                 .ToList();
@@ -230,6 +278,29 @@ namespace AccountingSystem.Controllers
             if (deductionTypeMap.Count != requestedTypeIds.Count)
             {
                 return BadRequest(new { message = "بعض أنواع الخصومات المحددة غير متاحة أو غير نشطة." });
+            }
+
+            if (requestedEmployees.SelectMany(e => e.Allowances).Any(a => !a.AllowanceTypeId.HasValue))
+            {
+                return BadRequest(new { message = "يجب اختيار نوع بدل صالح لكل بدل." });
+            }
+
+            var requestedAllowanceTypeIds = requestedEmployees
+                .SelectMany(e => e.Allowances)
+                .Select(a => a.AllowanceTypeId!.Value)
+                .Distinct()
+                .ToList();
+
+            var allowanceTypeMap = requestedAllowanceTypeIds.Count > 0
+                ? await _context.AllowanceTypes
+                    .Include(a => a.Account)
+                    .Where(a => requestedAllowanceTypeIds.Contains(a.Id) && a.IsActive)
+                    .ToDictionaryAsync(a => a.Id)
+                : new Dictionary<int, AllowanceType>();
+
+            if (allowanceTypeMap.Count != requestedAllowanceTypeIds.Count)
+            {
+                return BadRequest(new { message = "بعض أنواع البدلات المحددة غير متاحة أو غير نشطة." });
             }
 
             if (request.Month < 1 || request.Month > 12)
@@ -355,7 +426,7 @@ namespace AccountingSystem.Controllers
                 Status = PayrollBatchStatus.Draft
             };
 
-            var deductionMap = requestedEmployees.ToDictionary(
+            var selectionMap = requestedEmployees.ToDictionary(
                 e => e.EmployeeId,
                 e => e);
 
@@ -365,7 +436,9 @@ namespace AccountingSystem.Controllers
                 .Where(a => employeeIds.Contains(a.EmployeeId)
                     && a.IsActive
                     && a.AllowanceType != null
-                    && a.AllowanceType.IsActive)
+                    && a.AllowanceType.IsActive
+                    && a.Year == request.Year
+                    && a.Month == request.Month)
                 .ToListAsync();
 
             var allowanceLookup = allowanceRecords
@@ -389,7 +462,48 @@ namespace AccountingSystem.Controllers
                     return BadRequest(new { message = $"لا يوجد حساب مرتبط بالموظف {employee.Name}." });
                 }
 
-                if (allowanceLookup.TryGetValue(employee.Id, out var employeeAllowances))
+                selectionMap.TryGetValue(employee.Id, out var employeeSelection);
+                var useSelectionAllowances = employeeSelection != null
+                    && (employeeSelection.HasAllowanceSelection
+                        || (employeeSelection.Allowances?.Count ?? 0) > 0);
+
+                if (useSelectionAllowances && employeeSelection != null)
+                {
+                    foreach (var allowance in employeeSelection.Allowances)
+                    {
+                        if (!allowance.AllowanceTypeId.HasValue ||
+                            !allowanceTypeMap.TryGetValue(allowance.AllowanceTypeId.Value, out var allowanceType))
+                        {
+                            return BadRequest(new { message = "أحد أنواع البدلات المحددة غير متاح." });
+                        }
+
+                        if (allowanceType.Account == null)
+                        {
+                            return BadRequest(new { message = $"نوع البدل {allowanceType.Name} لا يحتوي على حساب محدد." });
+                        }
+
+                        if (allowanceType.Account.CurrencyId != employee.Account.CurrencyId)
+                        {
+                            return BadRequest(new { message = $"عملة حساب البدل {allowanceType.Name} لا تطابق عملة حساب الموظف {employee.Name}." });
+                        }
+
+                        var amount = Math.Round(allowance.Amount, 2, MidpointRounding.AwayFromZero);
+                        if (amount <= 0)
+                        {
+                            continue;
+                        }
+
+                        allowanceEntries.Add(new PayrollBatchLineAllowance
+                        {
+                            Amount = amount,
+                            AllowanceTypeId = allowanceType.Id,
+                            AccountId = allowanceType.AccountId,
+                            Type = string.IsNullOrWhiteSpace(allowance.Type) ? allowanceType.Name : allowance.Type,
+                            Description = string.IsNullOrWhiteSpace(allowance.Description) ? null : allowance.Description
+                        });
+                    }
+                }
+                else if (allowanceLookup.TryGetValue(employee.Id, out var employeeAllowances))
                 {
                     foreach (var allowance in employeeAllowances)
                     {
@@ -428,7 +542,7 @@ namespace AccountingSystem.Controllers
                 var allowanceTotal = allowanceEntries.Sum(a => a.Amount);
                 gross = Math.Round(baseSalary + allowanceTotal, 2, MidpointRounding.AwayFromZero);
 
-                if (deductionMap.TryGetValue(employee.Id, out var employeeSelection))
+                if (selectionMap.TryGetValue(employee.Id, out employeeSelection))
                 {
                     foreach (var deductionItem in employeeSelection.Deductions)
                     {
