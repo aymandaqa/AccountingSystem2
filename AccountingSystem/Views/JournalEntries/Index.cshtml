@@ -1435,12 +1435,8 @@
                     const totalRecords = result.totalRecords ?? items.length;
                     const totalPages = result.totalPages ?? 0;
 
-                    state.page = payload.page ?? state.page;
-                    state.pageSize = payload.pageSize ?? state.pageSize;
-                    const items = payload.items;
-                    const summary = payload.summary;
-                    const totalRecords = payload.totalRecords ?? items.length;
-                    const totalPages = payload.totalPages ?? 0;
+                    state.page = result.page ?? state.page;
+                    state.pageSize = result.pageSize ?? state.pageSize;
 
                     if (grid) {
                         grid.dataSource = items;
