@@ -57,6 +57,12 @@ namespace AccountingSystem.ViewModels
         public string? Description { get; set; }
 
         public bool IsActive { get; set; }
+
+        public int Year { get; set; }
+
+        public int Month { get; set; }
+
+        public string PeriodName { get; set; } = string.Empty;
     }
 
     public class EmployeeDeductionFormViewModel
@@ -82,6 +88,10 @@ namespace AccountingSystem.ViewModels
 
         [Display(Name = "نشط")]
         public bool IsActive { get; set; } = true;
+
+        [Required(ErrorMessage = "يرجى اختيار شهر الخصم")]
+        [Display(Name = "شهر الخصم")]
+        public string? Period { get; set; }
 
         public List<SelectListItem> Employees { get; set; } = new();
 

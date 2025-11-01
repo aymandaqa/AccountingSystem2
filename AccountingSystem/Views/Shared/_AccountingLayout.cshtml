@@ -1097,10 +1097,49 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">رجوع</button>
+                    <button type="button" class="btn btn-warning" id="holdPayrollBtn" asp-require-permission="payroll.process">
+                        <i class="fas fa-pause"></i> تعليق الدفعة
+                    </button>
                     <button type="button" class="btn btn-success" id="confirmPayrollBtn" asp-require-permission="payroll.process">
                         <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                         تأكيد التنزيل
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="allowanceModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="allowanceModalTitle">البدلات</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="allowanceEmptyState" class="alert alert-info text-center">
+                        لا توجد بدلات لهذا الموظف.
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle d-none" id="allowanceTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>نوع البدل</th>
+                                    <th>الوصف</th>
+                                    <th class="text-end">المبلغ</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="allowanceTableBody"></tbody>
+                        </table>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm mt-3" id="addAllowanceBtn">
+                        <i class="fas fa-plus"></i> إضافة بدل
+                    </button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                    <button type="button" class="btn btn-primary" id="saveAllowanceBtn">حفظ</button>
                 </div>
             </div>
         </div>

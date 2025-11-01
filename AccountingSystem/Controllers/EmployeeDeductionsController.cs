@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using AccountingSystem.Data;
@@ -24,11 +25,14 @@ namespace AccountingSystem.Controllers
 
         public async Task<IActionResult> Index()
         {
+            var culture = new CultureInfo("ar");
             var items = await _context.EmployeeDeductions
                 .AsNoTracking()
                 .Include(d => d.Employee).ThenInclude(e => e.Branch)
                 .Include(d => d.DeductionType).ThenInclude(t => t.Account)
-                .OrderBy(d => d.Employee.Name)
+                .OrderByDescending(d => d.Year)
+                .ThenByDescending(d => d.Month)
+                .ThenBy(d => d.Employee.Name)
                 .ThenBy(d => d.DeductionType.Name)
                 .Select(d => new EmployeeDeductionListItemViewModel
                 {
@@ -41,7 +45,12 @@ namespace AccountingSystem.Controllers
                         : string.Empty,
                     Amount = d.Amount,
                     Description = d.Description,
-                    IsActive = d.IsActive
+                    IsActive = d.IsActive,
+                    Year = d.Year,
+                    Month = d.Month,
+                    PeriodName = d.Year > 0 && d.Month > 0
+                        ? new DateTime(d.Year, d.Month, 1).ToString("MMMM yyyy", culture)
+                        : string.Empty
                 })
                 .ToListAsync();
 
@@ -54,7 +63,8 @@ namespace AccountingSystem.Controllers
             var model = new EmployeeDeductionFormViewModel
             {
                 Employees = await GetEmployeeSelectListAsync(),
-                DeductionTypes = await GetDeductionTypeSelectListAsync()
+                DeductionTypes = await GetDeductionTypeSelectListAsync(),
+                Period = DateTime.Today.ToString("yyyy-MM")
             };
 
             return View(model);
@@ -69,6 +79,12 @@ namespace AccountingSystem.Controllers
 
             if (!ModelState.IsValid)
             {
+                return View(model);
+            }
+
+            if (!TryParsePeriod(model.Period, out var year, out var month))
+            {
+                ModelState.AddModelError(nameof(model.Period), "يرجى اختيار شهر صالح");
                 return View(model);
             }
 
@@ -118,7 +134,9 @@ namespace AccountingSystem.Controllers
                 Amount = amount,
                 Description = string.IsNullOrWhiteSpace(model.Description) ? null : model.Description.Trim(),
                 IsActive = model.IsActive,
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.Now,
+                Year = year,
+                Month = month
             };
 
             _context.EmployeeDeductions.Add(deduction);
@@ -147,6 +165,7 @@ namespace AccountingSystem.Controllers
                 Amount = deduction.Amount,
                 Description = deduction.Description,
                 IsActive = deduction.IsActive,
+                Period = $"{deduction.Year:D4}-{deduction.Month:D2}",
                 Employees = await GetEmployeeSelectListAsync(),
                 DeductionTypes = await GetDeductionTypeSelectListAsync()
             };
@@ -168,6 +187,12 @@ namespace AccountingSystem.Controllers
 
             if (!ModelState.IsValid)
             {
+                return View(model);
+            }
+
+            if (!TryParsePeriod(model.Period, out var year, out var month))
+            {
+                ModelState.AddModelError(nameof(model.Period), "يرجى اختيار شهر صالح");
                 return View(model);
             }
 
@@ -224,6 +249,8 @@ namespace AccountingSystem.Controllers
             deduction.Amount = amount;
             deduction.Description = string.IsNullOrWhiteSpace(model.Description) ? null : model.Description.Trim();
             deduction.IsActive = model.IsActive;
+            deduction.Year = year;
+            deduction.Month = month;
             deduction.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
@@ -279,6 +306,25 @@ namespace AccountingSystem.Controllers
                     Text = d.Name
                 })
                 .ToListAsync();
+        }
+
+        private static bool TryParsePeriod(string? period, out int year, out int month)
+        {
+            year = 0;
+            month = 0;
+            if (string.IsNullOrWhiteSpace(period))
+            {
+                return false;
+            }
+
+            if (DateTime.TryParseExact(period, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+            {
+                year = date.Year;
+                month = date.Month;
+                return true;
+            }
+
+            return false;
         }
     }
 }

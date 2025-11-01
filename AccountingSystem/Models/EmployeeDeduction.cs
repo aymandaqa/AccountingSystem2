@@ -18,6 +18,12 @@ namespace AccountingSystem.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal Amount { get; set; }
 
+        [Range(2000, 2100)]
+        public int Year { get; set; } = DateTime.Now.Year;
+
+        [Range(1, 12)]
+        public int Month { get; set; } = DateTime.Now.Month;
+
         [StringLength(250)]
         public string? Description { get; set; }
 
