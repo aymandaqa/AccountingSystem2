@@ -189,6 +189,7 @@ namespace AccountingSystem.Controllers
             {
                 ModelState.AddModelError(nameof(ReceiptVoucher.PaymentAccountId), "يجب أن تكون الحسابات بنفس العملة");
             }
+            ModelState.Remove(nameof(ReceiptVoucher.CreatedById));
 
             if (!ModelState.IsValid)
             {

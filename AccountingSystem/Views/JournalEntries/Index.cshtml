@@ -1429,25 +1429,14 @@
                     }
 
                     const result = await response.json();
-                    const isArrayResponse = Array.isArray(result);
-                    const rawItems = isArrayResponse
-                        ? result
-                        : (result.items ?? result.Items ?? []);
+                    const rawItems = result.items || [];
                     const items = rawItems.map(normalizeEntry);
-                    const summary = isArrayResponse
-                        ? {}
-                        : (result.summary ?? result.Summary ?? {});
-                    const totalRecords = isArrayResponse
-                        ? items.length
-                        : (result.totalRecords ?? result.TotalRecords ?? items.length);
-                    const totalPages = isArrayResponse
-                        ? Math.ceil(totalRecords / state.pageSize)
-                        : (result.totalPages ?? result.TotalPages ?? 0);
+                    const summary = result.summary || {};
+                    const totalRecords = result.totalRecords ?? items.length;
+                    const totalPages = result.totalPages ?? 0;
 
-                    if (!isArrayResponse) {
-                        state.page = result.page ?? result.Page ?? state.page;
-                        state.pageSize = result.pageSize ?? result.PageSize ?? state.pageSize;
-                    }
+                    state.page = result.page || state.page;
+                    state.pageSize = result.pageSize || state.pageSize;
 
                     if (grid) {
                         grid.dataSource = items;
