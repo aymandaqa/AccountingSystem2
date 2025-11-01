@@ -505,6 +505,19 @@
     </script>
     <script>
         (function () {
+            if (window.ej?.grids?.Grid) {
+                const requiredModules = [
+                    window.ej.grids.Sort,
+                    window.ej.grids.Filter,
+                    window.ej.grids.Group,
+                    window.ej.grids.ExcelFilter
+                ].filter(Boolean);
+
+                if (requiredModules.length > 0) {
+                    window.ej.grids.Grid.Inject(...requiredModules);
+                }
+            }
+
             const endpoints = @Html.Raw(endpointsJson);
             const permissions = @Html.Raw(permissionsJson);
             const defaultPageSize = @Model.DefaultPageSize;
@@ -1439,8 +1452,13 @@
                     state.pageSize = result.pageSize ?? state.pageSize;
 
                     if (grid) {
-                        grid.dataSource = items;
-                        grid.refresh();
+                        grid.setProperties({ dataSource: items }, true);
+                        if (typeof grid.dataBind === 'function') {
+                            grid.dataBind();
+                        }
+                        else {
+                            grid.refresh();
+                        }
                         applyGrouping();
                         applyGridFilterState();
                     }
