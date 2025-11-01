@@ -71,15 +71,16 @@ namespace AccountingSystem.Controllers
             var selectedAccount = availableAccounts.FirstOrDefault(a => a.Id == (accountId ?? availableAccounts.First().Id))
                 ?? availableAccounts.First();
 
-            var today = DateTime.Today;
-            var todayTransactions = await _context.JournalEntryLines
-                .Include(l => l.JournalEntry)
-                .Where(l => l.AccountId == selectedAccount.Id)
-                .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
-                .Where(l => l.JournalEntry.Date >= today && l.JournalEntry.Date < today.AddDays(1))
-                .SumAsync(l => l.DebitAmount - l.CreditAmount);
+            var lastApprovedClosure = await _context.CashBoxClosures
+                .Where(c => c.AccountId == selectedAccount.Id)
+                .Where(c => c.Status == CashBoxClosureStatus.ApprovedMatched
+                            || c.Status == CashBoxClosureStatus.ApprovedWithDifference)
+                .OrderByDescending(c => c.ClosingDate ?? c.ApprovedAt ?? c.CreatedAt)
+                .FirstOrDefaultAsync();
 
-            var openingBalance = selectedAccount.CurrentBalance - todayTransactions;
+            var openingBalance = lastApprovedClosure?.ClosingBalance ?? selectedAccount.OpeningBalance;
+
+            var todayTransactions = selectedAccount.CurrentBalance - openingBalance;
 
             var model = new CashBoxClosureCreateViewModel
             {
@@ -142,15 +143,15 @@ namespace AccountingSystem.Controllers
 
             if (account != null)
             {
-                var today = DateTime.Today;
-                todayTransactions = await _context.JournalEntryLines
-                    .Include(l => l.JournalEntry)
-                    .Where(l => l.AccountId == account.Id)
-                    .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
-                    .Where(l => l.JournalEntry.Date >= today && l.JournalEntry.Date < today.AddDays(1))
-                    .SumAsync(l => l.DebitAmount - l.CreditAmount);
+                var lastApprovedClosure = await _context.CashBoxClosures
+                    .Where(c => c.AccountId == account.Id)
+                    .Where(c => c.Status == CashBoxClosureStatus.ApprovedMatched
+                                || c.Status == CashBoxClosureStatus.ApprovedWithDifference)
+                    .OrderByDescending(c => c.ClosingDate ?? c.ApprovedAt ?? c.CreatedAt)
+                    .FirstOrDefaultAsync();
 
-                openingBalance = account.CurrentBalance - todayTransactions;
+                openingBalance = lastApprovedClosure?.ClosingBalance ?? account.OpeningBalance;
+                todayTransactions = account.CurrentBalance - openingBalance;
             }
 
             if (account != null)
