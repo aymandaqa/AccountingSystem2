@@ -71,8 +71,8 @@ namespace AccountingSystem.Controllers
                     .Where(b => b.IsActive)
                     .Select(b => b.Id)
                     .ToList()
-                }
             };
+
 
             return View(BuildFormViewModel(model));
         }

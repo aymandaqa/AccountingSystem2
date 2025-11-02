@@ -27,7 +27,7 @@ namespace AccountingSystem.ViewModels
         [Display(Name = "البريد الإلكتروني")]
         public string? Email { get; set; }
 
-        [Display(Name = "نشط")]    
+        [Display(Name = "نشط")]
         public bool IsActive { get; set; } = true;
 
         [Display(Name = "نوع المود")]
@@ -44,8 +44,6 @@ namespace AccountingSystem.ViewModels
         public IEnumerable<SelectListItem> AuthorizationOptions { get; set; } = new List<SelectListItem>();
 
         public IEnumerable<SelectListItem> BranchOptions { get; set; } = new List<SelectListItem>();
-        public IEnumerable<SelectListItem> ModeOptions { get; set; } = new List<SelectListItem>();
 
-        public IEnumerable<SelectListItem> AuthorizationOptions { get; set; } = new List<SelectListItem>();
     }
 }
