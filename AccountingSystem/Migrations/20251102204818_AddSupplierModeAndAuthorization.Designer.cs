@@ -4,6 +4,7 @@ using AccountingSystem.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AccountingSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251102204818_AddSupplierModeAndAuthorization")]
+    partial class AddSupplierModeAndAuthorization
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3112,7 +3115,8 @@ namespace AccountingSystem.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("AuthorizedOperations")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasDefaultValue(3);
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -3150,21 +3154,6 @@ namespace AccountingSystem.Migrations
                     b.HasIndex("CreatedById");
 
                     b.ToTable("Suppliers");
-                });
-
-            modelBuilder.Entity("AccountingSystem.Models.SupplierBranch", b =>
-                {
-                    b.Property<int>("SupplierId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("BranchId")
-                        .HasColumnType("int");
-
-                    b.HasKey("SupplierId", "BranchId");
-
-                    b.HasIndex("BranchId");
-
-                    b.ToTable("SupplierBranches");
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.SystemSetting", b =>
@@ -4766,25 +4755,6 @@ namespace AccountingSystem.Migrations
                     b.Navigation("CreatedBy");
                 });
 
-            modelBuilder.Entity("AccountingSystem.Models.SupplierBranch", b =>
-                {
-                    b.HasOne("AccountingSystem.Models.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("AccountingSystem.Models.Supplier", "Supplier")
-                        .WithMany("SupplierBranches")
-                        .HasForeignKey("SupplierId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Branch");
-
-                    b.Navigation("Supplier");
-                });
-
             modelBuilder.Entity("AccountingSystem.Models.User", b =>
                 {
                     b.HasOne("AccountingSystem.Models.Agent", "Agent")
@@ -5154,11 +5124,6 @@ namespace AccountingSystem.Migrations
                     b.Navigation("PermissionGroupPermissions");
 
                     b.Navigation("UserPermissionGroups");
-                });
-
-            modelBuilder.Entity("AccountingSystem.Models.Supplier", b =>
-                {
-                    b.Navigation("SupplierBranches");
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.User", b =>

@@ -1,7 +1,14 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using AccountingSystem.Data;
+using AccountingSystem.Extensions;
 using AccountingSystem.Models;
+using AccountingSystem.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace AccountingSystem.Controllers
@@ -10,19 +17,41 @@ namespace AccountingSystem.Controllers
     public class SuppliersController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<User> _userManager;
 
-        public SuppliersController(ApplicationDbContext context)
+        public SuppliersController(ApplicationDbContext context, UserManager<User> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
         // GET: Suppliers
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? search)
         {
-            var suppliers = await _context.Suppliers
+            var suppliersQuery = _context.Suppliers
                 .Include(s => s.Account)
+                    .ThenInclude(a => a.Currency)
+                .Include(s => s.CreatedBy)
+                .Include(s => s.SupplierBranches)
+                    .ThenInclude(sb => sb.Branch)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                suppliersQuery = suppliersQuery.Where(s =>
+                    EF.Functions.Like(s.NameAr, $"%{search}%") ||
+                    (s.NameEn != null && EF.Functions.Like(s.NameEn, $"%{search}%")) ||
+                    (s.Phone != null && EF.Functions.Like(s.Phone, $"%{search}%")) ||
+                    (s.Email != null && EF.Functions.Like(s.Email, $"%{search}%")));
+            }
+
+            var suppliers = await suppliersQuery
                 .OrderBy(s => s.NameAr)
+                .ThenBy(s => s.Id)
                 .ToListAsync();
+
+            ViewBag.Search = search;
+
             return View(suppliers);
         }
 
@@ -30,17 +59,49 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "suppliers.create")]
         public IActionResult Create()
         {
-            return View(new Supplier());
+            var model = new SupplierFormViewModel
+            {
+                SelectedAuthorizations = new List<SupplierAuthorization>
+                {
+                    SupplierAuthorization.Payment,
+                    SupplierAuthorization.Receipt
+                },
+                SelectedBranchIds = _context.Branches
+                    .Where(b => b.IsActive)
+                    .Select(b => b.Id)
+                    .ToList()
+            };
+
+            return View(BuildFormViewModel(model));
         }
 
         // POST: Suppliers/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = "suppliers.create")]
-        public async Task<IActionResult> Create(Supplier model)
+        public async Task<IActionResult> Create(SupplierFormViewModel model)
         {
+            if (model.SelectedAuthorizations == null || !model.SelectedAuthorizations.Any())
+            {
+                ModelState.AddModelError(nameof(model.SelectedAuthorizations), "يرجى اختيار صلاحية واحدة على الأقل.");
+            }
+
+            model.SelectedAuthorizations ??= new List<SupplierAuthorization>();
+            model.SelectedBranchIds ??= new List<int>();
+
+            if (!model.SelectedBranchIds.Any() && await _context.Branches.AnyAsync())
+            {
+                ModelState.AddModelError(nameof(model.SelectedBranchIds), "يرجى اختيار فرع واحد على الأقل.");
+            }
+
             if (ModelState.IsValid)
             {
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null)
+                {
+                    return Challenge();
+                }
+
                 Account? parentAccount = null;
                 var setting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "SuppliersParentAccountId");
                 if (setting != null && int.TryParse(setting.Value, out var parentId))
@@ -100,13 +161,40 @@ namespace AccountingSystem.Controllers
                 _context.Accounts.Add(account);
                 await _context.SaveChangesAsync();
 
-                model.AccountId = account.Id;
-                _context.Suppliers.Add(model);
+                var validBranchIds = await _context.Branches
+                    .Where(b => model.SelectedBranchIds.Contains(b.Id))
+                    .Select(b => b.Id)
+                    .ToListAsync();
+
+                var supplier = new Supplier
+                {
+                    NameAr = model.NameAr,
+                    NameEn = model.NameEn,
+                    Phone = model.Phone,
+                    Email = model.Email,
+                    IsActive = model.IsActive,
+                    Mode = model.Mode,
+                    AuthorizedOperations = CombineAuthorizations(model.SelectedAuthorizations),
+                    AccountId = account.Id,
+                    CreatedById = user.Id,
+                    CreatedAt = DateTime.Now
+                };
+
+                foreach (var branchId in validBranchIds.Distinct())
+                {
+                    supplier.SupplierBranches.Add(new SupplierBranch
+                    {
+                        BranchId = branchId
+                    });
+                }
+
+                _context.Suppliers.Add(supplier);
                 await _context.SaveChangesAsync();
 
                 return RedirectToAction(nameof(Index));
             }
-            return View(model);
+
+            return View(BuildFormViewModel(model));
         }
 
         // GET: Suppliers/Edit/5
@@ -115,29 +203,59 @@ namespace AccountingSystem.Controllers
         {
             var supplier = await _context.Suppliers
                 .Include(s => s.Account)
+                .Include(s => s.SupplierBranches)
+                    .ThenInclude(sb => sb.Branch)
                 .FirstOrDefaultAsync(s => s.Id == id);
             if (supplier == null)
             {
                 return NotFound();
             }
-            return View(supplier);
+
+            var model = new SupplierFormViewModel
+            {
+                Id = supplier.Id,
+                NameAr = supplier.NameAr,
+                NameEn = supplier.NameEn,
+                Phone = supplier.Phone,
+                Email = supplier.Email,
+                IsActive = supplier.IsActive,
+                Mode = supplier.Mode,
+                SelectedAuthorizations = SplitAuthorizations(supplier.AuthorizedOperations),
+                SelectedBranchIds = supplier.SupplierBranches.Select(sb => sb.BranchId).ToList()
+            };
+
+            return View(BuildFormViewModel(model));
         }
 
         // POST: Suppliers/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = "suppliers.edit")]
-        public async Task<IActionResult> Edit(int id, Supplier model)
+        public async Task<IActionResult> Edit(int id, SupplierFormViewModel model)
         {
             if (id != model.Id)
             {
                 return NotFound();
             }
 
+            if (model.SelectedAuthorizations == null || !model.SelectedAuthorizations.Any())
+            {
+                ModelState.AddModelError(nameof(model.SelectedAuthorizations), "يرجى اختيار صلاحية واحدة على الأقل.");
+            }
+
+            model.SelectedAuthorizations ??= new List<SupplierAuthorization>();
+            model.SelectedBranchIds ??= new List<int>();
+
+            if (!model.SelectedBranchIds.Any() && await _context.Branches.AnyAsync())
+            {
+                ModelState.AddModelError(nameof(model.SelectedBranchIds), "يرجى اختيار فرع واحد على الأقل.");
+            }
+
             if (ModelState.IsValid)
             {
                 var supplier = await _context.Suppliers
                     .Include(s => s.Account)
+                    .Include(s => s.SupplierBranches)
                     .FirstOrDefaultAsync(s => s.Id == id);
                 if (supplier == null)
                 {
@@ -149,6 +267,45 @@ namespace AccountingSystem.Controllers
                 supplier.Phone = model.Phone;
                 supplier.Email = model.Email;
                 supplier.IsActive = model.IsActive;
+                supplier.Mode = model.Mode;
+                supplier.AuthorizedOperations = CombineAuthorizations(model.SelectedAuthorizations);
+
+                var validBranchIds = await _context.Branches
+                    .Where(b => model.SelectedBranchIds.Contains(b.Id))
+                    .Select(b => b.Id)
+                    .ToListAsync();
+
+                var distinctBranchIds = validBranchIds.Distinct().ToList();
+
+                var branchesToRemove = supplier.SupplierBranches
+                    .Where(sb => !distinctBranchIds.Contains(sb.BranchId))
+                    .ToList();
+
+                if (branchesToRemove.Any())
+                {
+                    foreach (var supplierBranch in branchesToRemove)
+                    {
+                        supplier.SupplierBranches.Remove(supplierBranch);
+                    }
+
+                    _context.SupplierBranches.RemoveRange(branchesToRemove);
+                }
+
+                var existingBranchIds = supplier.SupplierBranches
+                    .Select(sb => sb.BranchId)
+                    .ToHashSet();
+
+                foreach (var branchId in distinctBranchIds)
+                {
+                    if (!existingBranchIds.Contains(branchId))
+                    {
+                        supplier.SupplierBranches.Add(new SupplierBranch
+                        {
+                            SupplierId = supplier.Id,
+                            BranchId = branchId
+                        });
+                    }
+                }
 
                 if (supplier.Account != null)
                 {
@@ -160,7 +317,7 @@ namespace AccountingSystem.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            return View(model);
+            return View(BuildFormViewModel(model));
         }
 
         // POST: Suppliers/Delete/5
@@ -206,6 +363,68 @@ namespace AccountingSystem.Controllers
                 number = 0;
 
             return parentCode + (number + 1).ToString(segmentLength == 1 ? "D1" : "D2");
+        }
+
+        private SupplierFormViewModel BuildFormViewModel(SupplierFormViewModel model)
+        {
+            model.SelectedAuthorizations ??= new List<SupplierAuthorization>();
+            model.SelectedBranchIds ??= new List<int>();
+
+            model.ModeOptions = Enum.GetValues(typeof(SupplierMode))
+                .Cast<SupplierMode>()
+                .Select(m => new SelectListItem
+                {
+                    Value = ((int)m).ToString(),
+                    Text = m.GetDisplayName(),
+                    Selected = model.Mode == m
+                })
+                .ToList();
+
+            model.AuthorizationOptions = Enum.GetValues(typeof(SupplierAuthorization))
+                .Cast<SupplierAuthorization>()
+                .Where(a => a != SupplierAuthorization.None)
+                .Select(a => new SelectListItem
+                {
+                    Value = ((int)a).ToString(),
+                    Text = a.GetDisplayName(),
+                    Selected = model.SelectedAuthorizations.Contains(a)
+                })
+                .ToList();
+
+            model.BranchOptions = _context.Branches
+                .Where(b => b.IsActive || model.SelectedBranchIds.Contains(b.Id))
+                .OrderBy(b => b.NameAr)
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = !string.IsNullOrWhiteSpace(b.NameAr) ? b.NameAr : (b.NameEn ?? b.Code),
+                    Selected = model.SelectedBranchIds.Contains(b.Id)
+                })
+                .ToList();
+
+            return model;
+        }
+
+        private static SupplierAuthorization CombineAuthorizations(IEnumerable<SupplierAuthorization> authorizations)
+        {
+            var result = SupplierAuthorization.None;
+
+            foreach (var authorization in authorizations)
+            {
+                result |= authorization;
+            }
+
+            return result == SupplierAuthorization.None
+                ? SupplierAuthorization.None
+                : result;
+        }
+
+        private static List<SupplierAuthorization> SplitAuthorizations(SupplierAuthorization authorizations)
+        {
+            return Enum.GetValues(typeof(SupplierAuthorization))
+                .Cast<SupplierAuthorization>()
+                .Where(a => a != SupplierAuthorization.None && authorizations.HasFlag(a))
+                .ToList();
         }
     }
 }
