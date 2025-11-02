@@ -47,6 +47,7 @@ namespace AccountingSystem.Data
         public DbSet<DisbursementVoucher> DisbursementVouchers { get; set; }
         public DbSet<PaymentVoucher> PaymentVouchers { get; set; }
         public DbSet<Supplier> Suppliers { get; set; }
+        public DbSet<SupplierBranch> SupplierBranches { get; set; }
         public DbSet<SystemSetting> SystemSettings { get; set; }
         public DbSet<UserPaymentAccount> UserPaymentAccounts { get; set; }
         public DbSet<Asset> Assets { get; set; }
@@ -168,6 +169,21 @@ namespace AccountingSystem.Data
                 entity.HasOne(e => e.EmployeeParentAccount)
                     .WithMany()
                     .HasForeignKey(e => e.EmployeeParentAccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<SupplierBranch>(entity =>
+            {
+                entity.HasKey(e => new { e.SupplierId, e.BranchId });
+
+                entity.HasOne(e => e.Supplier)
+                    .WithMany(s => s.SupplierBranches)
+                    .HasForeignKey(e => e.SupplierId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Branch)
+                    .WithMany()
+                    .HasForeignKey(e => e.BranchId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 

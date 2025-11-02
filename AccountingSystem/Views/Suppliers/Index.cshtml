@@ -28,6 +28,10 @@
             <th>البريد الإلكتروني</th>
             <th>نوع المود</th>
             <th>الصلاحيات</th>
+            <th>الفروع المسموح بها</th>
+            <th>المستخدم</th>
+            <th>وقت الإنشاء</th>
+            <th class="text-end">رصيد المورد</th>
             <th>المستخدم</th>
             <th>وقت الإنشاء</th>
             <th>الإجراءات</th>
@@ -55,6 +59,38 @@
                     var permissionsText = permissions.Count == 0 ? "-" : string.Join("، ", permissions);
                 }
                 @permissionsText
+            </td>
+            <td>
+                @{
+                    var branchNames = item.SupplierBranches != null && item.SupplierBranches.Any()
+                        ? item.SupplierBranches
+                            .Where(sb => sb.Branch != null)
+                            .Select(sb => !string.IsNullOrWhiteSpace(sb.Branch!.NameAr)
+                                ? sb.Branch!.NameAr
+                                : (sb.Branch!.NameEn ?? sb.Branch!.Code))
+                            .ToList()
+                        : new List<string>();
+                    var branchesText = branchNames.Count == 0 ? "-" : string.Join("، ", branchNames);
+                }
+                @branchesText
+            </td>
+            <td>@(item.CreatedBy?.FullName ?? "-")</td>
+            <td>@item.CreatedAt.ToString("g")</td>
+            <td class="text-end">
+                @if (item.Account != null)
+                {
+                    var balanceText = item.Account.CurrentBalance.ToString("N2");
+                    var currencyCode = item.Account.Currency?.Code;
+                    if (!string.IsNullOrWhiteSpace(currencyCode))
+                    {
+                        balanceText += $" {currencyCode}";
+                    }
+                    @balanceText
+                }
+                else
+                {
+                    @("-")
+                }
             </td>
             <td>@(item.CreatedBy?.FullName ?? "-")</td>
             <td>@item.CreatedAt.ToString("g")</td>

@@ -30,6 +30,10 @@ namespace AccountingSystem.Controllers
         {
             var suppliersQuery = _context.Suppliers
                 .Include(s => s.Account)
+                    .ThenInclude(a => a.Currency)
+                .Include(s => s.CreatedBy)
+                .Include(s => s.SupplierBranches)
+                    .ThenInclude(sb => sb.Branch)
                 .Include(s => s.CreatedBy)
                 .AsQueryable();
 
@@ -62,6 +66,11 @@ namespace AccountingSystem.Controllers
                 {
                     SupplierAuthorization.Payment,
                     SupplierAuthorization.Receipt
+                },
+                SelectedBranchIds = _context.Branches
+                    .Where(b => b.IsActive)
+                    .Select(b => b.Id)
+                    .ToList()
                 }
             };
 
@@ -80,6 +89,12 @@ namespace AccountingSystem.Controllers
             }
 
             model.SelectedAuthorizations ??= new List<SupplierAuthorization>();
+            model.SelectedBranchIds ??= new List<int>();
+
+            if (!model.SelectedBranchIds.Any() && await _context.Branches.AnyAsync())
+            {
+                ModelState.AddModelError(nameof(model.SelectedBranchIds), "يرجى اختيار فرع واحد على الأقل.");
+            }
 
             if (ModelState.IsValid)
             {
@@ -148,6 +163,11 @@ namespace AccountingSystem.Controllers
                 _context.Accounts.Add(account);
                 await _context.SaveChangesAsync();
 
+                var validBranchIds = await _context.Branches
+                    .Where(b => model.SelectedBranchIds.Contains(b.Id))
+                    .Select(b => b.Id)
+                    .ToListAsync();
+
                 var supplier = new Supplier
                 {
                     NameAr = model.NameAr,
@@ -161,6 +181,14 @@ namespace AccountingSystem.Controllers
                     CreatedById = user.Id,
                     CreatedAt = DateTime.Now
                 };
+
+                foreach (var branchId in validBranchIds.Distinct())
+                {
+                    supplier.SupplierBranches.Add(new SupplierBranch
+                    {
+                        BranchId = branchId
+                    });
+                }
 
                 _context.Suppliers.Add(supplier);
                 await _context.SaveChangesAsync();
@@ -177,6 +205,8 @@ namespace AccountingSystem.Controllers
         {
             var supplier = await _context.Suppliers
                 .Include(s => s.Account)
+                .Include(s => s.SupplierBranches)
+                    .ThenInclude(sb => sb.Branch)
                 .FirstOrDefaultAsync(s => s.Id == id);
             if (supplier == null)
             {
@@ -192,6 +222,8 @@ namespace AccountingSystem.Controllers
                 Email = supplier.Email,
                 IsActive = supplier.IsActive,
                 Mode = supplier.Mode,
+                SelectedAuthorizations = SplitAuthorizations(supplier.AuthorizedOperations),
+                SelectedBranchIds = supplier.SupplierBranches.Select(sb => sb.BranchId).ToList()
                 SelectedAuthorizations = SplitAuthorizations(supplier.AuthorizedOperations)
             };
 
@@ -215,11 +247,18 @@ namespace AccountingSystem.Controllers
             }
 
             model.SelectedAuthorizations ??= new List<SupplierAuthorization>();
+            model.SelectedBranchIds ??= new List<int>();
+
+            if (!model.SelectedBranchIds.Any() && await _context.Branches.AnyAsync())
+            {
+                ModelState.AddModelError(nameof(model.SelectedBranchIds), "يرجى اختيار فرع واحد على الأقل.");
+            }
 
             if (ModelState.IsValid)
             {
                 var supplier = await _context.Suppliers
                     .Include(s => s.Account)
+                    .Include(s => s.SupplierBranches)
                     .FirstOrDefaultAsync(s => s.Id == id);
                 if (supplier == null)
                 {
@@ -233,6 +272,43 @@ namespace AccountingSystem.Controllers
                 supplier.IsActive = model.IsActive;
                 supplier.Mode = model.Mode;
                 supplier.AuthorizedOperations = CombineAuthorizations(model.SelectedAuthorizations);
+
+                var validBranchIds = await _context.Branches
+                    .Where(b => model.SelectedBranchIds.Contains(b.Id))
+                    .Select(b => b.Id)
+                    .ToListAsync();
+
+                var distinctBranchIds = validBranchIds.Distinct().ToList();
+
+                var branchesToRemove = supplier.SupplierBranches
+                    .Where(sb => !distinctBranchIds.Contains(sb.BranchId))
+                    .ToList();
+
+                if (branchesToRemove.Any())
+                {
+                    foreach (var supplierBranch in branchesToRemove)
+                    {
+                        supplier.SupplierBranches.Remove(supplierBranch);
+                    }
+
+                    _context.SupplierBranches.RemoveRange(branchesToRemove);
+                }
+
+                var existingBranchIds = supplier.SupplierBranches
+                    .Select(sb => sb.BranchId)
+                    .ToHashSet();
+
+                foreach (var branchId in distinctBranchIds)
+                {
+                    if (!existingBranchIds.Contains(branchId))
+                    {
+                        supplier.SupplierBranches.Add(new SupplierBranch
+                        {
+                            SupplierId = supplier.Id,
+                            BranchId = branchId
+                        });
+                    }
+                }
 
                 if (supplier.Account != null)
                 {
@@ -295,6 +371,7 @@ namespace AccountingSystem.Controllers
         private SupplierFormViewModel BuildFormViewModel(SupplierFormViewModel model)
         {
             model.SelectedAuthorizations ??= new List<SupplierAuthorization>();
+            model.SelectedBranchIds ??= new List<int>();
 
             model.ModeOptions = Enum.GetValues(typeof(SupplierMode))
                 .Cast<SupplierMode>()
@@ -314,6 +391,17 @@ namespace AccountingSystem.Controllers
                     Value = ((int)a).ToString(),
                     Text = a.GetDisplayName(),
                     Selected = model.SelectedAuthorizations.Contains(a)
+                })
+                .ToList();
+
+            model.BranchOptions = _context.Branches
+                .Where(b => b.IsActive || model.SelectedBranchIds.Contains(b.Id))
+                .OrderBy(b => b.NameAr)
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = !string.IsNullOrWhiteSpace(b.NameAr) ? b.NameAr : (b.NameEn ?? b.Code),
+                    Selected = model.SelectedBranchIds.Contains(b.Id)
                 })
                 .ToList();
 

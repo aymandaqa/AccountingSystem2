@@ -38,6 +38,12 @@
             <span class="form-text">يمكن اختيار أكثر من صلاحية.</span>
             <span asp-validation-for="SelectedAuthorizations" class="text-danger"></span>
         </div>
+        <div class="col-md-6">
+            <label asp-for="SelectedBranchIds" class="form-label"></label>
+            <select asp-for="SelectedBranchIds" asp-items="Model.BranchOptions" class="form-select" multiple></select>
+            <span class="form-text">يمكن اختيار أكثر من فرع.</span>
+            <span asp-validation-for="SelectedBranchIds" class="text-danger"></span>
+        </div>
         <div class="col-12">
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" asp-for="IsActive" />

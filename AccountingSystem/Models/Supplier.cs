@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
@@ -28,6 +29,8 @@ namespace AccountingSystem.Models
         public SupplierMode Mode { get; set; } = SupplierMode.Cash;
 
         public SupplierAuthorization AuthorizedOperations { get; set; } = SupplierAuthorization.Payment | SupplierAuthorization.Receipt;
+
+        public virtual ICollection<SupplierBranch> SupplierBranches { get; set; } = new List<SupplierBranch>();
 
         public string? CreatedById { get; set; }
 
