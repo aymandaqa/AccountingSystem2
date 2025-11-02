@@ -1310,14 +1310,30 @@ namespace AccountingSystem.Controllers
                 userCashAccountIds.Add(defaultPaymentAccountId.Value);
             }
 
+            if (userCashAccountIds.Count > 0)
+            {
+                userCashAccountIds = userCashAccountIds
+                    .Distinct()
+                    .ToList();
+            }
+
             var cashAccountIdSet = userCashAccountIds.Count == 0
                 ? null
                 : new HashSet<int>(userCashAccountIds);
 
             var query = _context.JournalEntries
                 .AsNoTracking()
-                .Where(e => e.CreatedById == userId)
                 .Where(e => e.Date >= startDate && e.Date < inclusiveEndDate);
+
+            if (cashAccountIdSet == null)
+            {
+                query = query.Where(e => e.CreatedById == userId);
+            }
+            else
+            {
+                query = query.Where(e => e.CreatedById == userId
+                    || e.Lines.Any(l => userCashAccountIds.Contains(l.AccountId)));
+            }
 
             if (!string.IsNullOrEmpty(referenceFilter))
             {
