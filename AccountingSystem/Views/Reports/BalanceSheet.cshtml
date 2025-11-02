@@ -48,6 +48,16 @@
                             </select>
                         </div>
                         <div class="col-sm-6 col-lg-3">
+                            <label for="level" class="form-label">المستوى:</label>
+                            <select name="level" id="level" class="form-select">
+                                @foreach (var levelOption in Model.Levels)
+                                {
+                                    <option value="@levelOption.Value" selected="@(levelOption.Selected)">@levelOption.Text</option>
+                                }
+                            </select>
+                            <small class="form-text text-muted">عرض الحسابات حتى المستوى المحدد</small>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
                             <label class="form-label">&nbsp;</label>
                             <div class="d-flex flex-column flex-lg-row gap-2">
                                 <div class="form-check">
@@ -61,10 +71,10 @@
                                     </button>
                                     @if (Model.Assets.Any() || Model.Liabilities.Any() || Model.Equity.Any())
                                     {
-                                        <a class="btn btn-outline-secondary" href="@Url.Action("BalanceSheetPdf", new { branchId = Model.BranchId, asOfDate = Model.AsOfDate.ToString("yyyy-MM-dd"), includePending = Model.IncludePending, currencyId = Model.SelectedCurrencyId })">
+                                        <a class="btn btn-outline-secondary" href="@Url.Action("BalanceSheetPdf", new { branchId = Model.BranchId, asOfDate = Model.AsOfDate.ToString("yyyy-MM-dd"), includePending = Model.IncludePending, currencyId = Model.SelectedCurrencyId, level = Model.SelectedLevel })">
                                             <i class="fas fa-file-pdf me-1"></i> PDF
                                         </a>
-                                        <a class="btn btn-outline-success" href="@Url.Action("BalanceSheetExcel", new { branchId = Model.BranchId, asOfDate = Model.AsOfDate.ToString("yyyy-MM-dd"), includePending = Model.IncludePending, currencyId = Model.SelectedCurrencyId })">
+                                        <a class="btn btn-outline-success" href="@Url.Action("BalanceSheetExcel", new { branchId = Model.BranchId, asOfDate = Model.AsOfDate.ToString("yyyy-MM-dd"), includePending = Model.IncludePending, currencyId = Model.SelectedCurrencyId, level = Model.SelectedLevel })">
                                             <i class="fas fa-file-excel me-1"></i> Excel
                                         </a>
                                     }
