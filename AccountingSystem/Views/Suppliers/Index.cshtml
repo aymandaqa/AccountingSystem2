@@ -1,18 +1,35 @@
 @model IEnumerable<AccountingSystem.Models.Supplier>
-@{ 
+@using AccountingSystem.Models
+@using AccountingSystem.Extensions
+@{
     ViewData["Title"] = "الموردين";
+    string searchValue = ViewBag.Search ?? string.Empty;
 }
 <h1 class="mb-3">الموردين</h1>
 @Html.AntiForgeryToken()
-<p>
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-2 mb-3">
     <a class="btn btn-primary" href="@Url.Action("Create")" asp-require-permission="suppliers.create">إضافة مورد</a>
-</p>
-<table class="table table-bordered">
-    <thead>
+    <form method="get" class="row g-2 align-items-end" asp-action="Index">
+        <div class="col-12 col-md-auto">
+            <label for="supplier-search" class="form-label">بحث</label>
+            <input type="text" id="supplier-search" name="search" value="@searchValue" class="form-control" placeholder="ابحث بالاسم أو الهاتف أو البريد" />
+        </div>
+        <div class="col-12 col-md-auto d-flex gap-2">
+            <button type="submit" class="btn btn-secondary">تطبيق</button>
+            <a class="btn btn-outline-secondary" href="@Url.Action("Index")">مسح</a>
+        </div>
+    </form>
+</div>
+<table class="table table-bordered align-middle">
+    <thead class="table-light">
         <tr>
             <th>الاسم</th>
             <th>التليفون</th>
             <th>البريد الإلكتروني</th>
+            <th>نوع المود</th>
+            <th>الصلاحيات</th>
+            <th>المستخدم</th>
+            <th>وقت الإنشاء</th>
             <th>الإجراءات</th>
         </tr>
     </thead>
@@ -21,8 +38,26 @@
     {
         <tr>
             <td>@item.NameAr</td>
-            <td>@item.Phone</td>
-            <td>@item.Email</td>
+            <td>@(string.IsNullOrWhiteSpace(item.Phone) ? "-" : item.Phone)</td>
+            <td>@(string.IsNullOrWhiteSpace(item.Email) ? "-" : item.Email)</td>
+            <td>@item.Mode.GetDisplayName()</td>
+            <td>
+                @{
+                    var permissions = new List<string>();
+                    if (item.AuthorizedOperations.HasFlag(SupplierAuthorization.Payment))
+                    {
+                        permissions.Add(SupplierAuthorization.Payment.GetDisplayName());
+                    }
+                    if (item.AuthorizedOperations.HasFlag(SupplierAuthorization.Receipt))
+                    {
+                        permissions.Add(SupplierAuthorization.Receipt.GetDisplayName());
+                    }
+                    var permissionsText = permissions.Count == 0 ? "-" : string.Join("، ", permissions);
+                }
+                @permissionsText
+            </td>
+            <td>@(item.CreatedBy?.FullName ?? "-")</td>
+            <td>@item.CreatedAt.ToString("g")</td>
             <td>
                 <div class="btn-group btn-group-sm" role="group">
                     @if (item.AccountId.HasValue)
