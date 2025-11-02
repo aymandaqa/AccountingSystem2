@@ -226,6 +226,8 @@ namespace AccountingSystem.ViewModels
         public string BaseCurrencyCode { get; set; } = string.Empty;
         public List<SelectListItem> Currencies { get; set; } = new List<SelectListItem>();
         public bool IsBalanced { get; set; }
+        public int SelectedLevel { get; set; } = 6;
+        public List<SelectListItem> Levels { get; set; } = new List<SelectListItem>();
     }
 
     public class BalanceSheetItemViewModel
