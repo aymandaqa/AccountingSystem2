@@ -32,86 +32,83 @@
             <th>المستخدم</th>
             <th>وقت الإنشاء</th>
             <th class="text-end">رصيد المورد</th>
-            <th>المستخدم</th>
-            <th>وقت الإنشاء</th>
+
             <th>الإجراءات</th>
         </tr>
     </thead>
     <tbody>
-    @foreach (var item in Model)
-    {
-        <tr>
-            <td>@item.NameAr</td>
-            <td>@(string.IsNullOrWhiteSpace(item.Phone) ? "-" : item.Phone)</td>
-            <td>@(string.IsNullOrWhiteSpace(item.Email) ? "-" : item.Email)</td>
-            <td>@item.Mode.GetDisplayName()</td>
-            <td>
-                @{
-                    var permissions = new List<string>();
-                    if (item.AuthorizedOperations.HasFlag(SupplierAuthorization.Payment))
-                    {
-                        permissions.Add(SupplierAuthorization.Payment.GetDisplayName());
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.NameAr</td>
+                <td>@(string.IsNullOrWhiteSpace(item.Phone) ? "-" : item.Phone)</td>
+                <td>@(string.IsNullOrWhiteSpace(item.Email) ? "-" : item.Email)</td>
+                <td>@item.Mode.GetDisplayName()</td>
+                <td>
+                    @{
+                        var permissions = new List<string>();
+                        if (item.AuthorizedOperations.HasFlag(SupplierAuthorization.Payment))
+                        {
+                            permissions.Add(SupplierAuthorization.Payment.GetDisplayName());
+                        }
+                        if (item.AuthorizedOperations.HasFlag(SupplierAuthorization.Receipt))
+                        {
+                            permissions.Add(SupplierAuthorization.Receipt.GetDisplayName());
+                        }
+                        var permissionsText = permissions.Count == 0 ? "-" : string.Join("، ", permissions);
                     }
-                    if (item.AuthorizedOperations.HasFlag(SupplierAuthorization.Receipt))
-                    {
-                        permissions.Add(SupplierAuthorization.Receipt.GetDisplayName());
-                    }
-                    var permissionsText = permissions.Count == 0 ? "-" : string.Join("، ", permissions);
-                }
-                @permissionsText
-            </td>
-            <td>
-                @{
-                    var branchNames = item.SupplierBranches != null && item.SupplierBranches.Any()
+                    @permissionsText
+                </td>
+                <td>
+                    @{
+                        var branchNames = item.SupplierBranches != null && item.SupplierBranches.Any()
                         ? item.SupplierBranches
-                            .Where(sb => sb.Branch != null)
-                            .Select(sb => !string.IsNullOrWhiteSpace(sb.Branch!.NameAr)
-                                ? sb.Branch!.NameAr
-                                : (sb.Branch!.NameEn ?? sb.Branch!.Code))
-                            .ToList()
+                        .Where(sb => sb.Branch != null)
+                        .Select(sb => !string.IsNullOrWhiteSpace(sb.Branch!.NameAr)
+                        ? sb.Branch!.NameAr
+                        : (sb.Branch!.NameEn ?? sb.Branch!.Code))
+                        .ToList()
                         : new List<string>();
-                    var branchesText = branchNames.Count == 0 ? "-" : string.Join("، ", branchNames);
-                }
-                @branchesText
-            </td>
-            <td>@(item.CreatedBy?.FullName ?? "-")</td>
-            <td>@item.CreatedAt.ToString("g")</td>
-            <td class="text-end">
-                @if (item.Account != null)
-                {
-                    var balanceText = item.Account.CurrentBalance.ToString("N2");
-                    var currencyCode = item.Account.Currency?.Code;
-                    if (!string.IsNullOrWhiteSpace(currencyCode))
-                    {
-                        balanceText += $" {currencyCode}";
+                        var branchesText = branchNames.Count == 0 ? "-" : string.Join("، ", branchNames);
                     }
-                    @balanceText
-                }
-                else
-                {
-                    @("-")
-                }
-            </td>
-            <td>@(item.CreatedBy?.FullName ?? "-")</td>
-            <td>@item.CreatedAt.ToString("g")</td>
-            <td>
-                <div class="btn-group btn-group-sm" role="group">
-                    @if (item.AccountId.HasValue)
+                    @branchesText
+                </td>
+                <td>@(item.CreatedBy?.FullName ?? "-")</td>
+                <td>@item.CreatedAt.ToString("g")</td>
+                <td class="text-end">
+                    @if (item.Account != null)
                     {
-                        <a class="btn btn-success" href="@Url.Action("AccountStatement", "Reports", new { accountId = item.AccountId })" target="_blank" asp-require-permission="reports.accountstatement" title="كشف الحساب">
-                            <i class="fas fa-file-alt"></i>
+                        var balanceText = item.Account.CurrentBalance.ToString("N2");
+                        var currencyCode = item.Account.Currency?.Code;
+                        if (!string.IsNullOrWhiteSpace(currencyCode))
+                        {
+                            balanceText += $" {currencyCode}";
+                        }
+                        @balanceText
+                    }
+                    else
+                    {
+                        @("-")
+                    }
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                        @if (item.AccountId.HasValue)
+                        {
+                            <a class="btn btn-success" href="@Url.Action("AccountStatement", "Reports", new { accountId = item.AccountId })" target="_blank" asp-require-permission="reports.accountstatement" title="كشف الحساب">
+                                <i class="fas fa-file-alt"></i>
+                            </a>
+                        }
+                        <a class="btn btn-warning" href="@Url.Action("Edit", new { id = item.Id })" asp-require-permission="suppliers.edit" title="تعديل">
+                            <i class="fas fa-edit"></i>
                         </a>
-                    }
-                    <a class="btn btn-warning" href="@Url.Action("Edit", new { id = item.Id })" asp-require-permission="suppliers.edit" title="تعديل">
-                        <i class="fas fa-edit"></i>
-                    </a>
-                    <button class="btn btn-danger" onclick="deleteSupplier(@item.Id)" asp-require-permission="suppliers.delete" title="حذف">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    }
+                        <button class="btn btn-danger" onclick="deleteSupplier(@item.Id)" asp-require-permission="suppliers.delete" title="حذف">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        }
     </tbody>
 </table>
 
