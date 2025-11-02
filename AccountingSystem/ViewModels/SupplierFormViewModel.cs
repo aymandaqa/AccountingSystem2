@@ -44,5 +44,8 @@ namespace AccountingSystem.ViewModels
         public IEnumerable<SelectListItem> AuthorizationOptions { get; set; } = new List<SelectListItem>();
 
         public IEnumerable<SelectListItem> BranchOptions { get; set; } = new List<SelectListItem>();
+        public IEnumerable<SelectListItem> ModeOptions { get; set; } = new List<SelectListItem>();
+
+        public IEnumerable<SelectListItem> AuthorizationOptions { get; set; } = new List<SelectListItem>();
     }
 }

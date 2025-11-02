@@ -1310,14 +1310,30 @@ namespace AccountingSystem.Controllers
                 userCashAccountIds.Add(defaultPaymentAccountId.Value);
             }
 
+            if (userCashAccountIds.Count > 0)
+            {
+                userCashAccountIds = userCashAccountIds
+                    .Distinct()
+                    .ToList();
+            }
+
             var cashAccountIdSet = userCashAccountIds.Count == 0
                 ? null
                 : new HashSet<int>(userCashAccountIds);
 
             var query = _context.JournalEntries
                 .AsNoTracking()
-                .Where(e => e.CreatedById == userId)
                 .Where(e => e.Date >= startDate && e.Date < inclusiveEndDate);
+
+            if (cashAccountIdSet == null)
+            {
+                query = query.Where(e => e.CreatedById == userId);
+            }
+            else
+            {
+                query = query.Where(e => e.CreatedById == userId
+                    || e.Lines.Any(l => userCashAccountIds.Contains(l.AccountId)));
+            }
 
             if (!string.IsNullOrEmpty(referenceFilter))
             {
@@ -3682,16 +3698,16 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/BalanceSheet
-        public async Task<IActionResult> BalanceSheet(int? branchId, DateTime? asOfDate, bool includePending = false, int? currencyId = null)
+        public async Task<IActionResult> BalanceSheet(int? branchId, DateTime? asOfDate, bool includePending = false, int? currencyId = null, int level = 6)
         {
-            var viewModel = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now, includePending, currencyId);
+            var viewModel = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now, includePending, currencyId, level);
             return View(viewModel);
         }
 
         // GET: Reports/BalanceSheetPdf
-        public async Task<IActionResult> BalanceSheetPdf(int? branchId, DateTime? asOfDate, bool includePending = false, int? currencyId = null)
+        public async Task<IActionResult> BalanceSheetPdf(int? branchId, DateTime? asOfDate, bool includePending = false, int? currencyId = null, int level = 6)
         {
-            var model = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now, includePending, currencyId);
+            var model = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now, includePending, currencyId, level);
 
             var document = Document.Create(container =>
             {
@@ -3737,9 +3753,9 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/BalanceSheetExcel
-        public async Task<IActionResult> BalanceSheetExcel(int? branchId, DateTime? asOfDate, bool includePending = false, int? currencyId = null)
+        public async Task<IActionResult> BalanceSheetExcel(int? branchId, DateTime? asOfDate, bool includePending = false, int? currencyId = null, int level = 6)
         {
-            var model = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now, includePending, currencyId);
+            var model = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now, includePending, currencyId, level);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.AddWorksheet("BalanceSheet");
@@ -3783,7 +3799,7 @@ namespace AccountingSystem.Controllers
             return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "BalanceSheet.xlsx");
         }
 
-        private async Task<BalanceSheetViewModel> BuildBalanceSheetViewModel(int? branchId, DateTime asOfDate, bool includePending, int? currencyId)
+        private async Task<BalanceSheetViewModel> BuildBalanceSheetViewModel(int? branchId, DateTime asOfDate, bool includePending, int? currencyId, int level = 6)
         {
             var accounts = await _context.Accounts
                 .Include(a => a.JournalEntryLines)
@@ -3794,6 +3810,31 @@ namespace AccountingSystem.Controllers
                 .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
                 .AsNoTracking()
                 .ToListAsync();
+
+            var availableLevels = accounts
+                .Select(a => a.Level)
+                .Distinct()
+                .OrderBy(l => l)
+                .ToList();
+
+            var levelOptions = availableLevels.Any()
+                ? availableLevels
+                : Enumerable.Range(1, 6).ToList();
+
+            var normalizedLevel = level < 1 ? 1 : level;
+            var maxLevel = levelOptions.Max();
+            if (normalizedLevel > maxLevel)
+            {
+                normalizedLevel = maxLevel;
+            }
+
+            if (!levelOptions.Contains(normalizedLevel))
+            {
+                normalizedLevel = levelOptions
+                    .Where(l => l <= normalizedLevel)
+                    .DefaultIfEmpty(maxLevel)
+                    .Max();
+            }
 
             var baseCurrency = await _context.Currencies.FirstAsync(c => c.IsBase);
             var selectedCurrency = currencyId.HasValue ? await _context.Currencies.FirstOrDefaultAsync(c => c.Id == currencyId.Value) : baseCurrency;
@@ -3864,6 +3905,30 @@ namespace AccountingSystem.Controllers
             var liabilities = rootNodes.Where(n => n.AccountType == AccountType.Liabilities).OrderBy(n => n.Code).ToList();
             var equity = rootNodes.Where(n => n.AccountType == AccountType.Equity).OrderBy(n => n.Code).ToList();
 
+            void TrimNodes(List<AccountTreeNodeViewModel> nodeList, int maxLevel)
+            {
+                for (var i = nodeList.Count - 1; i >= 0; i--)
+                {
+                    var node = nodeList[i];
+                    if (node.Level > maxLevel)
+                    {
+                        nodeList.RemoveAt(i);
+                        continue;
+                    }
+
+                    if (node.Children.Any())
+                    {
+                        TrimNodes(node.Children, maxLevel);
+                    }
+
+                    node.HasChildren = node.Children.Any();
+                }
+            }
+
+            TrimNodes(assets, normalizedLevel);
+            TrimNodes(liabilities, normalizedLevel);
+            TrimNodes(equity, normalizedLevel);
+
             var viewModel = new BalanceSheetViewModel
             {
                 AsOfDate = asOfDate,
@@ -3876,7 +3941,16 @@ namespace AccountingSystem.Controllers
                 SelectedCurrencyId = selectedCurrency.Id,
                 SelectedCurrencyCode = selectedCurrency.Code,
                 BaseCurrencyCode = baseCurrency.Code,
-                Currencies = await _context.Currencies.Select(c => new SelectListItem { Value = c.Id.ToString(), Text = c.Code }).ToListAsync()
+                Currencies = await _context.Currencies.Select(c => new SelectListItem { Value = c.Id.ToString(), Text = c.Code }).ToListAsync(),
+                SelectedLevel = normalizedLevel,
+                Levels = levelOptions
+                    .Select(l => new SelectListItem
+                    {
+                        Value = l.ToString(),
+                        Text = l.ToString(),
+                        Selected = l == normalizedLevel
+                    })
+                    .ToList()
             };
 
             viewModel.TotalAssets = assets.Sum(a => a.BalanceSelected);

@@ -32,6 +32,8 @@
             <th>المستخدم</th>
             <th>وقت الإنشاء</th>
             <th class="text-end">رصيد المورد</th>
+            <th>المستخدم</th>
+            <th>وقت الإنشاء</th>
             <th>الإجراءات</th>
         </tr>
     </thead>
@@ -90,6 +92,8 @@
                     @("-")
                 }
             </td>
+            <td>@(item.CreatedBy?.FullName ?? "-")</td>
+            <td>@item.CreatedAt.ToString("g")</td>
             <td>
                 <div class="btn-group btn-group-sm" role="group">
                     @if (item.AccountId.HasValue)

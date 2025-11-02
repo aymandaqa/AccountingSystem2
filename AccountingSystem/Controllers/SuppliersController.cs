@@ -34,6 +34,7 @@ namespace AccountingSystem.Controllers
                 .Include(s => s.CreatedBy)
                 .Include(s => s.SupplierBranches)
                     .ThenInclude(sb => sb.Branch)
+                .Include(s => s.CreatedBy)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
@@ -70,6 +71,7 @@ namespace AccountingSystem.Controllers
                     .Where(b => b.IsActive)
                     .Select(b => b.Id)
                     .ToList()
+                }
             };
 
             return View(BuildFormViewModel(model));
@@ -222,6 +224,7 @@ namespace AccountingSystem.Controllers
                 Mode = supplier.Mode,
                 SelectedAuthorizations = SplitAuthorizations(supplier.AuthorizedOperations),
                 SelectedBranchIds = supplier.SupplierBranches.Select(sb => sb.BranchId).ToList()
+                SelectedAuthorizations = SplitAuthorizations(supplier.AuthorizedOperations)
             };
 
             return View(BuildFormViewModel(model));

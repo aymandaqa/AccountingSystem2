@@ -3113,6 +3113,8 @@ namespace AccountingSystem.Migrations
 
                     b.Property<int>("AuthorizedOperations")
                         .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasDefaultValue(3);
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
