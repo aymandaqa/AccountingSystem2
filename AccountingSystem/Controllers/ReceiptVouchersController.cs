@@ -6,7 +6,9 @@ using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.Services;
 using AccountingSystem.Models.Workflows;
+using AccountingSystem.ViewModels;
 using ClosedXML.Excel;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -50,10 +52,55 @@ namespace AccountingSystem.Controllers
                 .OrderByDescending(v => v.Date)
                 .ToListAsync();
 
+            var voucherReferences = vouchers
+                .Select(v => $"RCV:{v.Id}")
+                .ToList();
+
+            var journalEntryLookup = new Dictionary<int, (int Id, string Number, string Reference)>();
+
+            if (voucherReferences.Count > 0)
+            {
+                var journalEntries = await _context.JournalEntries
+                    .AsNoTracking()
+                    .Where(j => j.Reference != null && voucherReferences.Contains(j.Reference))
+                    .Select(j => new { j.Id, j.Reference, j.Number })
+                    .ToListAsync();
+
+                foreach (var entry in journalEntries)
+                {
+                    if (entry.Reference != null && entry.Reference.StartsWith("RCV:", StringComparison.OrdinalIgnoreCase)
+                        && int.TryParse(entry.Reference[4..], out var voucherId))
+                    {
+                        journalEntryLookup[voucherId] = (entry.Id, entry.Number, entry.Reference);
+                    }
+                }
+            }
+
+            var model = vouchers
+                .Select(v =>
+                {
+                    if (journalEntryLookup.TryGetValue(v.Id, out var entry))
+                    {
+                        return new ReceiptVoucherListItemViewModel
+                        {
+                            Voucher = v,
+                            JournalEntryId = entry.Id,
+                            JournalEntryNumber = entry.Number,
+                            JournalEntryReference = entry.Reference
+                        };
+                    }
+
+                    return new ReceiptVoucherListItemViewModel
+                    {
+                        Voucher = v
+                    };
+                })
+                .ToList();
+
             ViewBag.FromDate = fromDate?.ToString("yyyy-MM-dd");
             ViewBag.ToDate = toDate?.ToString("yyyy-MM-dd");
 
-            return View(vouchers);
+            return View(model);
         }
 
         [Authorize(Policy = "receiptvouchers.create")]
