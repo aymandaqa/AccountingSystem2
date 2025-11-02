@@ -224,7 +224,6 @@ namespace AccountingSystem.Controllers
                 Mode = supplier.Mode,
                 SelectedAuthorizations = SplitAuthorizations(supplier.AuthorizedOperations),
                 SelectedBranchIds = supplier.SupplierBranches.Select(sb => sb.BranchId).ToList()
-                SelectedAuthorizations = SplitAuthorizations(supplier.AuthorizedOperations)
             };
 
             return View(BuildFormViewModel(model));
