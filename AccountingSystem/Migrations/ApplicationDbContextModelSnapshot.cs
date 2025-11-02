@@ -3112,7 +3112,6 @@ namespace AccountingSystem.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("AuthorizedOperations")
-                        .HasColumnType("int");
                         .HasColumnType("int")
                         .HasDefaultValue(3);
 
