@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace AccountingSystem.Models
 {
@@ -23,6 +24,15 @@ namespace AccountingSystem.Models
 
         public int? AccountId { get; set; }
         public virtual Account? Account { get; set; }
+
+        public SupplierMode Mode { get; set; } = SupplierMode.Cash;
+
+        public SupplierAuthorization AuthorizedOperations { get; set; } = SupplierAuthorization.Payment | SupplierAuthorization.Receipt;
+
+        public string? CreatedById { get; set; }
+
+        [ValidateNever]
+        public virtual User? CreatedBy { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
     }
