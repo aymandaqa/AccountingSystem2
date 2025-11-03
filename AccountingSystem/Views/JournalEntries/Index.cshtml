@@ -1442,14 +1442,19 @@
                     }
 
                     const result = await response.json();
-                    const rawItems = result.items || [];
+                    const isArrayResponse = Array.isArray(result);
+                    const rawItems = isArrayResponse ? result : (result.items || []);
                     const items = rawItems.map(normalizeEntry);
-                    const summary = result.summary || {};
+                    const summary = isArrayResponse ? {} : (result.summary || {});
                     const totalRecords = result.totalRecords ?? items.length;
-                    const totalPages = result.totalPages ?? 0;
+                    const totalPages = result.totalPages ?? (isArrayResponse ? (items.length > 0 ? 1 : 0) : 0);
 
                     state.page = result.page ?? state.page;
                     state.pageSize = result.pageSize ?? state.pageSize;
+
+                    const computedTotalPages = totalPages > 0 ? totalPages : Math.ceil(totalRecords / state.pageSize);
+                    const maxPage = Math.max(1, computedTotalPages || 0);
+                    state.page = Math.min(Math.max(1, state.page), maxPage);
 
                     if (grid) {
                         grid.dataSource = Array.isArray(items) ? items : [];
