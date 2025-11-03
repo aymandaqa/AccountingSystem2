@@ -2617,15 +2617,37 @@ namespace AccountingSystem.Controllers
                     .Max();
             }
 
-            var pending = includePending
+            var postedMovements = await _context.JournalEntryLines
+                .AsNoTracking()
+                .Include(l => l.JournalEntry)
+                .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
+                .Where(l => l.JournalEntry.Date >= from && l.JournalEntry.Date <= to)
+                .GroupBy(l => l.AccountId)
+                .Select(g => new
+                {
+                    g.Key,
+                    Debit = g.Sum(x => x.DebitAmount),
+                    Credit = g.Sum(x => x.CreditAmount)
+                })
+                .ToDictionaryAsync(x => x.Key, x => (x.Debit, x.Credit));
+
+            var pendingMovements = includePending
                 ? await _context.JournalEntryLines
+                    .AsNoTracking()
                     .Include(l => l.JournalEntry)
                     .Where(l => l.JournalEntry.Status != JournalEntryStatus.Posted)
                     .Where(l => l.JournalEntry.Date >= from && l.JournalEntry.Date <= to)
                     .GroupBy(l => l.AccountId)
-                    .Select(g => new { g.Key, Debit = g.Sum(x => x.DebitAmount), Credit = g.Sum(x => x.CreditAmount) })
+                    .Select(g => new
+                    {
+                        g.Key,
+                        Debit = g.Sum(x => x.DebitAmount),
+                        Credit = g.Sum(x => x.CreditAmount)
+                    })
                     .ToDictionaryAsync(x => x.Key, x => (x.Debit, x.Credit))
                 : new Dictionary<int, (decimal Debit, decimal Credit)>();
+
+            var includeOpeningBalances = from <= fiscalYearStart && to >= fiscalYearStart;
 
             var baseCurrency = await _context.Currencies.FirstAsync(c => c.IsBase);
             var selectedCurrency = currencyId.HasValue ? await _context.Currencies.FirstOrDefaultAsync(c => c.Id == currencyId.Value) : baseCurrency;
@@ -2664,11 +2686,20 @@ namespace AccountingSystem.Controllers
                     return cached;
                 }
 
-                pending.TryGetValue(account.Id, out var p);
-                var pendingBalance = account.Nature == AccountNature.Debit ? p.Debit - p.Credit : p.Credit - p.Debit;
-                var balance = account.CurrentBalance + pendingBalance;
-                var balanceSelected = _currencyService.Convert(balance, account.Currency, selectedCurrency);
-                var balanceBase = _currencyService.Convert(balance, account.Currency, baseCurrency);
+                postedMovements.TryGetValue(account.Id, out var posted);
+                pendingMovements.TryGetValue(account.Id, out var pending);
+
+                var totalDebit = posted.Debit + pending.Debit;
+                var totalCredit = posted.Credit + pending.Credit;
+
+                var openingContribution = includeOpeningBalances ? account.OpeningBalance : 0m;
+
+                var netAccountBalance = account.Nature == AccountNature.Debit
+                    ? openingContribution + totalDebit - totalCredit
+                    : openingContribution + totalCredit - totalDebit;
+
+                var balanceSelected = _currencyService.Convert(netAccountBalance, account.Currency, selectedCurrency);
+                var balanceBase = _currencyService.Convert(netAccountBalance, account.Currency, baseCurrency);
 
                 var result = SplitBalance(balanceSelected, balanceBase, account.Nature);
                 postingBalanceCache[account.Id] = result;
