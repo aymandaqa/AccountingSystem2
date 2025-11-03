@@ -3848,7 +3848,9 @@ namespace AccountingSystem.Controllers
                     {
                         row.ConstantItem(level * 15);
                         row.RelativeItem().Text(node.Id == 0 ? node.NameAr : $"{node.Code} - {node.NameAr}");
-                        row.ConstantItem(150).AlignRight().Text($"{node.BalanceSelected:N2} {selectedCurrencyCode} ({node.BalanceBase:N2} {baseCurrencyCode})");
+                        var displaySelected = NormalizeBalanceForDisplay(node.BalanceSelected, node.Nature);
+                        var displayBase = NormalizeBalanceForDisplay(node.BalanceBase, node.Nature);
+                        row.ConstantItem(150).AlignRight().Text($"{displaySelected:N2} {selectedCurrencyCode} ({displayBase:N2} {baseCurrencyCode})");
                     });
                     if (node.Children.Any())
                         ComposePdfTree(col, node.Children, level + 1, selectedCurrencyCode, baseCurrencyCode);
@@ -3877,8 +3879,10 @@ namespace AccountingSystem.Controllers
                 foreach (var node in nodes)
                 {
                     worksheet.Cell(row, 1).Value = new string(' ', level * 2) + (node.Id == 0 ? node.NameAr : $"{node.Code} - {node.NameAr}");
-                    worksheet.Cell(row, 2).Value = node.BalanceSelected;
-                    worksheet.Cell(row, 3).Value = node.BalanceBase;
+                    var displaySelected = NormalizeBalanceForDisplay(node.BalanceSelected, node.Nature);
+                    var displayBase = NormalizeBalanceForDisplay(node.BalanceBase, node.Nature);
+                    worksheet.Cell(row, 2).Value = displaySelected;
+                    worksheet.Cell(row, 3).Value = displayBase;
                     row++;
                     if (node.Children.Any())
                         WriteNodes(node.Children, level + 1);
@@ -4036,6 +4040,10 @@ namespace AccountingSystem.Controllers
             TrimNodes(liabilities, normalizedLevel);
             TrimNodes(equity, normalizedLevel);
 
+            var totalAssetsBaseRaw = assets.Sum(a => a.BalanceBase);
+            var totalLiabilitiesBaseRaw = liabilities.Sum(l => l.BalanceBase);
+            var totalEquityBaseRaw = equity.Sum(e => e.BalanceBase);
+
             var viewModel = new BalanceSheetViewModel
             {
                 AsOfDate = asOfDate,
@@ -4057,18 +4065,33 @@ namespace AccountingSystem.Controllers
                         Text = l.ToString(),
                         Selected = l == normalizedLevel
                     })
-                    .ToList()
+                    .ToList(),
+                TotalAssets = assets.Sum(a => NormalizeBalanceForDisplay(a.BalanceSelected, a.Nature)),
+                TotalLiabilities = liabilities.Sum(l => NormalizeBalanceForDisplay(l.BalanceSelected, l.Nature)),
+                TotalEquity = equity.Sum(e => NormalizeBalanceForDisplay(e.BalanceSelected, e.Nature)),
+                TotalAssetsBase = assets.Sum(a => NormalizeBalanceForDisplay(a.BalanceBase, a.Nature)),
+                TotalLiabilitiesBase = liabilities.Sum(l => NormalizeBalanceForDisplay(l.BalanceBase, l.Nature)),
+                TotalEquityBase = equity.Sum(e => NormalizeBalanceForDisplay(e.BalanceBase, e.Nature))
             };
 
-            viewModel.TotalAssets = assets.Sum(a => a.BalanceSelected);
-            viewModel.TotalLiabilities = liabilities.Sum(l => l.BalanceSelected);
-            viewModel.TotalEquity = equity.Sum(e => e.BalanceSelected);
-            viewModel.TotalAssetsBase = assets.Sum(a => a.BalanceBase);
-            viewModel.TotalLiabilitiesBase = liabilities.Sum(l => l.BalanceBase);
-            viewModel.TotalEquityBase = equity.Sum(e => e.BalanceBase);
-            viewModel.IsBalanced = viewModel.TotalAssetsBase == (viewModel.TotalLiabilitiesBase + viewModel.TotalEquityBase);
+            viewModel.IsBalanced = totalAssetsBaseRaw == (totalLiabilitiesBaseRaw + totalEquityBaseRaw);
 
             return viewModel;
+        }
+
+        private static decimal NormalizeBalanceForDisplay(decimal amount, AccountNature nature)
+        {
+            if (nature == AccountNature.Credit)
+            {
+                return amount < 0 ? Math.Abs(amount) : -Math.Abs(amount);
+            }
+
+            if (nature == AccountNature.Debit)
+            {
+                return amount > 0 ? Math.Abs(amount) : -Math.Abs(amount);
+            }
+
+            return amount;
         }
 
         private async Task<IncomeStatementViewModel> BuildIncomeStatementViewModel(int? branchId, DateTime fromDate, DateTime toDate, bool includePending, int? currencyId)
