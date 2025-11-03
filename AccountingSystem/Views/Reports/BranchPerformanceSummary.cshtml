@@ -18,6 +18,42 @@
             font-weight: 600;
             color: #6c757d;
         }
+
+        .branch-toggle {
+            background: none;
+            border: none;
+            color: inherit;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.5rem;
+            height: 1.5rem;
+            cursor: pointer;
+        }
+
+        .branch-toggle:focus {
+            outline: 2px solid rgba(13, 110, 253, 0.4);
+            outline-offset: 2px;
+        }
+
+        .branch-toggle-placeholder {
+            display: inline-block;
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+
+        .branch-row-child {
+            display: none;
+        }
+
+        .branch-toggle .fas {
+            transition: transform 0.2s ease;
+        }
+
+        .branch-toggle.expanded .fas {
+            transform: rotate(90deg);
+        }
     </style>
 }
 
@@ -84,13 +120,37 @@
                                         <tr class="table-primary fw-bold">
                                             <td colspan="@headerColspan">@reportSection.Title</td>
                                         </tr>
+                                        @{
+                                            var sectionPrefix = $"section-{(int)reportSection.AccountType}";
+                                            var parentAccountIds = reportSection.Rows
+                                                .Where(r => r.ParentAccountId.HasValue)
+                                                .Select(r => r.ParentAccountId!.Value)
+                                                .ToHashSet();
+                                        }
                                         @foreach (var row in reportSection.Rows)
                                         {
                                             var indentLevel = Math.Max(row.Level - 1, 0);
                                             var hasCode = !string.IsNullOrWhiteSpace(row.AccountCode);
-                                            <tr>
+                                            var hasChildren = parentAccountIds.Contains(row.AccountId);
+                                            var rowKey = $"{sectionPrefix}-row-{row.AccountId}";
+                                            var parentKey = row.ParentAccountId.HasValue ? $"{sectionPrefix}-row-{row.ParentAccountId.Value}" : string.Empty;
+                                            <tr class="branch-row@(row.ParentAccountId.HasValue ? " branch-row-child" : string.Empty)" data-row-id="@rowKey" data-level="@row.Level" @if (row.ParentAccountId.HasValue) { <text>data-parent-id="@parentKey"</text>; }>
                                                 <td>
                                                     <span class="branch-report-label" style="--level:@indentLevel;">
+                                                        @if (hasChildren)
+                                                        {
+                                                            <button type="button"
+                                                                    class="branch-toggle collapsed"
+                                                                    data-row-id="@rowKey"
+                                                                    aria-expanded="false"
+                                                                    title="تبديل عرض التفاصيل">
+                                                                <i class="fas fa-chevron-right"></i>
+                                                            </button>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="branch-toggle-placeholder"></span>
+                                                        }
                                                         @if (hasCode)
                                                         {
                                                             <span class="branch-report-code">@row.AccountCode</span>
@@ -111,8 +171,8 @@
                                                 <td class="@totalClass">@rowTotal.ToString("N2")</td>
                                             </tr>
                                         }
-                                        <tr class="table-secondary fw-bold">
-                                            <td>إجمالي @reportSection.Title</td>
+                                            <tr class="table-secondary fw-bold">
+                                                <td>إجمالي @reportSection.Title</td>
                                             @foreach (var branch in Model.Branches)
                                             {
                                                 var total = reportSection.TotalsByBranch.TryGetValue(branch.BranchId, out var amount) ? amount : 0m;
@@ -132,13 +192,36 @@
                                         <tr class="table-dark text-white fw-bold">
                                             <td colspan="@headerColspan">مؤشرات الأداء</td>
                                         </tr>
+                                        @{
+                                            var summaryParentAccountIds = Model.SummaryRows
+                                                .Where(r => r.ParentAccountId.HasValue)
+                                                .Select(r => r.ParentAccountId!.Value)
+                                                .ToHashSet();
+                                        }
                                         @foreach (var row in Model.SummaryRows)
                                         {
                                             var indentLevel = Math.Max(row.Level - 1, 0);
                                             var hasCode = !string.IsNullOrWhiteSpace(row.AccountCode);
-                                            <tr>
+                                            var hasChildren = summaryParentAccountIds.Contains(row.AccountId);
+                                            var rowKey = $"summary-row-{row.AccountId}";
+                                            var parentKey = row.ParentAccountId.HasValue ? $"summary-row-{row.ParentAccountId.Value}" : string.Empty;
+                                            <tr class="branch-row@(row.ParentAccountId.HasValue ? " branch-row-child" : string.Empty)" data-row-id="@rowKey" data-level="@row.Level" @if (row.ParentAccountId.HasValue) { <text>data-parent-id="@parentKey"</text>; }>
                                                 <td>
                                                     <span class="branch-report-label" style="--level:@indentLevel;">
+                                                        @if (hasChildren)
+                                                        {
+                                                            <button type="button"
+                                                                    class="branch-toggle collapsed"
+                                                                    data-row-id="@rowKey"
+                                                                    aria-expanded="false"
+                                                                    title="تبديل عرض التفاصيل">
+                                                                <i class="fas fa-chevron-right"></i>
+                                                            </button>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="branch-toggle-placeholder"></span>
+                                                        }
                                                         @if (hasCode)
                                                         {
                                                             <span class="branch-report-code">@row.AccountCode</span>
@@ -180,3 +263,60 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const toggles = document.querySelectorAll('.branch-toggle');
+
+            toggles.forEach(toggle => {
+                toggle.addEventListener('click', function () {
+                    const rowId = this.dataset.rowId;
+                    const isExpanded = this.getAttribute('aria-expanded') === 'true';
+                    setRowExpansion(rowId, !isExpanded, this);
+                });
+            });
+
+            function setRowExpansion(rowId, expand, button) {
+                button.setAttribute('aria-expanded', expand);
+                button.classList.toggle('expanded', expand);
+                button.classList.toggle('collapsed', !expand);
+                const icon = button.querySelector('i');
+                if (icon) {
+                    icon.classList.toggle('fa-chevron-right', !expand);
+                    icon.classList.toggle('fa-chevron-down', expand);
+                }
+                toggleChildren(rowId, expand);
+            }
+
+            function toggleChildren(parentId, show) {
+                const childRows = document.querySelectorAll(`tr[data-parent-id="${parentId}"]`);
+                childRows.forEach(child => {
+                    if (show) {
+                        child.style.display = 'table-row';
+                        const childToggle = child.querySelector('.branch-toggle');
+                        if (childToggle && childToggle.getAttribute('aria-expanded') === 'true') {
+                            toggleChildren(child.dataset.rowId, true);
+                        } else {
+                            toggleChildren(child.dataset.rowId, false);
+                        }
+                    } else {
+                        child.style.display = 'none';
+                        const childToggle = child.querySelector('.branch-toggle');
+                        if (childToggle) {
+                            childToggle.setAttribute('aria-expanded', 'false');
+                            childToggle.classList.remove('expanded');
+                            childToggle.classList.add('collapsed');
+                            const icon = childToggle.querySelector('i');
+                            if (icon) {
+                                icon.classList.add('fa-chevron-right');
+                                icon.classList.remove('fa-chevron-down');
+                            }
+                        }
+                        toggleChildren(child.dataset.rowId, false);
+                    }
+                });
+            }
+        });
+    </script>
+}
