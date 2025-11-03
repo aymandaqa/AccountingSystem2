@@ -28,6 +28,8 @@ namespace AccountingSystem.Models
 
         public int? AccountId { get; set; }
 
+        public int? CostCenterId { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public DateTime? UpdatedAt { get; set; }
@@ -37,6 +39,8 @@ namespace AccountingSystem.Models
         public virtual AssetType AssetType { get; set; } = null!;
 
         public virtual Account? Account { get; set; }
+
+        public virtual CostCenter? CostCenter { get; set; }
 
         public virtual ICollection<AssetExpense> Expenses { get; set; } = new List<AssetExpense>();
     }

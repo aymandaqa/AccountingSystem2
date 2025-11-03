@@ -13,11 +13,13 @@ namespace AccountingSystem.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IJournalEntryService _journalEntryService;
+        private readonly IAssetCostCenterService _assetCostCenterService;
 
-        public AssetExpenseProcessor(ApplicationDbContext context, IJournalEntryService journalEntryService)
+        public AssetExpenseProcessor(ApplicationDbContext context, IJournalEntryService journalEntryService, IAssetCostCenterService assetCostCenterService)
         {
             _context = context;
             _journalEntryService = journalEntryService;
+            _assetCostCenterService = assetCostCenterService;
         }
 
         public async Task FinalizeAsync(AssetExpense expense, string approvedById, CancellationToken cancellationToken = default)
@@ -33,6 +35,16 @@ namespace AccountingSystem.Services
             {
                 throw new InvalidOperationException($"Asset expense {expense.Id} not found");
             }
+
+            if (loadedExpense.Asset == null)
+            {
+                throw new InvalidOperationException("الأصل غير موجود");
+            }
+
+            await _assetCostCenterService.EnsureCostCenterAsync(loadedExpense.Asset, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            var costCenterId = loadedExpense.Asset.CostCenterId;
 
             if (loadedExpense.Supplier?.AccountId == null)
             {
@@ -61,13 +73,15 @@ namespace AccountingSystem.Services
                 {
                     AccountId = loadedExpense.ExpenseAccountId,
                     DebitAmount = loadedExpense.Amount,
-                    Description = "مصروف أصل"
+                    Description = "مصروف أصل",
+                    CostCenterId = costCenterId
                 },
                 new JournalEntryLine
                 {
                     AccountId = supplierAccount.Id,
                     CreditAmount = loadedExpense.Amount,
-                    Description = "مصروف أصل"
+                    Description = "مصروف أصل",
+                    CostCenterId = costCenterId
                 }
             };
 
@@ -101,14 +115,16 @@ namespace AccountingSystem.Services
                 {
                     AccountId = supplierAccount.Id,
                     DebitAmount = loadedExpense.Amount,
-                    Description = "دفع مصروف أصل"
+                    Description = "دفع مصروف أصل",
+                    CostCenterId = costCenterId
                 });
 
                 lines.Add(new JournalEntryLine
                 {
                     AccountId = paymentAccount.Id,
                     CreditAmount = loadedExpense.Amount,
-                    Description = "دفع مصروف أصل"
+                    Description = "دفع مصروف أصل",
+                    CostCenterId = costCenterId
                 });
             }
 
