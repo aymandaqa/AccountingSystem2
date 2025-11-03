@@ -1453,11 +1453,11 @@
 
                     if (grid) {
                         grid.dataSource = Array.isArray(items) ? items : [];
-                        if (typeof grid.dataBind === 'function') {
-                            grid.dataBind();
-                        }
-                        else if (typeof grid.refresh === 'function') {
+                        if (typeof grid.refresh === 'function') {
                             grid.refresh();
+                        }
+                        else if (typeof grid.dataBind === 'function') {
+                            grid.dataBind();
                         }
                         applyGrouping();
                         applyGridFilterState();
