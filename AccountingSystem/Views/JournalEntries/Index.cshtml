@@ -1457,12 +1457,15 @@
                     state.page = Math.min(Math.max(1, state.page), maxPage);
 
                     if (grid) {
-                        grid.dataSource = Array.isArray(items) ? items : [];
-                        if (typeof grid.refresh === 'function') {
-                            grid.refresh();
-                        }
-                        else if (typeof grid.dataBind === 'function') {
+                        const dataSource = Array.isArray(items) ? items : [];
+
+                        grid.dataSource = dataSource;
+
+                        if (typeof grid.dataBind === 'function') {
                             grid.dataBind();
+                        }
+                        else if (typeof grid.refresh === 'function') {
+                            grid.refresh();
                         }
                         applyGrouping();
                         applyGridFilterState();
