@@ -3998,15 +3998,24 @@ namespace AccountingSystem.Controllers
                 }
             }
 
-            void ApplyDisplayBalances(AccountTreeNodeViewModel node)
+            void ApplyDisplayBalances(AccountTreeNodeViewModel node, bool normalize)
             {
-                node.DisplayBalance = NormalizeBalanceForDisplay(node.Balance, node.Nature);
-                node.DisplayBalanceSelected = NormalizeBalanceForDisplay(node.BalanceSelected, node.Nature);
-                node.DisplayBalanceBase = NormalizeBalanceForDisplay(node.BalanceBase, node.Nature);
+                if (normalize)
+                {
+                    node.DisplayBalance = NormalizeBalanceForDisplay(node.Balance, node.Nature);
+                    node.DisplayBalanceSelected = NormalizeBalanceForDisplay(node.BalanceSelected, node.Nature);
+                    node.DisplayBalanceBase = NormalizeBalanceForDisplay(node.BalanceBase, node.Nature);
+                }
+                else
+                {
+                    node.DisplayBalance = node.Balance;
+                    node.DisplayBalanceSelected = node.BalanceSelected;
+                    node.DisplayBalanceBase = node.BalanceBase;
+                }
 
                 foreach (var child in node.Children)
                 {
-                    ApplyDisplayBalances(child);
+                    ApplyDisplayBalances(child, normalize);
                 }
             }
 
@@ -4014,7 +4023,6 @@ namespace AccountingSystem.Controllers
             foreach (var root in rootNodes)
             {
                 ComputeBalances(root);
-                ApplyDisplayBalances(root);
             }
 
             var assets = rootNodes.Where(n => n.AccountType == AccountType.Assets).OrderBy(n => n.Code).ToList();
@@ -4045,6 +4053,21 @@ namespace AccountingSystem.Controllers
             TrimNodes(liabilities, normalizedLevel);
             TrimNodes(equity, normalizedLevel);
 
+            foreach (var asset in assets)
+            {
+                ApplyDisplayBalances(asset, normalize: false);
+            }
+
+            foreach (var liability in liabilities)
+            {
+                ApplyDisplayBalances(liability, normalize: true);
+            }
+
+            foreach (var equityNode in equity)
+            {
+                ApplyDisplayBalances(equityNode, normalize: true);
+            }
+
             var totalAssetsRaw = assets.Sum(a => a.BalanceSelected);
             var totalLiabilitiesRaw = liabilities.Sum(l => l.BalanceSelected);
             var totalEquityRaw = equity.Sum(e => e.BalanceSelected);
@@ -4074,10 +4097,10 @@ namespace AccountingSystem.Controllers
                         Selected = l == normalizedLevel
                     })
                     .ToList(),
-                TotalAssets = NormalizeBalanceForDisplay(totalAssetsRaw, AccountNature.Debit),
+                TotalAssets = totalAssetsRaw,
                 TotalLiabilities = NormalizeBalanceForDisplay(totalLiabilitiesRaw, AccountNature.Credit),
                 TotalEquity = NormalizeBalanceForDisplay(totalEquityRaw, AccountNature.Credit),
-                TotalAssetsBase = NormalizeBalanceForDisplay(totalAssetsBaseRaw, AccountNature.Debit),
+                TotalAssetsBase = totalAssetsBaseRaw,
                 TotalLiabilitiesBase = NormalizeBalanceForDisplay(totalLiabilitiesBaseRaw, AccountNature.Credit),
                 TotalEquityBase = NormalizeBalanceForDisplay(totalEquityBaseRaw, AccountNature.Credit)
             };
