@@ -227,6 +227,8 @@ namespace AccountingSystem.ViewModels
         public bool IsBalanced { get; set; }
         public int SelectedLevel { get; set; } = 6;
         public List<SelectListItem> Levels { get; set; } = new List<SelectListItem>();
+        public DateTime FromDate { get; set; } = new DateTime(DateTime.Now.Year, 1, 1);
+        public DateTime ToDate { get; set; } = DateTime.Today;
     }
 
     public class BalanceSheetItemViewModel

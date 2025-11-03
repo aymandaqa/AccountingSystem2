@@ -3805,16 +3805,16 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/BalanceSheet
-        public async Task<IActionResult> BalanceSheet(int? branchId, bool includePending = false, int? currencyId = null, int level = 6)
+        public async Task<IActionResult> BalanceSheet(int? branchId, bool includePending = false, int? currencyId = null, int level = 6, DateTime? toDate = null)
         {
-            var viewModel = await BuildBalanceSheetViewModel(branchId, includePending, currencyId, level);
+            var viewModel = await BuildBalanceSheetViewModel(branchId, includePending, currencyId, level, toDate);
             return View(viewModel);
         }
 
         // GET: Reports/BalanceSheetPdf
-        public async Task<IActionResult> BalanceSheetPdf(int? branchId, bool includePending = false, int? currencyId = null, int level = 6)
+        public async Task<IActionResult> BalanceSheetPdf(int? branchId, bool includePending = false, int? currencyId = null, int level = 6, DateTime? toDate = null)
         {
-            var model = await BuildBalanceSheetViewModel(branchId, includePending, currencyId, level);
+            var model = await BuildBalanceSheetViewModel(branchId, includePending, currencyId, level, toDate);
 
             var document = Document.Create(container =>
             {
@@ -3825,6 +3825,7 @@ namespace AccountingSystem.Controllers
                     page.Header().Text("الميزانية العمومية").FontSize(16).Bold();
                     page.Content().Column(col =>
                     {
+                        col.Item().Text($"الفترة: من {model.FromDate:dd/MM/yyyy} إلى {model.ToDate:dd/MM/yyyy}").FontSize(10);
                         col.Item().Text("الأصول").FontSize(14).Bold();
                         ComposePdfTree(col, model.Assets, 0, model.SelectedCurrencyCode, model.BaseCurrencyCode);
                         col.Item().Text($"إجمالي الأصول: {model.TotalAssets:N2} {model.SelectedCurrencyCode} ({model.TotalAssetsBase:N2} {model.BaseCurrencyCode})");
@@ -3860,9 +3861,9 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/BalanceSheetExcel
-        public async Task<IActionResult> BalanceSheetExcel(int? branchId, bool includePending = false, int? currencyId = null, int level = 6)
+        public async Task<IActionResult> BalanceSheetExcel(int? branchId, bool includePending = false, int? currencyId = null, int level = 6, DateTime? toDate = null)
         {
-            var model = await BuildBalanceSheetViewModel(branchId, includePending, currencyId, level);
+            var model = await BuildBalanceSheetViewModel(branchId, includePending, currencyId, level, toDate);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.AddWorksheet("BalanceSheet");
@@ -3871,6 +3872,9 @@ namespace AccountingSystem.Controllers
             worksheet.Cell(row, 2).Value = $"الرصيد ({model.SelectedCurrencyCode})";
             worksheet.Cell(row, 3).Value = $"الرصيد ({model.BaseCurrencyCode})";
             row++;
+
+            worksheet.Cell(row, 1).Value = $"الفترة: من {model.FromDate:dd/MM/yyyy} إلى {model.ToDate:dd/MM/yyyy}";
+            row += 2;
 
             void WriteNodes(List<AccountTreeNodeViewModel> nodes, int level)
             {
@@ -3906,7 +3910,7 @@ namespace AccountingSystem.Controllers
             return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "BalanceSheet.xlsx");
         }
 
-        private async Task<BalanceSheetViewModel> BuildBalanceSheetViewModel(int? branchId, bool includePending, int? currencyId, int level = 6)
+        private async Task<BalanceSheetViewModel> BuildBalanceSheetViewModel(int? branchId, bool includePending, int? currencyId, int level = 6, DateTime? toDate = null)
         {
             var accounts = await _context.Accounts
                 .Include(a => a.Currency)
@@ -3915,6 +3919,26 @@ namespace AccountingSystem.Controllers
                 .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
                 .AsNoTracking()
                 .ToListAsync();
+
+            var targetDate = (toDate ?? DateTime.Today).Date;
+            var fiscalYearStart = new DateTime(targetDate.Year, 1, 1);
+
+            var accountIds = accounts.Select(a => a.Id).ToList();
+
+            var lineSums = await _context.JournalEntryLines
+                .AsNoTracking()
+                .Where(l => accountIds.Contains(l.AccountId))
+                .Where(l => includePending || l.JournalEntry.Status == JournalEntryStatus.Posted)
+                .Where(l => l.JournalEntry.Date >= fiscalYearStart && l.JournalEntry.Date <= targetDate)
+                .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
+                .GroupBy(l => l.AccountId)
+                .Select(g => new
+                {
+                    AccountId = g.Key,
+                    Debit = g.Sum(x => x.DebitAmount),
+                    Credit = g.Sum(x => x.CreditAmount)
+                })
+                .ToDictionaryAsync(x => x.AccountId);
 
             var availableLevels = accounts
                 .Select(a => a.Level)
@@ -3947,7 +3971,13 @@ namespace AccountingSystem.Controllers
 
             var nodes = accounts.Select(a =>
             {
-                var balance = a.CurrentBalance;
+                lineSums.TryGetValue(a.Id, out var sums);
+                var debit = sums?.Debit ?? 0m;
+                var credit = sums?.Credit ?? 0m;
+
+                var balance = a.Nature == AccountNature.Debit
+                    ? a.OpeningBalance + (debit - credit)
+                    : a.OpeningBalance + (credit - debit);
                 var balanceSelected = _currencyService.Convert(balance, a.Currency, selectedCurrency);
                 var balanceBase = _currencyService.Convert(balance, a.Currency, baseCurrency);
                 return new AccountTreeNodeViewModel
@@ -3998,15 +4028,24 @@ namespace AccountingSystem.Controllers
                 }
             }
 
-            void ApplyDisplayBalances(AccountTreeNodeViewModel node)
+            void ApplyDisplayBalances(AccountTreeNodeViewModel node, bool normalize)
             {
-                node.DisplayBalance = NormalizeBalanceForDisplay(node.Balance, node.Nature);
-                node.DisplayBalanceSelected = NormalizeBalanceForDisplay(node.BalanceSelected, node.Nature);
-                node.DisplayBalanceBase = NormalizeBalanceForDisplay(node.BalanceBase, node.Nature);
+                if (normalize)
+                {
+                    node.DisplayBalance = NormalizeBalanceForDisplay(node.Balance, node.Nature);
+                    node.DisplayBalanceSelected = NormalizeBalanceForDisplay(node.BalanceSelected, node.Nature);
+                    node.DisplayBalanceBase = NormalizeBalanceForDisplay(node.BalanceBase, node.Nature);
+                }
+                else
+                {
+                    node.DisplayBalance = node.Balance;
+                    node.DisplayBalanceSelected = node.BalanceSelected;
+                    node.DisplayBalanceBase = node.BalanceBase;
+                }
 
                 foreach (var child in node.Children)
                 {
-                    ApplyDisplayBalances(child);
+                    ApplyDisplayBalances(child, normalize);
                 }
             }
 
@@ -4014,7 +4053,6 @@ namespace AccountingSystem.Controllers
             foreach (var root in rootNodes)
             {
                 ComputeBalances(root);
-                ApplyDisplayBalances(root);
             }
 
             var assets = rootNodes.Where(n => n.AccountType == AccountType.Assets).OrderBy(n => n.Code).ToList();
@@ -4045,6 +4083,21 @@ namespace AccountingSystem.Controllers
             TrimNodes(liabilities, normalizedLevel);
             TrimNodes(equity, normalizedLevel);
 
+            foreach (var asset in assets)
+            {
+                ApplyDisplayBalances(asset, normalize: false);
+            }
+
+            foreach (var liability in liabilities)
+            {
+                ApplyDisplayBalances(liability, normalize: true);
+            }
+
+            foreach (var equityNode in equity)
+            {
+                ApplyDisplayBalances(equityNode, normalize: true);
+            }
+
             var totalAssetsRaw = assets.Sum(a => a.BalanceSelected);
             var totalLiabilitiesRaw = liabilities.Sum(l => l.BalanceSelected);
             var totalEquityRaw = equity.Sum(e => e.BalanceSelected);
@@ -4066,6 +4119,8 @@ namespace AccountingSystem.Controllers
                 BaseCurrencyCode = baseCurrency.Code,
                 Currencies = await _context.Currencies.Select(c => new SelectListItem { Value = c.Id.ToString(), Text = c.Code }).ToListAsync(),
                 SelectedLevel = normalizedLevel,
+                FromDate = fiscalYearStart,
+                ToDate = targetDate,
                 Levels = levelOptions
                     .Select(l => new SelectListItem
                     {
@@ -4074,10 +4129,10 @@ namespace AccountingSystem.Controllers
                         Selected = l == normalizedLevel
                     })
                     .ToList(),
-                TotalAssets = NormalizeBalanceForDisplay(totalAssetsRaw, AccountNature.Debit),
+                TotalAssets = totalAssetsRaw,
                 TotalLiabilities = NormalizeBalanceForDisplay(totalLiabilitiesRaw, AccountNature.Credit),
                 TotalEquity = NormalizeBalanceForDisplay(totalEquityRaw, AccountNature.Credit),
-                TotalAssetsBase = NormalizeBalanceForDisplay(totalAssetsBaseRaw, AccountNature.Debit),
+                TotalAssetsBase = totalAssetsBaseRaw,
                 TotalLiabilitiesBase = NormalizeBalanceForDisplay(totalLiabilitiesBaseRaw, AccountNature.Credit),
                 TotalEquityBase = NormalizeBalanceForDisplay(totalEquityBaseRaw, AccountNature.Credit)
             };
