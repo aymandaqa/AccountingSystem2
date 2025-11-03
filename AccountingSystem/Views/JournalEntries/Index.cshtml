@@ -1459,18 +1459,13 @@
                     if (grid) {
                         const dataSource = Array.isArray(items) ? items : [];
 
-                        if (typeof grid.setProperties === 'function') {
-                            grid.setProperties({ dataSource }, true);
-                        }
-                        else {
-                            grid.dataSource = dataSource;
-                        }
+                        grid.dataSource = dataSource;
 
-                        if (typeof grid.dataBind === 'function') {
-                            grid.dataBind();
-                        }
-                        else if (typeof grid.refresh === 'function') {
+                        if (typeof grid.refresh === 'function') {
                             grid.refresh();
+                        }
+                        else if (typeof grid.dataBind === 'function') {
+                            grid.dataBind();
                         }
                         applyGrouping();
                         applyGridFilterState();
