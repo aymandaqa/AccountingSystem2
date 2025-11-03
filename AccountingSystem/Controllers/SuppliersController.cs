@@ -91,7 +91,19 @@ namespace AccountingSystem.Controllers
             model.SelectedAuthorizations ??= new List<SupplierAuthorization>();
             model.SelectedBranchIds ??= new List<int>();
 
-            if (!model.SelectedBranchIds.Any() && await _context.Branches.AnyAsync())
+            var branchesExist = await _context.Branches.AnyAsync();
+            var validBranchIds = model.SelectedBranchIds.Any()
+                ? await _context.Branches
+                    .Where(b => model.SelectedBranchIds.Contains(b.Id))
+                    .Select(b => b.Id)
+                    .ToListAsync()
+                : new List<int>();
+
+            if (!model.SelectedBranchIds.Any() && branchesExist)
+            {
+                ModelState.AddModelError(nameof(model.SelectedBranchIds), "يرجى اختيار فرع واحد على الأقل.");
+            }
+            else if (!validBranchIds.Any() && branchesExist)
             {
                 ModelState.AddModelError(nameof(model.SelectedBranchIds), "يرجى اختيار فرع واحد على الأقل.");
             }
@@ -162,11 +174,6 @@ namespace AccountingSystem.Controllers
 
                 _context.Accounts.Add(account);
                 await _context.SaveChangesAsync();
-
-                var validBranchIds = await _context.Branches
-                    .Where(b => model.SelectedBranchIds.Contains(b.Id))
-                    .Select(b => b.Id)
-                    .ToListAsync();
 
                 var supplier = new Supplier
                 {
@@ -248,7 +255,19 @@ namespace AccountingSystem.Controllers
             model.SelectedAuthorizations ??= new List<SupplierAuthorization>();
             model.SelectedBranchIds ??= new List<int>();
 
-            if (!model.SelectedBranchIds.Any() && await _context.Branches.AnyAsync())
+            var branchesExist = await _context.Branches.AnyAsync();
+            var validBranchIds = model.SelectedBranchIds.Any()
+                ? await _context.Branches
+                    .Where(b => model.SelectedBranchIds.Contains(b.Id))
+                    .Select(b => b.Id)
+                    .ToListAsync()
+                : new List<int>();
+
+            if (!model.SelectedBranchIds.Any() && branchesExist)
+            {
+                ModelState.AddModelError(nameof(model.SelectedBranchIds), "يرجى اختيار فرع واحد على الأقل.");
+            }
+            else if (!validBranchIds.Any() && branchesExist)
             {
                 ModelState.AddModelError(nameof(model.SelectedBranchIds), "يرجى اختيار فرع واحد على الأقل.");
             }
@@ -271,11 +290,6 @@ namespace AccountingSystem.Controllers
                 supplier.IsActive = model.IsActive;
                 supplier.Mode = model.Mode;
                 supplier.AuthorizedOperations = CombineAuthorizations(model.SelectedAuthorizations);
-
-                var validBranchIds = await _context.Branches
-                    .Where(b => model.SelectedBranchIds.Contains(b.Id))
-                    .Select(b => b.Id)
-                    .ToListAsync();
 
                 var distinctBranchIds = validBranchIds.Distinct().ToList();
 
