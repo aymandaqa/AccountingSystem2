@@ -3879,7 +3879,10 @@ namespace AccountingSystem.Controllers
                     col.Item().Row(row =>
                     {
                         row.ConstantItem(level * 15);
-                        row.RelativeItem().Text(node.Id == 0 ? node.NameAr : $"{node.Code} - {node.NameAr}");
+                        var label = string.IsNullOrWhiteSpace(node.Code)
+                            ? node.NameAr
+                            : $"{node.Code} - {node.NameAr}";
+                        row.RelativeItem().Text(label);
                         row.ConstantItem(150).AlignRight().Text($"{node.DisplayBalanceSelected:N2} {selectedCurrencyCode} ({node.DisplayBalanceBase:N2} {baseCurrencyCode})");
                     });
                     if (node.Children.Any())
@@ -3951,7 +3954,10 @@ namespace AccountingSystem.Controllers
             {
                 foreach (var node in nodes)
                 {
-                    worksheet.Cell(row, 1).Value = new string(' ', level * 2) + (node.Id == 0 ? node.NameAr : $"{node.Code} - {node.NameAr}");
+                    var label = string.IsNullOrWhiteSpace(node.Code)
+                        ? node.NameAr
+                        : $"{node.Code} - {node.NameAr}";
+                    worksheet.Cell(row, 1).Value = new string(' ', level * 2) + label;
                     if (node.CanPostTransactions)
                     {
                         worksheet.Cell(row, 2).Value = node.DisplayBalanceSelected;
@@ -4173,6 +4179,87 @@ namespace AccountingSystem.Controllers
             TrimNodes(liabilities, normalizedLevel);
             TrimNodes(equity, normalizedLevel);
 
+            var incomeStatementAccounts = await _context.Accounts
+                .Include(a => a.Currency)
+                .Where(a => a.Classification == AccountClassification.IncomeStatement)
+                .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
+                .AsNoTracking()
+                .ToListAsync();
+
+            AccountTreeNodeViewModel? netIncomeNode = null;
+
+            if (incomeStatementAccounts.Any())
+            {
+                var incomeAccountIds = incomeStatementAccounts.Select(a => a.Id).ToList();
+
+                var incomeLineSums = await _context.JournalEntryLines
+                    .AsNoTracking()
+                    .Where(l => incomeAccountIds.Contains(l.AccountId))
+                    .Where(l => includePending || l.JournalEntry.Status == JournalEntryStatus.Posted)
+                    .Where(l => l.JournalEntry.Date >= fiscalYearStart && l.JournalEntry.Date < endDateExclusive)
+                    .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
+                    .GroupBy(l => l.AccountId)
+                    .Select(g => new
+                    {
+                        AccountId = g.Key,
+                        Debit = g.Sum(x => x.DebitAmount),
+                        Credit = g.Sum(x => x.CreditAmount)
+                    })
+                    .ToDictionaryAsync(x => x.AccountId);
+
+                decimal totalRevenueSelected = 0m;
+                decimal totalRevenueBase = 0m;
+                decimal totalExpensesSelected = 0m;
+                decimal totalExpensesBase = 0m;
+
+                foreach (var account in incomeStatementAccounts)
+                {
+                    incomeLineSums.TryGetValue(account.Id, out var sums);
+                    var debit = sums?.Debit ?? 0m;
+                    var credit = sums?.Credit ?? 0m;
+
+                    var balance = account.Nature == AccountNature.Debit
+                        ? debit - credit
+                        : credit - debit;
+
+                    var balanceSelected = _currencyService.Convert(balance, account.Currency, selectedCurrency);
+                    var balanceBase = _currencyService.Convert(balance, account.Currency, baseCurrency);
+
+                    if (account.AccountType == AccountType.Revenue)
+                    {
+                        totalRevenueSelected += balanceSelected;
+                        totalRevenueBase += balanceBase;
+                    }
+                    else if (account.AccountType == AccountType.Expenses)
+                    {
+                        totalExpensesSelected += balanceSelected;
+                        totalExpensesBase += balanceBase;
+                    }
+                }
+
+                var netIncomeSelected = totalRevenueSelected - totalExpensesSelected;
+                var netIncomeBase = totalRevenueBase - totalExpensesBase;
+
+                netIncomeNode = new AccountTreeNodeViewModel
+                {
+                    Id = -1,
+                    Code = string.Empty,
+                    NameAr = "صافي الدخل للفترة",
+                    ParentAccountName = string.Empty,
+                    AccountType = AccountType.Equity,
+                    Nature = AccountNature.Credit,
+                    CurrencyCode = selectedCurrency.Code,
+                    Balance = netIncomeSelected,
+                    BalanceSelected = netIncomeSelected,
+                    BalanceBase = netIncomeBase,
+                    CanPostTransactions = false,
+                    ParentId = null,
+                    Level = 1,
+                    Children = new List<AccountTreeNodeViewModel>(),
+                    HasChildren = false
+                };
+            }
+
             foreach (var asset in assets)
             {
                 ApplyDisplayBalances(asset, normalize: false);
@@ -4186,6 +4273,12 @@ namespace AccountingSystem.Controllers
             foreach (var equityNode in equity)
             {
                 ApplyDisplayBalances(equityNode, normalize: true);
+            }
+
+            if (netIncomeNode != null)
+            {
+                ApplyDisplayBalances(netIncomeNode, normalize: true);
+                equity.Add(netIncomeNode);
             }
 
             var totalAssetsRaw = assets.Sum(a => a.BalanceSelected);
@@ -4227,7 +4320,7 @@ namespace AccountingSystem.Controllers
                 TotalEquityBase = NormalizeBalanceForDisplay(totalEquityBaseRaw, AccountNature.Credit)
             };
 
-            viewModel.IsBalanced = totalAssetsBaseRaw == (totalLiabilitiesBaseRaw + totalEquityBaseRaw);
+            viewModel.IsBalanced = Math.Abs(totalAssetsBaseRaw - (totalLiabilitiesBaseRaw + totalEquityBaseRaw)) < 0.01m;
 
             return viewModel;
         }
