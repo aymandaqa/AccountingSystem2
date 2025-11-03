@@ -44,6 +44,20 @@ namespace AccountingSystem.Migrations
                 nullable: false,
                 defaultValue: 0m);
 
+            migrationBuilder.Sql(@"
+UPDATE Assets
+SET
+    OriginalCost = CASE
+        WHEN (OriginalCost IS NULL OR OriginalCost = 0) AND OpeningBalance IS NOT NULL THEN OpeningBalance
+        ELSE OriginalCost
+    END,
+    AccumulatedDepreciation = COALESCE(AccumulatedDepreciation, 0),
+    BookValue = CASE
+        WHEN (BookValue = 0 OR BookValue IS NULL) AND OpeningBalance IS NOT NULL THEN OpeningBalance - COALESCE(AccumulatedDepreciation, 0)
+        ELSE BookValue
+    END;
+");
+
             migrationBuilder.AddColumn<int>(
                 name: "DepreciationFrequency",
                 table: "Assets",
