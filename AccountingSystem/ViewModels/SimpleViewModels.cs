@@ -526,6 +526,9 @@ namespace AccountingSystem.ViewModels
         public decimal Balance { get; set; }
         public decimal BalanceSelected { get; set; }
         public decimal BalanceBase { get; set; }
+        public decimal DisplayBalance { get; set; }
+        public decimal DisplayBalanceSelected { get; set; }
+        public decimal DisplayBalanceBase { get; set; }
         public bool IsActive { get; set; }
         public bool CanPostTransactions { get; set; }
         public int? ParentId { get; set; }

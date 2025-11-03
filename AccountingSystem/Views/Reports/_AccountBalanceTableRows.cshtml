@@ -1,5 +1,4 @@
 @model IEnumerable<AccountingSystem.ViewModels.AccountTreeNodeViewModel>
-@using AccountingSystem.Models
 @{
     var selectedCurrencyCode = ViewData["SelectedCurrencyCode"] as string ?? string.Empty;
 }
@@ -13,25 +12,6 @@
     var rowClass = isRoot ? "bs-row-root" : hasChildren ? "bs-row-group" : "bs-row-leaf";
     var nodeId = node.Id.ToString();
     var parentId = node.ParentId?.ToString() ?? string.Empty;
-    decimal displayBalance;
-
-    if (node.Nature == AccountNature.Credit)
-    {
-        displayBalance = node.BalanceSelected < 0
-            ? Math.Abs(node.BalanceSelected)
-            : -Math.Abs(node.BalanceSelected);
-    }
-    else if (node.Nature == AccountNature.Debit)
-    {
-        displayBalance = node.BalanceSelected > 0
-            ? Math.Abs(node.BalanceSelected)
-            : -Math.Abs(node.BalanceSelected);
-    }
-    else
-    {
-        displayBalance = node.BalanceSelected;
-    }
-
     <tr class="balance-sheet-row @rowClass"
         data-level="@level"
         data-node-id="@nodeId"
@@ -66,7 +46,7 @@
             </div>
         </td>
         <td class="text-end">
-            <span class="amount">@displayBalance.ToString("N2")</span>
+            <span class="amount">@node.DisplayBalanceSelected.ToString("N2")</span>
             <span class="currency text-muted">@selectedCurrencyCode</span>
         </td>
     </tr>

@@ -3848,9 +3848,7 @@ namespace AccountingSystem.Controllers
                     {
                         row.ConstantItem(level * 15);
                         row.RelativeItem().Text(node.Id == 0 ? node.NameAr : $"{node.Code} - {node.NameAr}");
-                        var displaySelected = NormalizeBalanceForDisplay(node.BalanceSelected, node.Nature);
-                        var displayBase = NormalizeBalanceForDisplay(node.BalanceBase, node.Nature);
-                        row.ConstantItem(150).AlignRight().Text($"{displaySelected:N2} {selectedCurrencyCode} ({displayBase:N2} {baseCurrencyCode})");
+                        row.ConstantItem(150).AlignRight().Text($"{node.DisplayBalanceSelected:N2} {selectedCurrencyCode} ({node.DisplayBalanceBase:N2} {baseCurrencyCode})");
                     });
                     if (node.Children.Any())
                         ComposePdfTree(col, node.Children, level + 1, selectedCurrencyCode, baseCurrencyCode);
@@ -3879,10 +3877,8 @@ namespace AccountingSystem.Controllers
                 foreach (var node in nodes)
                 {
                     worksheet.Cell(row, 1).Value = new string(' ', level * 2) + (node.Id == 0 ? node.NameAr : $"{node.Code} - {node.NameAr}");
-                    var displaySelected = NormalizeBalanceForDisplay(node.BalanceSelected, node.Nature);
-                    var displayBase = NormalizeBalanceForDisplay(node.BalanceBase, node.Nature);
-                    worksheet.Cell(row, 2).Value = displaySelected;
-                    worksheet.Cell(row, 3).Value = displayBase;
+                    worksheet.Cell(row, 2).Value = node.DisplayBalanceSelected;
+                    worksheet.Cell(row, 3).Value = node.DisplayBalanceBase;
                     row++;
                     if (node.Children.Any())
                         WriteNodes(node.Children, level + 1);
@@ -4002,10 +3998,23 @@ namespace AccountingSystem.Controllers
                 }
             }
 
+            void ApplyDisplayBalances(AccountTreeNodeViewModel node)
+            {
+                node.DisplayBalance = NormalizeBalanceForDisplay(node.Balance, node.Nature);
+                node.DisplayBalanceSelected = NormalizeBalanceForDisplay(node.BalanceSelected, node.Nature);
+                node.DisplayBalanceBase = NormalizeBalanceForDisplay(node.BalanceBase, node.Nature);
+
+                foreach (var child in node.Children)
+                {
+                    ApplyDisplayBalances(child);
+                }
+            }
+
             var rootNodes = nodes.Values.Where(n => n.ParentId == null).ToList();
             foreach (var root in rootNodes)
             {
                 ComputeBalances(root);
+                ApplyDisplayBalances(root);
             }
 
             var assets = rootNodes.Where(n => n.AccountType == AccountType.Assets).OrderBy(n => n.Code).ToList();
@@ -4061,12 +4070,12 @@ namespace AccountingSystem.Controllers
                         Selected = l == normalizedLevel
                     })
                     .ToList(),
-                TotalAssets = assets.Sum(a => NormalizeBalanceForDisplay(a.BalanceSelected, a.Nature)),
-                TotalLiabilities = liabilities.Sum(l => NormalizeBalanceForDisplay(l.BalanceSelected, l.Nature)),
-                TotalEquity = equity.Sum(e => NormalizeBalanceForDisplay(e.BalanceSelected, e.Nature)),
-                TotalAssetsBase = assets.Sum(a => NormalizeBalanceForDisplay(a.BalanceBase, a.Nature)),
-                TotalLiabilitiesBase = liabilities.Sum(l => NormalizeBalanceForDisplay(l.BalanceBase, l.Nature)),
-                TotalEquityBase = equity.Sum(e => NormalizeBalanceForDisplay(e.BalanceBase, e.Nature))
+                TotalAssets = assets.Sum(a => a.DisplayBalanceSelected),
+                TotalLiabilities = liabilities.Sum(l => l.DisplayBalanceSelected),
+                TotalEquity = equity.Sum(e => e.DisplayBalanceSelected),
+                TotalAssetsBase = assets.Sum(a => a.DisplayBalanceBase),
+                TotalLiabilitiesBase = liabilities.Sum(l => l.DisplayBalanceBase),
+                TotalEquityBase = equity.Sum(e => e.DisplayBalanceBase)
             };
 
             viewModel.IsBalanced = totalAssetsBaseRaw == (totalLiabilitiesBaseRaw + totalEquityBaseRaw);
