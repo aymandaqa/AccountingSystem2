@@ -3,7 +3,9 @@
     var selectedCurrencyCode = ViewData["SelectedCurrencyCode"] as string ?? string.Empty;
 }
 
-@foreach (var node in Model.OrderBy(n => n.Code))
+@foreach (var node in Model
+    .OrderBy(n => n.Id == -1 ? 1 : 0)
+    .ThenBy(n => n.Code))
 {
     var level = node.Level;
     var indent = Math.Max(0, (level - 1) * 18);
