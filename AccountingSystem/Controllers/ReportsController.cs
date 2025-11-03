@@ -3581,7 +3581,8 @@ namespace AccountingSystem.Controllers
                 static bool HasNonZeroValues(BranchPerformanceSummaryRow row) => row.Values.Values.Any(v => v != 0);
 
                 var childrenLookup = rowsDictionary.Values
-                    .GroupBy(r => r.ParentAccountId)
+                    .Where(r => r.ParentAccountId.HasValue)
+                    .GroupBy(r => r.ParentAccountId!.Value)
                     .ToDictionary(
                         g => g.Key,
                         g => g.OrderBy(r => r.AccountCode, StringComparer.OrdinalIgnoreCase).ToList());
@@ -3608,13 +3609,10 @@ namespace AccountingSystem.Controllers
                     }
                 }
 
-                if (!childrenLookup.TryGetValue(null, out var rootRows))
-                {
-                    rootRows = rowsDictionary.Values
-                        .Where(r => r.ParentAccountId == null || !rowsDictionary.ContainsKey(r.ParentAccountId.Value))
-                        .OrderBy(r => r.AccountCode, StringComparer.OrdinalIgnoreCase)
-                        .ToList();
-                }
+                var rootRows = rowsDictionary.Values
+                    .Where(r => r.ParentAccountId == null || !rowsDictionary.ContainsKey(r.ParentAccountId.Value))
+                    .OrderBy(r => r.AccountCode, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
 
                 foreach (var root in rootRows)
                 {
