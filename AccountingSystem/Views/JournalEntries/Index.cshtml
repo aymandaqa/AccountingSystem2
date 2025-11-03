@@ -1459,7 +1459,12 @@
                     if (grid) {
                         const dataSource = Array.isArray(items) ? items : [];
 
-                        grid.dataSource = dataSource;
+                        if (typeof grid.setProperties === 'function') {
+                            grid.setProperties({ dataSource }, true);
+                        }
+                        else {
+                            grid.dataSource = dataSource;
+                        }
 
                         if (typeof grid.dataBind === 'function') {
                             grid.dataBind();
