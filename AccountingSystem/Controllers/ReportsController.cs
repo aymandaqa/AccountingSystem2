@@ -4045,6 +4045,10 @@ namespace AccountingSystem.Controllers
             TrimNodes(liabilities, normalizedLevel);
             TrimNodes(equity, normalizedLevel);
 
+            var totalAssetsRaw = assets.Sum(a => a.BalanceSelected);
+            var totalLiabilitiesRaw = liabilities.Sum(l => l.BalanceSelected);
+            var totalEquityRaw = equity.Sum(e => e.BalanceSelected);
+
             var totalAssetsBaseRaw = assets.Sum(a => a.BalanceBase);
             var totalLiabilitiesBaseRaw = liabilities.Sum(l => l.BalanceBase);
             var totalEquityBaseRaw = equity.Sum(e => e.BalanceBase);
@@ -4070,12 +4074,12 @@ namespace AccountingSystem.Controllers
                         Selected = l == normalizedLevel
                     })
                     .ToList(),
-                TotalAssets = assets.Sum(a => a.DisplayBalanceSelected),
-                TotalLiabilities = liabilities.Sum(l => l.DisplayBalanceSelected),
-                TotalEquity = equity.Sum(e => e.DisplayBalanceSelected),
-                TotalAssetsBase = assets.Sum(a => a.DisplayBalanceBase),
-                TotalLiabilitiesBase = liabilities.Sum(l => l.DisplayBalanceBase),
-                TotalEquityBase = equity.Sum(e => e.DisplayBalanceBase)
+                TotalAssets = NormalizeBalanceForDisplay(totalAssetsRaw, AccountNature.Debit),
+                TotalLiabilities = NormalizeBalanceForDisplay(totalLiabilitiesRaw, AccountNature.Credit),
+                TotalEquity = NormalizeBalanceForDisplay(totalEquityRaw, AccountNature.Credit),
+                TotalAssetsBase = NormalizeBalanceForDisplay(totalAssetsBaseRaw, AccountNature.Debit),
+                TotalLiabilitiesBase = NormalizeBalanceForDisplay(totalLiabilitiesBaseRaw, AccountNature.Credit),
+                TotalEquityBase = NormalizeBalanceForDisplay(totalEquityBaseRaw, AccountNature.Credit)
             };
 
             viewModel.IsBalanced = totalAssetsBaseRaw == (totalLiabilitiesBaseRaw + totalEquityBaseRaw);
@@ -4085,17 +4089,17 @@ namespace AccountingSystem.Controllers
 
         private static decimal NormalizeBalanceForDisplay(decimal amount, AccountNature nature)
         {
-            if (nature == AccountNature.Credit)
+            if (amount == 0)
             {
-                return amount < 0 ? Math.Abs(amount) : -Math.Abs(amount);
+                return 0;
             }
 
-            if (nature == AccountNature.Debit)
+            return nature switch
             {
-                return amount > 0 ? Math.Abs(amount) : -Math.Abs(amount);
-            }
-
-            return amount;
+                AccountNature.Credit => amount <= 0 ? Math.Abs(amount) : -Math.Abs(amount),
+                AccountNature.Debit => amount >= 0 ? Math.Abs(amount) : -Math.Abs(amount),
+                _ => amount
+            };
         }
 
         private async Task<IncomeStatementViewModel> BuildIncomeStatementViewModel(int? branchId, DateTime fromDate, DateTime toDate, bool includePending, int? currencyId)
