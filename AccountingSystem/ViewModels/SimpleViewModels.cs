@@ -208,7 +208,6 @@ namespace AccountingSystem.ViewModels
 
     public class BalanceSheetViewModel
     {
-        public DateTime AsOfDate { get; set; } = DateTime.Now;
         public int? BranchId { get; set; }
         public bool IncludePending { get; set; }
         public List<AccountTreeNodeViewModel> Assets { get; set; } = new List<AccountTreeNodeViewModel>();

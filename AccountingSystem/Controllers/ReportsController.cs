@@ -3805,16 +3805,16 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/BalanceSheet
-        public async Task<IActionResult> BalanceSheet(int? branchId, DateTime? asOfDate, bool includePending = false, int? currencyId = null, int level = 6)
+        public async Task<IActionResult> BalanceSheet(int? branchId, bool includePending = false, int? currencyId = null, int level = 6)
         {
-            var viewModel = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now, includePending, currencyId, level);
+            var viewModel = await BuildBalanceSheetViewModel(branchId, includePending, currencyId, level);
             return View(viewModel);
         }
 
         // GET: Reports/BalanceSheetPdf
-        public async Task<IActionResult> BalanceSheetPdf(int? branchId, DateTime? asOfDate, bool includePending = false, int? currencyId = null, int level = 6)
+        public async Task<IActionResult> BalanceSheetPdf(int? branchId, bool includePending = false, int? currencyId = null, int level = 6)
         {
-            var model = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now, includePending, currencyId, level);
+            var model = await BuildBalanceSheetViewModel(branchId, includePending, currencyId, level);
 
             var document = Document.Create(container =>
             {
@@ -3822,7 +3822,7 @@ namespace AccountingSystem.Controllers
                 {
                     page.Margin(20);
                     page.Size(PageSizes.A4);
-                    page.Header().Text($"الميزانية العمومية - {model.AsOfDate:dd/MM/yyyy}").FontSize(16).Bold();
+                    page.Header().Text("الميزانية العمومية").FontSize(16).Bold();
                     page.Content().Column(col =>
                     {
                         col.Item().Text("الأصول").FontSize(14).Bold();
@@ -3862,9 +3862,9 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/BalanceSheetExcel
-        public async Task<IActionResult> BalanceSheetExcel(int? branchId, DateTime? asOfDate, bool includePending = false, int? currencyId = null, int level = 6)
+        public async Task<IActionResult> BalanceSheetExcel(int? branchId, bool includePending = false, int? currencyId = null, int level = 6)
         {
-            var model = await BuildBalanceSheetViewModel(branchId, asOfDate ?? DateTime.Now, includePending, currencyId, level);
+            var model = await BuildBalanceSheetViewModel(branchId, includePending, currencyId, level);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.AddWorksheet("BalanceSheet");
@@ -3910,11 +3910,9 @@ namespace AccountingSystem.Controllers
             return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "BalanceSheet.xlsx");
         }
 
-        private async Task<BalanceSheetViewModel> BuildBalanceSheetViewModel(int? branchId, DateTime asOfDate, bool includePending, int? currencyId, int level = 6)
+        private async Task<BalanceSheetViewModel> BuildBalanceSheetViewModel(int? branchId, bool includePending, int? currencyId, int level = 6)
         {
             var accounts = await _context.Accounts
-                .Include(a => a.JournalEntryLines)
-                    .ThenInclude(l => l.JournalEntry)
                 .Include(a => a.Currency)
                 .Include(a => a.Parent)
                 .Where(a => a.Classification == AccountClassification.BalanceSheet)
@@ -3951,16 +3949,11 @@ namespace AccountingSystem.Controllers
             var selectedCurrency = currencyId.HasValue ? await _context.Currencies.FirstOrDefaultAsync(c => c.Id == currencyId.Value) : baseCurrency;
             selectedCurrency ??= baseCurrency;
 
-            var balances = accounts.ToDictionary(a => a.Id, a =>
-                a.OpeningBalance + a.JournalEntryLines
-                    .Where(l => includePending || l.JournalEntry.Status == JournalEntryStatus.Posted)
-                    .Where(l => l.JournalEntry.Date <= asOfDate)
-                    .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
-                    .Sum(l => l.DebitAmount - l.CreditAmount));
-
             var nodes = accounts.Select(a =>
             {
-                var balance = balances[a.Id];
+                var balance = a.CurrentBalance;
+                var balanceSelected = _currencyService.Convert(balance, a.Currency, selectedCurrency);
+                var balanceBase = _currencyService.Convert(balance, a.Currency, baseCurrency);
                 return new AccountTreeNodeViewModel
                 {
                     Id = a.Id,
@@ -3971,9 +3964,12 @@ namespace AccountingSystem.Controllers
                     Nature = a.Nature,
                     CurrencyCode = a.Currency.Code,
                     OpeningBalance = a.OpeningBalance,
+                    CurrentBalance = balance,
+                    CurrentBalanceSelected = balanceSelected,
+                    CurrentBalanceBase = balanceBase,
                     Balance = balance,
-                    BalanceSelected = _currencyService.Convert(balance, a.Currency, selectedCurrency),
-                    BalanceBase = _currencyService.Convert(balance, a.Currency, baseCurrency),
+                    BalanceSelected = balanceSelected,
+                    BalanceBase = balanceBase,
                     IsActive = a.IsActive,
                     CanPostTransactions = a.CanPostTransactions,
                     ParentId = a.ParentId,
@@ -4046,7 +4042,6 @@ namespace AccountingSystem.Controllers
 
             var viewModel = new BalanceSheetViewModel
             {
-                AsOfDate = asOfDate,
                 BranchId = branchId,
                 IncludePending = includePending,
                 Assets = assets,
