@@ -4096,7 +4096,7 @@ namespace AccountingSystem.Controllers
 
             return nature switch
             {
-                AccountNature.Credit => amount <= 0 ? Math.Abs(amount) : -Math.Abs(amount),
+                AccountNature.Credit => amount * -1 <= 0 ? Math.Abs(amount) : -Math.Abs(amount),
                 AccountNature.Debit => amount >= 0 ? Math.Abs(amount) : -Math.Abs(amount),
                 _ => amount
             };
