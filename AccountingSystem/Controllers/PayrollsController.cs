@@ -228,7 +228,6 @@ namespace AccountingSystem.Controllers
                         .Take(20)
                         .ToList();
 
-                    var hasAllowanceSelection = selection.Allowances != null;
                     var sanitizedAllowances = (selection.Allowances ?? new List<PayrollEmployeeAllowanceSelection>())
                         .Where(a => a != null)
                         .Select(a => new PayrollEmployeeAllowanceSelection
@@ -243,6 +242,8 @@ namespace AccountingSystem.Controllers
                         .Where(a => a.Amount > 0)
                         .Take(20)
                         .ToList();
+
+                    var hasAllowanceSelection = selection.Allowances != null && sanitizedAllowances.Count > 0;
 
                     return new PayrollEmployeeSelection
                     {
