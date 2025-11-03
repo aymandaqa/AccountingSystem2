@@ -81,7 +81,7 @@ namespace AccountingSystem.Services
                     AccountId = supplierAccount.Id,
                     CreditAmount = loadedExpense.Amount,
                     Description = "مصروف أصل",
-                    CostCenterId = costCenterId
+                    //CostCenterId = 0
                 }
             };
 
@@ -116,7 +116,7 @@ namespace AccountingSystem.Services
                     AccountId = supplierAccount.Id,
                     DebitAmount = loadedExpense.Amount,
                     Description = "دفع مصروف أصل",
-                    CostCenterId = costCenterId
+                    //CostCenterId = 0
                 });
 
                 lines.Add(new JournalEntryLine
@@ -124,7 +124,7 @@ namespace AccountingSystem.Services
                     AccountId = paymentAccount.Id,
                     CreditAmount = loadedExpense.Amount,
                     Description = "دفع مصروف أصل",
-                    CostCenterId = costCenterId
+                    //CostCenterId = 0
                 });
             }
 
