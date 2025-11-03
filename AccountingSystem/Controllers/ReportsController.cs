@@ -3921,6 +3921,7 @@ namespace AccountingSystem.Controllers
                 .ToListAsync();
 
             var targetDate = (toDate ?? DateTime.Today).Date;
+            var endDateExclusive = targetDate.AddDays(1);
             var fiscalYearStart = new DateTime(targetDate.Year, 1, 1);
 
             var accountIds = accounts.Select(a => a.Id).ToList();
@@ -3929,7 +3930,7 @@ namespace AccountingSystem.Controllers
                 .AsNoTracking()
                 .Where(l => accountIds.Contains(l.AccountId))
                 .Where(l => includePending || l.JournalEntry.Status == JournalEntryStatus.Posted)
-                .Where(l => l.JournalEntry.Date >= fiscalYearStart && l.JournalEntry.Date <= targetDate)
+                .Where(l => l.JournalEntry.Date >= fiscalYearStart && l.JournalEntry.Date < endDateExclusive)
                 .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
                 .GroupBy(l => l.AccountId)
                 .Select(g => new
