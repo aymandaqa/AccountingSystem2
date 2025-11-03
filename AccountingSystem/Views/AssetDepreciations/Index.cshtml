@@ -1,0 +1,147 @@
+@model AccountingSystem.ViewModels.AssetDepreciationIndexViewModel
+@using AccountingSystem.Models
+
+@{
+    ViewData["Title"] = "إهلاك الأصل";
+    string frequencyDisplay = Model.DepreciationFrequency switch
+    {
+        DepreciationFrequency.Monthly => "شهري",
+        DepreciationFrequency.Yearly => "سنوي",
+        _ => "غير محدد"
+    };
+}
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col-12">
+            <a asp-controller="Assets" asp-action="Index" class="btn btn-secondary"><i class="fas fa-arrow-right"></i> عودة إلى الأصول</a>
+        </div>
+    </div>
+
+    @if (TempData["Success"] is string successMessage)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-1"></i> @successMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Error"] is string errorMessage)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-1"></i> @errorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="card mb-4">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <h3 class="card-title mb-1">@Model.AssetName</h3>
+                <div class="text-muted">@Model.AssetTypeName - @Model.BranchName</div>
+            </div>
+            <div class="btn-group">
+                <form asp-action="Calculate" method="post" asp-route-assetId="@Model.AssetId" asp-require-permission="assetdepreciations.create">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-primary" @(Model.HasRemainingDepreciation ? string.Empty : "disabled")>
+                        <i class="fas fa-calculator"></i> احتساب الإهلاك
+                    </button>
+                </form>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3 col-sm-6">
+                    <div class="small text-muted">قيمة الأصل</div>
+                    <div class="fw-bold">@Model.OriginalCost?.ToString("N2")</div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="small text-muted">قيمة الخردة</div>
+                    <div class="fw-bold">@Model.SalvageValue?.ToString("N2")</div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="small text-muted">مجمع الإهلاك</div>
+                    <div class="fw-bold">@Model.AccumulatedDepreciation.ToString("N2")</div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="small text-muted">القيمة الدفترية</div>
+                    <div class="fw-bold">@Model.BookValue.ToString("N2")</div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="small text-muted">دورية الإهلاك</div>
+                    <div class="fw-bold">@frequencyDisplay</div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="small text-muted">عدد الفترات</div>
+                    <div class="fw-bold">@Model.DepreciationPeriods</div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="small text-muted">تاريخ الشراء</div>
+                    <div class="fw-bold">@Model.PurchaseDate?.ToString("dd/MM/yyyy")</div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="small text-muted">الفترة التالية</div>
+                    <div class="fw-bold">
+                        @if (Model.NextPeriodStart.HasValue && Model.NextPeriodEnd.HasValue)
+                        {
+                            <span>@Model.NextPeriodStart.Value.ToString("dd/MM/yyyy") - @Model.NextPeriodEnd.Value.ToString("dd/MM/yyyy")</span>
+                        }
+                        else
+                        {
+                            <span>لا توجد فترات متاحة</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h4 class="card-title mb-0">سجل فترات الإهلاك</h4>
+        </div>
+        <div class="card-body">
+            @if (Model.Depreciations.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>بداية الفترة</th>
+                                <th>نهاية الفترة</th>
+                                <th>قيمة الإهلاك</th>
+                                <th>مجمع الإهلاك</th>
+                                <th>القيمة الدفترية</th>
+                                <th>رقم القيد</th>
+                                <th>تم بواسطة</th>
+                                <th>تاريخ الإنشاء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var depreciation in Model.Depreciations)
+                            {
+                                <tr>
+                                    <td>@depreciation.PeriodNumber</td>
+                                    <td>@depreciation.PeriodStart.ToString("dd/MM/yyyy")</td>
+                                    <td>@depreciation.PeriodEnd.ToString("dd/MM/yyyy")</td>
+                                    <td>@depreciation.Amount.ToString("N2")</td>
+                                    <td>@depreciation.AccumulatedDepreciation.ToString("N2")</td>
+                                    <td>@depreciation.BookValue.ToString("N2")</td>
+                                    <td>@depreciation.JournalEntryNumber</td>
+                                    <td>@depreciation.CreatedByName</td>
+                                    <td>@depreciation.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info text-center mb-0">
+                    لم يتم تسجيل أي فترات إهلاك بعد.
+                </div>
+            }
+        </div>
+    </div>
+</div>

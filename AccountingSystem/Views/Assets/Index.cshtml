@@ -78,6 +78,8 @@
                                 <th>الفرع</th>
                                 <th>رقم الأصل</th>
                                 <th>الرصيد الافتتاحي</th>
+                                <th>مجمع الإهلاك</th>
+                                <th>القيمة الدفترية</th>
                                 <th>ملاحظات</th>
                                 <th>تاريخ الإنشاء</th>
                                 <th>الإجراءات</th>
@@ -92,6 +94,8 @@
                                     <td>@asset.BranchName</td>
                                     <td>@asset.AssetNumber</td>
                                     <td>@asset.OpeningBalance</td>
+                                    <td>@asset.AccumulatedDepreciation</td>
+                                    <td>@asset.BookValue</td>
                                     <td>@asset.Notes</td>
                                     <td>@asset.CreatedAt.ToString("dd/MM/yyyy")</td>
                                     <td>
@@ -106,6 +110,17 @@
                                                    asp-require-permission="reports.accountstatement"
                                                    title="كشف الحساب">
                                                     <i class="fas fa-file-alt"></i>
+                                                </a>
+                                            }
+                                            @if (asset.IsDepreciable)
+                                            {
+                                                <a asp-controller="AssetDepreciations"
+                                                   asp-action="Index"
+                                                   asp-route-assetId="@asset.Id"
+                                                   class="btn btn-info"
+                                                   asp-require-permission="assetdepreciations.view"
+                                                   title="إدارة الإهلاك">
+                                                    <i class="fas fa-calculator"></i>
                                                 </a>
                                             }
                                             <a asp-action="Edit" asp-route-id="@asset.Id" class="btn btn-warning" asp-require-permission="assets.edit">

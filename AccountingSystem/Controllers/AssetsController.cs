@@ -254,7 +254,10 @@ namespace AccountingSystem.Controllers
                 OpeningBalance = a.OpeningBalance,
                 AccountId = a.AccountId,
                 CreatedAt = a.CreatedAt,
-                UpdatedAt = a.UpdatedAt
+                UpdatedAt = a.UpdatedAt,
+                IsDepreciable = a.AssetType.IsDepreciable,
+                AccumulatedDepreciation = a.AccumulatedDepreciation,
+                BookValue = a.BookValue
             }).ToList();
 
             return View(model);
@@ -282,6 +285,8 @@ namespace AccountingSystem.Controllers
             worksheet.Cell(1, 6).Value = "الملاحظات";
             worksheet.Cell(1, 7).Value = "تاريخ الإنشاء";
             worksheet.Cell(1, 8).Value = "كود الحساب";
+            worksheet.Cell(1, 9).Value = "مجمع الإهلاك";
+            worksheet.Cell(1, 10).Value = "القيمة الدفترية";
 
             worksheet.Row(1).Style.Font.Bold = true;
 
@@ -299,6 +304,8 @@ namespace AccountingSystem.Controllers
                 worksheet.Cell(row, 7).Value = asset.CreatedAt;
                 worksheet.Cell(row, 7).Style.DateFormat.Format = "yyyy-mm-dd";
                 worksheet.Cell(row, 8).Value = asset.Account?.Code ?? string.Empty;
+                worksheet.Cell(row, 9).Value = asset.AccumulatedDepreciation;
+                worksheet.Cell(row, 10).Value = asset.BookValue;
                 row++;
             }
 
@@ -317,11 +324,15 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "assets.create")]
         public async Task<IActionResult> Create()
         {
+            var assetTypeSelection = await GetAssetTypeSelectionDataAsync();
             var model = new AssetFormViewModel
             {
                 Branches = await GetBranchesAsync(),
                 CapitalAccounts = await GetCapitalAccountsAsync(),
-                AssetTypes = await GetAssetTypesAsync()
+                AssetTypes = assetTypeSelection.SelectList,
+                AssetTypeOptions = assetTypeSelection.Options,
+                DepreciationFrequencies = GetDepreciationFrequencySelectList(),
+                PurchaseDate = DateTime.Today
             };
             return View(model);
         }
@@ -345,7 +356,9 @@ namespace AccountingSystem.Controllers
             {
                 assetType = await _context.AssetTypes
                     .Include(t => t.Account)
-                    .ThenInclude(a => a.Currency)
+                        .ThenInclude(a => a.Currency)
+                    .Include(t => t.DepreciationExpenseAccount)
+                    .Include(t => t.AccumulatedDepreciationAccount)
                     .FirstOrDefaultAsync(t => t.Id == model.AssetTypeId);
 
                 if (assetType == null)
@@ -377,11 +390,62 @@ namespace AccountingSystem.Controllers
                 }
             }
 
+            if (ModelState.IsValid && assetType != null && assetType.IsDepreciable)
+            {
+                if (!model.OriginalCost.HasValue || model.OriginalCost.Value <= 0)
+                {
+                    ModelState.AddModelError(nameof(model.OriginalCost), "قيمة الأصل مطلوبة للأصول القابلة للإهلاك");
+                }
+
+                if (assetType.DepreciationExpenseAccountId == null)
+                {
+                    ModelState.AddModelError(nameof(model.AssetTypeId), "نوع الأصل لا يحتوي على حساب مصروف الإهلاك");
+                }
+
+                if (assetType.AccumulatedDepreciationAccountId == null)
+                {
+                    ModelState.AddModelError(nameof(model.AssetTypeId), "نوع الأصل لا يحتوي على حساب مجمع الإهلاك");
+                }
+
+                var salvageValue = model.SalvageValue ?? 0m;
+                if (salvageValue < 0)
+                {
+                    ModelState.AddModelError(nameof(model.SalvageValue), "قيمة الخردة يجب أن تكون موجبة");
+                }
+
+                if (model.OriginalCost.HasValue && salvageValue > model.OriginalCost.Value)
+                {
+                    ModelState.AddModelError(nameof(model.SalvageValue), "قيمة الخردة يجب ألا تتجاوز قيمة الأصل");
+                }
+
+                if (!model.DepreciationPeriods.HasValue || model.DepreciationPeriods.Value <= 0)
+                {
+                    ModelState.AddModelError(nameof(model.DepreciationPeriods), "العمر الافتراضي مطلوب");
+                }
+
+                if (!model.DepreciationFrequency.HasValue)
+                {
+                    ModelState.AddModelError(nameof(model.DepreciationFrequency), "حدد دورية الإهلاك");
+                }
+
+                if (!model.PurchaseDate.HasValue)
+                {
+                    ModelState.AddModelError(nameof(model.PurchaseDate), "تاريخ الشراء مطلوب");
+                }
+            }
+
             if (!ModelState.IsValid)
             {
+                var assetTypeSelection = await GetAssetTypeSelectionDataAsync(model.AssetTypeId);
                 model.Branches = await GetBranchesAsync();
                 model.CapitalAccounts = await GetCapitalAccountsAsync();
-                model.AssetTypes = await GetAssetTypesAsync();
+                model.AssetTypes = assetTypeSelection.SelectList;
+                model.AssetTypeOptions = assetTypeSelection.Options;
+                model.DepreciationFrequencies = GetDepreciationFrequencySelectList(model.DepreciationFrequency);
+                if (assetType != null && assetType.IsDepreciable && model.OriginalCost.HasValue)
+                {
+                    model.OpeningBalance = model.OriginalCost.Value;
+                }
                 return View(model);
             }
 
@@ -403,6 +467,25 @@ namespace AccountingSystem.Controllers
 
                 await _context.SaveChangesAsync();
 
+                var openingBalanceValue = model.OpeningBalance;
+                var bookValue = model.OpeningBalance;
+                decimal? originalCost = null;
+                decimal? salvageValue = null;
+                int? depreciationPeriods = null;
+                DepreciationFrequency? depreciationFrequency = null;
+                DateTime? purchaseDate = null;
+
+                if (assetType!.IsDepreciable)
+                {
+                    originalCost = model.OriginalCost ?? 0m;
+                    salvageValue = model.SalvageValue ?? 0m;
+                    depreciationPeriods = model.DepreciationPeriods;
+                    depreciationFrequency = model.DepreciationFrequency;
+                    purchaseDate = model.PurchaseDate;
+                    openingBalanceValue = originalCost ?? 0m;
+                    bookValue = originalCost ?? 0m;
+                }
+
                 var asset = new Asset
                 {
                     Name = model.Name,
@@ -410,8 +493,15 @@ namespace AccountingSystem.Controllers
                     BranchId = model.BranchId,
                     AssetNumber = model.AssetNumber,
                     Notes = model.Notes,
-                    OpeningBalance = model.OpeningBalance,
-                    AccountId = accountId
+                    OpeningBalance = openingBalanceValue,
+                    AccountId = accountId,
+                    OriginalCost = originalCost,
+                    SalvageValue = salvageValue,
+                    DepreciationPeriods = depreciationPeriods,
+                    DepreciationFrequency = depreciationFrequency,
+                    PurchaseDate = purchaseDate,
+                    AccumulatedDepreciation = 0,
+                    BookValue = bookValue
                 };
 
                 _context.Assets.Add(asset);
@@ -420,12 +510,12 @@ namespace AccountingSystem.Controllers
                 await _assetCostCenterService.EnsureCostCenterAsync(asset);
                 await _context.SaveChangesAsync();
 
-                if (model.OpeningBalance > 0)
+                if (openingBalanceValue > 0)
                 {
                     var lines = new List<JournalEntryLine>
                     {
-                        new JournalEntryLine { AccountId = accountId, DebitAmount = model.OpeningBalance },
-                        new JournalEntryLine { AccountId = capitalAccount!.Id, CreditAmount = model.OpeningBalance }
+                        new JournalEntryLine { AccountId = accountId, DebitAmount = openingBalanceValue },
+                        new JournalEntryLine { AccountId = capitalAccount!.Id, CreditAmount = openingBalanceValue }
                     };
 
                     var description = $"إثبات أصل جديد: {asset.Name}";
@@ -457,9 +547,16 @@ namespace AccountingSystem.Controllers
                 ModelState.AddModelError(string.Empty, "حدث خطأ أثناء إنشاء الأصل. الرجاء المحاولة مرة أخرى");
             }
 
+            var selection = await GetAssetTypeSelectionDataAsync(model.AssetTypeId);
             model.Branches = await GetBranchesAsync();
             model.CapitalAccounts = await GetCapitalAccountsAsync();
-            model.AssetTypes = await GetAssetTypesAsync();
+            model.AssetTypes = selection.SelectList;
+            model.AssetTypeOptions = selection.Options;
+            model.DepreciationFrequencies = GetDepreciationFrequencySelectList(model.DepreciationFrequency);
+            if (assetType != null && assetType.IsDepreciable && model.OriginalCost.HasValue)
+            {
+                model.OpeningBalance = model.OriginalCost.Value;
+            }
             return View(model);
         }
 
@@ -475,6 +572,7 @@ namespace AccountingSystem.Controllers
                 return NotFound();
             }
 
+            var assetTypeSelection = await GetAssetTypeSelectionDataAsync(asset.AssetTypeId);
             var model = new AssetFormViewModel
             {
                 Id = asset.Id,
@@ -486,8 +584,15 @@ namespace AccountingSystem.Controllers
                 OpeningBalance = asset.OpeningBalance,
                 AccountId = asset.AccountId,
                 AccountCode = asset.Account?.Code,
+                OriginalCost = asset.OriginalCost,
+                SalvageValue = asset.SalvageValue,
+                DepreciationPeriods = asset.DepreciationPeriods,
+                DepreciationFrequency = asset.DepreciationFrequency,
+                PurchaseDate = asset.PurchaseDate,
                 Branches = await GetBranchesAsync(),
-                AssetTypes = await GetAssetTypesAsync()
+                AssetTypes = assetTypeSelection.SelectList,
+                AssetTypeOptions = assetTypeSelection.Options,
+                DepreciationFrequencies = GetDepreciationFrequencySelectList(asset.DepreciationFrequency)
             };
 
             return View(model);
@@ -510,6 +615,7 @@ namespace AccountingSystem.Controllers
             {
                 asset = await _context.Assets
                     .Include(a => a.Account)
+                    .Include(a => a.Depreciations)
                     .FirstOrDefaultAsync(a => a.Id == id);
                 if (asset == null)
                 {
@@ -518,6 +624,8 @@ namespace AccountingSystem.Controllers
 
                 assetType = await _context.AssetTypes
                     .Include(t => t.Account)
+                    .Include(t => t.DepreciationExpenseAccount)
+                    .Include(t => t.AccumulatedDepreciationAccount)
                     .FirstOrDefaultAsync(t => t.Id == model.AssetTypeId);
 
                 if (assetType == null)
@@ -530,6 +638,59 @@ namespace AccountingSystem.Controllers
                 }
             }
 
+            if (ModelState.IsValid && asset != null && assetType != null && assetType.IsDepreciable)
+            {
+                if (!model.OriginalCost.HasValue || model.OriginalCost.Value <= 0)
+                {
+                    ModelState.AddModelError(nameof(model.OriginalCost), "قيمة الأصل مطلوبة للأصول القابلة للإهلاك");
+                }
+
+                if (assetType.DepreciationExpenseAccountId == null)
+                {
+                    ModelState.AddModelError(nameof(model.AssetTypeId), "نوع الأصل لا يحتوي على حساب مصروف الإهلاك");
+                }
+
+                if (assetType.AccumulatedDepreciationAccountId == null)
+                {
+                    ModelState.AddModelError(nameof(model.AssetTypeId), "نوع الأصل لا يحتوي على حساب مجمع الإهلاك");
+                }
+
+                var salvageValue = model.SalvageValue ?? 0m;
+                if (salvageValue < 0)
+                {
+                    ModelState.AddModelError(nameof(model.SalvageValue), "قيمة الخردة يجب أن تكون موجبة");
+                }
+
+                if (model.OriginalCost.HasValue && salvageValue > model.OriginalCost.Value)
+                {
+                    ModelState.AddModelError(nameof(model.SalvageValue), "قيمة الخردة يجب ألا تتجاوز قيمة الأصل");
+                }
+
+                if (!model.DepreciationPeriods.HasValue || model.DepreciationPeriods.Value <= 0)
+                {
+                    ModelState.AddModelError(nameof(model.DepreciationPeriods), "العمر الافتراضي مطلوب");
+                }
+
+                if (!model.DepreciationFrequency.HasValue)
+                {
+                    ModelState.AddModelError(nameof(model.DepreciationFrequency), "حدد دورية الإهلاك");
+                }
+
+                if (!model.PurchaseDate.HasValue)
+                {
+                    ModelState.AddModelError(nameof(model.PurchaseDate), "تاريخ الشراء مطلوب");
+                }
+
+                if (model.OriginalCost.HasValue)
+                {
+                    var maxAccumulated = model.OriginalCost.Value - (model.SalvageValue ?? 0m);
+                    if (asset.AccumulatedDepreciation > maxAccumulated)
+                    {
+                        ModelState.AddModelError(nameof(model.OriginalCost), "قيمة الأصل يجب أن تغطي مجمع الإهلاك الحالي");
+                    }
+                }
+            }
+
             if (ModelState.IsValid && asset != null && assetType?.Account != null)
             {
                 var previousAssetTypeId = asset.AssetTypeId;
@@ -539,8 +700,43 @@ namespace AccountingSystem.Controllers
                 asset.BranchId = model.BranchId;
                 asset.AssetNumber = model.AssetNumber;
                 asset.Notes = model.Notes;
-                asset.OpeningBalance = model.OpeningBalance;
                 asset.UpdatedAt = DateTime.Now;
+
+                if (assetType.IsDepreciable && model.OriginalCost.HasValue)
+                {
+                    asset.OpeningBalance = model.OriginalCost.Value;
+                }
+                else
+                {
+                    asset.OpeningBalance = model.OpeningBalance;
+                }
+
+                if (assetType.IsDepreciable)
+                {
+                    asset.OriginalCost = model.OriginalCost ?? asset.OriginalCost;
+                    asset.SalvageValue = model.SalvageValue ?? 0m;
+                    asset.DepreciationPeriods = model.DepreciationPeriods;
+                    asset.DepreciationFrequency = model.DepreciationFrequency;
+                    asset.PurchaseDate = model.PurchaseDate;
+
+                    var currentBookValue = (asset.OriginalCost ?? 0m) - asset.AccumulatedDepreciation;
+                    if (asset.SalvageValue.HasValue && currentBookValue < asset.SalvageValue.Value)
+                    {
+                        currentBookValue = asset.SalvageValue.Value;
+                    }
+
+                    asset.BookValue = currentBookValue;
+                }
+                else
+                {
+                    asset.OriginalCost = null;
+                    asset.SalvageValue = null;
+                    asset.DepreciationPeriods = null;
+                    asset.DepreciationFrequency = null;
+                    asset.PurchaseDate = null;
+                    asset.AccumulatedDepreciation = 0;
+                    asset.BookValue = asset.OpeningBalance;
+                }
 
                 if (asset.AccountId.HasValue)
                 {
@@ -571,8 +767,15 @@ namespace AccountingSystem.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            var assetTypeSelection = await GetAssetTypeSelectionDataAsync(model.AssetTypeId);
             model.Branches = await GetBranchesAsync();
-            model.AssetTypes = await GetAssetTypesAsync();
+            model.AssetTypes = assetTypeSelection.SelectList;
+            model.AssetTypeOptions = assetTypeSelection.Options;
+            model.DepreciationFrequencies = GetDepreciationFrequencySelectList(model.DepreciationFrequency);
+            if (assetType != null && assetType.IsDepreciable && model.OriginalCost.HasValue)
+            {
+                model.OpeningBalance = model.OriginalCost.Value;
+            }
             if (model.AccountId.HasValue)
             {
                 var account = await _context.Accounts.FindAsync(model.AccountId.Value);
@@ -617,6 +820,7 @@ namespace AccountingSystem.Controllers
                 .Include(a => a.Account)
                     .ThenInclude(a => a!.JournalEntryLines)
                 .Include(a => a.Expenses)
+                .Include(a => a.Depreciations)
                 .FirstOrDefaultAsync(a => a.Id == id);
 
             if (asset == null)
@@ -639,6 +843,12 @@ namespace AccountingSystem.Controllers
             if (asset.Expenses.Any())
             {
                 TempData["ErrorMessage"] = "لا يمكن حذف الأصل لوجود مصاريف مرتبطة به.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (asset.Depreciations.Any())
+            {
+                TempData["ErrorMessage"] = "لا يمكن حذف الأصل لوجود قيود إهلاك مرتبطة به.";
                 return RedirectToAction(nameof(Index));
             }
 
@@ -679,17 +889,65 @@ namespace AccountingSystem.Controllers
                 }).ToListAsync();
         }
 
-        private async Task<IEnumerable<SelectListItem>> GetAssetTypesAsync()
+        private async Task<AssetTypeSelectionData> GetAssetTypeSelectionDataAsync(int? selectedId = null)
         {
-            return await _context.AssetTypes
+            var assetTypes = await _context.AssetTypes
+                .Include(t => t.Account)
                 .OrderBy(t => t.Name)
-                .Select(t => new SelectListItem
+                .Select(t => new
                 {
-                    Value = t.Id.ToString(),
-                    Text = t.Account == null || string.IsNullOrWhiteSpace(t.Account.Code)
-                        ? t.Name
-                        : $"{t.Name} ({t.Account.Code})"
-                }).ToListAsync();
+                    t.Id,
+                    t.Name,
+                    t.IsDepreciable,
+                    AccountCode = t.Account != null ? t.Account.Code : null
+                })
+                .ToListAsync();
+
+            var selectList = assetTypes.Select(t => new SelectListItem
+            {
+                Value = t.Id.ToString(),
+                Text = string.IsNullOrWhiteSpace(t.AccountCode)
+                    ? t.Name
+                    : $"{t.Name} ({t.AccountCode})",
+                Selected = selectedId.HasValue && selectedId.Value == t.Id
+            }).ToList();
+
+            var options = assetTypes.Select(t => new AssetTypeSelectOption
+            {
+                Id = t.Id,
+                IsDepreciable = t.IsDepreciable
+            }).ToList();
+
+            return new AssetTypeSelectionData
+            {
+                SelectList = selectList,
+                Options = options
+            };
+        }
+
+        private IEnumerable<SelectListItem> GetDepreciationFrequencySelectList(DepreciationFrequency? selected = null)
+        {
+            return new List<SelectListItem>
+            {
+                new SelectListItem
+                {
+                    Value = ((int)DepreciationFrequency.Monthly).ToString(),
+                    Text = "شهري",
+                    Selected = selected == DepreciationFrequency.Monthly
+                },
+                new SelectListItem
+                {
+                    Value = ((int)DepreciationFrequency.Yearly).ToString(),
+                    Text = "سنوي",
+                    Selected = selected == DepreciationFrequency.Yearly
+                }
+            };
+        }
+
+        private sealed class AssetTypeSelectionData
+        {
+            public List<SelectListItem> SelectList { get; set; } = new();
+            public List<AssetTypeSelectOption> Options { get; set; } = new();
         }
     }
 }
