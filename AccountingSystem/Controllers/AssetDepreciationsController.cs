@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AccountingSystem.Data;
@@ -110,6 +111,131 @@ namespace AccountingSystem.Controllers
             }
 
             return RedirectToAction(nameof(Index), new { assetId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "assetdepreciations.create")]
+        public async Task<IActionResult> BulkPreview([FromForm] int[] assetIds, [FromForm] bool processAll = false)
+        {
+            List<int> ids;
+
+            if (processAll)
+            {
+                ids = await _context.Assets
+                    .AsNoTracking()
+                    .Where(a => a.AssetType.IsDepreciable)
+                    .Select(a => a.Id)
+                    .ToListAsync();
+            }
+            else
+            {
+                ids = assetIds?.Distinct().ToList() ?? new List<int>();
+            }
+
+            if (ids.Count == 0)
+            {
+                TempData["Error"] = "لم يتم تحديد أي أصول لاحتساب الإهلاك.";
+                return RedirectToAction("Index", "Assets");
+            }
+
+            var previewItems = new List<AssetDepreciationBulkPreviewItemViewModel>();
+            foreach (var id in ids)
+            {
+                var preview = await _assetDepreciationService.PreviewNextPeriodAsync(id);
+                var assetName = string.IsNullOrWhiteSpace(preview.AssetName)
+                    ? $"أصل #{(preview.AssetId != 0 ? preview.AssetId : id)}"
+                    : preview.AssetName;
+                var item = new AssetDepreciationBulkPreviewItemViewModel
+                {
+                    AssetId = preview.AssetId,
+                    AssetName = assetName,
+                    AssetTypeName = string.IsNullOrWhiteSpace(preview.AssetTypeName) ? "-" : preview.AssetTypeName,
+                    BranchName = string.IsNullOrWhiteSpace(preview.BranchName) ? "-" : preview.BranchName,
+                    CanDepreciate = preview.Success,
+                    Message = preview.Message
+                };
+
+                if (preview.Success && preview.Details != null)
+                {
+                    item.PeriodNumber = preview.Details.PeriodNumber;
+                    item.PeriodStart = preview.Details.PeriodStart;
+                    item.PeriodEnd = preview.Details.PeriodEnd;
+                    item.Amount = preview.Details.Amount;
+                    item.AccumulatedBefore = preview.Details.AccumulatedBefore;
+                    item.AccumulatedAfter = preview.Details.AccumulatedAfter;
+                    item.BookValueAfter = preview.Details.BookValueAfter;
+                }
+
+                previewItems.Add(item);
+            }
+
+            if (previewItems.All(i => !i.CanDepreciate))
+            {
+                TempData["Error"] = "لا توجد أصول متاحة لاحتساب الإهلاك.";
+                return RedirectToAction("Index", "Assets");
+            }
+
+            var model = new AssetDepreciationBulkPreviewViewModel
+            {
+                Items = previewItems
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "assetdepreciations.create")]
+        public async Task<IActionResult> BulkConfirm([FromForm] int[] assetIds)
+        {
+            if (assetIds == null || assetIds.Length == 0)
+            {
+                TempData["Error"] = "لم يتم تحديد أي أصول لتأكيد الإهلاك.";
+                return RedirectToAction("Index", "Assets");
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Challenge();
+            }
+
+            var ids = assetIds.Distinct().ToList();
+            var assetNames = await _context.Assets
+                .AsNoTracking()
+                .Where(a => ids.Contains(a.Id))
+                .Select(a => new { a.Id, a.Name })
+                .ToDictionaryAsync(a => a.Id, a => a.Name);
+
+            var successCount = 0;
+            var failures = new List<string>();
+
+            foreach (var id in ids)
+            {
+                var result = await _assetDepreciationService.CalculateNextPeriodAsync(id, user.Id);
+                if (result.Success)
+                {
+                    successCount++;
+                }
+                else
+                {
+                    var name = assetNames.TryGetValue(id, out var assetName) ? assetName : $"#{id}";
+                    failures.Add($"{name}: {result.Message}");
+                }
+            }
+
+            if (successCount > 0)
+            {
+                TempData["Success"] = $"تم احتساب الإهلاك بنجاح لـ {successCount} أصل.";
+            }
+
+            if (failures.Count > 0)
+            {
+                TempData["Error"] = "تعذر احتساب الإهلاك لبعض الأصول: " + string.Join("، ", failures);
+            }
+
+            return RedirectToAction("Index", "Assets");
         }
 
         private static (DateTime? Start, DateTime? End) GetNextPeriodWindow(Asset asset)

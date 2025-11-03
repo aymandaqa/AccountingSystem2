@@ -1,0 +1,103 @@
+@model AccountingSystem.ViewModels.AssetDepreciationBulkPreviewViewModel
+@using System.Linq
+
+@{
+    ViewData["Title"] = "مراجعة الإهلاك الجماعي";
+}
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <a asp-controller="Assets" asp-action="Index" class="btn btn-secondary">
+                <i class="fas fa-arrow-right"></i> عودة إلى الأصول
+            </a>
+            @if (Model.HasConfirmableItems)
+            {
+                <div class="text-muted small">
+                    سيتم ترحيل @Model.ConfirmableCount أصل بإجمالي قيمة إهلاك @Model.TotalAmount.ToString("N2") عند التأكيد.
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h3 class="card-title mb-0">مراجعة قيود الإهلاك</h3>
+            @if (!Model.HasConfirmableItems)
+            {
+                <span class="badge bg-warning text-dark">لا توجد أصول قابلة للإهلاك حالياً</span>
+            }
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>الأصل</th>
+                            <th>الفرع</th>
+                            <th>نوع الأصل</th>
+                            <th>الفترة</th>
+                            <th>بداية الفترة</th>
+                            <th>نهاية الفترة</th>
+                            <th>قيمة الإهلاك</th>
+                            <th>مجمع الإهلاك قبل</th>
+                            <th>مجمع الإهلاك بعد</th>
+                            <th>القيمة الدفترية بعد</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items.OrderByDescending(i => i.CanDepreciate))
+                        {
+                            var statusClass = item.CanDepreciate ? "text-success" : "text-danger";
+                            <tr class="align-middle">
+                                <td>
+                                    <div class="fw-bold">@item.AssetName</div>
+                                    <div class="text-muted small">رقم: @item.AssetId</div>
+                                </td>
+                                <td>@item.BranchName</td>
+                                <td>@item.AssetTypeName</td>
+                                <td>
+                                    @if (item.PeriodNumber.HasValue)
+                                    {
+                                        <span class="badge bg-primary">@item.PeriodNumber</span>
+                                    }
+                                </td>
+                                <td>@(item.PeriodStart?.ToString("dd/MM/yyyy") ?? "-")</td>
+                                <td>@(item.PeriodEnd?.ToString("dd/MM/yyyy") ?? "-")</td>
+                                <td>@(item.Amount?.ToString("N2") ?? "-")</td>
+                                <td>@(item.AccumulatedBefore?.ToString("N2") ?? "-")</td>
+                                <td>@(item.AccumulatedAfter?.ToString("N2") ?? "-")</td>
+                                <td>@(item.BookValueAfter?.ToString("N2") ?? "-")</td>
+                                <td class="fw-bold @statusClass">@item.Message</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                @if (Model.FailedCount > 0)
+                {
+                    <div class="text-danger small">
+                        تعذر تحضير الإهلاك لـ @Model.FailedCount أصل. الرجاء مراجعة الرسائل أعلاه.
+                    </div>
+                }
+            </div>
+            @if (Model.HasConfirmableItems)
+            {
+                <form asp-action="BulkConfirm" method="post" class="d-flex align-items-center gap-2" asp-require-permission="assetdepreciations.create">
+                    @Html.AntiForgeryToken()
+                    @foreach (var id in Model.Items.Where(i => i.CanDepreciate).Select(i => i.AssetId))
+                    {
+                        <input type="hidden" name="assetIds" value="@id" />
+                    }
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check-circle me-1"></i> تأكيد احتساب الإهلاك
+                    </button>
+                </form>
+            }
+        </div>
+    </div>
+</div>
