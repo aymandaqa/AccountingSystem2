@@ -24,17 +24,20 @@ namespace AccountingSystem.Controllers
         private readonly UserManager<User> _userManager;
         private readonly IJournalEntryService _journalEntryService;
         private readonly IAccountService _accountService;
+        private readonly IAssetCostCenterService _assetCostCenterService;
 
         public AssetsController(
             ApplicationDbContext context,
             UserManager<User> userManager,
             IJournalEntryService journalEntryService,
-            IAccountService accountService)
+            IAccountService accountService,
+            IAssetCostCenterService assetCostCenterService)
         {
             _context = context;
             _userManager = userManager;
             _journalEntryService = journalEntryService;
             _accountService = accountService;
+            _assetCostCenterService = assetCostCenterService;
         }
 
         [HttpPost]
@@ -207,6 +210,10 @@ namespace AccountingSystem.Controllers
                 {
                     _context.Assets.AddRange(assetsToAdd);
                     await _context.SaveChangesAsync();
+
+                    await _assetCostCenterService.EnsureCostCentersAsync(assetsToAdd);
+                    await _context.SaveChangesAsync();
+
                     TempData["ImportSuccess"] = $"تم استيراد {assetsToAdd.Count} أصل بنجاح.";
                 }
 
@@ -410,6 +417,9 @@ namespace AccountingSystem.Controllers
                 _context.Assets.Add(asset);
                 await _context.SaveChangesAsync();
 
+                await _assetCostCenterService.EnsureCostCenterAsync(asset);
+                await _context.SaveChangesAsync();
+
                 if (model.OpeningBalance > 0)
                 {
                     var lines = new List<JournalEntryLine>
@@ -556,6 +566,7 @@ namespace AccountingSystem.Controllers
                     }
                 }
 
+                await _assetCostCenterService.EnsureCostCenterAsync(asset);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
@@ -630,6 +641,8 @@ namespace AccountingSystem.Controllers
                 TempData["ErrorMessage"] = "لا يمكن حذف الأصل لوجود مصاريف مرتبطة به.";
                 return RedirectToAction(nameof(Index));
             }
+
+            await _assetCostCenterService.RemoveCostCenterAsync(asset);
 
             if (asset.Account != null)
             {

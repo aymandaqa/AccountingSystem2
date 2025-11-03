@@ -607,6 +607,11 @@ namespace AccountingSystem.Data
                     .WithMany(t => t.Assets)
                     .HasForeignKey(e => e.AssetTypeId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.CostCenter)
+                    .WithMany()
+                    .HasForeignKey(e => e.CostCenterId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<AssetExpense>(entity =>
