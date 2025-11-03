@@ -3869,20 +3869,72 @@ namespace AccountingSystem.Controllers
             var worksheet = workbook.AddWorksheet("BalanceSheet");
             var row = 1;
             worksheet.Cell(row, 1).Value = "الحساب";
-            worksheet.Cell(row, 2).Value = $"الرصيد ({model.SelectedCurrencyCode})";
-            worksheet.Cell(row, 3).Value = $"الرصيد ({model.BaseCurrencyCode})";
+            worksheet.Cell(row, 2).Value = $"الرصيد القابل للترحيل ({model.SelectedCurrencyCode})";
+            worksheet.Cell(row, 3).Value = $"الرصيد غير القابل للترحيل ({model.SelectedCurrencyCode})";
+            worksheet.Cell(row, 4).Value = $"الرصيد القابل للترحيل ({model.BaseCurrencyCode})";
+            worksheet.Cell(row, 5).Value = $"الرصيد غير القابل للترحيل ({model.BaseCurrencyCode})";
             row++;
 
             worksheet.Cell(row, 1).Value = $"الفترة: من {model.FromDate:dd/MM/yyyy} إلى {model.ToDate:dd/MM/yyyy}";
             row += 2;
+
+            decimal SumPostableSelected(IEnumerable<AccountTreeNodeViewModel> nodes)
+            {
+                decimal total = 0;
+                foreach (var node in nodes)
+                {
+                    if (node.CanPostTransactions)
+                    {
+                        total += node.DisplayBalanceSelected;
+                    }
+
+                    if (node.Children.Any())
+                    {
+                        total += SumPostableSelected(node.Children);
+                    }
+                }
+
+                return total;
+            }
+
+            decimal SumPostableBase(IEnumerable<AccountTreeNodeViewModel> nodes)
+            {
+                decimal total = 0;
+                foreach (var node in nodes)
+                {
+                    if (node.CanPostTransactions)
+                    {
+                        total += node.DisplayBalanceBase;
+                    }
+
+                    if (node.Children.Any())
+                    {
+                        total += SumPostableBase(node.Children);
+                    }
+                }
+
+                return total;
+            }
 
             void WriteNodes(List<AccountTreeNodeViewModel> nodes, int level)
             {
                 foreach (var node in nodes)
                 {
                     worksheet.Cell(row, 1).Value = new string(' ', level * 2) + (node.Id == 0 ? node.NameAr : $"{node.Code} - {node.NameAr}");
-                    worksheet.Cell(row, 2).Value = node.DisplayBalanceSelected;
-                    worksheet.Cell(row, 3).Value = node.DisplayBalanceBase;
+                    if (node.CanPostTransactions)
+                    {
+                        worksheet.Cell(row, 2).Value = node.DisplayBalanceSelected;
+                        worksheet.Cell(row, 3).Clear();
+                        worksheet.Cell(row, 4).Value = node.DisplayBalanceBase;
+                        worksheet.Cell(row, 5).Clear();
+                    }
+                    else
+                    {
+                        worksheet.Cell(row, 2).Clear();
+                        worksheet.Cell(row, 3).Value = node.DisplayBalanceSelected;
+                        worksheet.Cell(row, 4).Clear();
+                        worksheet.Cell(row, 5).Value = node.DisplayBalanceBase;
+                    }
                     row++;
                     if (node.Children.Any())
                         WriteNodes(node.Children, level + 1);
@@ -3891,18 +3943,24 @@ namespace AccountingSystem.Controllers
 
             WriteNodes(model.Assets, 0);
             worksheet.Cell(row, 1).Value = "إجمالي الأصول";
-            worksheet.Cell(row, 2).Value = model.TotalAssets;
-            worksheet.Cell(row, 3).Value = model.TotalAssetsBase;
+            worksheet.Cell(row, 2).Value = SumPostableSelected(model.Assets);
+            worksheet.Cell(row, 3).Value = model.TotalAssets;
+            worksheet.Cell(row, 4).Value = SumPostableBase(model.Assets);
+            worksheet.Cell(row, 5).Value = model.TotalAssetsBase;
             row++;
             WriteNodes(model.Liabilities, 0);
             worksheet.Cell(row, 1).Value = "إجمالي الخصوم";
-            worksheet.Cell(row, 2).Value = model.TotalLiabilities;
-            worksheet.Cell(row, 3).Value = model.TotalLiabilitiesBase;
+            worksheet.Cell(row, 2).Value = SumPostableSelected(model.Liabilities);
+            worksheet.Cell(row, 3).Value = model.TotalLiabilities;
+            worksheet.Cell(row, 4).Value = SumPostableBase(model.Liabilities);
+            worksheet.Cell(row, 5).Value = model.TotalLiabilitiesBase;
             row++;
             WriteNodes(model.Equity, 0);
             worksheet.Cell(row, 1).Value = "إجمالي حقوق الملكية";
-            worksheet.Cell(row, 2).Value = model.TotalEquity;
-            worksheet.Cell(row, 3).Value = model.TotalEquityBase;
+            worksheet.Cell(row, 2).Value = SumPostableSelected(model.Equity);
+            worksheet.Cell(row, 3).Value = model.TotalEquity;
+            worksheet.Cell(row, 4).Value = SumPostableBase(model.Equity);
+            worksheet.Cell(row, 5).Value = model.TotalEquityBase;
 
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);
