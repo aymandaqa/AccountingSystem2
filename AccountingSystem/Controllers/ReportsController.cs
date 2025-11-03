@@ -184,7 +184,12 @@ namespace AccountingSystem.Controllers
 
                     foreach (var row in section.Rows)
                     {
-                        worksheet.Cell(currentRow, 1).Value = row.Label;
+                        var labelText = string.IsNullOrWhiteSpace(row.AccountCode)
+                            ? row.Label
+                            : $"{row.AccountCode} - {row.Label}";
+
+                        worksheet.Cell(currentRow, 1).Value = labelText;
+                        worksheet.Cell(currentRow, 1).Style.Alignment.SetIndent(Math.Max(row.Level - 1, 0));
                         columnIndex = 2;
                         foreach (var branch in model.Branches)
                         {
@@ -219,7 +224,12 @@ namespace AccountingSystem.Controllers
 
                     foreach (var row in model.SummaryRows)
                     {
-                        worksheet.Cell(currentRow, 1).Value = row.Label;
+                        var labelText = string.IsNullOrWhiteSpace(row.AccountCode)
+                            ? row.Label
+                            : $"{row.AccountCode} - {row.Label}";
+
+                        worksheet.Cell(currentRow, 1).Value = labelText;
+                        worksheet.Cell(currentRow, 1).Style.Alignment.SetIndent(Math.Max(row.Level - 1, 0));
                         columnIndex = 2;
                         foreach (var branch in model.Branches)
                         {
@@ -3417,6 +3427,19 @@ namespace AccountingSystem.Controllers
 
             var baseCurrency = await _context.Currencies.AsNoTracking().FirstAsync(c => c.IsBase);
 
+            var accountLookup = await _context.Accounts
+                .AsNoTracking()
+                .Select(a => new
+                {
+                    a.Id,
+                    a.ParentId,
+                    a.Level,
+                    a.AccountType,
+                    a.Code,
+                    Name = a.NameAr
+                })
+                .ToDictionaryAsync(a => a.Id);
+
             var lines = await _context.JournalEntryLines
                 .AsNoTracking()
                 .Include(l => l.JournalEntry)
@@ -3430,7 +3453,8 @@ namespace AccountingSystem.Controllers
                 .ToListAsync();
 
             var branchNames = new Dictionary<int?, string?>();
-            var sectionsRaw = new Dictionary<AccountType, Dictionary<string, BranchPerformanceSummaryRow>>();
+            var sectionsRaw = new Dictionary<AccountType, Dictionary<int, BranchPerformanceSummaryRow>>();
+            var sectionTotalsRaw = new Dictionary<AccountType, Dictionary<int?, decimal>>();
 
             foreach (var line in lines)
             {
@@ -3459,31 +3483,74 @@ namespace AccountingSystem.Controllers
                     branchNames[branchId] = string.IsNullOrWhiteSpace(branchName) ? "بدون فرع" : branchName;
                 }
 
-                if (!sectionsRaw.TryGetValue(line.Account.AccountType, out var rowsDictionary))
+                if (!accountLookup.TryGetValue(line.AccountId, out var accountInfo))
                 {
-                    rowsDictionary = new Dictionary<string, BranchPerformanceSummaryRow>(StringComparer.OrdinalIgnoreCase);
-                    sectionsRaw[line.Account.AccountType] = rowsDictionary;
+                    continue;
                 }
 
-                var label = line.Account.Parent?.NameAr ?? line.Account.NameAr;
-                var labelKey = string.IsNullOrWhiteSpace(label) ? line.Account.Code : label;
+                var accountType = accountInfo.AccountType;
 
-                if (!rowsDictionary.TryGetValue(labelKey, out var row))
+                if (!sectionTotalsRaw.TryGetValue(accountType, out var totalsByBranch))
                 {
-                    row = new BranchPerformanceSummaryRow
-                    {
-                        Label = labelKey
-                    };
-                    rowsDictionary[labelKey] = row;
+                    totalsByBranch = new Dictionary<int?, decimal>();
+                    sectionTotalsRaw[accountType] = totalsByBranch;
                 }
 
-                if (row.Values.ContainsKey(branchId))
+                if (totalsByBranch.ContainsKey(branchId))
                 {
-                    row.Values[branchId] += amountInBase;
+                    totalsByBranch[branchId] += amountInBase;
                 }
                 else
                 {
-                    row.Values[branchId] = amountInBase;
+                    totalsByBranch[branchId] = amountInBase;
+                }
+
+                int? currentAccountId = accountInfo.Id;
+
+                while (currentAccountId.HasValue)
+                {
+                    if (!accountLookup.TryGetValue(currentAccountId.Value, out var currentAccount))
+                    {
+                        break;
+                    }
+
+                    if (currentAccount.AccountType != accountType)
+                    {
+                        break;
+                    }
+
+                    if (!sectionsRaw.TryGetValue(accountType, out var rowsDictionary))
+                    {
+                        rowsDictionary = new Dictionary<int, BranchPerformanceSummaryRow>();
+                        sectionsRaw[accountType] = rowsDictionary;
+                    }
+
+                    if (!rowsDictionary.TryGetValue(currentAccount.Id, out var row))
+                    {
+                        var label = string.IsNullOrWhiteSpace(currentAccount.Name) ? currentAccount.Code : currentAccount.Name;
+
+                        row = new BranchPerformanceSummaryRow
+                        {
+                            AccountId = currentAccount.Id,
+                            ParentAccountId = currentAccount.ParentId,
+                            Level = currentAccount.Level,
+                            AccountCode = currentAccount.Code,
+                            Label = label
+                        };
+
+                        rowsDictionary[currentAccount.Id] = row;
+                    }
+
+                    if (row.Values.ContainsKey(branchId))
+                    {
+                        row.Values[branchId] += amountInBase;
+                    }
+                    else
+                    {
+                        row.Values[branchId] = amountInBase;
+                    }
+
+                    currentAccountId = currentAccount.ParentId;
                 }
             }
 
@@ -3511,10 +3578,50 @@ namespace AccountingSystem.Controllers
                     continue;
                 }
 
-                var rows = rowsDictionary.Values
-                    .Where(r => r.Values.Values.Any(v => v != 0))
-                    .OrderBy(r => r.Label)
-                    .ToList();
+                static bool HasNonZeroValues(BranchPerformanceSummaryRow row) => row.Values.Values.Any(v => v != 0);
+
+                var childrenLookup = rowsDictionary.Values
+                    .GroupBy(r => r.ParentAccountId)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.OrderBy(r => r.AccountCode, StringComparer.OrdinalIgnoreCase).ToList());
+
+                var orderedRows = new List<BranchPerformanceSummaryRow>();
+
+                void AddRowWithChildren(BranchPerformanceSummaryRow row)
+                {
+                    if (!HasNonZeroValues(row))
+                    {
+                        return;
+                    }
+
+                    orderedRows.Add(row);
+
+                    if (!childrenLookup.TryGetValue(row.AccountId, out var children))
+                    {
+                        return;
+                    }
+
+                    foreach (var child in children)
+                    {
+                        AddRowWithChildren(child);
+                    }
+                }
+
+                if (!childrenLookup.TryGetValue(null, out var rootRows))
+                {
+                    rootRows = rowsDictionary.Values
+                        .Where(r => r.ParentAccountId == null || !rowsDictionary.ContainsKey(r.ParentAccountId.Value))
+                        .OrderBy(r => r.AccountCode, StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+                }
+
+                foreach (var root in rootRows)
+                {
+                    AddRowWithChildren(root);
+                }
+
+                var rows = orderedRows;
 
                 if (!rows.Any())
                 {
@@ -3537,12 +3644,14 @@ namespace AccountingSystem.Controllers
                 };
 
                 var totals = new Dictionary<int?, decimal>();
-                foreach (var branch in branches)
+                if (sectionTotalsRaw.TryGetValue(accountType, out var totalsRaw))
                 {
-                    var total = rows.Sum(r => r.Values.TryGetValue(branch.BranchId, out var value) ? value : 0m);
-                    if (total != 0)
+                    foreach (var kvp in totalsRaw)
                     {
-                        totals[branch.BranchId] = total;
+                        if (kvp.Value != 0)
+                        {
+                            totals[kvp.Key] = kvp.Value;
+                        }
                     }
                 }
 

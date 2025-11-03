@@ -373,6 +373,10 @@ namespace AccountingSystem.ViewModels
 
     public class BranchPerformanceSummaryRow
     {
+        public int AccountId { get; set; }
+        public int? ParentAccountId { get; set; }
+        public int Level { get; set; }
+        public string AccountCode { get; set; } = string.Empty;
         public string Label { get; set; } = string.Empty;
         public Dictionary<int?, decimal> Values { get; set; } = new();
         public decimal Total => Values.Values.Sum();
