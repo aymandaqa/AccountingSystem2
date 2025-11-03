@@ -68,7 +68,9 @@
                         </div>
                     </form>
                     @{
-                        ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode; ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
+                        ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode;
+                        ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
+                        ViewData["ShowActualBalances"] = true;
                     }
 
                     <div class="row">

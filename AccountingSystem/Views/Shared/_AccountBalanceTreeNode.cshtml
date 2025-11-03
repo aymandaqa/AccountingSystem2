@@ -48,8 +48,12 @@
                     @if (showActualBalances)
                     {
                         <span title="الرصيد الفعلي بالعملة المختارة" class="text-success fw-bold ms-3">
-                            <i class="fas fa-wallet ms-1"></i>@node.CurrentBalanceSelected.ToString("0") @selectedCurrencyCode
+                            <i class="fas fa-wallet ms-1"></i>@node.CurrentBalanceSelected.ToString("N2") @selectedCurrencyCode
                         </span>
+                        if (!string.IsNullOrWhiteSpace(baseActualText))
+                        {
+                            <small class="text-muted ms-2">(@baseActualText)</small>
+                        }
                     }
                     @*<span title="الرصيد بالعملة المختارة" class="text-primary">@node.BalanceSelected.ToString("0") @selectedCurrencyCode</span>*@
                 </span>

@@ -4273,6 +4273,8 @@ namespace AccountingSystem.Controllers
             var nodes = accounts.Select(a =>
             {
                 var balance = balances[a.Id];
+                var balanceSelected = _currencyService.Convert(balance, a.Currency, selectedCurrency);
+                var balanceBase = _currencyService.Convert(balance, a.Currency, baseCurrency);
                 return new AccountTreeNodeViewModel
                 {
                     Id = a.Id,
@@ -4283,8 +4285,11 @@ namespace AccountingSystem.Controllers
                     Nature = a.Nature,
                     CurrencyCode = a.Currency.Code,
                     Balance = balance,
-                    BalanceSelected = _currencyService.Convert(balance, a.Currency, selectedCurrency),
-                    BalanceBase = _currencyService.Convert(balance, a.Currency, baseCurrency),
+                    BalanceSelected = balanceSelected,
+                    BalanceBase = balanceBase,
+                    CurrentBalance = balance,
+                    CurrentBalanceSelected = balanceSelected,
+                    CurrentBalanceBase = balanceBase,
                     ParentId = a.ParentId,
                     Level = a.Level,
                     Children = new List<AccountTreeNodeViewModel>(),
@@ -4312,6 +4317,9 @@ namespace AccountingSystem.Controllers
                     node.Balance = node.Children.Sum(c => c.Balance);
                     node.BalanceSelected = node.Children.Sum(c => c.BalanceSelected);
                     node.BalanceBase = node.Children.Sum(c => c.BalanceBase);
+                    node.CurrentBalance = node.Children.Sum(c => c.CurrentBalance);
+                    node.CurrentBalanceSelected = node.Children.Sum(c => c.CurrentBalanceSelected);
+                    node.CurrentBalanceBase = node.Children.Sum(c => c.CurrentBalanceBase);
                 }
             }
 
