@@ -20,7 +20,102 @@ namespace AccountingSystem.Services
 
         public async Task<AssetDepreciationResult> CalculateNextPeriodAsync(int assetId, string userId)
         {
-            var asset = await _context.Assets
+            var (asset, preview) = await PrepareNextPeriodAsync(assetId, asTracking: true);
+            if (preview == null)
+            {
+                return new AssetDepreciationResult
+                {
+                    Success = false,
+                    Message = "حدث خطأ أثناء احتساب الإهلاك"
+                };
+            }
+
+            if (!preview.Success || asset == null || preview.Details == null)
+            {
+                return new AssetDepreciationResult
+                {
+                    Success = false,
+                    Message = preview?.Message ?? "حدث خطأ أثناء احتساب الإهلاك"
+                };
+            }
+
+            var details = preview.Details;
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var lines = new[]
+                {
+                    new JournalEntryLine { AccountId = asset.AssetType.DepreciationExpenseAccountId!.Value, DebitAmount = details.Amount },
+                    new JournalEntryLine { AccountId = asset.AssetType.AccumulatedDepreciationAccountId!.Value, CreditAmount = details.Amount }
+                };
+
+                var description = $"إثبات إهلاك الأصل: {asset.Name} - الفترة رقم {details.PeriodNumber}";
+                var reference = $"ASSET-DEPR:{asset.Id}:{details.PeriodNumber}";
+
+                var journalEntry = await _journalEntryService.CreateJournalEntryAsync(
+                    details.PeriodEnd,
+                    description,
+                    asset.BranchId,
+                    userId,
+                    lines,
+                    JournalEntryStatus.Posted,
+                    reference: reference);
+
+                var depreciation = new AssetDepreciation
+                {
+                    AssetId = asset.Id,
+                    PeriodNumber = details.PeriodNumber,
+                    PeriodStart = details.PeriodStart,
+                    PeriodEnd = details.PeriodEnd,
+                    Amount = details.Amount,
+                    AccumulatedDepreciation = details.AccumulatedAfter,
+                    BookValue = details.BookValueAfter,
+                    JournalEntryId = journalEntry.Id,
+                    CreatedById = userId,
+                    CreatedAt = DateTime.Now
+                };
+
+                asset.AccumulatedDepreciation = details.AccumulatedAfter;
+                asset.BookValue = details.BookValueAfter;
+                asset.UpdatedAt = DateTime.Now;
+
+                _context.AssetDepreciations.Add(depreciation);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return new AssetDepreciationResult
+                {
+                    Success = true,
+                    Message = "تم احتساب الإهلاك بنجاح",
+                    Depreciation = depreciation
+                };
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                return new AssetDepreciationResult
+                {
+                    Success = false,
+                    Message = "حدث خطأ أثناء احتساب الإهلاك"
+                };
+            }
+        }
+
+        public async Task<AssetDepreciationPreviewResult> PreviewNextPeriodAsync(int assetId)
+        {
+            var (_, preview) = await PrepareNextPeriodAsync(assetId, asTracking: false);
+            return preview ?? new AssetDepreciationPreviewResult
+            {
+                Success = false,
+                Message = "حدث خطأ أثناء تحضير بيانات الإهلاك",
+                AssetId = assetId
+            };
+        }
+
+        private async Task<(Asset? Asset, AssetDepreciationPreviewResult? Preview)> PrepareNextPeriodAsync(int assetId, bool asTracking)
+        {
+            var query = _context.Assets
                 .Include(a => a.AssetType)
                     .ThenInclude(t => t.DepreciationExpenseAccount)
                 .Include(a => a.AssetType)
@@ -29,39 +124,69 @@ namespace AccountingSystem.Services
                     .ThenInclude(t => t.Account)
                 .Include(a => a.Depreciations)
                 .Include(a => a.Branch)
-                .FirstOrDefaultAsync(a => a.Id == assetId);
+                .Where(a => a.Id == assetId);
+
+            if (!asTracking)
+            {
+                query = query.AsNoTracking();
+            }
+
+            var asset = await query.FirstOrDefaultAsync();
 
             if (asset == null)
             {
-                return new AssetDepreciationResult { Success = false, Message = "الأصل غير موجود" };
+                return (null, new AssetDepreciationPreviewResult
+                {
+                    Success = false,
+                    Message = "الأصل غير موجود",
+                    AssetId = assetId
+                });
             }
+
+            var preview = new AssetDepreciationPreviewResult
+            {
+                AssetId = asset.Id,
+                AssetName = asset.Name,
+                AssetTypeName = asset.AssetType?.Name ?? string.Empty,
+                BranchName = asset.Branch?.NameAr ?? string.Empty
+            };
 
             if (asset.AssetType == null || !asset.AssetType.IsDepreciable)
             {
-                return new AssetDepreciationResult { Success = false, Message = "نوع الأصل غير قابل للإهلاك" };
+                preview.Success = false;
+                preview.Message = "نوع الأصل غير قابل للإهلاك";
+                return (asset, preview);
             }
 
             if (!asset.AssetType.DepreciationExpenseAccountId.HasValue || !asset.AssetType.AccumulatedDepreciationAccountId.HasValue)
             {
-                return new AssetDepreciationResult { Success = false, Message = "نوع الأصل لا يحتوي على إعدادات حسابات الإهلاك" };
+                preview.Success = false;
+                preview.Message = "نوع الأصل لا يحتوي على إعدادات حسابات الإهلاك";
+                return (asset, preview);
             }
 
             if (!asset.OriginalCost.HasValue || !asset.DepreciationPeriods.HasValue || !asset.DepreciationFrequency.HasValue || !asset.PurchaseDate.HasValue)
             {
-                return new AssetDepreciationResult { Success = false, Message = "بيانات الإهلاك غير مكتملة لهذا الأصل" };
+                preview.Success = false;
+                preview.Message = "بيانات الإهلاك غير مكتملة لهذا الأصل";
+                return (asset, preview);
             }
 
             var depreciableBase = asset.OriginalCost.Value - (asset.SalvageValue ?? 0m);
             if (depreciableBase <= 0)
             {
-                return new AssetDepreciationResult { Success = false, Message = "لا يمكن احتساب الإهلاك لقيمة أصل أقل من أو مساوية لقيمة الخردة" };
+                preview.Success = false;
+                preview.Message = "لا يمكن احتساب الإهلاك لقيمة أصل أقل من أو مساوية لقيمة الخردة";
+                return (asset, preview);
             }
 
             var totalPeriods = asset.DepreciationPeriods.Value;
             var completedPeriods = asset.Depreciations.Count;
             if (completedPeriods >= totalPeriods)
             {
-                return new AssetDepreciationResult { Success = false, Message = "تم احتساب جميع فترات الإهلاك" };
+                preview.Success = false;
+                preview.Message = "تم احتساب جميع فترات الإهلاك";
+                return (asset, preview);
             }
 
             var periodNumber = completedPeriods + 1;
@@ -95,7 +220,9 @@ namespace AccountingSystem.Services
 
             if (periodStart > periodEnd)
             {
-                return new AssetDepreciationResult { Success = false, Message = "لا توجد فترات متبقية للاهلاك" };
+                preview.Success = false;
+                preview.Message = "لا توجد فترات متبقية للاهلاك";
+                return (asset, preview);
             }
 
             var standardAmount = Math.Round(depreciableBase / totalPeriods, 2, MidpointRounding.AwayFromZero);
@@ -109,7 +236,9 @@ namespace AccountingSystem.Services
 
             if (amount <= 0)
             {
-                return new AssetDepreciationResult { Success = false, Message = "لا يوجد مبلغ إهلاك متبقي" };
+                preview.Success = false;
+                preview.Message = "لا يوجد مبلغ إهلاك متبقي";
+                return (asset, preview);
             }
 
             var accumulatedAfter = accumulatedBefore + amount;
@@ -119,65 +248,20 @@ namespace AccountingSystem.Services
                 bookValue = asset.SalvageValue.Value;
             }
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try
+            preview.Success = true;
+            preview.Message = "سيتم ترحيل الإهلاك التالي عند التأكيد";
+            preview.Details = new AssetDepreciationPreviewDetails
             {
-                var lines = new[]
-                {
-                    new JournalEntryLine { AccountId = asset.AssetType.DepreciationExpenseAccountId!.Value, DebitAmount = amount },
-                    new JournalEntryLine { AccountId = asset.AssetType.AccumulatedDepreciationAccountId!.Value, CreditAmount = amount }
-                };
+                PeriodNumber = periodNumber,
+                PeriodStart = periodStart,
+                PeriodEnd = periodEnd,
+                Amount = amount,
+                AccumulatedBefore = accumulatedBefore,
+                AccumulatedAfter = accumulatedAfter,
+                BookValueAfter = bookValue
+            };
 
-                var description = $"إثبات إهلاك الأصل: {asset.Name} - الفترة رقم {periodNumber}";
-                var reference = $"ASSET-DEPR:{asset.Id}:{periodNumber}";
-
-                var journalEntry = await _journalEntryService.CreateJournalEntryAsync(
-                    periodEnd,
-                    description,
-                    asset.BranchId,
-                    userId,
-                    lines,
-                    JournalEntryStatus.Posted,
-                    reference: reference);
-
-                var depreciation = new AssetDepreciation
-                {
-                    AssetId = asset.Id,
-                    PeriodNumber = periodNumber,
-                    PeriodStart = periodStart,
-                    PeriodEnd = periodEnd,
-                    Amount = amount,
-                    AccumulatedDepreciation = accumulatedAfter,
-                    BookValue = bookValue,
-                    JournalEntryId = journalEntry.Id,
-                    CreatedById = userId,
-                    CreatedAt = DateTime.Now
-                };
-
-                asset.AccumulatedDepreciation = accumulatedAfter;
-                asset.BookValue = bookValue;
-                asset.UpdatedAt = DateTime.Now;
-
-                _context.AssetDepreciations.Add(depreciation);
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                return new AssetDepreciationResult
-                {
-                    Success = true,
-                    Message = "تم احتساب الإهلاك بنجاح",
-                    Depreciation = depreciation
-                };
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                return new AssetDepreciationResult
-                {
-                    Success = false,
-                    Message = "حدث خطأ أثناء احتساب الإهلاك"
-                };
-            }
+            return (asset, preview);
         }
     }
 }
