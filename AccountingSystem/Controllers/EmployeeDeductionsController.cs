@@ -48,11 +48,15 @@ namespace AccountingSystem.Controllers
                     IsActive = d.IsActive,
                     Year = d.Year,
                     Month = d.Month,
-                    PeriodName = d.Year > 0 && d.Month > 0
-                        ? new DateTime(d.Year, d.Month, 1).ToString("MMMM yyyy", culture)
-                        : string.Empty
                 })
                 .ToListAsync();
+
+            foreach (var item in items)
+            {
+                item.PeriodName = item.Year > 0 && item.Month > 0
+                    ? new DateTime(item.Year, item.Month, 1).ToString("MMMM yyyy", culture)
+                    : string.Empty;
+            }
 
             ViewBag.StatusMessage = TempData[StatusMessageKey]?.ToString();
             return View(items);
