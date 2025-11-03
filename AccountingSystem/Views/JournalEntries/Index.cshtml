@@ -581,6 +581,58 @@
                 return numeric.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
 
+            function parseDateValue(value) {
+                if (value instanceof Date) {
+                    return Number.isNaN(value.getTime()) ? null : value;
+                }
+
+                if (!value) {
+                    return null;
+                }
+
+                const parsed = new Date(value);
+                return Number.isNaN(parsed.getTime()) ? null : parsed;
+            }
+
+            function normalizeGridDates(entries) {
+                if (!Array.isArray(entries)) {
+                    return [];
+                }
+
+                return entries.map(entry => {
+                    if (!entry || typeof entry !== 'object') {
+                        return entry;
+                    }
+
+                    const normalized = { ...entry };
+                    const dateValue = parseDateValue(entry.Date || entry.DateFormatted);
+                    const updatedValue = parseDateValue(entry.UpdatedAt || entry.UpdatedAtFormatted);
+
+                    normalized.DateFormattedOriginal = entry.DateFormatted ?? '';
+                    normalized.UpdatedAtFormattedOriginal = entry.UpdatedAtFormatted ?? '';
+                    normalized.DateFormatted = dateValue;
+                    normalized.UpdatedAtFormatted = updatedValue;
+
+                    return normalized;
+                });
+            }
+
+            function dateValueAccessor(field) {
+                return function (_, data) {
+                    if (!data) {
+                        return '';
+                    }
+
+                    const value = data[field];
+                    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+                        return value;
+                    }
+
+                    const fallbackKey = field + 'Original';
+                    return data[fallbackKey] || '';
+                };
+            }
+
             function escapeHtml(value) {
                 if (value === null || value === undefined) {
                     return '';
@@ -839,7 +891,7 @@
                     },
                     columns: [
                         { field: 'Number', headerText: 'رقم القيد', width: 110, textAlign: 'Center' },
-                        { field: 'DateFormatted', headerText: 'التاريخ', width: 120, textAlign: 'Center', type: 'date' },
+                        { field: 'DateFormatted', headerText: 'التاريخ', width: 120, textAlign: 'Center', type: 'date', format: 'dd/MM/yyyy', valueAccessor: dateValueAccessor('DateFormatted') },
                         { field: 'BranchName', headerText: 'الفرع', width: 150 },
                         { field: 'Description', headerText: 'الوصف', width: 220 },
                         { field: 'Reference', headerText: 'المرجع', width: 140 },
@@ -848,7 +900,7 @@
                         { field: 'TotalCredit', headerText: 'إجمالي الدائن', width: 140, textAlign: 'Right', type: 'number' },
                         { field: 'LinesCount', headerText: 'عدد البنود', width: 110, textAlign: 'Center', type: 'number' },
                         { field: 'StatusDisplay', headerText: 'الحالة', width: 130, textAlign: 'Center' },
-                        { field: 'UpdatedAtFormatted', headerText: 'آخر تحديث', width: 160, type: 'date' },
+                        { field: 'UpdatedAtFormatted', headerText: 'آخر تحديث', width: 160, type: 'date', format: 'dd/MM/yyyy HH:mm', valueAccessor: dateValueAccessor('UpdatedAtFormatted') },
                         { headerText: 'العمليات', width: 220, textAlign: 'Center', allowFiltering: false, customAttributes: { columnType: 'actions' } },
                         { field: 'MonthGroupLabel', visible: false, allowFiltering: false }
                     ]
@@ -1394,6 +1446,7 @@
 
                     const result = await response.json();
                     const items = result.items || [];
+                    const normalizedItems = normalizeGridDates(items);
                     const summary = result.summary || {};
                     const totalRecords = result.totalRecords ?? items.length;
                     const totalPages = result.totalPages ?? 0;
@@ -1402,7 +1455,7 @@
                     state.pageSize = result.pageSize || state.pageSize;
 
                     if (grid) {
-                        grid.dataSource = items;
+                        grid.dataSource = normalizedItems;
                         grid.refresh();
                         applyGrouping();
                         applyGridFilterState();
