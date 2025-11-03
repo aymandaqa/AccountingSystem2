@@ -31,6 +31,9 @@
                                 <th>اسم النوع</th>
                                 <th>كود الحساب</th>
                                 <th>اسم الحساب</th>
+                                <th>قابل للإهلاك</th>
+                                <th>حساب مصروف الإهلاك</th>
+                                <th>حساب مجمع الإهلاك</th>
                                 <th>الإجراءات</th>
                             </tr>
                         </thead>
@@ -41,6 +44,9 @@
                                     <td>@type.Name</td>
                                     <td>@type.AccountCode</td>
                                     <td>@type.AccountName</td>
+                                    <td>@(type.IsDepreciable ? "نعم" : "لا")</td>
+                                    <td>@type.DepreciationExpenseAccountName</td>
+                                    <td>@type.AccumulatedDepreciationAccountName</td>
                                     <td>
                                         <div class="btn-group btn-group-sm" role="group">
                                             <a asp-action="Edit" asp-route-id="@type.Id" class="btn btn-warning" asp-require-permission="assettypes.edit">

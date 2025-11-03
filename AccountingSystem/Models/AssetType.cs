@@ -16,6 +16,16 @@ namespace AccountingSystem.Models
 
         public virtual Account Account { get; set; } = null!;
 
+        public bool IsDepreciable { get; set; }
+
+        public int? DepreciationExpenseAccountId { get; set; }
+
+        public int? AccumulatedDepreciationAccountId { get; set; }
+
+        public virtual Account? DepreciationExpenseAccount { get; set; }
+
+        public virtual Account? AccumulatedDepreciationAccount { get; set; }
+
         public virtual ICollection<Asset> Assets { get; set; } = new List<Asset>();
     }
 }

@@ -53,6 +53,7 @@ namespace AccountingSystem.Data
         public DbSet<Asset> Assets { get; set; }
         public DbSet<AssetType> AssetTypes { get; set; }
         public DbSet<AssetExpense> AssetExpenses { get; set; }
+        public DbSet<AssetDepreciation> AssetDepreciations { get; set; }
         public DbSet<PivotReport> PivotReports { get; set; }
         public DbSet<ReportQuery> ReportQueries { get; set; }
         public DbSet<Employee> Employees { get; set; }
@@ -583,6 +584,16 @@ namespace AccountingSystem.Data
                     .WithMany()
                     .HasForeignKey(e => e.AccountId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.DepreciationExpenseAccount)
+                    .WithMany()
+                    .HasForeignKey(e => e.DepreciationExpenseAccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.AccumulatedDepreciationAccount)
+                    .WithMany()
+                    .HasForeignKey(e => e.AccumulatedDepreciationAccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<Asset>(entity =>
@@ -592,6 +603,10 @@ namespace AccountingSystem.Data
                 entity.Property(e => e.AssetNumber).HasMaxLength(100);
                 entity.Property(e => e.Notes).HasMaxLength(500);
                 entity.Property(e => e.OpeningBalance).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.OriginalCost).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.SalvageValue).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.AccumulatedDepreciation).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.BookValue).HasColumnType("decimal(18,2)");
 
                 entity.HasOne(e => e.Branch)
                     .WithMany(b => b.Assets)
@@ -611,6 +626,31 @@ namespace AccountingSystem.Data
                 entity.HasOne(e => e.CostCenter)
                     .WithMany()
                     .HasForeignKey(e => e.CostCenterId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<AssetDepreciation>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.AccumulatedDepreciation).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.BookValue).HasColumnType("decimal(18,2)");
+
+                entity.HasIndex(e => new { e.AssetId, e.PeriodNumber }).IsUnique();
+
+                entity.HasOne(e => e.Asset)
+                    .WithMany(a => a.Depreciations)
+                    .HasForeignKey(e => e.AssetId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.JournalEntry)
+                    .WithMany()
+                    .HasForeignKey(e => e.JournalEntryId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.CreatedBy)
+                    .WithMany()
+                    .HasForeignKey(e => e.CreatedById)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 

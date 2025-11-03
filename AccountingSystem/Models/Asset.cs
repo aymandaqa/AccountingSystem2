@@ -34,6 +34,20 @@ namespace AccountingSystem.Models
 
         public DateTime? UpdatedAt { get; set; }
 
+        public decimal? OriginalCost { get; set; }
+
+        public decimal? SalvageValue { get; set; }
+
+        public int? DepreciationPeriods { get; set; }
+
+        public DepreciationFrequency? DepreciationFrequency { get; set; }
+
+        public DateTime? PurchaseDate { get; set; }
+
+        public decimal AccumulatedDepreciation { get; set; }
+
+        public decimal BookValue { get; set; }
+
         public virtual Branch Branch { get; set; } = null!;
 
         public virtual AssetType AssetType { get; set; } = null!;
@@ -43,5 +57,7 @@ namespace AccountingSystem.Models
         public virtual CostCenter? CostCenter { get; set; }
 
         public virtual ICollection<AssetExpense> Expenses { get; set; } = new List<AssetExpense>();
+
+        public virtual ICollection<AssetDepreciation> Depreciations { get; set; } = new List<AssetDepreciation>();
     }
 }

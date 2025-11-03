@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using AccountingSystem.Models.Workflows;
+using AccountingSystem.Models;
 using System.Linq;
 
 namespace AccountingSystem.ViewModels
@@ -19,6 +20,9 @@ namespace AccountingSystem.ViewModels
         public int? AccountId { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        public bool IsDepreciable { get; set; }
+        public decimal AccumulatedDepreciation { get; set; }
+        public decimal BookValue { get; set; }
     }
 
     public class AssetFormViewModel
@@ -60,9 +64,30 @@ namespace AccountingSystem.ViewModels
         [Display(Name = "حساب الأصل")]
         public string? AccountCode { get; set; }
 
+        [Display(Name = "قيمة الأصل")]
+        [Range(typeof(decimal), "0", "79228162514264337593543950335", ErrorMessage = "قيمة غير صالحة")]
+        public decimal? OriginalCost { get; set; }
+
+        [Display(Name = "قيمة الخردة")]
+        [Range(typeof(decimal), "0", "79228162514264337593543950335", ErrorMessage = "قيمة غير صالحة")]
+        public decimal? SalvageValue { get; set; }
+
+        [Display(Name = "العمر الافتراضي")]
+        [Range(1, int.MaxValue, ErrorMessage = "قيمة غير صالحة")]
+        public int? DepreciationPeriods { get; set; }
+
+        [Display(Name = "دورية الإهلاك")]
+        public DepreciationFrequency? DepreciationFrequency { get; set; }
+
+        [Display(Name = "تاريخ الشراء")]
+        [DataType(DataType.Date)]
+        public DateTime? PurchaseDate { get; set; }
+
         public IEnumerable<SelectListItem> Branches { get; set; } = Enumerable.Empty<SelectListItem>();
         public IEnumerable<SelectListItem> CapitalAccounts { get; set; } = Enumerable.Empty<SelectListItem>();
         public IEnumerable<SelectListItem> AssetTypes { get; set; } = Enumerable.Empty<SelectListItem>();
+        public IEnumerable<SelectListItem> DepreciationFrequencies { get; set; } = Enumerable.Empty<SelectListItem>();
+        public IEnumerable<AssetTypeSelectOption> AssetTypeOptions { get; set; } = Enumerable.Empty<AssetTypeSelectOption>();
     }
 
     public class AssetExpenseListViewModel
@@ -145,6 +170,9 @@ namespace AccountingSystem.ViewModels
         public string Name { get; set; } = string.Empty;
         public string AccountCode { get; set; } = string.Empty;
         public string AccountName { get; set; } = string.Empty;
+        public bool IsDepreciable { get; set; }
+        public string? DepreciationExpenseAccountName { get; set; }
+        public string? AccumulatedDepreciationAccountName { get; set; }
     }
 
     public class AssetTypeFormViewModel
@@ -157,5 +185,23 @@ namespace AccountingSystem.ViewModels
         public string Name { get; set; } = string.Empty;
 
         public string? AccountCode { get; set; }
+
+        [Display(Name = "قابل للإهلاك")]
+        public bool IsDepreciable { get; set; }
+
+        [Display(Name = "حساب مصروف الإهلاك")]
+        public int? DepreciationExpenseAccountId { get; set; }
+
+        [Display(Name = "حساب مجمع الإهلاك")]
+        public int? AccumulatedDepreciationAccountId { get; set; }
+
+        public IEnumerable<SelectListItem> DepreciationExpenseAccounts { get; set; } = Enumerable.Empty<SelectListItem>();
+        public IEnumerable<SelectListItem> AccumulatedDepreciationAccounts { get; set; } = Enumerable.Empty<SelectListItem>();
+    }
+
+    public class AssetTypeSelectOption
+    {
+        public int Id { get; set; }
+        public bool IsDepreciable { get; set; }
     }
 }

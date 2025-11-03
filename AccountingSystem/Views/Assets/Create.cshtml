@@ -1,7 +1,9 @@
 @model AccountingSystem.ViewModels.AssetFormViewModel
+@using System.Text.Json
 
 @{
     ViewData["Title"] = "إضافة أصل";
+    var assetTypeDataJson = JsonSerializer.Serialize(Model.AssetTypeOptions.Select(o => new { id = o.Id, isDepreciable = o.IsDepreciable }));
 }
 
 <div class="container-fluid">
@@ -45,6 +47,35 @@
                     <input asp-for="AssetNumber" class="form-control" />
                     <span asp-validation-for="AssetNumber" class="text-danger"></span>
                 </div>
+                <div class="row g-3 d-none" id="depreciation-fields">
+                    <div class="col-md-6">
+                        <label asp-for="OriginalCost" class="form-label"></label>
+                        <input asp-for="OriginalCost" class="form-control" />
+                        <span asp-validation-for="OriginalCost" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="SalvageValue" class="form-label"></label>
+                        <input asp-for="SalvageValue" class="form-control" />
+                        <span asp-validation-for="SalvageValue" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="DepreciationPeriods" class="form-label"></label>
+                        <input asp-for="DepreciationPeriods" class="form-control" />
+                        <span asp-validation-for="DepreciationPeriods" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="DepreciationFrequency" class="form-label"></label>
+                        <select asp-for="DepreciationFrequency" asp-items="Model.DepreciationFrequencies" class="form-select">
+                            <option value="">اختر دورية الإهلاك</option>
+                        </select>
+                        <span asp-validation-for="DepreciationFrequency" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="PurchaseDate" class="form-label"></label>
+                        <input asp-for="PurchaseDate" class="form-control" />
+                        <span asp-validation-for="PurchaseDate" class="text-danger"></span>
+                    </div>
+                </div>
                 <div class="col-12">
                     <label asp-for="Notes" class="form-label"></label>
                     <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
@@ -61,4 +92,50 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const assetTypeMeta = @Html.Raw(assetTypeDataJson);
+            const assetTypeSelect = document.getElementById('AssetTypeId');
+            const depreciationSection = document.getElementById('depreciation-fields');
+            const openingBalanceInput = document.getElementById('OpeningBalance');
+            const originalCostInput = document.getElementById('OriginalCost');
+
+            function isDepreciable(id) {
+                const value = parseInt(id, 10);
+                if (isNaN(value)) {
+                    return false;
+                }
+                return assetTypeMeta.some(t => t.id === value && t.isDepreciable);
+            }
+
+            function syncOpeningBalance() {
+                if (openingBalanceInput && originalCostInput && openingBalanceInput.readOnly) {
+                    openingBalanceInput.value = originalCostInput.value ?? '';
+                }
+            }
+
+            function updateDepreciationFields() {
+                if (!assetTypeSelect) {
+                    return;
+                }
+                const depreciable = isDepreciable(assetTypeSelect.value);
+                if (depreciable) {
+                    depreciationSection?.classList.remove('d-none');
+                    if (openingBalanceInput) {
+                        openingBalanceInput.readOnly = true;
+                        syncOpeningBalance();
+                    }
+                } else {
+                    depreciationSection?.classList.add('d-none');
+                    if (openingBalanceInput) {
+                        openingBalanceInput.readOnly = false;
+                    }
+                }
+            }
+
+            assetTypeSelect?.addEventListener('change', updateDepreciationFields);
+            originalCostInput?.addEventListener('input', syncOpeningBalance);
+            updateDepreciationFields();
+        })();
+    </script>
 }

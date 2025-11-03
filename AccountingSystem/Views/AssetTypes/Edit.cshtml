@@ -21,6 +21,28 @@
                     <label asp-for="AccountCode" class="form-label">كود الحساب</label>
                     <input asp-for="AccountCode" class="form-control" readonly />
                 </div>
+                <div class="col-md-6">
+                    <div class="form-check form-switch mt-4">
+                        <input asp-for="IsDepreciable" class="form-check-input" type="checkbox" role="switch" id="isDepreciableToggle" />
+                        <label class="form-check-label" asp-for="IsDepreciable"></label>
+                    </div>
+                </div>
+                <div class="row g-3 d-none" id="depreciation-settings">
+                    <div class="col-md-6">
+                        <label asp-for="DepreciationExpenseAccountId" class="form-label"></label>
+                        <select asp-for="DepreciationExpenseAccountId" asp-items="Model.DepreciationExpenseAccounts" class="form-select">
+                            <option value="">اختر حساب مصروف الإهلاك</option>
+                        </select>
+                        <span asp-validation-for="DepreciationExpenseAccountId" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="AccumulatedDepreciationAccountId" class="form-label"></label>
+                        <select asp-for="AccumulatedDepreciationAccountId" asp-items="Model.AccumulatedDepreciationAccounts" class="form-select">
+                            <option value="">اختر حساب مجمع الإهلاك</option>
+                        </select>
+                        <span asp-validation-for="AccumulatedDepreciationAccountId" class="text-danger"></span>
+                    </div>
+                </div>
                 <div class="col-12">
                     <button type="submit" class="btn btn-primary">حفظ</button>
                     <a asp-action="Index" class="btn btn-secondary">إلغاء</a>
@@ -32,4 +54,24 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const toggle = document.getElementById('isDepreciableToggle');
+            const section = document.getElementById('depreciation-settings');
+
+            function update() {
+                if (!toggle || !section) {
+                    return;
+                }
+                if (toggle.checked) {
+                    section.classList.remove('d-none');
+                } else {
+                    section.classList.add('d-none');
+                }
+            }
+
+            toggle?.addEventListener('change', update);
+            update();
+        })();
+    </script>
 }

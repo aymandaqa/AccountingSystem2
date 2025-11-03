@@ -102,6 +102,7 @@ builder.Services.AddScoped<IReceiptVoucherProcessor, ReceiptVoucherProcessor>();
 builder.Services.AddScoped<IDisbursementVoucherProcessor, DisbursementVoucherProcessor>();
 builder.Services.AddScoped<IAssetExpenseProcessor, AssetExpenseProcessor>();
 builder.Services.AddScoped<IAssetCostCenterService, AssetCostCenterService>();
+builder.Services.AddScoped<IAssetDepreciationService, AssetDepreciationService>();
 builder.Services.AddScoped<IUserSessionService, UserSessionService>();
 builder.Services.AddSignalR();
 
