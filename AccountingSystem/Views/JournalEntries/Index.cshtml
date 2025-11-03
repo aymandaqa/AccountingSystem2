@@ -1443,15 +1443,35 @@
 
                     const result = await response.json();
                     const isArrayResponse = Array.isArray(result);
-                    const rawItems = isArrayResponse ? result : (result.items || []);
-                    const items = rawItems.map(normalizeEntry);
-                    const summary = isArrayResponse ? {} : (result.summary || {});
-                    const totalRecords = result.totalRecords ?? items.length;
-                    const totalPages = result.totalPages ?? (isArrayResponse ? (items.length > 0 ? 1 : 0) : 0);
+                    const normalizedResult = isArrayResponse ? {} : (result || {});
+                    const rawItems = isArrayResponse
+                        ? result
+                        : (normalizedResult.items
+                            ?? normalizedResult.Items
+                            ?? normalizedResult.data
+                            ?? normalizedResult.Data
+                            ?? []);
+                    const items = (Array.isArray(rawItems) ? rawItems : []).map(normalizeEntry);
+                    const summary = isArrayResponse
+                        ? {}
+                        : (normalizedResult.summary ?? normalizedResult.Summary ?? {});
+                    const totalRecords = (normalizedResult.totalRecords
+                        ?? normalizedResult.TotalRecords
+                        ?? items.length);
+                    const totalPages = (normalizedResult.totalPages
+                        ?? normalizedResult.TotalPages
+                        ?? (isArrayResponse ? (items.length > 0 ? 1 : 0) : 0));
 
-                    state.page = result.page ?? state.page;
-                    state.pageSize = result.pageSize ?? state.pageSize;
+                    const responsePage = normalizedResult.page ?? normalizedResult.Page;
+                    const responsePageSize = normalizedResult.pageSize ?? normalizedResult.PageSize;
 
+                    if (typeof responsePage === 'number' && !Number.isNaN(responsePage) && responsePage > 0) {
+                        state.page = responsePage;
+                    }
+
+                    if (typeof responsePageSize === 'number' && !Number.isNaN(responsePageSize) && responsePageSize > 0) {
+                        state.pageSize = responsePageSize;
+                    }
                     const computedTotalPages = totalPages > 0 ? totalPages : Math.ceil(totalRecords / state.pageSize);
                     const maxPage = Math.max(1, computedTotalPages || 0);
                     state.page = Math.min(Math.max(1, state.page), maxPage);
