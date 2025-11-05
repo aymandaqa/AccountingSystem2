@@ -3,7 +3,11 @@
 
 @{
     var selectedCurrencyCode = ViewData["SelectedCurrencyCode"] as string ?? string.Empty;
-    var baseCurrencyCode = ViewData["BaseCurrencyCode"] as string ?? string.Empty;
+    var branchId = ViewData["IncomeStatementBranchId"] as int?;
+    var fromDate = ViewData["IncomeStatementFromDate"] is DateTime from ? from : (DateTime?)null;
+    var toDate = ViewData["IncomeStatementToDate"] is DateTime to ? to : (DateTime?)null;
+    var fromDateParameter = fromDate?.ToString("yyyy-MM-dd");
+    var toDateParameter = toDate?.ToString("yyyy-MM-dd");
 }
 
 @foreach (var node in Model)
@@ -12,7 +16,12 @@
     var containerDisplay = hasChildren ? "block" : "none";
     var toggleIcon = hasChildren ? "minus" : "plus";
     var balanceClass = node.DisplayBalanceSelected < 0 ? "text-danger" : string.Empty;
-    <div class="tree-node level-@node.Level" data-level="@node.Level" data-node-id="@node.Id" data-has-children="@(hasChildren.ToString().ToLower())">
+    <div class="tree-node level-@node.Level"
+         data-level="@node.Level"
+         data-node-id="@node.Id"
+         data-node-name="@node.NameAr"
+         data-node-code="@(node.Id == 0 ? string.Empty : node.Code)"
+         data-has-children="@(hasChildren.ToString().ToLower())">
         <div class="tree-node-content">
             <div class="tree-node-info">
                 @if (hasChildren)
@@ -38,15 +47,24 @@
                 }
             </div>
 
-            <div class="ms-auto text-nowrap">
+            <div class="tree-node-amount ms-auto text-nowrap">
+                <span class="text-muted small">رصيد الحركات:</span>
                 <span class="fw-bold @balanceClass">
                     @node.DisplayBalanceSelected.ToString("N2") @selectedCurrencyCode
                 </span>
-                @if (!string.IsNullOrWhiteSpace(baseCurrencyCode))
-                {
-                    <small class="text-muted ms-2">(@node.DisplayBalanceBase.ToString("N2") @baseCurrencyCode)</small>
-                }
             </div>
+
+            @if (node.Id != 0 && node.CanPostTransactions)
+            {
+                <div class="tree-node-actions ms-3">
+                    <a class="btn btn-outline-success btn-sm"
+                       href="@Url.Action("AccountStatement", "Reports", new { accountId = node.Id, branchId = branchId, fromDate = fromDateParameter, toDate = toDateParameter })"
+                       title="كشف الحساب"
+                       asp-require-permission="reports.accountstatement">
+                        <i class="fas fa-file-alt"></i>
+                    </a>
+                </div>
+            }
         </div>
 
         @if (hasChildren)
