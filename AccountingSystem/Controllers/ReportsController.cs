@@ -4435,6 +4435,25 @@ namespace AccountingSystem.Controllers
             decimal SumDisplayBase(IEnumerable<AccountTreeNodeViewModel> nodeCollection) =>
                 nodeCollection.Sum(node => node.DisplayBalanceBase);
 
+            decimal SumRawSelected(IEnumerable<AccountTreeNodeViewModel> nodeCollection) =>
+                nodeCollection.Sum(node => node.BalanceSelected);
+
+            decimal SumRawBase(IEnumerable<AccountTreeNodeViewModel> nodeCollection) =>
+                nodeCollection.Sum(node => node.BalanceBase);
+
+            var totalRevenuesDisplay = SumDisplaySelected(revenues);
+            var totalExpensesDisplay = SumDisplaySelected(expenses);
+            var totalRevenuesBaseDisplay = SumDisplayBase(revenues);
+            var totalExpensesBaseDisplay = SumDisplayBase(expenses);
+
+            var totalRevenuesRaw = SumRawSelected(revenues);
+            var totalExpensesRaw = SumRawSelected(expenses);
+            var netIncomeRaw = totalRevenuesRaw - totalExpensesRaw;
+
+            var totalRevenuesBaseRaw = SumRawBase(revenues);
+            var totalExpensesBaseRaw = SumRawBase(expenses);
+            var netIncomeBaseRaw = totalRevenuesBaseRaw - totalExpensesBaseRaw;
+
             var viewModel = new IncomeStatementViewModel
             {
                 FromDate = fromDate,
@@ -4450,21 +4469,39 @@ namespace AccountingSystem.Controllers
                 Currencies = await _context.Currencies.Select(c => new SelectListItem { Value = c.Id.ToString(), Text = c.Code }).ToListAsync()
             };
 
-            viewModel.TotalRevenues = SumDisplaySelected(revenues);
-            viewModel.TotalExpenses = SumDisplaySelected(expenses);
-            viewModel.NetIncome = viewModel.TotalRevenues - viewModel.TotalExpenses;
-            viewModel.TotalRevenuesBase = SumDisplayBase(revenues);
-            viewModel.TotalExpensesBase = SumDisplayBase(expenses);
-            viewModel.NetIncomeBase = viewModel.TotalRevenuesBase - viewModel.TotalExpensesBase;
+            viewModel.TotalRevenues = totalRevenuesDisplay;
+            viewModel.TotalExpenses = totalExpensesDisplay;
+            viewModel.TotalRevenuesBase = totalRevenuesBaseDisplay;
+            viewModel.TotalExpensesBase = totalExpensesBaseDisplay;
+
+            viewModel.NetIncome = netIncomeRaw;
+            viewModel.NetIncomeBase = netIncomeBaseRaw;
+            viewModel.NetIncomeDisplay = NormalizeIncomeStatementBalance(netIncomeRaw, AccountNature.Credit);
+            viewModel.NetIncomeDisplayBase = NormalizeIncomeStatementBalance(netIncomeBaseRaw, AccountNature.Credit);
 
             return viewModel;
         }
 
+        private static decimal NormalizeIncomeStatementBalance(decimal amount, AccountNature nature)
+        {
+            if (amount == 0)
+            {
+                return 0;
+            }
+
+            return nature switch
+            {
+                AccountNature.Credit => -Math.Abs(amount),
+                AccountNature.Debit => Math.Abs(amount),
+                _ => amount
+            };
+        }
+
         private static void ApplyDisplayBalances(AccountTreeNodeViewModel node)
         {
-            node.DisplayBalance = NormalizeBalanceForDisplay(node.Balance, node.Nature);
-            node.DisplayBalanceSelected = NormalizeBalanceForDisplay(node.BalanceSelected, node.Nature);
-            node.DisplayBalanceBase = NormalizeBalanceForDisplay(node.BalanceBase, node.Nature);
+            node.DisplayBalance = NormalizeIncomeStatementBalance(node.Balance, node.Nature);
+            node.DisplayBalanceSelected = NormalizeIncomeStatementBalance(node.BalanceSelected, node.Nature);
+            node.DisplayBalanceBase = NormalizeIncomeStatementBalance(node.BalanceBase, node.Nature);
 
             foreach (var child in node.Children)
             {
@@ -4514,6 +4551,7 @@ namespace AccountingSystem.Controllers
                     page.Margin(20);
                     page.Size(PageSizes.A4);
                     page.Header().Text($"قائمة الدخل - {model.FromDate:dd/MM/yyyy} إلى {model.ToDate:dd/MM/yyyy}").FontSize(16).Bold();
+                    var netIncomeTitle = model.NetIncome >= 0 ? "صافي الدخل" : "صافي الخسارة";
                     page.Content().Column(col =>
                     {
                         col.Item().Text("الإيرادات").FontSize(14).Bold();
@@ -4524,7 +4562,7 @@ namespace AccountingSystem.Controllers
                         ComposePdfTree(col, model.Expenses, 0, model.SelectedCurrencyCode, model.BaseCurrencyCode);
                         col.Item().Text($"إجمالي المصروفات: {model.TotalExpenses:N2} {model.SelectedCurrencyCode} ({model.TotalExpensesBase:N2} {model.BaseCurrencyCode})");
 
-                        col.Item().PaddingTop(10).Text($"صافي الدخل: {model.NetIncome:N2} {model.SelectedCurrencyCode} ({model.NetIncomeBase:N2} {model.BaseCurrencyCode})").FontSize(14).Bold();
+                        col.Item().PaddingTop(10).Text($"{netIncomeTitle}: {model.NetIncomeDisplay:N2} {model.SelectedCurrencyCode} ({model.NetIncomeDisplayBase:N2} {model.BaseCurrencyCode})").FontSize(14).Bold();
                     });
                 });
             });
@@ -4593,9 +4631,10 @@ namespace AccountingSystem.Controllers
             worksheet.Cell(row, 2).Value = model.TotalExpenses;
             worksheet.Cell(row, 3).Value = model.TotalExpensesBase;
             row++;
-            worksheet.Cell(row, 1).Value = "صافي الدخل";
-            worksheet.Cell(row, 2).Value = model.NetIncome;
-            worksheet.Cell(row, 3).Value = model.NetIncomeBase;
+            var netIncomeTitle = model.NetIncome >= 0 ? "صافي الدخل" : "صافي الخسارة";
+            worksheet.Cell(row, 1).Value = netIncomeTitle;
+            worksheet.Cell(row, 2).Value = model.NetIncomeDisplay;
+            worksheet.Cell(row, 3).Value = model.NetIncomeDisplayBase;
 
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);

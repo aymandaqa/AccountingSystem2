@@ -251,9 +251,11 @@ namespace AccountingSystem.ViewModels
         public decimal TotalRevenues { get; set; }
         public decimal TotalExpenses { get; set; }
         public decimal NetIncome { get; set; }
+        public decimal NetIncomeDisplay { get; set; }
         public decimal TotalRevenuesBase { get; set; }
         public decimal TotalExpensesBase { get; set; }
         public decimal NetIncomeBase { get; set; }
+        public decimal NetIncomeDisplayBase { get; set; }
         public int? SelectedCurrencyId { get; set; }
         public string SelectedCurrencyCode { get; set; } = string.Empty;
         public string BaseCurrencyCode { get; set; } = string.Empty;

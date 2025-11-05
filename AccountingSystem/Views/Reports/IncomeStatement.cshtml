@@ -126,7 +126,7 @@
                             </div>
 
                             <!-- صافي الدخل -->
-                            @{ 
+                            @{
                                 var netIncomeClass = Model.NetIncome >= 0 ? "text-success" : "text-danger";
                                 var netIncomeTitle = Model.NetIncome >= 0 ? "صافي الدخل" : "صافي الخسارة";
                             }
@@ -146,7 +146,7 @@
                                     <hr />
                                     <div class="d-flex justify-content-between">
                                         <strong class="fs-5">@netIncomeTitle:</strong>
-                                        <strong class="fs-5 @netIncomeClass">@Model.NetIncome.ToString("N2") @Model.SelectedCurrencyCode <small class="text-muted">(@Model.NetIncomeBase.ToString("N2") @Model.BaseCurrencyCode)</small></strong>
+                                        <strong class="fs-5 @netIncomeClass">@Model.NetIncomeDisplay.ToString("N2") @Model.SelectedCurrencyCode <small class="text-muted">(@Model.NetIncomeDisplayBase.ToString("N2") @Model.BaseCurrencyCode)</small></strong>
                                     </div>
                                 </div>
                             </div>
