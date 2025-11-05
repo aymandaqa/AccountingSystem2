@@ -47,10 +47,16 @@
                 <div class="col-lg-3 col-md-5">
                     <label class="form-label" for="pageSize">عدد السجلات في الصفحة</label>
                     <select class="form-select" id="pageSize" name="pageSize">
-                        @{ var pageSizeOptions = new[] { 10, 20, 50, 100 }; }
+                        @{
+                            var pageSizeOptions = new[] { 10, 20, 50, 100 };
+                            foreach (var option in pageSizeOptions)
+                            {
+                                var selected = option == pageSize ? "selected" : "";
+                            }
+                        }
                         @foreach (var option in pageSizeOptions)
                         {
-                            <option value="@option" @(option == pageSize ? "selected" : null)>@option</option>
+                            <option value="@option" selected="@(option == pageSize ? "selected" : null)">@option</option>
                         }
                     </select>
                 </div>
