@@ -124,7 +124,7 @@ namespace AccountingSystem.Controllers
             {
                 ids = await _context.Assets
                     .AsNoTracking()
-                    .Where(a => a.AssetType.IsDepreciable)
+                    .Where(a => a.AssetType.IsDepreciable && !a.IsDisposed)
                     .Select(a => a.Id)
                     .ToListAsync();
             }

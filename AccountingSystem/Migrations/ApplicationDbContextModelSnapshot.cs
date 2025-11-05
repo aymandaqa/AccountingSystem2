@@ -196,6 +196,9 @@ namespace AccountingSystem.Migrations
                     b.Property<decimal>("BookValue")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal?>("BookValueAtDisposal")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<int>("BranchId")
                         .HasColumnType("int");
 
@@ -210,6 +213,18 @@ namespace AccountingSystem.Migrations
 
                     b.Property<int?>("DepreciationPeriods")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("DisposedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("DisposalProceeds")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("DisposalProfitLoss")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsDisposed")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
