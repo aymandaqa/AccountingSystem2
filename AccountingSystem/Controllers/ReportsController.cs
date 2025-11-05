@@ -4179,66 +4179,19 @@ namespace AccountingSystem.Controllers
             TrimNodes(liabilities, normalizedLevel);
             TrimNodes(equity, normalizedLevel);
 
-            var incomeStatementAccounts = await _context.Accounts
-                .Include(a => a.Currency)
-                .Where(a => a.Classification == AccountClassification.IncomeStatement)
-                .Where(a => !branchId.HasValue || a.BranchId == branchId || a.BranchId == null)
-                .AsNoTracking()
-                .ToListAsync();
-
             AccountTreeNodeViewModel? netIncomeNode = null;
 
-            if (incomeStatementAccounts.Any())
+            var incomeStatementViewModel = await BuildIncomeStatementViewModel(
+                branchId,
+                fiscalYearStart,
+                targetDate,
+                includePending,
+                currencyId);
+
+            if (incomeStatementViewModel.Revenues.Any() || incomeStatementViewModel.Expenses.Any())
             {
-                var incomeAccountIds = incomeStatementAccounts.Select(a => a.Id).ToList();
-
-                var incomeLineSums = await _context.JournalEntryLines
-                    .AsNoTracking()
-                    .Where(l => incomeAccountIds.Contains(l.AccountId))
-                    .Where(l => includePending || l.JournalEntry.Status == JournalEntryStatus.Posted)
-                    .Where(l => l.JournalEntry.Date >= fiscalYearStart && l.JournalEntry.Date < endDateExclusive)
-                    .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
-                    .GroupBy(l => l.AccountId)
-                    .Select(g => new
-                    {
-                        AccountId = g.Key,
-                        Debit = g.Sum(x => x.DebitAmount),
-                        Credit = g.Sum(x => x.CreditAmount)
-                    })
-                    .ToDictionaryAsync(x => x.AccountId);
-
-                decimal totalRevenueSelected = 0m;
-                decimal totalRevenueBase = 0m;
-                decimal totalExpensesSelected = 0m;
-                decimal totalExpensesBase = 0m;
-
-                foreach (var account in incomeStatementAccounts)
-                {
-                    incomeLineSums.TryGetValue(account.Id, out var sums);
-                    var debit = sums?.Debit ?? 0m;
-                    var credit = sums?.Credit ?? 0m;
-
-                    var balance = account.Nature == AccountNature.Debit
-                        ? debit - credit
-                        : credit - debit;
-
-                    var balanceSelected = _currencyService.Convert(balance, account.Currency, selectedCurrency);
-                    var balanceBase = _currencyService.Convert(balance, account.Currency, baseCurrency);
-
-                    if (account.AccountType == AccountType.Revenue)
-                    {
-                        totalRevenueSelected += balanceSelected;
-                        totalRevenueBase += balanceBase;
-                    }
-                    else if (account.AccountType == AccountType.Expenses)
-                    {
-                        totalExpensesSelected += balanceSelected;
-                        totalExpensesBase += balanceBase;
-                    }
-                }
-
-                var netIncomeSelected = totalRevenueSelected - totalExpensesSelected;
-                var netIncomeBase = totalRevenueBase - totalExpensesBase;
+                var netIncomeSelected = incomeStatementViewModel.NetIncome;
+                var netIncomeBase = incomeStatementViewModel.NetIncomeBase;
 
                 netIncomeNode = new AccountTreeNodeViewModel
                 {
