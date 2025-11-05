@@ -1,0 +1,59 @@
+@using System.Linq
+@model IReadOnlyList<AccountingSystem.ViewModels.AccountTreeNodeViewModel>
+
+@{
+    var selectedCurrencyCode = ViewData["SelectedCurrencyCode"] as string ?? string.Empty;
+    var baseCurrencyCode = ViewData["BaseCurrencyCode"] as string ?? string.Empty;
+}
+
+@foreach (var node in Model)
+{
+    var hasChildren = node.Children.Any();
+    var containerDisplay = hasChildren ? "block" : "none";
+    var toggleIcon = hasChildren ? "minus" : "plus";
+    var balanceClass = node.DisplayBalanceSelected < 0 ? "text-danger" : string.Empty;
+    <div class="tree-node level-@node.Level" data-level="@node.Level" data-node-id="@node.Id" data-has-children="@(hasChildren.ToString().ToLower())">
+        <div class="tree-node-content">
+            <div class="tree-node-info">
+                @if (hasChildren)
+                {
+                    <button class="toggle-btn" type="button">
+                        <i class="fas fa-@toggleIcon"></i>
+                    </button>
+                }
+                else
+                {
+                    <span style="width: 20px; display: inline-block;"></span>
+                }
+
+                @if (node.Id == 0)
+                {
+                    <span class="account-name">@node.NameAr</span>
+                }
+                else
+                {
+                    <span class="account-code">@node.Code</span>
+                    <span class="account-name">@node.NameAr</span>
+                    <span class="text-muted ms-1">(@node.CurrencyCode)</span>
+                }
+            </div>
+
+            <div class="ms-auto text-nowrap">
+                <span class="fw-bold @balanceClass">
+                    @node.DisplayBalanceSelected.ToString("N2") @selectedCurrencyCode
+                </span>
+                @if (!string.IsNullOrWhiteSpace(baseCurrencyCode))
+                {
+                    <small class="text-muted ms-2">(@node.DisplayBalanceBase.ToString("N2") @baseCurrencyCode)</small>
+                }
+            </div>
+        </div>
+
+        @if (hasChildren)
+        {
+            <div class="tree-children" style="display:@containerDisplay">
+                @await Html.PartialAsync("_IncomeStatementTreeNode", node.Children)
+            </div>
+        }
+    </div>
+}

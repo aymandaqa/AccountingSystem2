@@ -70,8 +70,12 @@
                     @{
                         ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode;
                         ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
-                        ViewData["ShowActualBalances"] = true;
                     }
+
+                    <div class="alert alert-light border-start border-success ps-3 mb-4">
+                        <strong>الفترة:</strong>
+                        من @Model.FromDate.ToString("dd/MM/yyyy") إلى @Model.ToDate.ToString("dd/MM/yyyy")
+                    </div>
 
                     <div class="row">
                         <div class="col-12">
@@ -84,7 +88,7 @@
                                     @if (Model.Revenues.Any())
                                     {
                                         <div class="tree-container">
-                                            @await Html.PartialAsync("_AccountBalanceTreeNode", Model.Revenues)
+                                            @await Html.PartialAsync("_IncomeStatementTreeNode", Model.Revenues)
                                         </div>
                                     }
                                     else
@@ -107,7 +111,7 @@
                                     @if (Model.Expenses.Any())
                                     {
                                         <div class="tree-container">
-                                            @await Html.PartialAsync("_AccountBalanceTreeNode", Model.Expenses)
+                                            @await Html.PartialAsync("_IncomeStatementTreeNode", Model.Expenses)
                                         </div>
                                     }
                                     else
@@ -122,6 +126,10 @@
                             </div>
 
                             <!-- صافي الدخل -->
+                            @{ 
+                                var netIncomeClass = Model.NetIncome >= 0 ? "text-success" : "text-danger";
+                                var netIncomeTitle = Model.NetIncome >= 0 ? "صافي الدخل" : "صافي الخسارة";
+                            }
                             <div class="card border-primary">
                                 <div class="card-header bg-primary text-white">
                                     <h5 class="mb-0">النتيجة النهائية</h5>
@@ -137,8 +145,8 @@
                                     </div>
                                     <hr />
                                     <div class="d-flex justify-content-between">
-                                        <strong class="fs-5">صافي الدخل:</strong>
-                                        <strong class="fs-5 text-primary">@Model.NetIncome.ToString("N2") @Model.SelectedCurrencyCode <small class="text-muted">(@Model.NetIncomeBase.ToString("N2") @Model.BaseCurrencyCode)</small></strong>
+                                        <strong class="fs-5">@netIncomeTitle:</strong>
+                                        <strong class="fs-5 @netIncomeClass">@Model.NetIncome.ToString("N2") @Model.SelectedCurrencyCode <small class="text-muted">(@Model.NetIncomeBase.ToString("N2") @Model.BaseCurrencyCode)</small></strong>
                                     </div>
                                 </div>
                             </div>

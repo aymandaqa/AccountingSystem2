@@ -4225,15 +4225,18 @@ namespace AccountingSystem.Controllers
                     var balanceSelected = _currencyService.Convert(balance, account.Currency, selectedCurrency);
                     var balanceBase = _currencyService.Convert(balance, account.Currency, baseCurrency);
 
+                    var displaySelected = NormalizeBalanceForDisplay(balanceSelected, account.Nature);
+                    var displayBase = NormalizeBalanceForDisplay(balanceBase, account.Nature);
+
                     if (account.AccountType == AccountType.Revenue)
                     {
-                        totalRevenueSelected += balanceSelected;
-                        totalRevenueBase += balanceBase;
+                        totalRevenueSelected += displaySelected;
+                        totalRevenueBase += displayBase;
                     }
                     else if (account.AccountType == AccountType.Expenses)
                     {
-                        totalExpensesSelected += balanceSelected;
-                        totalExpensesBase += balanceBase;
+                        totalExpensesSelected += displaySelected;
+                        totalExpensesBase += displayBase;
                     }
                 }
 
@@ -4420,10 +4423,17 @@ namespace AccountingSystem.Controllers
             foreach (var root in rootNodes)
             {
                 ComputeBalances(root);
+                ApplyDisplayBalances(root);
             }
 
             var revenues = rootNodes.Where(n => n.AccountType == AccountType.Revenue).OrderBy(n => n.Code).ToList();
             var expenses = rootNodes.Where(n => n.AccountType == AccountType.Expenses).OrderBy(n => n.Code).ToList();
+
+            decimal SumDisplaySelected(IEnumerable<AccountTreeNodeViewModel> nodeCollection) =>
+                nodeCollection.Sum(node => node.DisplayBalanceSelected);
+
+            decimal SumDisplayBase(IEnumerable<AccountTreeNodeViewModel> nodeCollection) =>
+                nodeCollection.Sum(node => node.DisplayBalanceBase);
 
             var viewModel = new IncomeStatementViewModel
             {
@@ -4440,23 +4450,44 @@ namespace AccountingSystem.Controllers
                 Currencies = await _context.Currencies.Select(c => new SelectListItem { Value = c.Id.ToString(), Text = c.Code }).ToListAsync()
             };
 
-            viewModel.TotalRevenues = revenues.Sum(r => r.BalanceSelected);
-            viewModel.TotalExpenses = expenses.Sum(e => e.BalanceSelected);
+            viewModel.TotalRevenues = SumDisplaySelected(revenues);
+            viewModel.TotalExpenses = SumDisplaySelected(expenses);
             viewModel.NetIncome = viewModel.TotalRevenues - viewModel.TotalExpenses;
-            viewModel.TotalRevenuesBase = revenues.Sum(r => r.BalanceBase);
-            viewModel.TotalExpensesBase = expenses.Sum(e => e.BalanceBase);
+            viewModel.TotalRevenuesBase = SumDisplayBase(revenues);
+            viewModel.TotalExpensesBase = SumDisplayBase(expenses);
             viewModel.NetIncomeBase = viewModel.TotalRevenuesBase - viewModel.TotalExpensesBase;
 
             return viewModel;
         }
 
+        private static void ApplyDisplayBalances(AccountTreeNodeViewModel node)
+        {
+            node.DisplayBalance = NormalizeBalanceForDisplay(node.Balance, node.Nature);
+            node.DisplayBalanceSelected = NormalizeBalanceForDisplay(node.BalanceSelected, node.Nature);
+            node.DisplayBalanceBase = NormalizeBalanceForDisplay(node.BalanceBase, node.Nature);
+
+            foreach (var child in node.Children)
+            {
+                ApplyDisplayBalances(child);
+            }
+        }
+
+        private static DateTime GetFiscalYearStart(DateTime referenceDate)
+        {
+            return new DateTime(referenceDate.Year, 1, 1);
+        }
+
         // GET: Reports/IncomeStatement
         public async Task<IActionResult> IncomeStatement(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null)
         {
+            var effectiveToDate = (toDate ?? DateTime.Today).Date;
+            var fiscalYearStart = GetFiscalYearStart(effectiveToDate);
+            var effectiveFromDate = (fromDate ?? fiscalYearStart).Date;
+
             var model = await BuildIncomeStatementViewModel(
                 branchId,
-                fromDate ?? DateTime.Now.AddMonths(-1),
-                toDate ?? DateTime.Now,
+                effectiveFromDate,
+                effectiveToDate,
                 includePending,
                 currencyId);
             return View(model);
@@ -4465,10 +4496,14 @@ namespace AccountingSystem.Controllers
         // GET: Reports/IncomeStatementPdf
         public async Task<IActionResult> IncomeStatementPdf(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null)
         {
+            var effectiveToDate = (toDate ?? DateTime.Today).Date;
+            var fiscalYearStart = GetFiscalYearStart(effectiveToDate);
+            var effectiveFromDate = (fromDate ?? fiscalYearStart).Date;
+
             var model = await BuildIncomeStatementViewModel(
                 branchId,
-                fromDate ?? DateTime.Now.AddMonths(-1),
-                toDate ?? DateTime.Now,
+                effectiveFromDate,
+                effectiveToDate,
                 includePending,
                 currencyId);
 
@@ -4502,7 +4537,7 @@ namespace AccountingSystem.Controllers
                     {
                         row.ConstantItem(level * 15);
                         row.RelativeItem().Text(node.Id == 0 ? node.NameAr : $"{node.Code} - {node.NameAr}");
-                        row.ConstantItem(150).AlignRight().Text($"{node.BalanceSelected:N2} {selectedCurrencyCode} ({node.BalanceBase:N2} {baseCurrencyCode})");
+                        row.ConstantItem(150).AlignRight().Text($"{node.DisplayBalanceSelected:N2} {selectedCurrencyCode} ({node.DisplayBalanceBase:N2} {baseCurrencyCode})");
                     });
                     if (node.Children.Any())
                         ComposePdfTree(col, node.Children, level + 1, selectedCurrencyCode, baseCurrencyCode);
@@ -4516,10 +4551,14 @@ namespace AccountingSystem.Controllers
         // GET: Reports/IncomeStatementExcel
         public async Task<IActionResult> IncomeStatementExcel(int? branchId, DateTime? fromDate, DateTime? toDate, bool includePending = false, int? currencyId = null)
         {
+            var effectiveToDate = (toDate ?? DateTime.Today).Date;
+            var fiscalYearStart = GetFiscalYearStart(effectiveToDate);
+            var effectiveFromDate = (fromDate ?? fiscalYearStart).Date;
+
             var model = await BuildIncomeStatementViewModel(
                 branchId,
-                fromDate ?? DateTime.Now.AddMonths(-1),
-                toDate ?? DateTime.Now,
+                effectiveFromDate,
+                effectiveToDate,
                 includePending,
                 currencyId);
 
@@ -4536,8 +4575,8 @@ namespace AccountingSystem.Controllers
                 foreach (var node in nodes)
                 {
                     worksheet.Cell(row, 1).Value = new string(' ', level * 2) + (node.Id == 0 ? node.NameAr : $"{node.Code} - {node.NameAr}");
-                    worksheet.Cell(row, 2).Value = node.BalanceSelected;
-                    worksheet.Cell(row, 3).Value = node.BalanceBase;
+                    worksheet.Cell(row, 2).Value = node.DisplayBalanceSelected;
+                    worksheet.Cell(row, 3).Value = node.DisplayBalanceBase;
                     row++;
                     if (node.Children.Any())
                         WriteNodes(node.Children, level + 1);
