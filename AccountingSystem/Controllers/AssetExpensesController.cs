@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using AccountingSystem.Data;
+using AccountingSystem.Extensions;
 using AccountingSystem.Models;
 using AccountingSystem.Services;
 using AccountingSystem.Models.Workflows;
@@ -191,7 +192,7 @@ namespace AccountingSystem.Controllers
                             ModelState.AddModelError(string.Empty, "يجب أن تكون الحسابات بنفس العملة");
                         }
 
-                        if (paymentAccount.Nature == AccountNature.Debit && model.Amount > paymentAccount.CurrentBalance)
+                        if (!paymentAccount.HasSufficientCashBalance(model.Amount))
                         {
                             ModelState.AddModelError(nameof(model.Amount), "الرصيد المتاح في حساب الدفع لا يكفي لإتمام العملية.");
                         }

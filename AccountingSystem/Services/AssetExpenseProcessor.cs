@@ -1,4 +1,5 @@
 using AccountingSystem.Data;
+using AccountingSystem.Extensions;
 using AccountingSystem.Models;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -106,7 +107,7 @@ namespace AccountingSystem.Services
                     throw new InvalidOperationException("يجب أن تكون الحسابات بنفس العملة");
                 }
 
-                if (paymentAccount.Nature == AccountNature.Debit && loadedExpense.Amount > paymentAccount.CurrentBalance)
+                if (!paymentAccount.HasSufficientCashBalance(loadedExpense.Amount))
                 {
                     throw new InvalidOperationException("الرصيد المتاح في حساب الدفع لا يكفي لإتمام العملية.");
                 }
