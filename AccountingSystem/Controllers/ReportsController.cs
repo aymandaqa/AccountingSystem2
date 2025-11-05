@@ -4386,6 +4386,7 @@ namespace AccountingSystem.Controllers
                     CurrentBalance = balance,
                     CurrentBalanceSelected = balanceSelected,
                     CurrentBalanceBase = balanceBase,
+                    CanPostTransactions = a.CanPostTransactions,
                     ParentId = a.ParentId,
                     Level = a.Level,
                     Children = new List<AccountTreeNodeViewModel>(),

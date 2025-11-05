@@ -70,7 +70,31 @@
                     @{
                         ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode;
                         ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
+                        ViewData["IncomeStatementBranchId"] = Model.BranchId;
+                        ViewData["IncomeStatementFromDate"] = Model.FromDate;
+                        ViewData["IncomeStatementToDate"] = Model.ToDate;
                     }
+
+                    <div class="row g-3 align-items-end tree-filters mb-4">
+                        <div class="col-md-5">
+                            <label class="form-label" for="incomeStatementSearch">بحث في الشجرة</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="search" id="incomeStatementSearch" class="form-control" placeholder="ابحث باسم أو رقم الحساب..." />
+                                <button type="button" class="btn btn-outline-secondary" id="clearIncomeStatementSearch">مسح</button>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-lg-2">
+                            <label class="form-label" for="incomeStatementLevel">المستوى</label>
+                            <select id="incomeStatementLevel" class="form-select">
+                                <option value="">جميع المستويات</option>
+                                @for (var level = 1; level <= 6; level++)
+                                {
+                                    <option value="@level">المستوى @level</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
 
                     <div class="alert alert-light border-start border-success ps-3 mb-4">
                         <strong>الفترة:</strong>
@@ -87,7 +111,7 @@
                                 <div class="card-body">
                                     @if (Model.Revenues.Any())
                                     {
-                                        <div class="tree-container">
+                                        <div class="tree-container income-statement-tree">
                                             @await Html.PartialAsync("_IncomeStatementTreeNode", Model.Revenues)
                                         </div>
                                     }
@@ -110,7 +134,7 @@
                                 <div class="card-body">
                                     @if (Model.Expenses.Any())
                                     {
-                                        <div class="tree-container">
+                                        <div class="tree-container income-statement-tree">
                                             @await Html.PartialAsync("_IncomeStatementTreeNode", Model.Expenses)
                                         </div>
                                     }
@@ -164,6 +188,15 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
+        .tree-filters .input-group-text {
+            background-color: #f8f9fa;
+        }
+
+        .tree-filters .btn {
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+        }
+
         .tree-node {
             margin: 5px 0;
             padding: 8px;
@@ -180,6 +213,17 @@
             display: flex;
             align-items: center;
             flex-grow: 1;
+        }
+
+        .tree-node-amount {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tree-node-actions {
+            display: flex;
+            align-items: center;
         }
 
         .tree-children {
@@ -230,9 +274,53 @@
                     $this.html('<i class="fas fa-minus"></i>');
                 }
             });
-        });
-        $(document).ready(function () {
-            $('.tree-node[data-level="0"] .toggle-btn').click();
+
+            var $treeSearch = $('#incomeStatementSearch');
+            var $levelFilter = $('#incomeStatementLevel');
+            var $clearButton = $('#clearIncomeStatementSearch');
+
+            function filterIncomeStatementTree() {
+                var term = $treeSearch.val().toString().trim().toLowerCase();
+                var levelValue = $levelFilter.val();
+                var level = levelValue ? parseInt(levelValue, 10) : null;
+                var $nodes = $('.income-statement-tree .tree-node');
+
+                if (!term.length && !level) {
+                    $nodes.show().removeData('search-match');
+                    return;
+                }
+
+                $nodes.each(function () {
+                    var $node = $(this);
+                    var name = ($node.data('node-name') || '').toString().toLowerCase();
+                    var code = ($node.data('node-code') || '').toString().toLowerCase();
+                    var nodeLevel = parseInt($node.data('level'), 10);
+                    var matchesTerm = !term.length || name.indexOf(term) !== -1 || code.indexOf(term) !== -1;
+                    var matchesLevel = !level || nodeLevel === level;
+                    var matches = matchesTerm && matchesLevel;
+
+                    $node.toggle(matches);
+                    $node.data('search-match', matches);
+                });
+
+                $nodes.filter(function () {
+                    return $(this).data('search-match');
+                }).each(function () {
+                    $(this).parents('.tree-node').show();
+                });
+            }
+
+            if ($treeSearch.length) {
+                $treeSearch.on('input', filterIncomeStatementTree);
+                $levelFilter.on('change', filterIncomeStatementTree);
+                $clearButton.on('click', function () {
+                    $treeSearch.val('');
+                    $levelFilter.val('');
+                    filterIncomeStatementTree();
+                });
+            }
+
+            $('.tree-node[data-level="0"] .toggle-btn').trigger('click');
         });
     </script>
 }
