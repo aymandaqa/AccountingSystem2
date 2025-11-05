@@ -4225,18 +4225,15 @@ namespace AccountingSystem.Controllers
                     var balanceSelected = _currencyService.Convert(balance, account.Currency, selectedCurrency);
                     var balanceBase = _currencyService.Convert(balance, account.Currency, baseCurrency);
 
-                    var displaySelected = NormalizeBalanceForDisplay(balanceSelected, account.Nature);
-                    var displayBase = NormalizeBalanceForDisplay(balanceBase, account.Nature);
-
                     if (account.AccountType == AccountType.Revenue)
                     {
-                        totalRevenueSelected += displaySelected;
-                        totalRevenueBase += displayBase;
+                        totalRevenueSelected += balanceSelected;
+                        totalRevenueBase += balanceBase;
                     }
                     else if (account.AccountType == AccountType.Expenses)
                     {
-                        totalExpensesSelected += displaySelected;
-                        totalExpensesBase += displayBase;
+                        totalExpensesSelected += balanceSelected;
+                        totalExpensesBase += balanceBase;
                     }
                 }
 
