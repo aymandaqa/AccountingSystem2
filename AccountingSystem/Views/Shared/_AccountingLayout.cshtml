@@ -1181,6 +1181,38 @@
         </div>
     </div>
 
+    <div class="modal fade" id="sellAssetModal" tabindex="-1" aria-labelledby="sellAssetModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form asp-action="Sell" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="sellAssetModalLabel">بيع الأصل</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="id" id="sellAssetId" />
+                        <div class="mb-3">
+                            <label class="form-label">الأصل</label>
+                            <div id="sellAssetName" class="form-control-plaintext fw-bold"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="salePriceInput" class="form-label">قيمة البيع (القيمة السوقية)</label>
+                            <input type="number" class="form-control" id="salePriceInput" name="salePrice" min="0" step="0.01" required />
+                        </div>
+                        <div class="alert alert-secondary" id="sellAssetSummary">
+                            <div>القيمة الدفترية الحالية: <span id="sellAssetBookValue"></span></div>
+                            <div class="mt-2">الربح / الخسارة المتوقعة: <span id="sellAssetProfitLoss" class="fw-bold"></span></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-primary">بيع الأصل</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
 
     <div id="notificationToastContainer" class="toast-container position-fixed bottom-0 start-50 translate-middle-x p-3"></div>
