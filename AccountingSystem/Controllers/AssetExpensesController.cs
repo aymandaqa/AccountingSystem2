@@ -248,7 +248,7 @@ namespace AccountingSystem.Controllers
             if (definition != null)
             {
                 var baseAmount = assetExpense.Amount * assetExpense.ExchangeRate;
-                await _workflowService.StartWorkflowAsync(
+                var instance = await _workflowService.StartWorkflowAsync(
                     definition,
                     WorkflowDocumentType.AssetExpense,
                     assetExpense.Id,
@@ -258,8 +258,11 @@ namespace AccountingSystem.Controllers
                     baseAmount,
                     assetExpense.CurrencyId);
 
-                TempData["InfoMessage"] = "تم إرسال مصروف الأصل لاعتمادات الموافقة";
-                return RedirectToAction(nameof(Index));
+                if (instance != null)
+                {
+                    TempData["InfoMessage"] = "تم إرسال مصروف الأصل لاعتمادات الموافقة";
+                    return RedirectToAction(nameof(Index));
+                }
             }
 
             return await FinalizeAssetExpenseAsync(assetExpense, user.Id, model);
