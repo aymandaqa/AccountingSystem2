@@ -36,6 +36,18 @@
                     <span asp-validation-for="OpeningBalance" class="text-danger"></span>
                 </div>
                 <div class="col-md-6">
+                    <label asp-for="SupplierId" class="form-label"></label>
+                    <select asp-for="SupplierId" asp-items="Model.Suppliers" class="form-select">
+                        <option value="">اختر المورد</option>
+                    </select>
+                    <span asp-validation-for="SupplierId" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="PurchaseAmount" class="form-label"></label>
+                    <input asp-for="PurchaseAmount" class="form-control" />
+                    <span asp-validation-for="PurchaseAmount" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
                     <label asp-for="AccountCode" class="form-label"></label>
                     <input asp-for="AccountCode" class="form-control" readonly />
                 </div>

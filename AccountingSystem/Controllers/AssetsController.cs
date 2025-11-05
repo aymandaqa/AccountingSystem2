@@ -331,6 +331,7 @@ namespace AccountingSystem.Controllers
                 CapitalAccounts = await GetCapitalAccountsAsync(),
                 AssetTypes = assetTypeSelection.SelectList,
                 AssetTypeOptions = assetTypeSelection.Options,
+                Suppliers = await GetSuppliersAsync(),
                 DepreciationFrequencies = GetDepreciationFrequencySelectList(),
                 PurchaseDate = DateTime.Today
             };
@@ -350,6 +351,7 @@ namespace AccountingSystem.Controllers
 
             Account? parentAccount = null;
             Account? capitalAccount = null;
+            Account? supplierAccount = null;
             AssetType? assetType = null;
 
             if (ModelState.IsValid)
@@ -375,19 +377,64 @@ namespace AccountingSystem.Controllers
                     }
                 }
 
+                if (model.SupplierId.HasValue && model.CapitalAccountId.HasValue)
+                {
+                    ModelState.AddModelError(string.Empty, "يرجى اختيار حساب واحد للقيد: المورد أو رأس المال");
+                }
+            }
+
+            if (ModelState.IsValid && model.SupplierId.HasValue && (!model.PurchaseAmount.HasValue || model.PurchaseAmount.Value <= 0))
+            {
+                ModelState.AddModelError(nameof(model.PurchaseAmount), "قيمة الشراء مطلوبة عند اختيار مورد");
+            }
+
+            if (ModelState.IsValid && model.PurchaseAmount.HasValue && model.PurchaseAmount.Value > 0 && !model.SupplierId.HasValue)
+            {
+                ModelState.AddModelError(nameof(model.SupplierId), "حدد المورد المرتبط بقيمة الشراء");
+            }
+
+            if (ModelState.IsValid && model.CapitalAccountId.HasValue)
+            {
                 capitalAccount = await _context.Accounts
                     .Include(a => a.Currency)
-                    .FirstOrDefaultAsync(a => a.Id == model.CapitalAccountId);
+                    .FirstOrDefaultAsync(a => a.Id == model.CapitalAccountId.Value);
 
                 if (capitalAccount == null)
                 {
                     ModelState.AddModelError(nameof(model.CapitalAccountId), "حساب رأس المال غير صالح");
                 }
+            }
 
-                if (parentAccount != null && capitalAccount != null && parentAccount.CurrencyId != capitalAccount.CurrencyId)
+            if (ModelState.IsValid && model.SupplierId.HasValue)
+            {
+                var supplier = await _context.Suppliers
+                    .Include(s => s.Account)
+                        .ThenInclude(a => a.Currency)
+                    .FirstOrDefaultAsync(s => s.Id == model.SupplierId.Value);
+
+                if (supplier == null || supplier.Account == null)
                 {
-                    ModelState.AddModelError(nameof(model.CapitalAccountId), "يجب أن تكون عملة حساب الأصل مطابقة لعملة حساب رأس المال");
+                    ModelState.AddModelError(nameof(model.SupplierId), "المورد المحدد غير صالح أو لا يحتوي على حساب مرتبط");
                 }
+                else
+                {
+                    supplierAccount = supplier.Account;
+                }
+            }
+
+            if (ModelState.IsValid && parentAccount != null && !model.SupplierId.HasValue && !model.CapitalAccountId.HasValue)
+            {
+                ModelState.AddModelError(nameof(model.CapitalAccountId), "يرجى اختيار حساب المورد أو حساب رأس المال");
+            }
+
+            if (ModelState.IsValid && parentAccount != null && capitalAccount != null && parentAccount.CurrencyId != capitalAccount.CurrencyId)
+            {
+                ModelState.AddModelError(nameof(model.CapitalAccountId), "يجب أن تكون عملة حساب الأصل مطابقة لعملة حساب رأس المال");
+            }
+
+            if (ModelState.IsValid && parentAccount != null && supplierAccount != null && parentAccount.CurrencyId != supplierAccount.CurrencyId)
+            {
+                ModelState.AddModelError(nameof(model.SupplierId), "يجب أن تكون عملة حساب الأصل مطابقة لعملة حساب المورد");
             }
 
             if (ModelState.IsValid && assetType != null && assetType.IsDepreciable)
@@ -442,6 +489,7 @@ namespace AccountingSystem.Controllers
                 model.AssetTypes = assetTypeSelection.SelectList;
                 model.AssetTypeOptions = assetTypeSelection.Options;
                 model.DepreciationFrequencies = GetDepreciationFrequencySelectList(model.DepreciationFrequency);
+                model.Suppliers = await GetSuppliersAsync();
                 if (assetType != null && assetType.IsDepreciable && model.OriginalCost.HasValue)
                 {
                     model.OpeningBalance = model.OriginalCost.Value;
@@ -469,6 +517,7 @@ namespace AccountingSystem.Controllers
 
                 var openingBalanceValue = model.OpeningBalance;
                 var bookValue = model.OpeningBalance;
+                var journalAmount = model.PurchaseAmount ?? model.OpeningBalance;
                 decimal? originalCost = null;
                 decimal? salvageValue = null;
                 int? depreciationPeriods = null;
@@ -484,6 +533,12 @@ namespace AccountingSystem.Controllers
                     purchaseDate = model.PurchaseDate;
                     openingBalanceValue = originalCost ?? 0m;
                     bookValue = originalCost ?? 0m;
+                    journalAmount = model.PurchaseAmount ?? (originalCost ?? 0m);
+                }
+                else if (model.PurchaseAmount.HasValue)
+                {
+                    openingBalanceValue = model.PurchaseAmount.Value;
+                    bookValue = model.PurchaseAmount.Value;
                 }
 
                 var asset = new Asset
@@ -500,6 +555,8 @@ namespace AccountingSystem.Controllers
                     DepreciationPeriods = depreciationPeriods,
                     DepreciationFrequency = depreciationFrequency,
                     PurchaseDate = purchaseDate,
+                    SupplierId = model.SupplierId,
+                    PurchaseAmount = model.PurchaseAmount,
                     AccumulatedDepreciation = 0,
                     BookValue = bookValue
                 };
@@ -510,13 +567,19 @@ namespace AccountingSystem.Controllers
                 await _assetCostCenterService.EnsureCostCenterAsync(asset);
                 await _context.SaveChangesAsync();
 
-                if (openingBalanceValue > 0)
+                if (journalAmount > 0 && (capitalAccount != null || supplierAccount != null))
                 {
                     var lines = new List<JournalEntryLine>
                     {
-                        new JournalEntryLine { AccountId = accountId, DebitAmount = openingBalanceValue },
-                        new JournalEntryLine { AccountId = capitalAccount!.Id, CreditAmount = openingBalanceValue }
+                        new JournalEntryLine { AccountId = accountId, DebitAmount = journalAmount }
                     };
+
+                    var creditAccountId = supplierAccount?.Id ?? capitalAccount?.Id ?? 0;
+                    if (creditAccountId == 0)
+                    {
+                        throw new InvalidOperationException("تعذر تحديد الحساب الدائن للقيد المحاسبي للأصل");
+                    }
+                    lines.Add(new JournalEntryLine { AccountId = creditAccountId, CreditAmount = journalAmount });
 
                     var description = $"إثبات أصل جديد: {asset.Name}";
                     if (!string.IsNullOrWhiteSpace(asset.Notes))
@@ -553,6 +616,7 @@ namespace AccountingSystem.Controllers
             model.AssetTypes = selection.SelectList;
             model.AssetTypeOptions = selection.Options;
             model.DepreciationFrequencies = GetDepreciationFrequencySelectList(model.DepreciationFrequency);
+            model.Suppliers = await GetSuppliersAsync();
             if (assetType != null && assetType.IsDepreciable && model.OriginalCost.HasValue)
             {
                 model.OpeningBalance = model.OriginalCost.Value;
@@ -573,6 +637,7 @@ namespace AccountingSystem.Controllers
             }
 
             var assetTypeSelection = await GetAssetTypeSelectionDataAsync(asset.AssetTypeId);
+            var suppliers = await GetSuppliersAsync();
             var model = new AssetFormViewModel
             {
                 Id = asset.Id,
@@ -589,10 +654,13 @@ namespace AccountingSystem.Controllers
                 DepreciationPeriods = asset.DepreciationPeriods,
                 DepreciationFrequency = asset.DepreciationFrequency,
                 PurchaseDate = asset.PurchaseDate,
+                SupplierId = asset.SupplierId,
+                PurchaseAmount = asset.PurchaseAmount,
                 Branches = await GetBranchesAsync(),
                 AssetTypes = assetTypeSelection.SelectList,
                 AssetTypeOptions = assetTypeSelection.Options,
-                DepreciationFrequencies = GetDepreciationFrequencySelectList(asset.DepreciationFrequency)
+                DepreciationFrequencies = GetDepreciationFrequencySelectList(asset.DepreciationFrequency),
+                Suppliers = suppliers
             };
 
             return View(model);
@@ -610,6 +678,7 @@ namespace AccountingSystem.Controllers
 
             Asset? asset = null;
             AssetType? assetType = null;
+            Account? supplierAccount = null;
 
             if (ModelState.IsValid)
             {
@@ -636,6 +705,38 @@ namespace AccountingSystem.Controllers
                 {
                     ModelState.AddModelError(nameof(model.AssetTypeId), "نوع الأصل لا يحتوي على حساب مرتبط");
                 }
+            }
+
+            if (ModelState.IsValid && model.SupplierId.HasValue && (!model.PurchaseAmount.HasValue || model.PurchaseAmount.Value <= 0))
+            {
+                ModelState.AddModelError(nameof(model.PurchaseAmount), "قيمة الشراء مطلوبة عند اختيار مورد");
+            }
+
+            if (ModelState.IsValid && model.PurchaseAmount.HasValue && model.PurchaseAmount.Value > 0 && !model.SupplierId.HasValue)
+            {
+                ModelState.AddModelError(nameof(model.SupplierId), "حدد المورد المرتبط بقيمة الشراء");
+            }
+
+            if (ModelState.IsValid && model.SupplierId.HasValue)
+            {
+                var supplier = await _context.Suppliers
+                    .Include(s => s.Account)
+                        .ThenInclude(a => a.Currency)
+                    .FirstOrDefaultAsync(s => s.Id == model.SupplierId.Value);
+
+                if (supplier == null || supplier.Account == null)
+                {
+                    ModelState.AddModelError(nameof(model.SupplierId), "المورد المحدد غير صالح أو لا يحتوي على حساب مرتبط");
+                }
+                else
+                {
+                    supplierAccount = supplier.Account;
+                }
+            }
+
+            if (ModelState.IsValid && assetType?.Account != null && supplierAccount != null && assetType.Account.CurrencyId != supplierAccount.CurrencyId)
+            {
+                ModelState.AddModelError(nameof(model.SupplierId), "يجب أن تكون عملة حساب الأصل مطابقة لعملة حساب المورد");
             }
 
             if (ModelState.IsValid && asset != null && assetType != null && assetType.IsDepreciable)
@@ -701,6 +802,8 @@ namespace AccountingSystem.Controllers
                 asset.AssetNumber = model.AssetNumber;
                 asset.Notes = model.Notes;
                 asset.UpdatedAt = DateTime.Now;
+                asset.SupplierId = model.SupplierId;
+                asset.PurchaseAmount = model.PurchaseAmount;
 
                 if (assetType.IsDepreciable && model.OriginalCost.HasValue)
                 {
@@ -708,7 +811,7 @@ namespace AccountingSystem.Controllers
                 }
                 else
                 {
-                    asset.OpeningBalance = model.OpeningBalance;
+                    asset.OpeningBalance = model.PurchaseAmount ?? model.OpeningBalance;
                 }
 
                 if (assetType.IsDepreciable)
@@ -772,6 +875,7 @@ namespace AccountingSystem.Controllers
             model.AssetTypes = assetTypeSelection.SelectList;
             model.AssetTypeOptions = assetTypeSelection.Options;
             model.DepreciationFrequencies = GetDepreciationFrequencySelectList(model.DepreciationFrequency);
+            model.Suppliers = await GetSuppliersAsync();
             if (assetType != null && assetType.IsDepreciable && model.OriginalCost.HasValue)
             {
                 model.OpeningBalance = model.OriginalCost.Value;
@@ -875,6 +979,19 @@ namespace AccountingSystem.Controllers
                 {
                     Value = a.Id.ToString(),
                     Text = $"{a.Code} - {a.NameAr}"
+                }).ToListAsync();
+        }
+
+        private async Task<IEnumerable<SelectListItem>> GetSuppliersAsync()
+        {
+            return await _context.Suppliers
+                .Include(s => s.Account)
+                .Where(s => s.AccountId != null && s.Account != null)
+                .OrderBy(s => s.NameAr)
+                .Select(s => new SelectListItem
+                {
+                    Value = s.Id.ToString(),
+                    Text = s.NameAr
                 }).ToListAsync();
         }
 

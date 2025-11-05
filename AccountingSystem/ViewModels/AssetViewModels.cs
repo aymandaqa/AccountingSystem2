@@ -55,9 +55,15 @@ namespace AccountingSystem.ViewModels
         [Range(typeof(decimal), "0", "79228162514264337593543950335", ErrorMessage = "قيمة غير صالحة")]
         public decimal OpeningBalance { get; set; }
 
-        [Required]
         [Display(Name = "حساب رأس المال")]
-        public int CapitalAccountId { get; set; }
+        public int? CapitalAccountId { get; set; }
+
+        [Display(Name = "المورد")]
+        public int? SupplierId { get; set; }
+
+        [Display(Name = "قيمة الشراء")]
+        [Range(typeof(decimal), "0.00", "79228162514264337593543950335", ErrorMessage = "قيمة غير صالحة")]
+        public decimal? PurchaseAmount { get; set; }
 
         public int? AccountId { get; set; }
 
@@ -88,6 +94,7 @@ namespace AccountingSystem.ViewModels
         public IEnumerable<SelectListItem> AssetTypes { get; set; } = Enumerable.Empty<SelectListItem>();
         public IEnumerable<SelectListItem> DepreciationFrequencies { get; set; } = Enumerable.Empty<SelectListItem>();
         public IEnumerable<AssetTypeSelectOption> AssetTypeOptions { get; set; } = Enumerable.Empty<AssetTypeSelectOption>();
+        public IEnumerable<SelectListItem> Suppliers { get; set; } = Enumerable.Empty<SelectListItem>();
     }
 
     public class AssetExpenseListViewModel
