@@ -4285,10 +4285,12 @@ namespace AccountingSystem.Controllers
                 return 0;
             }
 
+            var normalized = amount >= 0 ? Math.Abs(amount) : -Math.Abs(amount);
+
             return nature switch
             {
-                AccountNature.Credit => amount * -1 <= 0 ? Math.Abs(amount) : -Math.Abs(amount),
-                AccountNature.Debit => amount >= 0 ? Math.Abs(amount) : -Math.Abs(amount),
+                AccountNature.Credit => normalized,
+                AccountNature.Debit => normalized,
                 _ => amount
             };
         }
@@ -4440,10 +4442,12 @@ namespace AccountingSystem.Controllers
                 return 0;
             }
 
+            var normalized = amount >= 0 ? Math.Abs(amount) : -Math.Abs(amount);
+
             return nature switch
             {
-                AccountNature.Credit => -Math.Abs(amount),
-                AccountNature.Debit => Math.Abs(amount),
+                AccountNature.Credit => normalized,
+                AccountNature.Debit => normalized,
                 _ => amount
             };
         }
