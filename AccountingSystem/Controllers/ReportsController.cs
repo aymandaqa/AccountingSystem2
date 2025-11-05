@@ -4312,11 +4312,17 @@ namespace AccountingSystem.Controllers
             selectedCurrency ??= baseCurrency;
 
             var balances = accounts.ToDictionary(a => a.Id, a =>
-                a.JournalEntryLines
+            {
+                var treatAsDebit = a.Nature == AccountNature.Debit || a.AccountType == AccountType.Expenses;
+
+                return a.JournalEntryLines
                     .Where(l => includePending || l.JournalEntry.Status == JournalEntryStatus.Posted)
                     .Where(l => l.JournalEntry.Date >= fromDate && l.JournalEntry.Date <= toDate)
                     .Where(l => !branchId.HasValue || l.JournalEntry.BranchId == branchId)
-                    .Sum(l => a.Nature == AccountNature.Debit ? l.DebitAmount - l.CreditAmount : l.CreditAmount - l.DebitAmount));
+                    .Sum(l => treatAsDebit
+                        ? l.DebitAmount - l.CreditAmount
+                        : l.CreditAmount - l.DebitAmount);
+            });
 
             var nodes = accounts.Select(a =>
             {
