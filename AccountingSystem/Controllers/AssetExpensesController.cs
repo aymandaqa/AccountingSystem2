@@ -18,6 +18,9 @@ namespace AccountingSystem.Controllers
     [Authorize(Policy = "assetexpenses.view")]
     public class AssetExpensesController : Controller
     {
+        private const string InsufficientPaymentBalanceMessage = "الرصيد المتاح في حساب الدفع لا يكفي لإتمام العملية.";
+        private const string AssetExpenseApprovedMessage = "تم إنشاء مصروف الأصل واعتماده فوراً";
+
         private readonly ApplicationDbContext _context;
         private readonly UserManager<User> _userManager;
         private readonly IWorkflowService _workflowService;
@@ -207,9 +210,7 @@ namespace AccountingSystem.Controllers
 
             if (!ModelState.IsValid)
             {
-                model.Assets = await GetAssetsAsync();
-                model.ExpenseAccounts = await GetExpenseAccountsAsync();
-                model.Suppliers = await GetSuppliersAsync();
+                await PopulateCreateAssetExpenseModelAsync(model);
                 return View(model);
             }
 
@@ -258,14 +259,10 @@ namespace AccountingSystem.Controllers
                     assetExpense.CurrencyId);
 
                 TempData["InfoMessage"] = "تم إرسال مصروف الأصل لاعتمادات الموافقة";
-            }
-            else
-            {
-                await _assetExpenseProcessor.FinalizeAsync(assetExpense, user.Id);
-                TempData["SuccessMessage"] = "تم إنشاء مصروف الأصل واعتماده فوراً";
+                return RedirectToAction(nameof(Index));
             }
 
-            return RedirectToAction(nameof(Index));
+            return await FinalizeAssetExpenseAsync(assetExpense, user.Id, model);
         }
 
         [HttpPost]
@@ -349,6 +346,36 @@ namespace AccountingSystem.Controllers
                     CurrencyCode = s.Account.Currency.Code
                 })
                 .ToListAsync();
+        }
+
+        private async Task<IActionResult> FinalizeAssetExpenseAsync(AssetExpense assetExpense, string userId, CreateAssetExpenseViewModel model)
+        {
+            try
+            {
+                await _assetExpenseProcessor.FinalizeAsync(assetExpense, userId);
+                TempData["SuccessMessage"] = AssetExpenseApprovedMessage;
+                return RedirectToAction(nameof(Index));
+            }
+            catch (InvalidOperationException ex) when (ex.Message == InsufficientPaymentBalanceMessage)
+            {
+                await RemoveAssetExpenseAsync(assetExpense);
+                ModelState.AddModelError(nameof(model.Amount), ex.Message);
+                await PopulateCreateAssetExpenseModelAsync(model);
+                return View("Create", model);
+            }
+        }
+
+        private async Task RemoveAssetExpenseAsync(AssetExpense assetExpense)
+        {
+            _context.AssetExpenses.Remove(assetExpense);
+            await _context.SaveChangesAsync();
+        }
+
+        private async Task PopulateCreateAssetExpenseModelAsync(CreateAssetExpenseViewModel model)
+        {
+            model.Assets = await GetAssetsAsync();
+            model.ExpenseAccounts = await GetExpenseAccountsAsync();
+            model.Suppliers = await GetSuppliersAsync();
         }
 
         private async Task<IEnumerable<SelectListItem>> GetAssetsAsync()
