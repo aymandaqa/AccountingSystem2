@@ -284,6 +284,9 @@ namespace AccountingSystem.Controllers
             }
 
             var asset = await _context.Assets
+                .Include(a => a.AssetType)
+                    .ThenInclude(t => t.AccumulatedDepreciationAccount)
+                .Include(a => a.Branch)
                 .FirstOrDefaultAsync(a => a.Id == id);
 
             if (asset == null)
@@ -298,33 +301,205 @@ namespace AccountingSystem.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            var bookValueAtSale = asset.BookValue;
-            asset.IsDisposed = true;
-            asset.DisposedAt = DateTime.Now;
-            asset.DisposalProceeds = salePrice;
-            asset.BookValueAtDisposal = bookValueAtSale;
-            asset.DisposalProfitLoss = salePrice - bookValueAtSale;
-            asset.BookValue = 0m;
-            asset.UpdatedAt = DateTime.Now;
-
-            await _context.SaveChangesAsync();
-
-            var profitLoss = asset.DisposalProfitLoss ?? 0m;
-            string resultMessage;
-            if (profitLoss > 0)
+            if (asset.AssetType == null)
             {
-                resultMessage = $"تحقق ربح قدره {profitLoss:N2}.";
-            }
-            else if (profitLoss < 0)
-            {
-                resultMessage = $"تحقق خسارة قدرها {Math.Abs(profitLoss):N2}.";
-            }
-            else
-            {
-                resultMessage = "لم يتحقق ربح أو خسارة.";
+                TempData["AssetSaleError"] = "نوع الأصل غير محدد.";
+                return RedirectToAction(nameof(Index));
             }
 
-            TempData["AssetSaleSuccess"] = $"تم بيع الأصل \"{asset.Name}\" بنجاح. {resultMessage}";
+            if (!asset.AccountId.HasValue)
+            {
+                TempData["AssetSaleError"] = "الأصل غير مرتبط بحساب محاسبي.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Challenge();
+            }
+
+            var profitLoss = salePrice - asset.BookValue;
+            var accumulatedDepreciation = asset.AccumulatedDepreciation;
+            var assetCost = accumulatedDepreciation + asset.BookValue;
+            var reference = $"ASSETSALE:{asset.Id}";
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var settingsKeys = new[]
+                {
+                    "AssetSaleProceedsAccountId",
+                    "AssetSaleGainAccountId",
+                    "AssetSaleLossAccountId"
+                };
+
+                var settings = await _context.SystemSettings
+                    .Where(s => settingsKeys.Contains(s.Key))
+                    .ToDictionaryAsync(s => s.Key, s => s.Value);
+
+                int GetAccountId(string key, string friendlyName, bool required)
+                {
+                    if (!settings.TryGetValue(key, out var value) || string.IsNullOrWhiteSpace(value))
+                    {
+                        if (!required)
+                        {
+                            return 0;
+                        }
+
+                        throw new InvalidOperationException($"يرجى تحديد {friendlyName} في إعدادات النظام.");
+                    }
+
+                    if (!int.TryParse(value, out var accountId))
+                    {
+                        throw new InvalidOperationException($"قيمة إعداد {friendlyName} غير صالحة.");
+                    }
+
+                    return accountId;
+                }
+
+                var proceedsAccountId = salePrice > 0
+                    ? GetAccountId("AssetSaleProceedsAccountId", "حساب متحصلات بيع الأصول", required: true)
+                    : 0;
+
+                var gainAccountId = profitLoss > 0
+                    ? GetAccountId("AssetSaleGainAccountId", "حساب أرباح بيع الأصول", required: true)
+                    : 0;
+
+                var lossAccountId = profitLoss < 0
+                    ? GetAccountId("AssetSaleLossAccountId", "حساب خسائر بيع الأصول", required: true)
+                    : 0;
+
+                if (accumulatedDepreciation > 0 && (!asset.AssetType.IsDepreciable || !asset.AssetType.AccumulatedDepreciationAccountId.HasValue))
+                {
+                    throw new InvalidOperationException("نوع الأصل لا يحتوي على حساب مجمع إهلاك صالح.");
+                }
+
+                var lines = new List<JournalEntryLine>();
+
+                if (salePrice > 0)
+                {
+                    lines.Add(new JournalEntryLine
+                    {
+                        AccountId = proceedsAccountId,
+                        DebitAmount = salePrice,
+                        Description = "بيع أصل"
+                    });
+                }
+
+                if (accumulatedDepreciation > 0 && asset.AssetType.AccumulatedDepreciationAccountId.HasValue)
+                {
+                    lines.Add(new JournalEntryLine
+                    {
+                        AccountId = asset.AssetType.AccumulatedDepreciationAccountId.Value,
+                        DebitAmount = accumulatedDepreciation,
+                        Description = "إلغاء مجمع الإهلاك"
+                    });
+                }
+
+                if (assetCost > 0)
+                {
+                    lines.Add(new JournalEntryLine
+                    {
+                        AccountId = asset.AccountId.Value,
+                        CreditAmount = assetCost,
+                        Description = "إلغاء قيمة الأصل"
+                    });
+                }
+
+                if (profitLoss > 0)
+                {
+                    lines.Add(new JournalEntryLine
+                    {
+                        AccountId = gainAccountId,
+                        CreditAmount = profitLoss,
+                        Description = "ربح بيع أصل"
+                    });
+                }
+                else if (profitLoss < 0)
+                {
+                    lines.Add(new JournalEntryLine
+                    {
+                        AccountId = lossAccountId,
+                        DebitAmount = Math.Abs(profitLoss),
+                        Description = "خسارة بيع أصل"
+                    });
+                }
+
+                if (!lines.Any())
+                {
+                    throw new InvalidOperationException("لا يمكن إنشاء قيد بدون حركات.");
+                }
+
+                var descriptionLines = new List<string>
+                {
+                    $"بيع الأصل: {asset.Name}"
+                };
+
+                if (!string.IsNullOrWhiteSpace(asset.AssetNumber))
+                {
+                    descriptionLines.Add($"رقم الأصل: {asset.AssetNumber}");
+                }
+
+                var description = string.Join(Environment.NewLine, descriptionLines);
+
+                var existingEntry = await _context.JournalEntries
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(e => e.Reference == reference);
+
+                if (existingEntry != null)
+                {
+                    throw new InvalidOperationException("تم إنشاء قيد بيع لهذا الأصل مسبقًا.");
+                }
+
+                await _journalEntryService.CreateJournalEntryAsync(
+                    DateTime.Now,
+                    description,
+                    asset.BranchId,
+                    user.Id,
+                    lines,
+                    JournalEntryStatus.Posted,
+                    reference: reference);
+
+                var bookValueAtSale = asset.BookValue;
+
+                asset.IsDisposed = true;
+                asset.DisposedAt = DateTime.Now;
+                asset.DisposalProceeds = salePrice;
+                asset.BookValueAtDisposal = bookValueAtSale;
+                asset.DisposalProfitLoss = profitLoss;
+                asset.BookValue = 0m;
+                asset.UpdatedAt = DateTime.Now;
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                string resultMessage;
+                if (profitLoss > 0)
+                {
+                    resultMessage = $"تحقق ربح قدره {profitLoss:N2}.";
+                }
+                else if (profitLoss < 0)
+                {
+                    resultMessage = $"تحقق خسارة قدرها {Math.Abs(profitLoss):N2}.";
+                }
+                else
+                {
+                    resultMessage = "لم يتحقق ربح أو خسارة.";
+                }
+
+                TempData["AssetSaleSuccess"] = $"تم بيع الأصل \"{asset.Name}\" بنجاح. {resultMessage}";
+            }
+            catch (InvalidOperationException ex)
+            {
+                await transaction.RollbackAsync();
+                TempData["AssetSaleError"] = ex.Message;
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                TempData["AssetSaleError"] = "حدث خطأ أثناء إنشاء القيد المحاسبي لبيع الأصل.";
+            }
 
             return RedirectToAction(nameof(Index));
         }

@@ -377,6 +377,21 @@ namespace AccountingSystem.Data
                 context.SystemSettings.Add(new SystemSetting { Key = "DashboardParentAccountId", Value = null });
             }
 
+            if (!context.SystemSettings.Any(s => s.Key == "AssetSaleProceedsAccountId"))
+            {
+                context.SystemSettings.Add(new SystemSetting { Key = "AssetSaleProceedsAccountId", Value = null });
+            }
+
+            if (!context.SystemSettings.Any(s => s.Key == "AssetSaleGainAccountId"))
+            {
+                context.SystemSettings.Add(new SystemSetting { Key = "AssetSaleGainAccountId", Value = null });
+            }
+
+            if (!context.SystemSettings.Any(s => s.Key == "AssetSaleLossAccountId"))
+            {
+                context.SystemSettings.Add(new SystemSetting { Key = "AssetSaleLossAccountId", Value = null });
+            }
+
             await context.SaveChangesAsync();
         }
 
