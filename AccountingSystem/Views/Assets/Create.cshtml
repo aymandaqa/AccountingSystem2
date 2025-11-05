@@ -38,9 +38,21 @@
                 <div class="col-md-6">
                     <label asp-for="CapitalAccountId" class="form-label"></label>
                     <select asp-for="CapitalAccountId" asp-items="Model.CapitalAccounts" class="form-select">
-                        <option value="">اختر حساب رأس المال</option>
+                        <option value="">اختر حساب رأس المال (اختياري)</option>
                     </select>
                     <span asp-validation-for="CapitalAccountId" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="SupplierId" class="form-label"></label>
+                    <select asp-for="SupplierId" asp-items="Model.Suppliers" class="form-select">
+                        <option value="">اختر المورد</option>
+                    </select>
+                    <span asp-validation-for="SupplierId" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="PurchaseAmount" class="form-label"></label>
+                    <input asp-for="PurchaseAmount" class="form-control" />
+                    <span asp-validation-for="PurchaseAmount" class="text-danger"></span>
                 </div>
                 <div class="col-md-6">
                     <label asp-for="AssetNumber" class="form-label"></label>

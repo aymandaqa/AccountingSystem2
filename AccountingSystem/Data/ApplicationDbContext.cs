@@ -607,6 +607,7 @@ namespace AccountingSystem.Data
                 entity.Property(e => e.SalvageValue).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.AccumulatedDepreciation).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.BookValue).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.PurchaseAmount).HasColumnType("decimal(18,2)");
 
                 entity.HasOne(e => e.Branch)
                     .WithMany(b => b.Assets)
@@ -626,6 +627,11 @@ namespace AccountingSystem.Data
                 entity.HasOne(e => e.CostCenter)
                     .WithMany()
                     .HasForeignKey(e => e.CostCenterId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Supplier)
+                    .WithMany()
+                    .HasForeignKey(e => e.SupplierId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 

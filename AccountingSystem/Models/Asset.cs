@@ -30,6 +30,10 @@ namespace AccountingSystem.Models
 
         public int? CostCenterId { get; set; }
 
+        public int? SupplierId { get; set; }
+
+        public decimal? PurchaseAmount { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public DateTime? UpdatedAt { get; set; }
@@ -55,6 +59,8 @@ namespace AccountingSystem.Models
         public virtual Account? Account { get; set; }
 
         public virtual CostCenter? CostCenter { get; set; }
+
+        public virtual Supplier? Supplier { get; set; }
 
         public virtual ICollection<AssetExpense> Expenses { get; set; } = new List<AssetExpense>();
 
