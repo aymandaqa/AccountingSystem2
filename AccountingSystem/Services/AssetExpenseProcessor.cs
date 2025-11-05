@@ -109,7 +109,7 @@ namespace AccountingSystem.Services
 
                 if (!paymentAccount.HasSufficientCashBalance(loadedExpense.Amount))
                 {
-                    throw new InvalidOperationException("الرصيد المتاح في حساب الدفع لا يكفي لإتمام العملية.");
+                    throw new InvalidOperationException(AssetExpenseMessages.InsufficientPaymentBalanceMessage);
                 }
 
                 lines.Add(new JournalEntryLine
