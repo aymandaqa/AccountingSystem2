@@ -151,6 +151,13 @@ namespace AccountingSystem.Services
                 BranchName = asset.Branch?.NameAr ?? string.Empty
             };
 
+            if (asset.IsDisposed)
+            {
+                preview.Success = false;
+                preview.Message = "تم بيع الأصل ولا يمكن متابعة الإهلاك.";
+                return (asset, preview);
+            }
+
             if (asset.AssetType == null || !asset.AssetType.IsDepreciable)
             {
                 preview.Success = false;

@@ -236,7 +236,11 @@ namespace AccountingSystem.Controllers
 
         public async Task<IActionResult> Index()
         {
+            ViewBag.AssetSaleSuccess = TempData["AssetSaleSuccess"] as string;
+            ViewBag.AssetSaleError = TempData["AssetSaleError"] as string;
+
             var assets = await _context.Assets
+                .Where(a => !a.IsDisposed)
                 .Include(a => a.Branch)
                 .Include(a => a.AssetType)
                 .Include(a => a.Account)
@@ -255,12 +259,74 @@ namespace AccountingSystem.Controllers
                 AccountId = a.AccountId,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
-                IsDepreciable = a.AssetType.IsDepreciable,
+                IsDepreciable = a.AssetType.IsDepreciable && !a.IsDisposed,
                 AccumulatedDepreciation = a.AccumulatedDepreciation,
-                BookValue = a.BookValue
+                BookValue = a.BookValue,
+                IsDisposed = a.IsDisposed,
+                DisposedAt = a.DisposedAt,
+                DisposalProceeds = a.DisposalProceeds,
+                DisposalProfitLoss = a.DisposalProfitLoss,
+                BookValueAtDisposal = a.BookValueAtDisposal
             }).ToList();
 
             return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "assets.edit")]
+        public async Task<IActionResult> Sell(int id, decimal salePrice)
+        {
+            if (salePrice < 0)
+            {
+                TempData["AssetSaleError"] = "قيمة البيع يجب أن تكون مساوية أو أكبر من صفر.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var asset = await _context.Assets
+                .FirstOrDefaultAsync(a => a.Id == id);
+
+            if (asset == null)
+            {
+                TempData["AssetSaleError"] = "الأصل غير موجود.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (asset.IsDisposed)
+            {
+                TempData["AssetSaleError"] = "تم بيع الأصل بالفعل.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var bookValueAtSale = asset.BookValue;
+            asset.IsDisposed = true;
+            asset.DisposedAt = DateTime.Now;
+            asset.DisposalProceeds = salePrice;
+            asset.BookValueAtDisposal = bookValueAtSale;
+            asset.DisposalProfitLoss = salePrice - bookValueAtSale;
+            asset.BookValue = 0m;
+            asset.UpdatedAt = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+
+            var profitLoss = asset.DisposalProfitLoss ?? 0m;
+            string resultMessage;
+            if (profitLoss > 0)
+            {
+                resultMessage = $"تحقق ربح قدره {profitLoss:N2}.";
+            }
+            else if (profitLoss < 0)
+            {
+                resultMessage = $"تحقق خسارة قدرها {Math.Abs(profitLoss):N2}.";
+            }
+            else
+            {
+                resultMessage = "لم يتحقق ربح أو خسارة.";
+            }
+
+            TempData["AssetSaleSuccess"] = $"تم بيع الأصل \"{asset.Name}\" بنجاح. {resultMessage}";
+
+            return RedirectToAction(nameof(Index));
         }
 
         [Authorize(Policy = "assets.view")]

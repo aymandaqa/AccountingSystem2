@@ -1,3 +1,4 @@
+@using System.Globalization
 @model IEnumerable<AccountingSystem.ViewModels.AssetListViewModel>
 
 @{
@@ -7,6 +8,8 @@
     var importErrors = !string.IsNullOrWhiteSpace(importErrorsRaw)
         ? importErrorsRaw.Split(";;", StringSplitOptions.RemoveEmptyEntries)
         : Array.Empty<string>();
+    var saleSuccess = ViewBag.AssetSaleSuccess as string;
+    var saleError = ViewBag.AssetSaleError as string;
 }
 
 <div class="container-fluid">
@@ -14,6 +17,22 @@
     {
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="fas fa-check-circle me-1"></i> @importSuccess
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(saleSuccess))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-1"></i> @saleSuccess
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(saleError))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-1"></i> @saleError
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
@@ -149,6 +168,18 @@
                                                 <a asp-action="Edit" asp-route-id="@asset.Id" class="btn btn-warning" asp-require-permission="assets.edit">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
+                                                <button type="button"
+                                                        class="btn btn-secondary"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#sellAssetModal"
+                                                        data-asset-id="@asset.Id"
+                                                        data-asset-name="@asset.Name"
+                                                        data-asset-book-value="@asset.BookValue.ToString(CultureInfo.InvariantCulture)"
+                                                        data-asset-book-value-display="@asset.BookValue.ToString("N2")"
+                                                        asp-require-permission="assets.edit"
+                                                        title="بيع الأصل">
+                                                    <i class="fas fa-dollar-sign"></i>
+                                                </button>
                                                 <a asp-action="Delete" asp-route-id="@asset.Id" class="btn btn-danger" asp-require-permission="assets.delete">
                                                     <i class="fas fa-trash"></i>
                                                 </a>
@@ -184,48 +215,147 @@
     </div>
 </div>
 
+<div class="modal fade" id="sellAssetModal" tabindex="-1" aria-labelledby="sellAssetModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="Sell" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title" id="sellAssetModalLabel">بيع الأصل</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="sellAssetId" />
+                    <div class="mb-3">
+                        <label class="form-label">الأصل</label>
+                        <div id="sellAssetName" class="form-control-plaintext fw-bold"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="salePriceInput" class="form-label">قيمة البيع (القيمة السوقية)</label>
+                        <input type="number" class="form-control" id="salePriceInput" name="salePrice" min="0" step="0.01" required />
+                    </div>
+                    <div class="alert alert-secondary" id="sellAssetSummary">
+                        <div>القيمة الدفترية الحالية: <span id="sellAssetBookValue"></span></div>
+                        <div class="mt-2">الربح / الخسارة المتوقعة: <span id="sellAssetProfitLoss" class="fw-bold"></span></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">بيع الأصل</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             var form = document.getElementById('bulkDepreciationForm');
-            if (!form) {
+            if (form) {
+                var selectAll = document.getElementById('selectAllAssets');
+                var alertBox = document.getElementById('bulkDepreciationSelectionAlert');
+
+                var getSelectableCheckboxes = function () {
+                    return Array.prototype.slice.call(form.querySelectorAll('.asset-select')).filter(function (checkbox) {
+                        return !checkbox.disabled;
+                    });
+                };
+
+                if (selectAll) {
+                    selectAll.addEventListener('change', function () {
+                        var checkboxes = getSelectableCheckboxes();
+                        checkboxes.forEach(function (checkbox) {
+                            checkbox.checked = selectAll.checked;
+                        });
+                    });
+                }
+
+                form.addEventListener('submit', function (event) {
+                    var submitter = event.submitter;
+                    if (submitter && submitter.dataset.requiresSelection === 'true') {
+                        var hasSelection = getSelectableCheckboxes().some(function (checkbox) {
+                            return checkbox.checked;
+                        });
+
+                        if (!hasSelection) {
+                            event.preventDefault();
+                            if (alertBox) {
+                                alertBox.classList.remove('d-none');
+                                alertBox.focus();
+                            }
+                        }
+                    }
+                });
+            }
+
+            var sellAssetModal = document.getElementById('sellAssetModal');
+            if (!sellAssetModal) {
                 return;
             }
 
-            var selectAll = document.getElementById('selectAllAssets');
-            var alertBox = document.getElementById('bulkDepreciationSelectionAlert');
+            var salePriceInput = document.getElementById('salePriceInput');
+            var assetIdInput = document.getElementById('sellAssetId');
+            var assetNameDisplay = document.getElementById('sellAssetName');
+            var bookValueDisplay = document.getElementById('sellAssetBookValue');
+            var profitLossDisplay = document.getElementById('sellAssetProfitLoss');
+            var numberFormatter = new Intl.NumberFormat('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-            var getSelectableCheckboxes = function () {
-                return Array.prototype.slice.call(form.querySelectorAll('.asset-select')).filter(function (checkbox) {
-                    return !checkbox.disabled;
-                });
+            var updateProfitLoss = function () {
+                var bookValue = parseFloat(sellAssetModal.dataset.bookValue || '0');
+                var salePrice = parseFloat(salePriceInput.value || '0');
+                var difference = salePrice - bookValue;
+
+                if (!isFinite(difference)) {
+                    profitLossDisplay.textContent = '-';
+                    profitLossDisplay.classList.remove('text-success', 'text-danger');
+                    return;
+                }
+
+                var formatted = numberFormatter.format(Math.abs(difference));
+                profitLossDisplay.classList.remove('text-success', 'text-danger');
+
+                if (difference > 0) {
+                    profitLossDisplay.textContent = formatted + ' ربح';
+                    profitLossDisplay.classList.add('text-success');
+                } else if (difference < 0) {
+                    profitLossDisplay.textContent = formatted + ' خسارة';
+                    profitLossDisplay.classList.add('text-danger');
+                } else {
+                    profitLossDisplay.textContent = 'لا يوجد ربح أو خسارة';
+                }
             };
 
-            if (selectAll) {
-                selectAll.addEventListener('change', function () {
-                    var checkboxes = getSelectableCheckboxes();
-                    checkboxes.forEach(function (checkbox) {
-                        checkbox.checked = selectAll.checked;
-                    });
-                });
-            }
+            sellAssetModal.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                if (!button) {
+                    return;
+                }
 
-            form.addEventListener('submit', function (event) {
-                var submitter = event.submitter;
-                if (submitter && submitter.dataset.requiresSelection === 'true') {
-                    var hasSelection = getSelectableCheckboxes().some(function (checkbox) {
-                        return checkbox.checked;
-                    });
+                var assetId = button.getAttribute('data-asset-id');
+                var assetName = button.getAttribute('data-asset-name');
+                var bookValue = button.getAttribute('data-asset-book-value');
+                var bookValueDisplayText = button.getAttribute('data-asset-book-value-display');
 
-                    if (!hasSelection) {
-                        event.preventDefault();
-                        if (alertBox) {
-                            alertBox.classList.remove('d-none');
-                            alertBox.focus();
-                        }
-                    }
+                sellAssetModal.dataset.bookValue = bookValue || '0';
+                assetIdInput.value = assetId || '';
+                assetNameDisplay.textContent = assetName || '';
+                bookValueDisplay.textContent = bookValueDisplayText || '0.00';
+                salePriceInput.value = bookValue || '';
+
+                updateProfitLoss();
+            });
+
+            sellAssetModal.addEventListener('shown.bs.modal', function () {
+                if (salePriceInput) {
+                    salePriceInput.focus();
+                    salePriceInput.select();
                 }
             });
+
+            if (salePriceInput) {
+                salePriceInput.addEventListener('input', updateProfitLoss);
+            }
         });
     </script>
 }

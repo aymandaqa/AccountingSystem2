@@ -52,6 +52,16 @@ namespace AccountingSystem.Models
 
         public decimal BookValue { get; set; }
 
+        public bool IsDisposed { get; set; }
+
+        public DateTime? DisposedAt { get; set; }
+
+        public decimal? DisposalProceeds { get; set; }
+
+        public decimal? DisposalProfitLoss { get; set; }
+
+        public decimal? BookValueAtDisposal { get; set; }
+
         public virtual Branch Branch { get; set; } = null!;
 
         public virtual AssetType AssetType { get; set; } = null!;
