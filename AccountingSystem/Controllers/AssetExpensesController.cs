@@ -18,7 +18,6 @@ namespace AccountingSystem.Controllers
     [Authorize(Policy = "assetexpenses.view")]
     public class AssetExpensesController : Controller
     {
-        private const string InsufficientPaymentBalanceMessage = "الرصيد المتاح في حساب الدفع لا يكفي لإتمام العملية.";
         private const string AssetExpenseApprovedMessage = "تم إنشاء مصروف الأصل واعتماده فوراً";
 
         private readonly ApplicationDbContext _context;
@@ -197,7 +196,7 @@ namespace AccountingSystem.Controllers
 
                         if (!paymentAccount.HasSufficientCashBalance(model.Amount))
                         {
-                            ModelState.AddModelError(nameof(model.Amount), "الرصيد المتاح في حساب الدفع لا يكفي لإتمام العملية.");
+                            ModelState.AddModelError(nameof(model.Amount), AssetExpenseMessages.InsufficientPaymentBalanceMessage);
                         }
                     }
                 }
@@ -359,7 +358,7 @@ namespace AccountingSystem.Controllers
                 TempData["SuccessMessage"] = AssetExpenseApprovedMessage;
                 return RedirectToAction(nameof(Index));
             }
-            catch (InvalidOperationException ex) when (ex.Message == InsufficientPaymentBalanceMessage)
+            catch (InvalidOperationException ex) when (ex.Message == AssetExpenseMessages.InsufficientPaymentBalanceMessage)
             {
                 await RemoveAssetExpenseAsync(assetExpense);
                 ModelState.AddModelError(nameof(model.Amount), ex.Message);

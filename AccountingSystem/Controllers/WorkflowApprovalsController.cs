@@ -1,3 +1,4 @@
+using System;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.Models.Workflows;
@@ -170,8 +171,16 @@ namespace AccountingSystem.Controllers
             if (user == null)
                 return Challenge();
 
-            await _workflowService.ProcessActionAsync(actionId, user.Id, approve: true, notes: notes);
-            TempData["Success"] = "تمت الموافقة بنجاح";
+            try
+            {
+                await _workflowService.ProcessActionAsync(actionId, user.Id, approve: true, notes: notes);
+                TempData["Success"] = "تمت الموافقة بنجاح";
+            }
+            catch (InvalidOperationException ex) when (ex.Message == AssetExpenseMessages.InsufficientPaymentBalanceMessage)
+            {
+                TempData["Error"] = ex.Message;
+            }
+
             return RedirectToAction(nameof(Index));
         }
 
