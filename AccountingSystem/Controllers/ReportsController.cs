@@ -4435,7 +4435,7 @@ namespace AccountingSystem.Controllers
             return viewModel;
         }
 
-        private static decimal NormalizeIncomeStatementBalance(decimal amount, AccountNature nature)
+        private static decimal NormalizeIncomeStatementBalance(decimal amount, AccountNature nature, AccountType? accountType = null)
         {
             if (amount == 0)
             {
@@ -4443,6 +4443,11 @@ namespace AccountingSystem.Controllers
             }
 
             var normalized = amount >= 0 ? Math.Abs(amount) : -Math.Abs(amount);
+
+            if (accountType == AccountType.Revenue)
+            {
+                return -normalized;
+            }
 
             return nature switch
             {
@@ -4454,9 +4459,9 @@ namespace AccountingSystem.Controllers
 
         private static void ApplyDisplayBalances(AccountTreeNodeViewModel node)
         {
-            node.DisplayBalance = NormalizeIncomeStatementBalance(node.Balance, node.Nature);
-            node.DisplayBalanceSelected = NormalizeIncomeStatementBalance(node.BalanceSelected, node.Nature);
-            node.DisplayBalanceBase = NormalizeIncomeStatementBalance(node.BalanceBase, node.Nature);
+            node.DisplayBalance = NormalizeIncomeStatementBalance(node.Balance, node.Nature, node.AccountType);
+            node.DisplayBalanceSelected = NormalizeIncomeStatementBalance(node.BalanceSelected, node.Nature, node.AccountType);
+            node.DisplayBalanceBase = NormalizeIncomeStatementBalance(node.BalanceBase, node.Nature, node.AccountType);
 
             foreach (var child in node.Children)
             {
