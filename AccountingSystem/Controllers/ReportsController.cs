@@ -4380,6 +4380,14 @@ namespace AccountingSystem.Controllers
             }
 
             var revenues = rootNodes.Where(n => n.AccountType == AccountType.Revenue).OrderBy(n => n.Code).ToList();
+            var expenses1 = rootNodes.Where(n => n.AccountType == AccountType.Expenses).OrderBy(n => n.Code).ToList();
+
+            foreach (var item in expenses1)
+            {
+                ComputeBalances(item);
+
+                ApplyDisplayBalances(item);
+            }
             var expenses = rootNodes.Where(n => n.AccountType == AccountType.Expenses).OrderBy(n => n.Code).ToList();
 
             decimal SumDisplaySelected(IEnumerable<AccountTreeNodeViewModel> nodeCollection) =>
@@ -4422,15 +4430,15 @@ namespace AccountingSystem.Controllers
                 Currencies = await _context.Currencies.Select(c => new SelectListItem { Value = c.Id.ToString(), Text = c.Code }).ToListAsync()
             };
 
-            viewModel.TotalRevenues = totalRevenuesDisplay;
-            viewModel.TotalExpenses = totalExpensesDisplay;
-            viewModel.TotalRevenuesBase = totalRevenuesBaseDisplay;
-            viewModel.TotalExpensesBase = totalExpensesBaseDisplay;
+            viewModel.TotalRevenues = NormalizeBalanceForDisplay(totalRevenuesDisplay, AccountNature.Credit);
+            viewModel.TotalExpenses = NormalizeBalanceForDisplay(totalExpensesDisplay, AccountNature.Debit);
+            viewModel.TotalRevenuesBase = NormalizeBalanceForDisplay(totalRevenuesBaseDisplay, AccountNature.Credit);
+            viewModel.TotalExpensesBase = NormalizeBalanceForDisplay(totalExpensesBaseDisplay, AccountNature.Debit);
 
             viewModel.NetIncome = netIncomeRaw;
             viewModel.NetIncomeBase = netIncomeBaseRaw;
-            viewModel.NetIncomeDisplay = NormalizeIncomeStatementBalance(netIncomeRaw, AccountNature.Credit);
-            viewModel.NetIncomeDisplayBase = NormalizeIncomeStatementBalance(netIncomeBaseRaw, AccountNature.Credit);
+            viewModel.NetIncomeDisplay = NormalizeBalanceForDisplay(netIncomeRaw, AccountNature.Credit);
+            viewModel.NetIncomeDisplayBase = NormalizeBalanceForDisplay(netIncomeBaseRaw, AccountNature.Credit);
 
             return viewModel;
         }
@@ -4442,12 +4450,12 @@ namespace AccountingSystem.Controllers
                 return 0;
             }
 
-            var normalized = amount >= 0 ? Math.Abs(amount) : -Math.Abs(amount);
+            var normalized = amount >= 0 ? -Math.Abs(amount) : Math.Abs(amount);
 
-            if (accountType == AccountType.Revenue)
-            {
-                return -normalized;
-            }
+            //if (accountType == AccountType.Revenue)
+            //{
+            //    return -normalized;
+            //}
 
             return nature switch
             {
@@ -4459,9 +4467,9 @@ namespace AccountingSystem.Controllers
 
         private static void ApplyDisplayBalances(AccountTreeNodeViewModel node)
         {
-            node.DisplayBalance = NormalizeIncomeStatementBalance(node.Balance, node.Nature, node.AccountType);
-            node.DisplayBalanceSelected = NormalizeIncomeStatementBalance(node.BalanceSelected, node.Nature, node.AccountType);
-            node.DisplayBalanceBase = NormalizeIncomeStatementBalance(node.BalanceBase, node.Nature, node.AccountType);
+            node.DisplayBalance = NormalizeBalanceForDisplay(node.Balance, node.Nature);
+            node.DisplayBalanceSelected = NormalizeBalanceForDisplay(node.BalanceSelected, node.Nature);
+            node.DisplayBalanceBase = NormalizeBalanceForDisplay(node.BalanceBase, node.Nature);
 
             foreach (var child in node.Children)
             {
