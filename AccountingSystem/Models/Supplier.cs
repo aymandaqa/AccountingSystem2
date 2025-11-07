@@ -28,7 +28,7 @@ namespace AccountingSystem.Models
 
         public SupplierMode Mode { get; set; } = SupplierMode.Cash;
 
-        public SupplierAuthorization AuthorizedOperations { get; set; } = SupplierAuthorization.Payment | SupplierAuthorization.Receipt;
+        public SupplierAuthorization AuthorizedOperations { get; set; } = SupplierAuthorization.PaymentVoucher | SupplierAuthorization.ReceiptVoucher;
 
         public virtual ICollection<SupplierBranch> SupplierBranches { get; set; } = new List<SupplierBranch>();
 

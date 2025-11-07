@@ -37,6 +37,14 @@ namespace AccountingSystem.Controllers
             _assetExpenseProcessor = assetExpenseProcessor;
         }
 
+        private async Task<List<int>> GetUserBranchIdsAsync(string userId)
+        {
+            return await _context.UserBranches
+                .Where(ub => ub.UserId == userId)
+                .Select(ub => ub.BranchId)
+                .ToListAsync();
+        }
+
         public async Task<IActionResult> Index()
         {
             var expenses = await _context.AssetExpenses
@@ -118,13 +126,20 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "assetexpenses.create")]
         public async Task<IActionResult> Create()
         {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Challenge();
+            }
+
+            var userBranchIds = await GetUserBranchIdsAsync(user.Id);
+
             var model = new CreateAssetExpenseViewModel
             {
-                Date = DateTime.Now,
-                Assets = await GetAssetsAsync(),
-                ExpenseAccounts = await GetExpenseAccountsAsync(),
-                Suppliers = await GetSuppliersAsync()
+                Date = DateTime.Now
             };
+
+            await PopulateCreateAssetExpenseModelAsync(model, userBranchIds);
 
             return View(model);
         }
@@ -139,6 +154,8 @@ namespace AccountingSystem.Controllers
             {
                 return Challenge();
             }
+
+            var userBranchIds = await GetUserBranchIdsAsync(user.Id);
 
             var asset = await _context.Assets
                 .Include(a => a.Branch)
@@ -169,11 +186,17 @@ namespace AccountingSystem.Controllers
                 supplier = await _context.Suppliers
                     .Include(s => s.Account)
                         .ThenInclude(a => a.Currency)
+                    .Include(s => s.SupplierBranches)
                     .FirstOrDefaultAsync(s => s.Id == model.SupplierId.Value);
 
                 if (supplier?.Account == null)
                 {
                     ModelState.AddModelError(nameof(model.SupplierId), "المورد غير موجود أو لا يملك حساباً");
+                }
+                else if (!supplier.AuthorizedOperations.HasFlag(SupplierAuthorization.AssetExpense)
+                    || !supplier.SupplierBranches.Any(sb => userBranchIds.Contains(sb.BranchId)))
+                {
+                    ModelState.AddModelError(nameof(model.SupplierId), "المورد المحدد غير مسموح له بهذه العملية أو غير مرتبط بفرعك");
                 }
             }
 
@@ -209,7 +232,7 @@ namespace AccountingSystem.Controllers
 
             if (!ModelState.IsValid)
             {
-                await PopulateCreateAssetExpenseModelAsync(model);
+                await PopulateCreateAssetExpenseModelAsync(model, userBranchIds);
                 return View(model);
             }
 
@@ -264,7 +287,7 @@ namespace AccountingSystem.Controllers
                 }
             }
 
-            return await FinalizeAssetExpenseAsync(assetExpense, user.Id, model);
+            return await FinalizeAssetExpenseAsync(assetExpense, user, userBranchIds, model);
         }
 
         [HttpPost]
@@ -332,11 +355,11 @@ namespace AccountingSystem.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        private async Task<IEnumerable<AssetExpenseSupplierOption>> GetSuppliersAsync()
+        private async Task<IEnumerable<AssetExpenseSupplierOption>> GetSuppliersAsync(IReadOnlyCollection<int> userBranchIds)
         {
             return await _context.Suppliers
-                .Include(s => s.Account)
-                    .ThenInclude(a => a.Currency)
+                .AsNoTracking()
+                .FilterByAuthorizationAndBranches(SupplierAuthorization.AssetExpense, userBranchIds)
                 .Where(s => s.AccountId != null && s.Account != null)
                 .OrderBy(s => s.NameAr)
                 .Select(s => new AssetExpenseSupplierOption
@@ -350,11 +373,11 @@ namespace AccountingSystem.Controllers
                 .ToListAsync();
         }
 
-        private async Task<IActionResult> FinalizeAssetExpenseAsync(AssetExpense assetExpense, string userId, CreateAssetExpenseViewModel model)
+        private async Task<IActionResult> FinalizeAssetExpenseAsync(AssetExpense assetExpense, User user, IReadOnlyCollection<int> userBranchIds, CreateAssetExpenseViewModel model)
         {
             try
             {
-                await _assetExpenseProcessor.FinalizeAsync(assetExpense, userId);
+                await _assetExpenseProcessor.FinalizeAsync(assetExpense, user.Id);
                 TempData["SuccessMessage"] = AssetExpenseApprovedMessage;
                 return RedirectToAction(nameof(Index));
             }
@@ -362,7 +385,7 @@ namespace AccountingSystem.Controllers
             {
                 await RemoveAssetExpenseAsync(assetExpense);
                 ModelState.AddModelError(nameof(model.Amount), ex.Message);
-                await PopulateCreateAssetExpenseModelAsync(model);
+                await PopulateCreateAssetExpenseModelAsync(model, userBranchIds);
                 return View("Create", model);
             }
         }
@@ -373,11 +396,11 @@ namespace AccountingSystem.Controllers
             await _context.SaveChangesAsync();
         }
 
-        private async Task PopulateCreateAssetExpenseModelAsync(CreateAssetExpenseViewModel model)
+        private async Task PopulateCreateAssetExpenseModelAsync(CreateAssetExpenseViewModel model, IReadOnlyCollection<int> userBranchIds)
         {
             model.Assets = await GetAssetsAsync();
             model.ExpenseAccounts = await GetExpenseAccountsAsync();
-            model.Suppliers = await GetSuppliersAsync();
+            model.Suppliers = await GetSuppliersAsync(userBranchIds);
         }
 
         private async Task<IEnumerable<SelectListItem>> GetAssetsAsync()

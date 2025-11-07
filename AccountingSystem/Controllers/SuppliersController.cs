@@ -64,8 +64,8 @@ namespace AccountingSystem.Controllers
             {
                 SelectedAuthorizations = new List<SupplierAuthorization>
                 {
-                    SupplierAuthorization.Payment,
-                    SupplierAuthorization.Receipt
+                    SupplierAuthorization.PaymentVoucher,
+                    SupplierAuthorization.ReceiptVoucher
                 },
                 SelectedBranchIds = _context.Branches
                     .Where(b => b.IsActive)
@@ -180,12 +180,11 @@ namespace AccountingSystem.Controllers
                     NameAr = model.NameAr,
                     NameEn = model.NameEn,
                     Phone = model.Phone,
-                    Email = model.Email,
-                    IsActive = model.IsActive,
-                    Mode = model.Mode,
-                    AuthorizedOperations = CombineAuthorizations(model.SelectedAuthorizations),
-                    AccountId = account.Id,
-                    CreatedById = user.Id,
+                Email = model.Email,
+                IsActive = model.IsActive,
+                AuthorizedOperations = CombineAuthorizations(model.SelectedAuthorizations),
+                AccountId = account.Id,
+                CreatedById = user.Id,
                     CreatedAt = DateTime.Now
                 };
 
@@ -228,7 +227,6 @@ namespace AccountingSystem.Controllers
                 Phone = supplier.Phone,
                 Email = supplier.Email,
                 IsActive = supplier.IsActive,
-                Mode = supplier.Mode,
                 SelectedAuthorizations = SplitAuthorizations(supplier.AuthorizedOperations),
                 SelectedBranchIds = supplier.SupplierBranches.Select(sb => sb.BranchId).ToList()
             };
@@ -288,7 +286,6 @@ namespace AccountingSystem.Controllers
                 supplier.Phone = model.Phone;
                 supplier.Email = model.Email;
                 supplier.IsActive = model.IsActive;
-                supplier.Mode = model.Mode;
                 supplier.AuthorizedOperations = CombineAuthorizations(model.SelectedAuthorizations);
 
                 var distinctBranchIds = validBranchIds.Distinct().ToList();
@@ -385,16 +382,6 @@ namespace AccountingSystem.Controllers
         {
             model.SelectedAuthorizations ??= new List<SupplierAuthorization>();
             model.SelectedBranchIds ??= new List<int>();
-
-            model.ModeOptions = Enum.GetValues(typeof(SupplierMode))
-                .Cast<SupplierMode>()
-                .Select(m => new SelectListItem
-                {
-                    Value = ((int)m).ToString(),
-                    Text = m.GetDisplayName(),
-                    Selected = model.Mode == m
-                })
-                .ToList();
 
             model.AuthorizationOptions = Enum.GetValues(typeof(SupplierAuthorization))
                 .Cast<SupplierAuthorization>()

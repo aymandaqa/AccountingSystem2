@@ -28,11 +28,6 @@
             <span asp-validation-for="Email" class="text-danger"></span>
         </div>
         <div class="col-md-6">
-            <label asp-for="Mode" class="form-label"></label>
-            <select asp-for="Mode" asp-items="Model.ModeOptions" class="form-select"></select>
-            <span asp-validation-for="Mode" class="text-danger"></span>
-        </div>
-        <div class="col-md-6">
             <label asp-for="SelectedAuthorizations" class="form-label"></label>
             <select asp-for="SelectedAuthorizations" asp-items="Model.AuthorizationOptions" class="form-select" multiple></select>
             <span class="form-text">يمكن اختيار أكثر من صلاحية.</span>
