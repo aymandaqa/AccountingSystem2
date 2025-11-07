@@ -490,6 +490,7 @@ namespace AccountingSystem.ViewModels
         public bool ParentAccountConfigured { get; set; }
         public string? SelectedParentAccountName { get; set; }
         public List<DriverCodBranchSummaryViewModel> DriverCodBranchSummaries { get; set; } = new List<DriverCodBranchSummaryViewModel>();
+        public List<CustomerBranchAccountNode> CustomerAccountBranches { get; set; } = new List<CustomerBranchAccountNode>();
     }
 
     public class CashBoxTreeViewModel
