@@ -4,7 +4,7 @@
     ViewData["Title"] = "إدارة الرواتب";
     var branches = ViewBag.Branches as List<SelectListItem> ?? new();
     var history = ViewBag.History as List<AccountingSystem.ViewModels.PayrollBatchHistoryViewModel> ?? new();
-    var culture = new CultureInfo("ar");
+    var culture = CultureInfo.InvariantCulture;
 }
 
 <div class="container-fluid payroll-container">
@@ -104,7 +104,7 @@
                                         }
                                         else if (item.Year > 0 && item.Month > 0)
                                         {
-                                            @(new System.DateTime(item.Year, item.Month, 1).ToString("MMMM yyyy", culture))
+                                            @(new System.DateTime(item.Year, item.Month, 1).ToString("MM/yyyy", culture))
                                         }
                                         else
                                         {

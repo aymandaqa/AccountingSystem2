@@ -52,7 +52,7 @@
                                         }
                                         else if (item.Year > 0 && item.Month > 0)
                                         {
-                                            @(new System.DateTime(item.Year, item.Month, 1).ToString("MMMM yyyy", new System.Globalization.CultureInfo("ar")))
+                                            @(new System.DateTime(item.Year, item.Month, 1).ToString("MM/yyyy", System.Globalization.CultureInfo.InvariantCulture))
                                         }
                                         else
                                         {

@@ -25,7 +25,7 @@ namespace AccountingSystem.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var culture = new CultureInfo("ar");
+            var culture = CultureInfo.InvariantCulture;
             var items = await _context.EmployeeAllowances
                 .AsNoTracking()
                 .Include(a => a.Employee).ThenInclude(e => e.Branch)
@@ -54,7 +54,7 @@ namespace AccountingSystem.Controllers
             foreach (var item in items)
             {
                 item.PeriodName = item.Year > 0 && item.Month > 0
-                    ? new DateTime(item.Year, item.Month, 1).ToString("MMMM yyyy", culture)
+                    ? new DateTime(item.Year, item.Month, 1).ToString("MM/yyyy", culture)
                     : string.Empty;
             }
 
@@ -62,13 +62,13 @@ namespace AccountingSystem.Controllers
             return View(items);
         }
 
-        public async Task<IActionResult> Create()
+        public async Task<IActionResult> Create(int? year, int? month, string? period)
         {
             var model = new EmployeeAllowanceFormViewModel
             {
                 Employees = await GetEmployeeSelectListAsync(),
                 AllowanceTypes = await GetAllowanceTypeSelectListAsync(),
-                Period = DateTime.Today.ToString("yyyy-MM")
+                Period = ResolveInitialPeriod(year, month, period)
             };
 
             return View(model);
@@ -91,6 +91,8 @@ namespace AccountingSystem.Controllers
                 ModelState.AddModelError(nameof(model.Period), "يرجى اختيار شهر صالح");
                 return View(model);
             }
+
+            model.Period = $"{year:D4}-{month:D2}";
 
             var employee = await _context.Employees
                 .Include(e => e.Account)
@@ -200,6 +202,8 @@ namespace AccountingSystem.Controllers
                 return View(model);
             }
 
+            model.Period = $"{year:D4}-{month:D2}";
+
             var allowance = await _context.EmployeeAllowances
                 .Include(a => a.Employee).ThenInclude(e => e.Account)
                 .FirstOrDefaultAsync(a => a.Id == id);
@@ -308,6 +312,28 @@ namespace AccountingSystem.Controllers
                     Text = a.Name
                 })
                 .ToListAsync();
+        }
+
+        private static string ResolveInitialPeriod(int? year, int? month, string? period)
+        {
+            if (TryParsePeriod(period, out var parsedYear, out var parsedMonth))
+            {
+                return $"{parsedYear:D4}-{parsedMonth:D2}";
+            }
+
+            if (year.HasValue && month.HasValue && year.Value > 0 && month.Value > 0)
+            {
+                try
+                {
+                    return new DateTime(year.Value, month.Value, 1).ToString("yyyy-MM");
+                }
+                catch
+                {
+                    // Ignore invalid combinations and fall back to today
+                }
+            }
+
+            return DateTime.Today.ToString("yyyy-MM");
         }
 
         private static bool TryParsePeriod(string? period, out int year, out int month)
