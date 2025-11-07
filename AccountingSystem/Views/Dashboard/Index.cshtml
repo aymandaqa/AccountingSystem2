@@ -54,12 +54,6 @@
     <div class="dashboard-layout">
         <div class="dashboard-main">
 
-            @if (canAccessReports)
-            {
-                <a href="@Url.Action("Index", "Reports")" class="btn btn-primary">
-                    <i class="fas fa-chart-line ms-1"></i> التقارير المالية
-                </a>
-            }
             <div id="dashboardWidgetsGrid" class="dashboard-widgets-grid">
 
 
@@ -83,13 +77,11 @@
                             </button>
                         </div>
                         <section class="dashboard-panels row g-4 mb-0">
-                            @{
-                                var accountTreeColumnClass = canViewCashBoxes ? "col-12 col-xl-12" : "col-12 col-xl-12";
-                            }
+
 
                             @if (canViewCashBoxes)
                             {
-                                <div class="@accountTreeColumnClass">
+                                <div class="col-8 col-xl-8">
                                     <div class="card account-tree-card shadow-sm border-0 h-100">
                                         <div class="card-header d-flex align-items-center justify-content-between">
                                             <div>
@@ -137,7 +129,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="@accountTreeColumnClass">
+                                <div class="col-4 col-xl-4">
                                     <div class="card account-tree-card shadow-sm border-0 h-100">
                                         <div class="card-header d-flex align-items-center justify-content-between">
                                             <div>

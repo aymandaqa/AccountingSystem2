@@ -737,8 +737,21 @@
                                 <i class="fas fa-angle-down toggle-icon"></i>
                             </a>
                             <ul class="submenu collapse nav flex-column @(reportsActive ? "show" : "")" id="reportsMenu">
+
+
+
+
                                 @if (canReportsView)
                                 {
+                                    <li class="report-item nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Reports"
+                                           asp-action="INDEX"
+                                           asp-require-permission="reports.view">
+                                            <i class="fas fa-balance-scale"></i> جميع التقارير
+                                        </a>
+                                    </li>
+
                                     <li class="report-item nav-item">
                                         <a class="nav-link"
                                            asp-controller="Reports"
