@@ -63,6 +63,8 @@ namespace AccountingSystem.Controllers
             public decimal Credit { get; set; }
         }
 
+        private sealed record RoadUserInfo(string? FirstName, string? LastName, string? UserName, string? Mobile, int? BranchId);
+
         private static bool ContainsKeyword(string? value, string[] keywords)
         {
             if (string.IsNullOrWhiteSpace(value))
@@ -743,7 +745,7 @@ namespace AccountingSystem.Controllers
                     .Distinct()
                     .ToList();
 
-                Dictionary<int, (string? FirstName, string? LastName, string? UserName, string? Mobile, int? BranchId)> customers =
+                Dictionary<int, RoadUserInfo> customers =
                     validCustomerIds.Any()
                         ? await _roadContext.Users
                             .AsNoTracking()
@@ -759,8 +761,8 @@ namespace AccountingSystem.Controllers
                             })
                             .ToDictionaryAsync(
                                 u => u.Id,
-                                u => (u.FirstName, u.LastName, u.UserName, u.MobileNo1, u.CompanyBranchId))
-                        : new Dictionary<int, (string?, string?, string?, string?, int?)>();
+                                u => new RoadUserInfo(u.FirstName, u.LastName, u.UserName, u.MobileNo1, u.CompanyBranchId))
+                        : new Dictionary<int, RoadUserInfo>();
 
                 var roadBranchIds = customers.Values
                     .Select(c => c.BranchId)
