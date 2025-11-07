@@ -1,0 +1,119 @@
+@model IReadOnlyList<AccountingSystem.ViewModels.CustomerBranchAccountNode>
+@{
+    var baseCurrencyCode = ViewData["BaseCurrencyCode"] as string ?? string.Empty;
+    var formatCurrency = ViewData["FormatCurrency"] as Func<decimal, string> ?? (value => value.ToString("N2"));
+}
+
+@if (Model == null || !Model.Any())
+{
+    <div class="alert alert-info text-center mb-0">
+        لا توجد حسابات عملاء مرتبطة لعرضها.
+    </div>
+}
+else
+{
+    var totalBalance = Model.Sum(branch => branch.TotalBalanceBase);
+    var branchBalanceHeading = string.IsNullOrWhiteSpace(baseCurrencyCode)
+        ? "إجمالي الرصيد"
+        : $"إجمالي الرصيد ({baseCurrencyCode})";
+    var customerBalanceHeading = string.IsNullOrWhiteSpace(baseCurrencyCode)
+        ? "الرصيد"
+        : $"الرصيد ({baseCurrencyCode})";
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="customerBranchTable">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 45%;">الفرع</th>
+                    <th class="text-end">@branchBalanceHeading</th>
+                    <th class="text-center" style="width: 120px;">التفاصيل</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var index = 0; index < Model.Count; index++)
+                {
+                    var branch = Model[index];
+                    var collapseId = $"customerBranchDetails_{branch.BranchId ?? 0}_{index}";
+                    <tr>
+                        <td class="fw-semibold">@branch.BranchName</td>
+                        <td class="text-end">@formatCurrency(branch.TotalBalanceBase)</td>
+                        <td class="text-center">
+                            @if (branch.HasCustomers)
+                            {
+                                <button class="btn btn-outline-primary btn-sm"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#@collapseId"
+                                        aria-expanded="false"
+                                        aria-controls="@collapseId">
+                                    عرض التفاصيل
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                    @if (branch.HasCustomers)
+                    {
+                        <tr class="collapse" id="@collapseId">
+                            <td colspan="3">
+                                <div class="p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-striped mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th style="width: 45%;">العميل</th>
+                                                    <th>الحساب</th>
+                                                    <th class="text-end">@customerBalanceHeading</th>
+                                                    <th class="text-end">الرصيد (العملة الأصلية)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var customer in branch.Customers)
+                                                {
+                                                    <tr>
+                                                        <td>
+                                                            <div class="fw-semibold">@customer.CustomerName</div>
+                                                            @if (!string.IsNullOrWhiteSpace(customer.CustomerContact))
+                                                            {
+                                                                <div class="text-muted small">@customer.CustomerContact</div>
+                                                            }
+                                                            @if (!string.IsNullOrWhiteSpace(customer.CustomerId))
+                                                            {
+                                                                <div class="text-muted small">معرّف: @customer.CustomerId</div>
+                                                            }
+                                                        </td>
+                                                        <td>
+                                                            <div class="fw-semibold">@customer.AccountCode</div>
+                                                            <div class="text-muted small">@customer.AccountName</div>
+                                                        </td>
+                                                        <td class="text-end">@formatCurrency(customer.BalanceBase)</td>
+                                                        <td class="text-end">
+                                                            @if (!string.IsNullOrWhiteSpace(customer.AccountCurrencyCode))
+                                                            {
+                                                                <span>@formatCurrency(customer.BalanceOriginal)</span>
+                                                                <span class="text-muted">@customer.AccountCurrencyCode</span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="text-muted">-</span>
+                                                            }
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+            <tfoot class="table-light">
+                <tr>
+                    <th>الإجمالي</th>
+                    <th class="text-end">@formatCurrency(totalBalance)</th>
+                    <th></th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+}

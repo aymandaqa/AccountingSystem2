@@ -84,84 +84,123 @@
                         {
                             <div class="row g-4 dashboard-widget-cards">
                                 <div class="col-12 col-lg-4">
-                                    <div class="card account-tree-card shadow-sm border-0 h-100">
+                                    <div class="card dashboard-table-card shadow-sm border-0 h-100">
                                         <div class="card-header d-flex align-items-center justify-content-between">
                                             <div>
                                                 <h5 class="card-title mb-0"><i class="fas fa-sitemap ms-2"></i> أرصدة الحسابات حسب النوع</h5>
-                                                <span class="text-muted small">عرض هرمي لتوزيع الحسابات بالقيم المختارة</span>
+                                                <span class="text-muted small">نظرة جدولة على الأرصدة الفعلية حسب نوع الحساب.</span>
                                             </div>
+                                            <button class="btn btn-outline-primary btn-sm"
+                                                    type="button"
+                                                    data-bs-toggle="collapse"
+                                                    data-bs-target="#accountBalancesByTypeCollapse"
+                                                    aria-expanded="true"
+                                                    aria-controls="accountBalancesByTypeCollapse">
+                                                إظهار/إخفاء
+                                            </button>
                                         </div>
-                                        <div class="card-body">
-                                            <div class="mb-3">
-                                                @if (Model.ParentAccountConfigured && !string.IsNullOrWhiteSpace(Model.SelectedParentAccountName))
+                                        <div id="accountBalancesByTypeCollapse" class="collapse show">
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    @if (Model.ParentAccountConfigured && !string.IsNullOrWhiteSpace(Model.SelectedParentAccountName))
+                                                    {
+                                                        <div class="alert alert-info py-2 px-3 mb-0">
+                                                            يتم عرض النتائج بدايةً من الحساب الأب المحدد: <strong>@Model.SelectedParentAccountName</strong>.
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="alert alert-secondary py-2 px-3 mb-0">
+                                                            لم يتم تحديد حساب أب من الإعدادات، لذلك يتم عرض جميع الحسابات من الجذر.
+                                                        </div>
+                                                    }
+                                                </div>
+                                                @if (Model.ParentAccountTree.Any())
                                                 {
-                                                    <div class="alert alert-info py-2 px-3 mb-0">
-                                                        يتم عرض الشجرة بدايةً من الحساب الأب المحدد: <strong>@Model.SelectedParentAccountName</strong>.
-                                                    </div>
-                                                }
-                                                else
-                                                {
-                                                    <div class="alert alert-secondary py-2 px-3 mb-0">
-                                                        لم يتم تحديد حساب أب من الإعدادات، لذلك يتم عرض جميع الحسابات من الجذر.
-                                                    </div>
-                                                }
-                                            </div>
-                                            @if (Model.ParentAccountTree.Any())
-                                            {
-                                                <div id="dashboardParentAccountsTree" class="tree-container">
                                                     @{
                                                         ViewData["SelectedCurrencyCode"] = Model.SelectedCurrencyCode;
                                                         ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
-                                                        ViewData["CollapseTreeNodes"] = true;
-                                                        ViewData["ShowActualBalances"] = true;
                                                     }
-                                                    @await Html.PartialAsync("_AccountBalanceTreeNode", Model.ParentAccountTree)
+                                                    <div class="table-responsive">
+                                                        <table class="table table-hover align-middle mb-0">
+                                                            <thead class="table-light">
+                                                                <tr>
+                                                                    <th>الحساب</th>
+                                                                    <th class="text-end">الرصيد (العملة المختارة)</th>
+                                                                    <th class="text-end">الرصيد (العملة الأساس)</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @await Html.PartialAsync("~/Views/Dashboard/_AccountBalanceTableRows.cshtml", Model.ParentAccountTree)
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
                                                     @{
-                                                        ViewData["CollapseTreeNodes"] = null;
-                                                        ViewData["ShowActualBalances"] = null;
+                                                        ViewData["SelectedCurrencyCode"] = null;
+                                                        ViewData["BaseCurrencyCode"] = null;
                                                     }
-                                                </div>
-                                            }
-                                            else
-                                            {
-                                                <div class="alert alert-info text-center mb-0">
-                                                    لا توجد بيانات لعرضها
-                                                </div>
-                                            }
+                                                }
+                                                else
+                                                {
+                                                    <div class="alert alert-info text-center mb-0">
+                                                        لا توجد بيانات لعرضها
+                                                    </div>
+                                                }
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-12 col-lg-4">
-                                    <div class="card account-tree-card shadow-sm border-0 h-100">
+                                    <div class="card dashboard-table-card shadow-sm border-0 h-100">
                                         <div class="card-header d-flex align-items-center justify-content-between">
                                             <div>
                                                 <h5 class="card-title mb-0"><i class="fas fa-project-diagram ms-2"></i> تقرير تحصيل السائقين حسب الفروع</h5>
-                                                <span class="text-muted small">عرض هرمي لمبالغ الشحنات وCOD للسائقين في الفروع</span>
+                                                <span class="text-muted small">جدول ملخص لمبالغ الشحنات والـ COD لكل فرع.</span>
                                             </div>
+                                            <button class="btn btn-outline-primary btn-sm"
+                                                    type="button"
+                                                    data-bs-toggle="collapse"
+                                                    data-bs-target="#driverCodByBranchCollapse"
+                                                    aria-expanded="true"
+                                                    aria-controls="driverCodByBranchCollapse">
+                                                إظهار/إخفاء
+                                            </button>
                                         </div>
-                                        <div class="card-body">
-                                            @await Html.PartialAsync("~/Views/Dashboard/_DriverCodBranchTree.cshtml", Model.DriverCodBranchSummaries)
+                                        <div id="driverCodByBranchCollapse" class="collapse show">
+                                            <div class="card-body">
+                                                @await Html.PartialAsync("~/Views/Dashboard/_DriverCodBranchTable.cshtml", Model.DriverCodBranchSummaries)
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-12 col-lg-4">
-                                    <div class="card account-tree-card shadow-sm border-0 h-100">
+                                    <div class="card dashboard-table-card shadow-sm border-0 h-100">
                                         <div class="card-header d-flex align-items-center justify-content-between">
                                             <div>
                                                 <h5 class="card-title mb-0"><i class="fas fa-people-arrows ms-2"></i> أرصدة حسابات العملاء حسب الفروع</h5>
-                                                <span class="text-muted small">إجمالي أرصدة الحسابات المرتبطة بالعملاء بحسب الفرع مع تفاصيل كل حساب.</span>
+                                                <span class="text-muted small">عرض جدولي لأرصدة العملاء مع إمكانية استعراض التفاصيل لكل فرع.</span>
                                             </div>
+                                            <button class="btn btn-outline-primary btn-sm"
+                                                    type="button"
+                                                    data-bs-toggle="collapse"
+                                                    data-bs-target="#customerBalancesByBranchCollapse"
+                                                    aria-expanded="true"
+                                                    aria-controls="customerBalancesByBranchCollapse">
+                                                إظهار/إخفاء
+                                            </button>
                                         </div>
-                                        <div class="card-body">
-                                            @{
-                                                ViewData["FormatCurrency"] = formatCurrency;
-                                                ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
-                                            }
-                                            @await Html.PartialAsync("~/Views/Dashboard/_CustomerBranchTree.cshtml", Model.CustomerAccountBranches)
-                                            @{
-                                                ViewData["FormatCurrency"] = null;
-                                                ViewData["BaseCurrencyCode"] = null;
-                                            }
+                                        <div id="customerBalancesByBranchCollapse" class="collapse show">
+                                            <div class="card-body">
+                                                @{
+                                                    ViewData["FormatCurrency"] = formatCurrency;
+                                                    ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
+                                                }
+                                                @await Html.PartialAsync("~/Views/Dashboard/_CustomerBranchTable.cshtml", Model.CustomerAccountBranches)
+                                                @{
+                                                    ViewData["FormatCurrency"] = null;
+                                                    ViewData["BaseCurrencyCode"] = null;
+                                                }
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -524,6 +563,7 @@
 
         .cashbox-card .card-header,
         .account-tree-card .card-header,
+        .dashboard-table-card .card-header,
         .quick-links-card .card-header,
         .side-card .card-header {
             background-color: transparent;
@@ -532,6 +572,7 @@
 
             .cashbox-card .card-header h5,
             .account-tree-card .card-header h5,
+            .dashboard-table-card .card-header h5,
             .quick-links-card .card-header h5 {
                 font-weight: 700;
             }
@@ -1287,181 +1328,39 @@
                 }
             });
 
-            var $driverCodTree = $('#driverCodTree');
-            var driverCodDetailsUrl = $driverCodTree.data('load-url');
+            $(document).on('show.bs.collapse', '.driver-branch-details', function () {
+                var $collapse = $(this);
 
-            $(document).on('click', '#driverCodTree .toggle-btn', function () {
-                var $button = $(this);
-                var $node = $button.closest('.tree-node');
-                var $children = $node.find('> .tree-children');
-
-                if (!$children.length) {
+                if ($collapse.data('loaded')) {
                     return;
                 }
 
-                var isVisible = $children.is(':visible');
-                if (isVisible) {
-                    $children.slideUp(200);
-                    $button.html('<i class="fas fa-plus"></i>');
+                var branchId = parseInt($collapse.data('branch-id')) || 0;
+                var $table = $('#driverCodBranchTable');
+                var detailsUrl = $table.data('details-url');
+                var $container = $collapse.find('.driver-details-container');
+
+                if (!detailsUrl || !branchId) {
+                    $container.html('<div class="alert alert-warning text-center my-2">لا يمكن تحميل بيانات السائقين لهذا الفرع.</div>');
+                    $collapse.data('loaded', true);
                     return;
                 }
 
-                if ($children.data('loaded')) {
-                    $children.slideDown(200);
-                    $button.html('<i class="fas fa-minus"></i>');
-                    return;
-                }
+                $container.html('<div class="text-center text-muted"><i class="fas fa-spinner fa-spin ms-2"></i>جاري التحميل...</div>');
 
-                var branchId = parseInt($node.data('branch-id')) || 0;
-                if (!driverCodDetailsUrl || !branchId) {
-                    $children.data('loaded', true);
-                    $children.html('<div class="alert alert-warning text-center my-2">لا يمكن تحميل بيانات السائقين لهذا الفرع.</div>');
-                    $children.slideDown(200);
-                    $button.html('<i class="fas fa-minus"></i>');
-                    return;
-                }
-
-                $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
-
-                $.get(driverCodDetailsUrl, { branchId: branchId })
+                $.get(detailsUrl, { branchId: branchId })
                     .done(function (html) {
                         var trimmed = $.trim(html);
                         if (trimmed.length) {
-                            $children.html(trimmed);
+                            $container.html(trimmed);
                         } else {
-                            $children.html('<div class="alert alert-light border text-center my-2">لا توجد بيانات للسائقين في هذا الفرع.</div>');
+                            $container.html('<div class="alert alert-light border text-center my-2">لا توجد بيانات للسائقين في هذا الفرع.</div>');
                         }
-                        $children.data('loaded', true);
-                        $children.slideDown(200);
-                        $button.html('<i class="fas fa-minus"></i>');
+                        $collapse.data('loaded', true);
                     })
                     .fail(function () {
-                        alert('تعذر تحميل بيانات السائقين، يرجى المحاولة مرة أخرى.');
-                        $button.html('<i class="fas fa-plus"></i>');
-                    })
-                    .always(function () {
-                        $button.prop('disabled', false);
+                        $container.html('<div class="alert alert-warning text-center my-2">تعذر تحميل بيانات السائقين، يرجى المحاولة مرة أخرى.</div>');
                     });
-            });
-
-            $(document).on('click', '#customerBranchTree .toggle-btn', function () {
-                var $button = $(this);
-                var $node = $button.closest('.tree-node');
-                var $children = $node.find('> .tree-children');
-
-                if (!$children.length) {
-                    return;
-                }
-
-                var isVisible = $children.is(':visible');
-                if (isVisible) {
-                    $children.slideUp(200);
-                    $button.html('<i class="fas fa-plus"></i>');
-                } else {
-                    $children.slideDown(200);
-                    $button.html('<i class="fas fa-minus"></i>');
-                }
-            });
-
-            var $accountTypeTree = $('#dashboardAccountTypeTree');
-            var loadTreeUrl = '@Url.Action("LoadAccountTreeNodes")';
-
-            $(document).on('click', '#dashboardAccountTypeTree .toggle-btn', function () {
-                var $button = $(this);
-                var $node = $button.closest('.tree-node');
-                var hasChildren = $node.data('has-children');
-
-                if (!hasChildren) {
-                    return;
-                }
-
-                var $children = $node.find('> .tree-children');
-                var isVisible = $children.is(':visible');
-
-                if (isVisible) {
-                    $children.slideUp(200);
-                    $button.html('<i class="fas fa-plus"></i>');
-                    return;
-                }
-
-                if ($children.data('loaded')) {
-                    $children.slideDown(200);
-                    $button.html('<i class="fas fa-minus"></i>');
-                    return;
-                }
-
-                var nodeId = parseInt($node.data('node-id')) || 0;
-                var accountType = $node.data('account-type');
-                var requestData = {};
-
-                if (nodeId > 0) {
-                    requestData.parentId = nodeId;
-                }
-
-                if (accountType) {
-                    requestData.accountType = accountType;
-                }
-
-                var branchId = $accountTypeTree.data('branch-id');
-                var fromDate = $accountTypeTree.data('from-date');
-                var toDate = $accountTypeTree.data('to-date');
-                var currencyId = $accountTypeTree.data('currency-id');
-
-                if (branchId) {
-                    requestData.branchId = branchId;
-                }
-                if (fromDate) {
-                    requestData.fromDate = fromDate;
-                }
-                if (toDate) {
-                    requestData.toDate = toDate;
-                }
-                if (currencyId) {
-                    requestData.currencyId = currencyId;
-                }
-
-                $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
-
-                $.get(loadTreeUrl, requestData)
-                    .done(function (html) {
-                        var trimmed = $.trim(html);
-                        if (trimmed.length) {
-                            $children.html(trimmed);
-                            $children.data('loaded', true);
-                            $children.slideDown(200);
-                            $button.html('<i class="fas fa-minus"></i>');
-                        } else {
-                            $children.data('loaded', true);
-                            $node.data('has-children', false);
-                            $button.replaceWith('<span style="width: 20px; display: inline-block;"></span>');
-                        }
-                    })
-                    .fail(function () {
-                        alert('تعذر تحميل بيانات الشجرة، يرجى المحاولة مرة أخرى.');
-                        $button.html('<i class="fas fa-plus"></i>');
-                    })
-                    .always(function () {
-                        $button.prop('disabled', false);
-                    });
-            });
-
-            $(document).on('click', '#dashboardParentAccountsTree .toggle-btn', function () {
-                var $button = $(this);
-                var $node = $button.closest('.tree-node');
-                var $children = $node.find('> .tree-children');
-
-                if (!$children.length) {
-                    return;
-                }
-
-                var isVisible = $children.is(':visible');
-                if (isVisible) {
-                    $children.slideUp(200);
-                    $button.html('<i class="fas fa-plus"></i>');
-                } else {
-                    $children.slideDown(200);
-                    $button.html('<i class="fas fa-minus"></i>');
-                }
             });
         });
     </script>
