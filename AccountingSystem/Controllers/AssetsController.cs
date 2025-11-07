@@ -584,6 +584,11 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "assets.create")]
         public async Task<IActionResult> Create(AssetFormViewModel model)
         {
+            model.Name = model.Name?.Trim() ?? string.Empty;
+            model.AssetNumber = string.IsNullOrWhiteSpace(model.AssetNumber)
+                ? null
+                : model.AssetNumber.Trim();
+
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
             {
@@ -719,6 +724,26 @@ namespace AccountingSystem.Controllers
                 if (!model.PurchaseDate.HasValue)
                 {
                     ModelState.AddModelError(nameof(model.PurchaseDate), "تاريخ الشراء مطلوب");
+                }
+            }
+
+            if (ModelState.IsValid)
+            {
+                var nameExists = await _context.Assets
+                    .AnyAsync(a => a.Name == model.Name);
+                if (nameExists)
+                {
+                    ModelState.AddModelError(nameof(model.Name), "اسم الأصل مستخدم بالفعل.");
+                }
+
+                if (!string.IsNullOrEmpty(model.AssetNumber))
+                {
+                    var assetNumberExists = await _context.Assets
+                        .AnyAsync(a => a.AssetNumber != null && a.AssetNumber == model.AssetNumber);
+                    if (assetNumberExists)
+                    {
+                        ModelState.AddModelError(nameof(model.AssetNumber), "رقم الأصل مستخدم بالفعل.");
+                    }
                 }
             }
 
@@ -912,6 +937,11 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "assets.edit")]
         public async Task<IActionResult> Edit(int id, AssetFormViewModel model)
         {
+            model.Name = model.Name?.Trim() ?? string.Empty;
+            model.AssetNumber = string.IsNullOrWhiteSpace(model.AssetNumber)
+                ? null
+                : model.AssetNumber.Trim();
+
             if (id != model.Id)
             {
                 return NotFound();
@@ -1029,6 +1059,26 @@ namespace AccountingSystem.Controllers
                     if (asset.AccumulatedDepreciation > maxAccumulated)
                     {
                         ModelState.AddModelError(nameof(model.OriginalCost), "قيمة الأصل يجب أن تغطي مجمع الإهلاك الحالي");
+                    }
+                }
+            }
+
+            if (ModelState.IsValid)
+            {
+                var nameExists = await _context.Assets
+                    .AnyAsync(a => a.Id != id && a.Name == model.Name);
+                if (nameExists)
+                {
+                    ModelState.AddModelError(nameof(model.Name), "اسم الأصل مستخدم بالفعل.");
+                }
+
+                if (!string.IsNullOrEmpty(model.AssetNumber))
+                {
+                    var assetNumberExists = await _context.Assets
+                        .AnyAsync(a => a.Id != id && a.AssetNumber != null && a.AssetNumber == model.AssetNumber);
+                    if (assetNumberExists)
+                    {
+                        ModelState.AddModelError(nameof(model.AssetNumber), "رقم الأصل مستخدم بالفعل.");
                     }
                 }
             }

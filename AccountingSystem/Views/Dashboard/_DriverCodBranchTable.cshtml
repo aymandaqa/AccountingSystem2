@@ -1,0 +1,68 @@
+@model IReadOnlyList<AccountingSystem.ViewModels.DriverCodBranchSummaryViewModel>
+
+@if (Model == null || !Model.Any())
+{
+    <div class="alert alert-info text-center mb-0">
+        لا توجد بيانات متاحة لعرض تقرير تحصيل السائقين.
+    </div>
+}
+else
+{
+    var totalShipments = Model.Sum(b => b.ShipmentTotal);
+    var totalCod = Model.Sum(b => b.ShipmentCod);
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="driverCodBranchTable" data-details-url="@Url.Action("LoadDriverCodBranchDetails", "Dashboard")">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 45%;">الفرع</th>
+                    <th class="text-end">إجمالي الشحنات</th>
+                    <th class="text-end">مبالغ الـ COD</th>
+                    <th class="text-center" style="width: 120px;">التفاصيل</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var index = 0; index < Model.Count; index++)
+                {
+                    var branch = Model[index];
+                    var collapseId = $"driverBranchDetails_{branch.BranchId}_{index}";
+                    <tr>
+                        <td class="fw-semibold">@branch.BranchName</td>
+                        <td class="text-end">@branch.ShipmentTotal.ToString("N2")</td>
+                        <td class="text-end text-success">@branch.ShipmentCod.ToString("N2")</td>
+                        <td class="text-center">
+                            @if (branch.BranchId > 0)
+                            {
+                                <button class="btn btn-outline-primary btn-sm driver-branch-toggle"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#@collapseId"
+                                        aria-expanded="false"
+                                        aria-controls="@collapseId">
+                                    عرض التفاصيل
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                    @if (branch.BranchId > 0)
+                    {
+                        <tr class="collapse driver-branch-details" id="@collapseId" data-branch-id="@branch.BranchId">
+                            <td colspan="4">
+                                <div class="driver-details-container p-3 bg-light border rounded">
+                                    <div class="text-center text-muted small">اضغط على زر التفاصيل لتحميل بيانات السائقين.</div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+            <tfoot class="table-light">
+                <tr>
+                    <th>الإجمالي</th>
+                    <th class="text-end">@totalShipments.ToString("N2")</th>
+                    <th class="text-end">@totalCod.ToString("N2")</th>
+                    <th></th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+}

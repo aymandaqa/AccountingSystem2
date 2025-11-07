@@ -8,28 +8,28 @@
 }
 else
 {
-    @foreach (var detail in Model)
-    {
-        <div class="tree-node level-1" data-has-children="false">
-            <div class="tree-node-content">
-                <div class="tree-node-info">
-                    <span style="width: 20px; display: inline-block;"></span>
-                    <div class="tree-node-text">
-                        <div class="node-title">@detail.DriverName</div>
-                        <div class="node-subtitle text-muted small">رقم السائق: @detail.DriverId</div>
-                    </div>
-                </div>
-                <div class="tree-node-metrics text-end ms-auto">
-                    <div class="metric">
-                        <span class="metric-label">إجمالي الشحنات</span>
-                        <span class="metric-value">@detail.ShipmentTotal.ToString("N2")</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">مبالغ الـ COD</span>
-                        <span class="metric-value text-success">@detail.ShipmentCod.ToString("N2")</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
+    <div class="table-responsive">
+        <table class="table table-sm table-striped mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 40%;">السائق</th>
+                    <th class="text-end">إجمالي الشحنات</th>
+                    <th class="text-end">مبالغ الـ COD</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var detail in Model.OrderBy(d => d.DriverName))
+                {
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">@detail.DriverName</div>
+                            <div class="text-muted small">رقم السائق: @detail.DriverId</div>
+                        </td>
+                        <td class="text-end">@detail.ShipmentTotal.ToString("N2")</td>
+                        <td class="text-end text-success">@detail.ShipmentCod.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
