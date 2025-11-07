@@ -41,7 +41,7 @@ namespace AccountingSystem.Controllers
                 })
                 .ToListAsync();
 
-            var culture = new CultureInfo("ar");
+            var culture = CultureInfo.InvariantCulture;
             var history = await _context.PayrollBatches
                 .AsNoTracking()
                 .Include(b => b.Branch)
@@ -51,7 +51,7 @@ namespace AccountingSystem.Controllers
                 {
                     Id = b.Id,
                     BranchName = b.Branch.NameAr,
-                    PeriodName = new DateTime(b.Year == 0 ? DateTime.Today.Year : b.Year, b.Month == 0 ? 1 : b.Month, 1).ToString("MMMM yyyy", culture),
+                    PeriodName = new DateTime(b.Year == 0 ? DateTime.Today.Year : b.Year, b.Month == 0 ? 1 : b.Month, 1).ToString("MM/yyyy", culture),
                     Year = b.Year,
                     Month = b.Month,
                     TotalAmount = b.TotalAmount,
@@ -1074,7 +1074,7 @@ namespace AccountingSystem.Controllers
                 return Json(Array.Empty<PayrollMonthOptionViewModel>());
             }
 
-            var culture = new CultureInfo("ar");
+            var culture = CultureInfo.InvariantCulture;
             var start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
             var months = Enumerable.Range(0, 12)
                 .Select(offset => start.AddMonths(-offset))
@@ -1082,7 +1082,7 @@ namespace AccountingSystem.Controllers
                 {
                     Year = date.Year,
                     Month = date.Month,
-                    Name = date.ToString("MMMM yyyy", culture)
+                    Name = date.ToString("MM/yyyy", culture)
                 })
                 .OrderByDescending(option => option.Year)
                 .ThenByDescending(option => option.Month)
