@@ -18,13 +18,11 @@ else
                  data-has-children="true">
                 <div class="tree-node-content">
                     <div class="tree-node-info">
-                        <button class="toggle-btn" type="button">
+                        <button class="toggle-btn" type="button" aria-label="عرض تفاصيل السائقين للفرع">
                             <i class="fas fa-plus"></i>
                         </button>
-                        <div class="tree-node-text">
-                            <div class="node-title">@branch.BranchName</div>
-                            <div class="node-subtitle text-muted small">إجمالي بيانات السائقين في الفرع</div>
-                        </div>
+                        <span class="account-name">@branch.BranchName</span>
+                        <small class="text-muted ms-2">ملخص السائقين في هذا الفرع</small>
                     </div>
                     <div class="tree-node-metrics text-end ms-auto">
                         <div class="metric">
