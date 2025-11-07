@@ -52,7 +52,8 @@ namespace AccountingSystem.Controllers
                 : new List<int>(userBranchIds);
 
             var driverCodSummaries = await GetDriverCodBranchSummariesAsync(allowedBranchIds);
-            var customerAccountBranches = await GetCustomerAccountBranchesAsync(allowedBranchIds, treeData.BaseCurrency);
+            // Always display customer account balances across all branches, not just the user's assigned branches.
+            var customerAccountBranches = await GetCustomerAccountBranchesAsync(new List<int>(), treeData.BaseCurrency);
 
             var accountTypeTrees = treeData.RootNodes
                 .GroupBy(n => n.AccountType)
@@ -469,7 +470,9 @@ namespace AccountingSystem.Controllers
                     ? $"عميل #{entry.Mapping.CustomerId}"
                     : "عميل غير معروف";
                 string? customerContact = null;
-                int? branchIdForCustomer = account.BranchId;
+
+                int? accountBranchId = account.BranchId;
+                int? customerBranchId = null;
 
                 if (entry.CustomerId.HasValue && customers.TryGetValue(entry.CustomerId.Value, out var customer))
                 {
@@ -498,12 +501,29 @@ namespace AccountingSystem.Controllers
                         customerContact = customer.Mobile;
                     }
 
-                    branchIdForCustomer = customer.BranchId ?? branchIdForCustomer;
+                    customerBranchId = customer.BranchId;
                 }
 
-                if (restrictBranches && branchIdForCustomer.HasValue && !normalizedBranchIds.Contains(branchIdForCustomer.Value))
+                int? branchIdForCustomer = null;
+
+                if (restrictBranches)
                 {
-                    continue;
+                    if (accountBranchId.HasValue && normalizedBranchIds.Contains(accountBranchId.Value))
+                    {
+                        branchIdForCustomer = accountBranchId.Value;
+                    }
+                    else if (customerBranchId.HasValue && normalizedBranchIds.Contains(customerBranchId.Value))
+                    {
+                        branchIdForCustomer = customerBranchId.Value;
+                    }
+                    else if (accountBranchId.HasValue || customerBranchId.HasValue)
+                    {
+                        continue;
+                    }
+                }
+                else
+                {
+                    branchIdForCustomer = customerBranchId ?? accountBranchId;
                 }
 
                 var branchKey = branchIdForCustomer.HasValue
@@ -513,7 +533,17 @@ namespace AccountingSystem.Controllers
                 string branchName;
                 if (branchIdForCustomer.HasValue)
                 {
-                    if (!roadBranches.TryGetValue(branchIdForCustomer.Value, out branchName))
+                    if (branchIdForCustomer == accountBranchId && account.Branch != null)
+                    {
+                        branchName = !string.IsNullOrWhiteSpace(account.Branch.NameAr)
+                            ? account.Branch.NameAr!
+                            : account.Branch.NameEn ?? $"فرع {branchIdForCustomer.Value}";
+                    }
+                    else if (branchIdForCustomer == customerBranchId && customerBranchId.HasValue && roadBranches.TryGetValue(customerBranchId.Value, out var roadBranchName))
+                    {
+                        branchName = roadBranchName;
+                    }
+                    else
                     {
                         branchName = account.Branch != null
                             ? (!string.IsNullOrWhiteSpace(account.Branch.NameAr)
