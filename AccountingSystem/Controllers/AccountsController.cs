@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -26,7 +27,6 @@ namespace AccountingSystem.Controllers
                 .Include(a => a.Parent)
                 .Include(a => a.Branch)
                 .Include(a => a.Currency)
-                .Where(a => a.IsActive)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
@@ -63,7 +63,7 @@ namespace AccountingSystem.Controllers
                 BranchId = a.BranchId,
                 BranchName = a.Branch?.NameAr ?? "",
                 Level = a.Level,
-                HasChildren = _context.Accounts.Any(x => x.ParentId == a.Id && x.IsActive),
+                HasChildren = _context.Accounts.Any(x => x.ParentId == a.Id),
                 HasTransactions = false,
                 CurrencyCode = a.Currency.Code
             }).ToList();
@@ -99,7 +99,7 @@ namespace AccountingSystem.Controllers
         {
             IQueryable<Account> query = _context.Accounts
                 .Include(a => a.Parent)
-                .Where(a => a.IsActive);
+                .Include(a => a.Currency);
 
             if (parentId.HasValue && parentId.Value > 0)
             {
@@ -116,7 +116,8 @@ namespace AccountingSystem.Controllers
             }
 
             var nodes = await query
-                .OrderBy(a => a.Code)
+                .OrderBy(a => a.IsActive ? 0 : 1)
+                .ThenBy(a => a.Code)
                 .Select(a => new AccountTreeNodeViewModel
                 {
                     Id = a.Id,
@@ -132,7 +133,7 @@ namespace AccountingSystem.Controllers
                     CanPostTransactions = a.CanPostTransactions,
                     ParentId = a.ParentId,
                     Level = a.Level,
-                    HasChildren = a.Children.Any(c => c.IsActive)
+                    HasChildren = a.Children.Any()
                 })
                 .ToListAsync();
 
@@ -150,8 +151,7 @@ namespace AccountingSystem.Controllers
             IQueryable<Account> query = _context.Accounts
                 .Include(a => a.Branch)
                 .Include(a => a.Currency)
-                .Include(a => a.Parent)
-                .Where(a => a.IsActive);
+                .Include(a => a.Parent);
 
             if (parentId.HasValue && parentId.Value > 0)
             {
@@ -168,7 +168,8 @@ namespace AccountingSystem.Controllers
             }
 
             var accounts = await query
-                .OrderBy(a => a.Code)
+                .OrderBy(a => a.IsActive ? 0 : 1)
+                .ThenBy(a => a.Code)
                 .Select(a => new AccountViewModel
                 {
                     Id = a.Id,
@@ -187,7 +188,7 @@ namespace AccountingSystem.Controllers
                     BranchId = a.BranchId,
                     BranchName = a.Branch != null ? a.Branch.NameAr : string.Empty,
                     Level = a.Level,
-                    HasChildren = a.Children.Any(c => c.IsActive),
+                    HasChildren = a.Children.Any(),
                     HasTransactions = false,
                     CurrencyCode = a.Currency.Code
                 })
@@ -206,7 +207,7 @@ namespace AccountingSystem.Controllers
             foreach (var type in accountTypes)
             {
                 var hasChildren = await _context.Accounts
-                    .AnyAsync(a => a.ParentId == null && a.IsActive && a.AccountType == type);
+                    .AnyAsync(a => a.ParentId == null && a.AccountType == type);
 
                 if (!hasChildren)
                 {
@@ -248,10 +249,11 @@ namespace AccountingSystem.Controllers
                 CanPostTransactions = account.CanPostTransactions,
                 ParentId = account.ParentId,
                 Level = account.Level,
-                HasChildren = account.Children.Any(c => c.IsActive),
+                HasChildren = account.Children.Any(),
                 Children = account.Children
-                    .Where(c => c.IsActive)
-                    .Select(c => MapToTreeNode(c))
+                    .OrderBy(c => c.IsActive ? 0 : 1)
+                    .ThenBy(c => c.Code)
+                    .Select(MapToTreeNode)
                     .ToList()
             };
         }
