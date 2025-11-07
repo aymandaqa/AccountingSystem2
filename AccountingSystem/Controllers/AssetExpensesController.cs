@@ -39,6 +39,14 @@ namespace AccountingSystem.Controllers
             _assetExpenseProcessor = assetExpenseProcessor;
         }
 
+        private async Task<List<int>> GetUserBranchIdsAsync(string userId)
+        {
+            return await _context.UserBranches
+                .Where(ub => ub.UserId == userId)
+                .Select(ub => ub.BranchId)
+                .ToListAsync();
+        }
+
         public async Task<IActionResult> Index(string? searchTerm, bool showMyExpenses = false, int page = 1, int pageSize = 10)
         {
             const int maxPageSize = 100;
