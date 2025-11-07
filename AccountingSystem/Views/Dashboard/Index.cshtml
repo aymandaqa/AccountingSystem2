@@ -1,5 +1,6 @@
 @using AccountingSystem.ViewModels
 @using Microsoft.AspNetCore.Authorization
+@using System.Globalization
 @using System.Linq
 @model DashboardViewModel
 @inject IAuthorizationService AuthorizationService
@@ -46,6 +47,8 @@
     }
 
     var dateRangeLabel = $"{Model.FromDate:dd/MM/yyyy} - {Model.ToDate:dd/MM/yyyy}";
+    var numberCulture = CultureInfo.CreateSpecificCulture("ar-SA");
+    Func<decimal, string> formatCurrency = value => string.Format(numberCulture, "{0:N2}", value);
 }
 
 <div class="container-fluid dashboard-wrapper">
@@ -149,11 +152,123 @@
                     </div>
                 }
 
+                @if (canViewAccounts)
+                {
+                    <div class="dashboard-widget" data-widget-id="customer-account-branches" data-widget-name="أرصدة العملاء حسب الفروع" data-default-size="medium">
+                        <div class="widget-controls" aria-hidden="true">
+                            <button type="button" class="widget-control-btn widget-drag-handle" title="سحب لترتيب الودجت">
+                                <i class="fas fa-grip-vertical"></i>
+                            </button>
+                            <div class="widget-resize-controls">
+                                <button type="button" class="widget-control-btn widget-size-down" title="تصغير الودجت">
+                                    <i class="fas fa-compress-alt"></i>
+                                </button>
+                                <button type="button" class="widget-control-btn widget-size-up" title="تكبير الودجت">
+                                    <i class="fas fa-expand-alt"></i>
+                                </button>
+                            </div>
+                            <button type="button" class="widget-control-btn widget-hide" title="إخفاء الودجت">
+                                <i class="fas fa-eye-slash"></i>
+                            </button>
+                        </div>
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-header d-flex align-items-center justify-content-between">
+                                <div>
+                                    <h5 class="card-title mb-0"><i class="fas fa-people-arrows ms-2"></i> أرصدة حسابات العملاء حسب الفروع</h5>
+                                    <span class="text-muted small">إجمالي أرصدة الحسابات المرتبطة بالعملاء لكل فرع.</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                @if (!Model.CustomerAccountBranches.Any())
+                                {
+                                    <div class="alert alert-info text-center mb-0">لا توجد حسابات عملاء مرتبطة لعرضها.</div>
+                                }
+                                else
+                                {
+                                    <div class="accordion customer-branch-tree" id="dashboardCustomerBranchTree">
+                                        @for (var index = 0; index < Model.CustomerAccountBranches.Count; index++)
+                                        {
+                                            var branch = Model.CustomerAccountBranches[index];
+                                            var headingId = $"dashboardCustomerBranchHeading{index}";
+                                            var collapseId = $"dashboardCustomerBranchCollapse{index}";
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header" id="@headingId">
+                                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId" aria-expanded="false" aria-controls="@collapseId">
+                                                        <div class="flex-grow-1 d-flex align-items-center justify-content-between gap-3">
+                                                            <div>
+                                                                <div class="fw-semibold">@branch.BranchName</div>
+                                                                <div class="text-muted small">@branch.Customers.Count @((branch.Customers.Count == 1) ? "حساب" : "حسابات")</div>
+                                                            </div>
+                                                            <span class="badge bg-primary-subtle text-primary customer-branch-total">@formatCurrency(branch.TotalBalanceBase) @Model.BaseCurrencyCode</span>
+                                                        </div>
+                                                    </button>
+                                                </h2>
+                                                <div id="@collapseId" class="accordion-collapse collapse" aria-labelledby="@headingId" data-bs-parent="#dashboardCustomerBranchTree">
+                                                    <div class="accordion-body">
+                                                        @if (!branch.HasCustomers)
+                                                        {
+                                                            <div class="text-muted text-center">لا توجد حسابات تابعة لهذا الفرع.</div>
+                                                        }
+                                                        else
+                                                        {
+                                                            <div class="table-responsive">
+                                                                <table class="table table-sm align-middle table-hover mb-0">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>العميل</th>
+                                                                            <th>الحساب</th>
+                                                                            <th class="text-end">الرصيد</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        @foreach (var customer in branch.Customers)
+                                                                        {
+                                                                            <tr>
+                                                                                <td>
+                                                                                    <div class="fw-semibold">@customer.CustomerName</div>
+                                                                                    @if (!string.IsNullOrWhiteSpace(customer.CustomerId))
+                                                                                    {
+                                                                                        <div class="text-muted small">معرّف العميل: @customer.CustomerId</div>
+                                                                                    }
+                                                                                    @if (!string.IsNullOrWhiteSpace(customer.CustomerContact))
+                                                                                    {
+                                                                                        <div class="text-muted small">@customer.CustomerContact</div>
+                                                                                    }
+                                                                                </td>
+                                                                                <td>
+                                                                                    <div class="fw-semibold">@customer.AccountCode</div>
+                                                                                    <div class="text-muted small">@customer.AccountName</div>
+                                                                                </td>
+                                                                                <td class="text-end">
+                                                                                    <div class="fw-semibold">@formatCurrency(customer.BalanceBase) @Model.BaseCurrencyCode</div>
+                                                                                    @if (!string.IsNullOrWhiteSpace(customer.AccountCurrencyCode) && customer.AccountCurrencyCode != Model.BaseCurrencyCode)
+                                                                                    {
+                                                                                        <div class="text-muted small">@formatCurrency(customer.BalanceOriginal) @customer.AccountCurrencyCode</div>
+                                                                                    }
+                                                                                </td>
+                                                                            </tr>
+                                                                        }
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+
 
             </div>
         </div>
     </div>
 </div>
+
 
 @section Styles {
     <style>
@@ -318,6 +433,27 @@
             border-radius: 18px;
             min-height: 120px;
             background: rgba(79, 70, 229, 0.06);
+        }
+
+        .customer-branch-tree .accordion-button {
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .customer-branch-tree .accordion-button::after {
+            margin-left: 0;
+            margin-right: auto;
+        }
+
+        .customer-branch-tree .accordion-body {
+            background-color: rgba(0, 0, 0, 0.02);
+            border-radius: 0.75rem;
+        }
+
+        .customer-branch-tree .customer-branch-total {
+            font-size: 0.9rem;
+            border-radius: 999px;
+            padding-inline: 0.75rem;
         }
 
         .dashboard-side {

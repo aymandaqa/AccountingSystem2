@@ -29,6 +29,8 @@ namespace AccountingSystem.Controllers
             _logger = logger;
             _currencyService = currencyService;
         }
+
+        private sealed record RoadUserInfo(string? FirstName, string? LastName, string? UserName, string? Mobile, int? BranchId);
         [Authorize]
         public async Task<IActionResult> Index(int? branchId = null, DateTime? fromDate = null, DateTime? toDate = null, int? currencyId = null)
         {
@@ -45,11 +47,12 @@ namespace AccountingSystem.Controllers
 
             var treeData = await ComputeDashboardTreeAsync(userBranchIds, branchId, fromDate, toDate, currencyId);
 
-            var driverCodBranchIds = branchId.HasValue
+            var allowedBranchIds = branchId.HasValue
                 ? new List<int> { branchId.Value }
                 : new List<int>(userBranchIds);
 
-            var driverCodSummaries = await GetDriverCodBranchSummariesAsync(driverCodBranchIds);
+            var driverCodSummaries = await GetDriverCodBranchSummariesAsync(allowedBranchIds);
+            var customerAccountBranches = await GetCustomerAccountBranchesAsync(allowedBranchIds, treeData.BaseCurrency);
 
             var accountTypeTrees = treeData.RootNodes
                 .GroupBy(n => n.AccountType)
@@ -99,7 +102,8 @@ namespace AccountingSystem.Controllers
                 ParentAccountTree = treeData.ParentAccountTree,
                 ParentAccountConfigured = treeData.ParentAccountConfigured,
                 SelectedParentAccountName = treeData.SelectedParentAccountName,
-                DriverCodBranchSummaries = driverCodSummaries
+                DriverCodBranchSummaries = driverCodSummaries,
+                CustomerAccountBranches = customerAccountBranches
             };
 
             viewModel.NetIncome = viewModel.TotalRevenues - viewModel.TotalExpenses;
@@ -361,6 +365,206 @@ namespace AccountingSystem.Controllers
             return results
                 .OrderByDescending(r => r.ShipmentCod)
                 .ThenBy(r => r.BranchName)
+                .ToList();
+        }
+
+        private async Task<List<CustomerBranchAccountNode>> GetCustomerAccountBranchesAsync(List<int> allowedBranchIds, Currency baseCurrency)
+        {
+            var normalizedBranchIds = allowedBranchIds?.Distinct().ToList() ?? new List<int>();
+            var restrictBranches = normalizedBranchIds.Any();
+
+            var customerMappings = await _context.CusomerMappingAccounts
+                .AsNoTracking()
+                .Where(m => !string.IsNullOrWhiteSpace(m.AccountCode))
+                .ToListAsync();
+
+            if (!customerMappings.Any())
+            {
+                return new List<CustomerBranchAccountNode>();
+            }
+
+            decimal Round(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);
+
+            var mappingByCustomer = customerMappings
+                .Select(m => new
+                {
+                    Mapping = m,
+                    CustomerId = int.TryParse(m.CustomerId, out var parsedCustomerId) ? parsedCustomerId : (int?)null
+                })
+                .ToList();
+
+            var accountCodes = customerMappings
+                .Select(m => m.AccountCode!)
+                .Distinct()
+                .ToList();
+
+            var accountsQuery = _context.Accounts
+                .AsNoTracking()
+                .Where(a => accountCodes.Contains(a.Code!))
+                .Include(a => a.Currency)
+                .Include(a => a.Branch);
+
+            if (restrictBranches)
+            {
+                accountsQuery = accountsQuery.Where(a => !a.BranchId.HasValue || normalizedBranchIds.Contains(a.BranchId.Value));
+            }
+
+            var accounts = await accountsQuery.ToDictionaryAsync(a => a.Code!);
+
+            var validCustomerIds = mappingByCustomer
+                .Select(x => x.CustomerId)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .Distinct()
+                .ToList();
+
+            Dictionary<int, RoadUserInfo> customers = validCustomerIds.Any()
+                ? await _roadContext.Users
+                    .AsNoTracking()
+                    .Where(u => validCustomerIds.Contains(u.Id))
+                    .Select(u => new
+                    {
+                        u.Id,
+                        u.FirstName,
+                        u.LastName,
+                        u.UserName,
+                        u.MobileNo1,
+                        u.CompanyBranchId
+                    })
+                    .ToDictionaryAsync(
+                        u => u.Id,
+                        u => new RoadUserInfo(u.FirstName, u.LastName, u.UserName, u.MobileNo1, u.CompanyBranchId))
+                : new Dictionary<int, RoadUserInfo>();
+
+            var roadBranchIds = customers.Values
+                .Select(c => c.BranchId)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .Distinct()
+                .ToList();
+
+            Dictionary<int, string> roadBranches = roadBranchIds.Any()
+                ? await _roadContext.CompanyBranches
+                    .AsNoTracking()
+                    .Where(b => roadBranchIds.Contains(b.Id))
+                    .ToDictionaryAsync(b => b.Id, b => b.BranchName ?? $"فرع {b.Id}")
+                : new Dictionary<int, string>();
+
+            var branchMap = new Dictionary<string, CustomerBranchAccountNode>();
+
+            foreach (var entry in mappingByCustomer)
+            {
+                if (!accounts.TryGetValue(entry.Mapping.AccountCode!, out var account))
+                {
+                    continue;
+                }
+
+                var balanceBase = Round(_currencyService.Convert(account.CurrentBalance, account.Currency, baseCurrency));
+                var balanceOriginal = Round(account.CurrentBalance);
+                var accountCurrencyCode = account.Currency.Code;
+
+                string customerName = !string.IsNullOrWhiteSpace(entry.Mapping.CustomerId)
+                    ? $"عميل #{entry.Mapping.CustomerId}"
+                    : "عميل غير معروف";
+                string? customerContact = null;
+                int? branchIdForCustomer = account.BranchId;
+
+                if (entry.CustomerId.HasValue && customers.TryGetValue(entry.CustomerId.Value, out var customer))
+                {
+                    var nameParts = new List<string>();
+                    if (!string.IsNullOrWhiteSpace(customer.FirstName))
+                    {
+                        nameParts.Add(customer.FirstName!);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(customer.LastName))
+                    {
+                        nameParts.Add(customer.LastName!);
+                    }
+
+                    if (nameParts.Any())
+                    {
+                        customerName = string.Join(" ", nameParts);
+                    }
+                    else if (!string.IsNullOrWhiteSpace(customer.UserName))
+                    {
+                        customerName = customer.UserName!;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(customer.Mobile))
+                    {
+                        customerContact = customer.Mobile;
+                    }
+
+                    branchIdForCustomer = customer.BranchId ?? branchIdForCustomer;
+                }
+
+                if (restrictBranches && branchIdForCustomer.HasValue && !normalizedBranchIds.Contains(branchIdForCustomer.Value))
+                {
+                    continue;
+                }
+
+                var branchKey = branchIdForCustomer.HasValue
+                    ? $"branch-{branchIdForCustomer.Value}"
+                    : "branch-unassigned";
+
+                string branchName;
+                if (branchIdForCustomer.HasValue)
+                {
+                    if (!roadBranches.TryGetValue(branchIdForCustomer.Value, out branchName))
+                    {
+                        branchName = account.Branch != null
+                            ? (!string.IsNullOrWhiteSpace(account.Branch.NameAr)
+                                ? account.Branch.NameAr!
+                                : account.Branch.NameEn ?? $"فرع {branchIdForCustomer.Value}")
+                            : $"فرع {branchIdForCustomer.Value}";
+                    }
+                }
+                else
+                {
+                    branchName = account.Branch != null
+                        ? (!string.IsNullOrWhiteSpace(account.Branch.NameAr)
+                            ? account.Branch.NameAr!
+                            : account.Branch.NameEn ?? "فرع غير محدد")
+                        : "فرع غير محدد";
+                }
+
+                if (!branchMap.TryGetValue(branchKey, out var branchNode))
+                {
+                    branchNode = new CustomerBranchAccountNode
+                    {
+                        BranchId = branchIdForCustomer,
+                        BranchName = branchName
+                    };
+                    branchMap[branchKey] = branchNode;
+                }
+
+                branchNode.TotalBalanceBase += balanceBase;
+                branchNode.Customers.Add(new CustomerAccountBalanceNode
+                {
+                    CustomerId = entry.Mapping.CustomerId ?? string.Empty,
+                    CustomerName = customerName,
+                    CustomerContact = customerContact,
+                    AccountCode = account.Code ?? string.Empty,
+                    AccountName = !string.IsNullOrWhiteSpace(account.NameAr) ? account.NameAr! : account.NameEn ?? account.Code ?? string.Empty,
+                    BalanceBase = balanceBase,
+                    BalanceOriginal = balanceOriginal,
+                    AccountCurrencyCode = accountCurrencyCode
+                });
+            }
+
+            foreach (var branchNode in branchMap.Values)
+            {
+                branchNode.TotalBalanceBase = Round(branchNode.TotalBalanceBase);
+                branchNode.Customers = branchNode.Customers
+                    .OrderByDescending(c => Math.Abs(c.BalanceBase))
+                    .ThenBy(c => c.CustomerName)
+                    .ToList();
+            }
+
+            return branchMap.Values
+                .OrderByDescending(b => Math.Abs(b.TotalBalanceBase))
+                .ThenBy(b => b.BranchName)
                 .ToList();
         }
 
