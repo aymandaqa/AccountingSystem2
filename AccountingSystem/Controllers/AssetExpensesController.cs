@@ -7,6 +7,8 @@ using AccountingSystem.Models;
 using AccountingSystem.Services;
 using AccountingSystem.Models.Workflows;
 using AccountingSystem.ViewModels;
+using ClosedXML.Excel;
+using System.IO;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -37,25 +39,75 @@ namespace AccountingSystem.Controllers
             _assetExpenseProcessor = assetExpenseProcessor;
         }
 
-        private async Task<List<int>> GetUserBranchIdsAsync(string userId)
+        public async Task<IActionResult> Index(string? searchTerm, bool showMyExpenses = false, int page = 1, int pageSize = 10)
         {
-            return await _context.UserBranches
-                .Where(ub => ub.UserId == userId)
-                .Select(ub => ub.BranchId)
-                .ToListAsync();
-        }
+            const int maxPageSize = 100;
+            if (page < 1)
+            {
+                page = 1;
+            }
 
-        public async Task<IActionResult> Index()
-        {
-            var expenses = await _context.AssetExpenses
+            if (pageSize < 1)
+            {
+                pageSize = 10;
+            }
+            else if (pageSize > maxPageSize)
+            {
+                pageSize = maxPageSize;
+            }
+
+            var query = _context.AssetExpenses
+                .AsNoTracking()
                 .Include(e => e.Asset).ThenInclude(a => a.Branch)
                 .Include(e => e.ExpenseAccount)
                 .Include(e => e.Supplier)
                 .Include(e => e.CreatedBy)
+                .AsQueryable();
+
+            var trimmedSearch = string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm.Trim();
+
+            if (showMyExpenses)
+            {
+                var currentUserId = _userManager.GetUserId(User);
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return Challenge();
+                }
+
+                query = query.Where(e => e.CreatedById == currentUserId);
+            }
+
+            if (!string.IsNullOrEmpty(trimmedSearch))
+            {
+                var likeFilter = $"%{trimmedSearch}%";
+                query = query.Where(e =>
+                    EF.Functions.Like(e.Asset.Name, likeFilter) ||
+                    EF.Functions.Like(e.Asset.Branch.NameAr, likeFilter) ||
+                    EF.Functions.Like(e.ExpenseAccount.NameAr, likeFilter) ||
+                    EF.Functions.Like(e.Supplier.NameAr, likeFilter) ||
+                    (e.CreatedBy != null && (
+                        (!string.IsNullOrWhiteSpace(e.CreatedBy.FullName) && EF.Functions.Like(e.CreatedBy.FullName!, likeFilter)) ||
+                        (!string.IsNullOrWhiteSpace(e.CreatedBy.UserName) && EF.Functions.Like(e.CreatedBy.UserName!, likeFilter))
+                    )) ||
+                    (!string.IsNullOrWhiteSpace(e.Notes) && EF.Functions.Like(e.Notes!, likeFilter)));
+            }
+
+            var totalItems = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+            if (totalPages > 0 && page > totalPages)
+            {
+                page = totalPages;
+            }
+
+            var expenses = await query
                 .OrderByDescending(e => e.Date)
+                .ThenByDescending(e => e.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
             var expenseIds = expenses.Select(e => e.Id).ToList();
+
             var workflowInstances = await _context.WorkflowInstances
                 .Where(i => i.DocumentType == WorkflowDocumentType.AssetExpense && expenseIds.Contains(i.DocumentId))
                 .Include(i => i.Actions)
@@ -79,7 +131,7 @@ namespace AccountingSystem.Controllers
             var journalEntryLookup = journalEntries
                 .ToDictionary(j => j.Reference!, j => (j.Id, j.Number));
 
-            var model = expenses.Select(e =>
+            var items = expenses.Select(e =>
             {
                 var reference = $"ASSETEXP:{e.Id}";
                 int? journalEntryId = null;
@@ -120,7 +172,150 @@ namespace AccountingSystem.Controllers
                 };
             }).ToList();
 
+            var model = new PagedResult<AssetExpenseListViewModel>
+            {
+                Items = items,
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                SearchTerm = trimmedSearch
+            };
+
+            ViewBag.ShowMyExpenses = showMyExpenses;
+            ViewBag.PageSize = pageSize;
+
             return View(model);
+        }
+
+        [Authorize(Policy = "assetexpenses.view")]
+        public async Task<IActionResult> ExportExcel(string? searchTerm, bool showMyExpenses = false)
+        {
+            var query = _context.AssetExpenses
+                .AsNoTracking()
+                .Include(e => e.Asset).ThenInclude(a => a.Branch)
+                .Include(e => e.ExpenseAccount)
+                .Include(e => e.Supplier)
+                .Include(e => e.CreatedBy)
+                .AsQueryable();
+
+            var trimmedSearch = string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm.Trim();
+
+            if (showMyExpenses)
+            {
+                var currentUserId = _userManager.GetUserId(User);
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return Challenge();
+                }
+
+                query = query.Where(e => e.CreatedById == currentUserId);
+            }
+
+            if (!string.IsNullOrEmpty(trimmedSearch))
+            {
+                var likeFilter = $"%{trimmedSearch}%";
+                query = query.Where(e =>
+                    EF.Functions.Like(e.Asset.Name, likeFilter) ||
+                    EF.Functions.Like(e.Asset.Branch.NameAr, likeFilter) ||
+                    EF.Functions.Like(e.ExpenseAccount.NameAr, likeFilter) ||
+                    EF.Functions.Like(e.Supplier.NameAr, likeFilter) ||
+                    (e.CreatedBy != null && (
+                        (!string.IsNullOrWhiteSpace(e.CreatedBy.FullName) && EF.Functions.Like(e.CreatedBy.FullName!, likeFilter)) ||
+                        (!string.IsNullOrWhiteSpace(e.CreatedBy.UserName) && EF.Functions.Like(e.CreatedBy.UserName!, likeFilter))
+                    )) ||
+                    (!string.IsNullOrWhiteSpace(e.Notes) && EF.Functions.Like(e.Notes!, likeFilter)));
+            }
+
+            var expenses = await query
+                .OrderByDescending(e => e.Date)
+                .ThenByDescending(e => e.Id)
+                .ToListAsync();
+
+            var expenseIds = expenses.Select(e => e.Id).ToList();
+
+            var workflowInstances = await _context.WorkflowInstances
+                .AsNoTracking()
+                .Where(i => i.DocumentType == WorkflowDocumentType.AssetExpense && expenseIds.Contains(i.DocumentId))
+                .Include(i => i.Actions)
+                    .ThenInclude(a => a.User)
+                .OrderByDescending(i => i.CreatedAt)
+                .ToListAsync();
+
+            var workflowLookup = workflowInstances
+                .GroupBy(i => i.DocumentId)
+                .ToDictionary(g => g.Key, g => g.First());
+
+            var references = expenses
+                .Select(e => $"ASSETEXP:{e.Id}")
+                .ToList();
+
+            var journalEntries = await _context.JournalEntries
+                .AsNoTracking()
+                .Where(j => j.Reference != null && references.Contains(j.Reference))
+                .Select(j => new { j.Reference, j.Number })
+                .ToListAsync();
+
+            var journalLookup = journalEntries
+                .ToDictionary(j => j.Reference!, j => j.Number);
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("AssetExpenses");
+
+            worksheet.Cell(1, 1).Value = "تاريخ العملية";
+            worksheet.Cell(1, 2).Value = "الأصل";
+            worksheet.Cell(1, 3).Value = "الفرع";
+            worksheet.Cell(1, 4).Value = "حساب المصروف";
+            worksheet.Cell(1, 5).Value = "المورد";
+            worksheet.Cell(1, 6).Value = "نوع الدفع";
+            worksheet.Cell(1, 7).Value = "المبلغ";
+            worksheet.Cell(1, 8).Value = "الملاحظات";
+            worksheet.Cell(1, 9).Value = "أنشئ بواسطة";
+            worksheet.Cell(1, 10).Value = "آخر معتمد";
+            worksheet.Cell(1, 11).Value = "رقم القيد";
+            worksheet.Row(1).Style.Font.Bold = true;
+
+            var row = 2;
+            foreach (var expense in expenses)
+            {
+                worksheet.Cell(row, 1).Value = expense.Date;
+                worksheet.Cell(row, 1).Style.DateFormat.Format = "yyyy-MM-dd";
+                worksheet.Cell(row, 2).Value = expense.Asset.Name;
+                worksheet.Cell(row, 3).Value = expense.Asset.Branch.NameAr;
+                worksheet.Cell(row, 4).Value = expense.ExpenseAccount.NameAr;
+                worksheet.Cell(row, 5).Value = expense.Supplier.NameAr;
+                worksheet.Cell(row, 6).Value = expense.IsCash ? "نقدي" : "غير نقدي";
+                worksheet.Cell(row, 7).Value = expense.Amount;
+                worksheet.Cell(row, 8).Value = expense.Notes ?? string.Empty;
+                worksheet.Cell(row, 9).Value = expense.CreatedBy == null
+                    ? string.Empty
+                    : (string.IsNullOrWhiteSpace(expense.CreatedBy.FullName) ? expense.CreatedBy.UserName : expense.CreatedBy.FullName);
+
+                var reference = $"ASSETEXP:{expense.Id}";
+                journalLookup.TryGetValue(reference, out var journalNumber);
+                worksheet.Cell(row, 11).Value = journalNumber ?? string.Empty;
+
+                workflowLookup.TryGetValue(expense.Id, out var instance);
+                var approverName = instance?.Actions?
+                    .Where(a => a.Status == WorkflowActionStatus.Approved)
+                    .OrderByDescending(a => a.ActionedAt)
+                    .Select(a => a.User == null
+                        ? null
+                        : (string.IsNullOrWhiteSpace(a.User.FullName) ? a.User.UserName : a.User.FullName))
+                    .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name));
+
+                worksheet.Cell(row, 10).Value = approverName ?? string.Empty;
+
+                row++;
+            }
+
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            var fileName = $"AssetExpenses_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+            return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
         [Authorize(Policy = "assetexpenses.create")]
