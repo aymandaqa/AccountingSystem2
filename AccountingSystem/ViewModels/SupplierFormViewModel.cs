@@ -30,16 +30,11 @@ namespace AccountingSystem.ViewModels
         [Display(Name = "نشط")]
         public bool IsActive { get; set; } = true;
 
-        [Display(Name = "نوع المود")]
-        public SupplierMode Mode { get; set; } = SupplierMode.Cash;
-
         [Display(Name = "الصلاحيات المسموح بها")]
         public List<SupplierAuthorization> SelectedAuthorizations { get; set; } = new();
 
         [Display(Name = "الفروع المسموح بها")]
         public List<int> SelectedBranchIds { get; set; } = new();
-
-        public IEnumerable<SelectListItem> ModeOptions { get; set; } = new List<SelectListItem>();
 
         public IEnumerable<SelectListItem> AuthorizationOptions { get; set; } = new List<SelectListItem>();
 

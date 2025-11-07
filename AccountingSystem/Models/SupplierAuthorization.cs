@@ -8,10 +8,19 @@ namespace AccountingSystem.Models
         [Display(Name = "بدون")]
         None = 0,
 
-        [Display(Name = "الدفع")]
-        Payment = 1,
+        [Display(Name = "سند الدفع")]
+        PaymentVoucher = 1,
 
-        [Display(Name = "القبض")]
-        Receipt = 2
+        [Display(Name = "شاشة الإدخال الديناميكي")]
+        DynamicScreenEntry = 2,
+
+        [Display(Name = "سند القبض")]
+        ReceiptVoucher = 4,
+
+        [Display(Name = "سند المصاريف")]
+        DisbursementVoucher = 8,
+
+        [Display(Name = "مصروفات الأصل الثابت")]
+        AssetExpense = 16
     }
 }

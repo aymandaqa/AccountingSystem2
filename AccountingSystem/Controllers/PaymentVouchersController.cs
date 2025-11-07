@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using AccountingSystem.Extensions;
 
 namespace AccountingSystem.Controllers
 {
@@ -47,17 +48,26 @@ namespace AccountingSystem.Controllers
             }
         }
 
-        private async Task PopulateSupplierSelectListAsync()
+        private async Task<List<int>> GetUserBranchIdsAsync(string userId)
+        {
+            return await _context.UserBranches
+                .Where(ub => ub.UserId == userId)
+                .Select(ub => ub.BranchId)
+                .ToListAsync();
+        }
+
+        private async Task PopulateSupplierSelectListAsync(IReadOnlyCollection<int> userBranchIds)
         {
             ViewBag.Suppliers = await _context.Suppliers
-                .Include(s => s.Account).ThenInclude(a => a.Currency)
-                .Where(s => s.AccountId != null)
+                .AsNoTracking()
+                .FilterByAuthorizationAndBranches(SupplierAuthorization.PaymentVoucher, userBranchIds)
+                .Where(s => s.AccountId != null && s.Account != null)
                 .OrderBy(s => s.NameAr)
                 .Select(s => new
                 {
                     s.Id,
                     s.NameAr,
-                    s.AccountId,
+                    AccountId = s.AccountId!.Value,
                     CurrencyId = s.Account!.CurrencyId,
                     CurrencyCode = s.Account.Currency.Code
                 })
@@ -88,7 +98,13 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "paymentvouchers.create")]
         public async Task<IActionResult> Create()
         {
-            await PopulateSupplierSelectListAsync();
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Challenge();
+
+            var userBranchIds = await GetUserBranchIdsAsync(user.Id);
+
+            await PopulateSupplierSelectListAsync(userBranchIds);
             await PopulatePaymentAccountSelectListAsync();
 
             return View(new PaymentVoucher { Date = DateTime.Now, IsCash = true });
@@ -103,6 +119,8 @@ namespace AccountingSystem.Controllers
             if (user == null || user.PaymentAccountId == null || user.PaymentBranchId == null)
                 return Challenge();
 
+            var userBranchIds = await GetUserBranchIdsAsync(user.Id);
+
             if (!model.SupplierId.HasValue)
             {
                 ModelState.AddModelError(nameof(PaymentVoucher.SupplierId), "الرجاء اختيار المورد");
@@ -113,9 +131,17 @@ namespace AccountingSystem.Controllers
             {
                 supplier = await _context.Suppliers
                     .Include(s => s.Account)
+                    .Include(s => s.SupplierBranches)
                     .FirstOrDefaultAsync(s => s.Id == model.SupplierId.Value);
                 if (supplier?.Account == null)
+                {
                     ModelState.AddModelError(nameof(PaymentVoucher.SupplierId), "المورد غير موجود");
+                }
+                else if (!supplier.AuthorizedOperations.HasFlag(SupplierAuthorization.PaymentVoucher)
+                    || !supplier.SupplierBranches.Any(sb => userBranchIds.Contains(sb.BranchId)))
+                {
+                    ModelState.AddModelError(nameof(PaymentVoucher.SupplierId), "المورد المحدد غير مسموح له بهذه العملية أو غير مرتبط بفرعك");
+                }
             }
 
             Account? selectedAccount = await _context.Accounts.FindAsync(model.AccountId);
@@ -149,7 +175,7 @@ namespace AccountingSystem.Controllers
 
             if (!ModelState.IsValid)
             {
-                await PopulateSupplierSelectListAsync();
+                await PopulateSupplierSelectListAsync(userBranchIds);
                 await PopulatePaymentAccountSelectListAsync();
                 return View(model);
             }

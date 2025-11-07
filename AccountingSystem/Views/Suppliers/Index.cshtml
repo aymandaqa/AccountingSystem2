@@ -26,7 +26,6 @@
             <th>الاسم</th>
             <th>التليفون</th>
             <th>البريد الإلكتروني</th>
-            <th>نوع المود</th>
             <th>الصلاحيات</th>
             <th>الفروع المسموح بها</th>
             <th>المستخدم</th>
@@ -43,18 +42,13 @@
                 <td>@item.NameAr</td>
                 <td>@(string.IsNullOrWhiteSpace(item.Phone) ? "-" : item.Phone)</td>
                 <td>@(string.IsNullOrWhiteSpace(item.Email) ? "-" : item.Email)</td>
-                <td>@item.Mode.GetDisplayName()</td>
                 <td>
                     @{
-                        var permissions = new List<string>();
-                        if (item.AuthorizedOperations.HasFlag(SupplierAuthorization.Payment))
-                        {
-                            permissions.Add(SupplierAuthorization.Payment.GetDisplayName());
-                        }
-                        if (item.AuthorizedOperations.HasFlag(SupplierAuthorization.Receipt))
-                        {
-                            permissions.Add(SupplierAuthorization.Receipt.GetDisplayName());
-                        }
+                        var permissions = Enum.GetValues(typeof(SupplierAuthorization))
+                            .Cast<SupplierAuthorization>()
+                            .Where(a => a != SupplierAuthorization.None && item.AuthorizedOperations.HasFlag(a))
+                            .Select(a => a.GetDisplayName())
+                            .ToList();
                         var permissionsText = permissions.Count == 0 ? "-" : string.Join("، ", permissions);
                     }
                     @permissionsText

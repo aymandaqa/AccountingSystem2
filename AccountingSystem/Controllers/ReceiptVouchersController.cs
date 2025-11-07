@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using AccountingSystem.Extensions;
 
 namespace AccountingSystem.Controllers
 {
@@ -33,6 +34,14 @@ namespace AccountingSystem.Controllers
             _userManager = userManager;
             _workflowService = workflowService;
             _receiptVoucherProcessor = receiptVoucherProcessor;
+        }
+
+        private async Task<List<int>> GetUserBranchIdsAsync(string userId)
+        {
+            return await _context.UserBranches
+                .Where(ub => ub.UserId == userId)
+                .Select(ub => ub.BranchId)
+                .ToListAsync();
         }
 
         public async Task<IActionResult> Index(DateTime? fromDate = null, DateTime? toDate = null)
@@ -129,10 +138,13 @@ namespace AccountingSystem.Controllers
             }
             ViewBag.PaymentAccounts = paymentAccounts;
 
+            var userBranchIds = await GetUserBranchIdsAsync(user.Id);
+
             var suppliers = await _context.Suppliers
                 .AsNoTracking()
-                .Include(s => s.Account).ThenInclude(a => a.Currency)
-                .Where(s => s.AccountId != null)
+                .FilterByAuthorizationAndBranches(SupplierAuthorization.ReceiptVoucher, userBranchIds)
+                .Where(s => s.AccountId != null && s.Account != null)
+                .OrderBy(s => s.NameAr)
                 .Select(s => new
                 {
                     s.Id,
@@ -173,6 +185,8 @@ namespace AccountingSystem.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            var userBranchIds = await GetUserBranchIdsAsync(user.Id);
+
             ModelState.Remove(nameof(ReceiptVoucher.Account));
             ModelState.Remove(nameof(ReceiptVoucher.Currency));
             ModelState.Remove(nameof(ReceiptVoucher.CreatedBy));
@@ -192,11 +206,17 @@ namespace AccountingSystem.Controllers
                 var supplier = await _context.Suppliers
                     .Include(s => s.Account)
                     .ThenInclude(a => a.Currency)
+                    .Include(s => s.SupplierBranches)
                     .FirstOrDefaultAsync(s => s.Id == model.SupplierId.Value);
 
                 if (supplier?.Account == null)
                 {
                     ModelState.AddModelError(nameof(ReceiptVoucher.SupplierId), "المورد غير موجود أو لا يملك حساباً");
+                }
+                else if (!supplier.AuthorizedOperations.HasFlag(SupplierAuthorization.ReceiptVoucher)
+                    || !supplier.SupplierBranches.Any(sb => userBranchIds.Contains(sb.BranchId)))
+                {
+                    ModelState.AddModelError(nameof(ReceiptVoucher.SupplierId), "المورد المحدد غير مسموح له بهذه العملية أو غير مرتبط بفرعك");
                 }
                 else
                 {
@@ -255,8 +275,9 @@ namespace AccountingSystem.Controllers
 
                 var suppliers = await _context.Suppliers
                     .AsNoTracking()
-                    .Include(s => s.Account).ThenInclude(a => a.Currency)
-                    .Where(s => s.AccountId != null)
+                    .FilterByAuthorizationAndBranches(SupplierAuthorization.ReceiptVoucher, userBranchIds)
+                    .Where(s => s.AccountId != null && s.Account != null)
+                    .OrderBy(s => s.NameAr)
                     .Select(s => new
                     {
                         s.Id,
