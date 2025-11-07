@@ -63,6 +63,8 @@ namespace AccountingSystem.Controllers
             public decimal Credit { get; set; }
         }
 
+        private sealed record RoadUserInfo(string? FirstName, string? LastName, string? UserName, string? Mobile, int? BranchId);
+
         private static bool ContainsKeyword(string? value, string[] keywords)
         {
             if (string.IsNullOrWhiteSpace(value))
@@ -708,6 +710,188 @@ namespace AccountingSystem.Controllers
                 }
             };
 
+            var customerAccountBranches = new List<CustomerBranchAccountNode>();
+            var customerMappings = await _context.CusomerMappingAccounts
+                .AsNoTracking()
+                .Where(m => !string.IsNullOrWhiteSpace(m.AccountCode))
+                .ToListAsync();
+
+            if (customerMappings.Any())
+            {
+                var mappingByCustomer = customerMappings
+                    .Select(m => new
+                    {
+                        Mapping = m,
+                        CustomerId = int.TryParse(m.CustomerId, out var parsedCustomerId) ? parsedCustomerId : (int?)null
+                    })
+                    .ToList();
+
+                var accountCodes = customerMappings
+                    .Select(m => m.AccountCode!)
+                    .Distinct()
+                    .ToList();
+
+                var accounts = await _context.Accounts
+                    .AsNoTracking()
+                    .Where(a => accountCodes.Contains(a.Code))
+                    .Include(a => a.Currency)
+                    .Include(a => a.Branch)
+                    .ToDictionaryAsync(a => a.Code);
+
+                var validCustomerIds = mappingByCustomer
+                    .Select(x => x.CustomerId)
+                    .Where(id => id.HasValue)
+                    .Select(id => id!.Value)
+                    .Distinct()
+                    .ToList();
+
+                Dictionary<int, RoadUserInfo> customers =
+                    validCustomerIds.Any()
+                        ? await _roadContext.Users
+                            .AsNoTracking()
+                            .Where(u => validCustomerIds.Contains(u.Id))
+                            .Select(u => new
+                            {
+                                u.Id,
+                                u.FirstName,
+                                u.LastName,
+                                u.UserName,
+                                u.MobileNo1,
+                                u.CompanyBranchId
+                            })
+                            .ToDictionaryAsync(
+                                u => u.Id,
+                                u => new RoadUserInfo(u.FirstName, u.LastName, u.UserName, u.MobileNo1, u.CompanyBranchId))
+                        : new Dictionary<int, RoadUserInfo>();
+
+                var roadBranchIds = customers.Values
+                    .Select(c => c.BranchId)
+                    .Where(id => id.HasValue)
+                    .Select(id => id!.Value)
+                    .Distinct()
+                    .ToList();
+
+                Dictionary<int, string> roadBranches = roadBranchIds.Any()
+                    ? await _roadContext.CompanyBranches
+                        .AsNoTracking()
+                        .Where(b => roadBranchIds.Contains(b.Id))
+                        .ToDictionaryAsync(b => b.Id, b => b.BranchName ?? $"فرع {b.Id}")
+                    : new Dictionary<int, string>();
+
+                var branchMap = new Dictionary<string, CustomerBranchAccountNode>();
+
+                foreach (var entry in mappingByCustomer)
+                {
+                    if (!accounts.TryGetValue(entry.Mapping.AccountCode!, out var account))
+                    {
+                        continue;
+                    }
+
+                    var balanceBase = Round(_currencyService.Convert(account.CurrentBalance, account.Currency, baseCurrency));
+                    var balanceOriginal = Round(account.CurrentBalance);
+                    var accountCurrencyCode = account.Currency.Code;
+
+                    string customerName = !string.IsNullOrWhiteSpace(entry.Mapping.CustomerId)
+                        ? $"عميل #{entry.Mapping.CustomerId}"
+                        : "عميل غير معروف";
+                    string? customerContact = null;
+                    int? branchIdForCustomer = account.BranchId;
+
+                    if (entry.CustomerId.HasValue && customers.TryGetValue(entry.CustomerId.Value, out var customer))
+                    {
+                        var nameParts = new List<string>();
+                        if (!string.IsNullOrWhiteSpace(customer.FirstName))
+                        {
+                            nameParts.Add(customer.FirstName!);
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(customer.LastName))
+                        {
+                            nameParts.Add(customer.LastName!);
+                        }
+
+                        if (nameParts.Any())
+                        {
+                            customerName = string.Join(" ", nameParts);
+                        }
+                        else if (!string.IsNullOrWhiteSpace(customer.UserName))
+                        {
+                            customerName = customer.UserName!;
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(customer.Mobile))
+                        {
+                            customerContact = customer.Mobile;
+                        }
+
+                        branchIdForCustomer = customer.BranchId ?? branchIdForCustomer;
+                    }
+
+                    var branchKey = branchIdForCustomer.HasValue
+                        ? $"branch-{branchIdForCustomer.Value}"
+                        : "branch-unassigned";
+
+                    string branchName;
+                    if (branchIdForCustomer.HasValue)
+                    {
+                        if (!roadBranches.TryGetValue(branchIdForCustomer.Value, out branchName))
+                        {
+                            branchName = account.Branch != null
+                                ? (!string.IsNullOrWhiteSpace(account.Branch.NameAr)
+                                    ? account.Branch.NameAr
+                                    : account.Branch.NameEn ?? $"فرع {branchIdForCustomer.Value}")
+                                : $"فرع {branchIdForCustomer.Value}";
+                        }
+                    }
+                    else
+                    {
+                        branchName = account.Branch != null
+                            ? (!string.IsNullOrWhiteSpace(account.Branch.NameAr)
+                                ? account.Branch.NameAr
+                                : account.Branch.NameEn ?? "فرع غير محدد")
+                            : "فرع غير محدد";
+                    }
+
+                    if (!branchMap.TryGetValue(branchKey, out var branchNode))
+                    {
+                        branchNode = new CustomerBranchAccountNode
+                        {
+                            BranchId = branchIdForCustomer,
+                            BranchName = branchName
+                        };
+                        branchMap[branchKey] = branchNode;
+                        customerAccountBranches.Add(branchNode);
+                    }
+
+                    branchNode.TotalBalanceBase += balanceBase;
+                    branchNode.Customers.Add(new CustomerAccountBalanceNode
+                    {
+                        CustomerId = entry.Mapping.CustomerId ?? string.Empty,
+                        CustomerName = customerName,
+                        CustomerContact = customerContact,
+                        AccountCode = account.Code,
+                        AccountName = !string.IsNullOrWhiteSpace(account.NameAr) ? account.NameAr : account.NameEn ?? account.Code,
+                        BalanceBase = balanceBase,
+                        BalanceOriginal = balanceOriginal,
+                        AccountCurrencyCode = accountCurrencyCode
+                    });
+                }
+
+                foreach (var branchNode in customerAccountBranches)
+                {
+                    branchNode.TotalBalanceBase = Round(branchNode.TotalBalanceBase);
+                    branchNode.Customers = branchNode.Customers
+                        .OrderByDescending(c => Math.Abs(c.BalanceBase))
+                        .ThenBy(c => c.CustomerName)
+                        .ToList();
+                }
+
+                customerAccountBranches = customerAccountBranches
+                    .OrderByDescending(b => Math.Abs(b.TotalBalanceBase))
+                    .ThenBy(b => b.BranchName)
+                    .ToList();
+            }
+
             var viewModel = new ExecutiveDashboardViewModel
             {
                 Year = selectedYear,
@@ -724,7 +908,8 @@ namespace AccountingSystem.Controllers
                 CashConversionCycleMonthly = cashConversionCycleMonth,
                 CashConversionCycleYearToDate = cashConversionCycleYear,
                 OperatingExpenseBreakdown = operatingExpenseBreakdown,
-                IncomeStatement = incomeStatement
+                IncomeStatement = incomeStatement,
+                CustomerAccountBranches = customerAccountBranches
             };
 
             return View(viewModel);

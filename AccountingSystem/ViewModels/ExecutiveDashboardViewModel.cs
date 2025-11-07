@@ -101,5 +101,27 @@ namespace AccountingSystem.ViewModels
         public decimal CashConversionCycleYearToDate { get; set; }
         public List<OperatingExpenseBreakdownItem> OperatingExpenseBreakdown { get; set; } = new();
         public List<ExecutiveIncomeStatementRow> IncomeStatement { get; set; } = new();
+        public List<CustomerBranchAccountNode> CustomerAccountBranches { get; set; } = new();
+    }
+
+    public class CustomerBranchAccountNode
+    {
+        public int? BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+        public decimal TotalBalanceBase { get; set; }
+        public List<CustomerAccountBalanceNode> Customers { get; set; } = new();
+        public bool HasCustomers => Customers.Count > 0;
+    }
+
+    public class CustomerAccountBalanceNode
+    {
+        public string CustomerId { get; set; } = string.Empty;
+        public string CustomerName { get; set; } = string.Empty;
+        public string? CustomerContact { get; set; }
+        public string AccountCode { get; set; } = string.Empty;
+        public string AccountName { get; set; } = string.Empty;
+        public decimal BalanceBase { get; set; }
+        public decimal BalanceOriginal { get; set; }
+        public string AccountCurrencyCode { get; set; } = string.Empty;
     }
 }
