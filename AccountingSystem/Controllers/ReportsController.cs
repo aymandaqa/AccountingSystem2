@@ -252,6 +252,62 @@ namespace AccountingSystem.Controllers
             return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
+        public async Task<IActionResult> DriverRevenueReport(DateTime? fromDate = null, DateTime? toDate = null)
+        {
+            var model = await BuildDriverRevenueReportViewModel(fromDate, toDate);
+            return View(model);
+        }
+
+        public async Task<IActionResult> DriverRevenueReportExcel(DateTime? fromDate = null, DateTime? toDate = null)
+        {
+            var model = await BuildDriverRevenueReportViewModel(fromDate, toDate);
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.AddWorksheet("DriverRevenue");
+
+            worksheet.Cell(1, 1).Value = "تقرير عوائد السائقين";
+            worksheet.Cell(2, 1).Value = "من تاريخ";
+            worksheet.Cell(2, 2).Value = model.FromDate.ToString("dd/MM/yyyy");
+            worksheet.Cell(3, 1).Value = "إلى تاريخ";
+            worksheet.Cell(3, 2).Value = model.ToDate.ToString("dd/MM/yyyy");
+
+            if (!model.HasResults)
+            {
+                worksheet.Cell(5, 1).Value = "لا توجد بيانات للفترة المحددة.";
+            }
+            else
+            {
+                worksheet.Cell(5, 1).Value = "اسم السائق";
+                worksheet.Cell(5, 2).Value = "الحساب";
+                worksheet.Cell(5, 3).Value = $"إجمالي العائد ({model.BaseCurrencyCode})";
+
+                var currentRow = 6;
+                foreach (var row in model.Rows)
+                {
+                    worksheet.Cell(currentRow, 1).Value = row.DriverName;
+                    worksheet.Cell(currentRow, 2).Value = string.IsNullOrWhiteSpace(row.AccountCode)
+                        ? row.AccountName
+                        : $"{row.AccountCode} - {row.AccountName}";
+                    worksheet.Cell(currentRow, 3).Value = Math.Round(row.TotalRevenue, 2, MidpointRounding.AwayFromZero);
+                    currentRow++;
+                }
+
+                worksheet.Cell(currentRow, 1).Value = "الإجمالي";
+                worksheet.Cell(currentRow, 1).Style.Font.Bold = true;
+                worksheet.Cell(currentRow, 3).Value = Math.Round(model.GrandTotal, 2, MidpointRounding.AwayFromZero);
+                worksheet.Cell(currentRow, 3).Style.Font.Bold = true;
+
+                worksheet.Range(5, 1, 5, 3).Style.Font.Bold = true;
+                worksheet.Columns().AdjustToContents();
+            }
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+
+            var fileName = $"DriverRevenue_{model.FromDate:yyyyMMdd}_{model.ToDate:yyyyMMdd}.xlsx";
+            return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
         [Authorize(Policy = "reports.view")]
         public async Task<IActionResult> ExecutiveDashboard(int? year, int? month)
         {
@@ -5040,6 +5096,284 @@ namespace AccountingSystem.Controllers
             return currentRow;
         }
 
+        private async Task<DriverRevenueReportViewModel> BuildDriverRevenueReportViewModel(DateTime? fromDate, DateTime? toDate)
+        {
+            var today = DateTime.Today;
+            var normalizedFrom = (fromDate ?? new DateTime(today.Year, today.Month, 1)).Date;
+            var normalizedTo = (toDate ?? today).Date;
+
+            if (normalizedFrom > normalizedTo)
+            {
+                (normalizedFrom, normalizedTo) = (normalizedTo, normalizedFrom);
+            }
+
+            var baseCurrency = await _context.Currencies.AsNoTracking().FirstAsync(c => c.IsBase);
+
+            var model = new DriverRevenueReportViewModel
+            {
+                FromDate = normalizedFrom,
+                ToDate = normalizedTo,
+                BaseCurrencyCode = baseCurrency.Code,
+                FiltersApplied = true
+            };
+
+            var driverAccounts = await GetDriverAccountReportInfoAsync();
+            if (!driverAccounts.Any())
+            {
+                return model;
+            }
+
+            var accountIds = driverAccounts
+                .Where(info => info.AccountId.HasValue)
+                .Select(info => info.AccountId!.Value)
+                .Distinct()
+                .ToList();
+
+            if (!accountIds.Any())
+            {
+                return model;
+            }
+
+            var revenueLines = await (from driverLine in _context.JournalEntryLines.AsNoTracking()
+                                      where accountIds.Contains(driverLine.AccountId)
+                                      join journalEntry in _context.JournalEntries.AsNoTracking() on driverLine.JournalEntryId equals journalEntry.Id
+                                      where journalEntry.Status == JournalEntryStatus.Posted
+                                          && journalEntry.Date >= normalizedFrom
+                                          && journalEntry.Date <= normalizedTo
+                                      join revenueLine in _context.JournalEntryLines.AsNoTracking() on journalEntry.Id equals revenueLine.JournalEntryId
+                                      join revenueAccount in _context.Accounts.AsNoTracking() on revenueLine.AccountId equals revenueAccount.Id
+                                      where revenueAccount.AccountType == AccountType.Revenue
+                                      select new
+                                      {
+                                          driverLine.AccountId,
+                                          Amount = revenueLine.CreditAmount - revenueLine.DebitAmount
+                                      }).ToListAsync();
+
+            if (!revenueLines.Any())
+            {
+                return model;
+            }
+
+            var amountsByAccount = revenueLines
+                .GroupBy(x => x.AccountId)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
+
+            if (!amountsByAccount.Any())
+            {
+                return model;
+            }
+
+            var driverNames = await BuildDriverNameLookupAsync(driverAccounts);
+            var rows = new List<DriverRevenueReportRowViewModel>();
+            var processedAccounts = new HashSet<int>();
+
+            foreach (var info in driverAccounts)
+            {
+                if (!info.AccountId.HasValue)
+                {
+                    continue;
+                }
+
+                if (!processedAccounts.Add(info.AccountId.Value))
+                {
+                    continue;
+                }
+
+                if (!amountsByAccount.TryGetValue(info.AccountId.Value, out var total) || total == 0m)
+                {
+                    continue;
+                }
+
+                var driverName = info.DriverId.HasValue && driverNames.TryGetValue(info.DriverId.Value, out var resolvedName)
+                    ? resolvedName
+                    : (!string.IsNullOrWhiteSpace(info.DriverIdRaw) ? $"سائق {info.DriverIdRaw}" : "سائق غير معروف");
+
+                rows.Add(new DriverRevenueReportRowViewModel
+                {
+                    DriverId = info.DriverId,
+                    DriverName = driverName,
+                    AccountCode = info.AccountCode,
+                    AccountName = info.AccountName,
+                    TotalRevenue = total
+                });
+            }
+
+            rows = rows
+                .OrderByDescending(r => r.TotalRevenue)
+                .ThenBy(r => r.DriverName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            model.Rows = rows;
+            model.GrandTotal = rows.Sum(r => r.TotalRevenue);
+
+            return model;
+        }
+
+        private async Task<List<DriverAccountReportInfo>> GetDriverAccountReportInfoAsync()
+        {
+            var mappings = await _context.DriverMappingAccounts
+                .AsNoTracking()
+                .ToListAsync();
+
+            if (!mappings.Any())
+            {
+                return new List<DriverAccountReportInfo>();
+            }
+
+            var accountIds = new HashSet<int>();
+            var accountCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var driverAccounts = new List<DriverAccountReportInfo>(mappings.Count);
+
+            foreach (var mapping in mappings)
+            {
+                int? driverId = null;
+                if (!string.IsNullOrWhiteSpace(mapping.DriverId) && int.TryParse(mapping.DriverId, out var parsedDriver))
+                {
+                    driverId = parsedDriver;
+                }
+
+                int? accountId = null;
+                if (!string.IsNullOrWhiteSpace(mapping.AccountId) && int.TryParse(mapping.AccountId, out var parsedAccount))
+                {
+                    accountId = parsedAccount;
+                    accountIds.Add(parsedAccount);
+                }
+
+                if (!string.IsNullOrWhiteSpace(mapping.AccountCode))
+                {
+                    accountCodes.Add(mapping.AccountCode);
+                }
+
+                driverAccounts.Add(new DriverAccountReportInfo
+                {
+                    DriverIdRaw = mapping.DriverId ?? string.Empty,
+                    DriverId = driverId,
+                    AccountId = accountId,
+                    AccountCode = mapping.AccountCode ?? string.Empty
+                });
+            }
+
+            var accounts = await _context.Accounts
+                .AsNoTracking()
+                .Where(a => accountIds.Contains(a.Id) || accountCodes.Contains(a.Code))
+                .Select(a => new
+                {
+                    a.Id,
+                    a.Code,
+                    a.NameAr,
+                    a.NameEn
+                })
+                .ToListAsync();
+
+            var accountsById = accounts.ToDictionary(a => a.Id, a => a);
+            var accountsByCode = accounts
+                .GroupBy(a => a.Code, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var info in driverAccounts)
+            {
+                if (info.AccountId.HasValue && accountsById.TryGetValue(info.AccountId.Value, out var accountById))
+                {
+                    info.AccountId = accountById.Id;
+                    info.AccountCode = accountById.Code;
+                    info.AccountName = accountById.NameAr ?? accountById.NameEn ?? accountById.Code;
+                }
+                else if (!string.IsNullOrWhiteSpace(info.AccountCode) && accountsByCode.TryGetValue(info.AccountCode, out var accountByCode))
+                {
+                    info.AccountId = accountByCode.Id;
+                    info.AccountCode = accountByCode.Code;
+                    info.AccountName = accountByCode.NameAr ?? accountByCode.NameEn ?? accountByCode.Code;
+                }
+
+                if (string.IsNullOrWhiteSpace(info.AccountName) && !string.IsNullOrWhiteSpace(info.AccountCode))
+                {
+                    info.AccountName = info.AccountCode;
+                }
+            }
+
+            return driverAccounts
+                .Where(info => info.AccountId.HasValue)
+                .ToList();
+        }
+
+        private async Task<Dictionary<int, string>> BuildDriverNameLookupAsync(IEnumerable<DriverAccountReportInfo> driverAccounts)
+        {
+            var driverIds = driverAccounts
+                .Select(info => info.DriverId)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .Distinct()
+                .ToList();
+
+            var driverNames = new Dictionary<int, string>();
+
+            if (!driverIds.Any())
+            {
+                return driverNames;
+            }
+
+            var drivers = await _roadContext.Drives
+                .AsNoTracking()
+                .Where(d => driverIds.Contains(d.Id))
+                .Select(d => new
+                {
+                    d.Id,
+                    d.FirstName,
+                    d.SecoundName,
+                    d.FamilyName,
+                    d.Phone1
+                })
+                .ToListAsync();
+
+            foreach (var driver in drivers)
+            {
+                var nameParts = new[] { driver.FirstName, driver.SecoundName, driver.FamilyName }
+                    .Where(part => !string.IsNullOrWhiteSpace(part))
+                    .ToList();
+
+                string displayName;
+                if (nameParts.Any())
+                {
+                    displayName = string.Join(" ", nameParts);
+                }
+                else if (!string.IsNullOrWhiteSpace(driver.Phone1))
+                {
+                    displayName = $"سائق {driver.Id} ({driver.Phone1})";
+                }
+                else
+                {
+                    displayName = $"سائق {driver.Id}";
+                }
+
+                driverNames[driver.Id] = displayName;
+            }
+
+            var missingDriverIds = driverIds
+                .Where(id => !driverNames.ContainsKey(id))
+                .ToList();
+
+            if (missingDriverIds.Any())
+            {
+                var fallbackDrivers = await _roadContext.DriverPay
+                    .AsNoTracking()
+                    .Where(d => missingDriverIds.Contains(d.DriverID))
+                    .Select(d => new { d.DriverID, d.DriverName })
+                    .ToListAsync();
+
+                foreach (var driver in fallbackDrivers)
+                {
+                    if (!driverNames.ContainsKey(driver.DriverID))
+                    {
+                        driverNames[driver.DriverID] = !string.IsNullOrWhiteSpace(driver.DriverName)
+                            ? driver.DriverName!
+                            : $"سائق {driver.DriverID}";
+                    }
+                }
+            }
+
+            return driverNames;
+        }
+
         private async Task<JournalEntryLineReportViewModel> BuildJournalEntryLineReportViewModel(DateTime? fromDate, DateTime? toDate, int? branchId, int? accountId, int? costCenterId, JournalEntryStatus? status, string? searchTerm, bool statusFilterProvided, bool includeOptions, bool includeAllLines, int pageNumber = 1, int pageSize = JournalEntryLinesPageSize)
         {
             var normalizedFrom = (fromDate ?? DateTime.Today.AddMonths(-1)).Date;
@@ -5269,6 +5603,15 @@ namespace AccountingSystem.Controllers
                 JournalEntryStatus.Cancelled => "ملغى",
                 _ => status.ToString()
             };
+        }
+
+        private class DriverAccountReportInfo
+        {
+            public string DriverIdRaw { get; set; } = string.Empty;
+            public int? DriverId { get; set; }
+            public int? AccountId { get; set; }
+            public string AccountCode { get; set; } = string.Empty;
+            public string AccountName { get; set; } = string.Empty;
         }
 
         private class DriverPaymentHeaderInfo

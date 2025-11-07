@@ -516,6 +516,26 @@ namespace AccountingSystem.ViewModels
         public decimal ShipmentCod { get; set; }
     }
 
+    public class DriverRevenueReportViewModel
+    {
+        public DateTime FromDate { get; set; } = DateTime.Today;
+        public DateTime ToDate { get; set; } = DateTime.Today;
+        public string BaseCurrencyCode { get; set; } = string.Empty;
+        public bool FiltersApplied { get; set; }
+        public List<DriverRevenueReportRowViewModel> Rows { get; set; } = new List<DriverRevenueReportRowViewModel>();
+        public decimal GrandTotal { get; set; }
+        public bool HasResults => Rows.Count > 0;
+    }
+
+    public class DriverRevenueReportRowViewModel
+    {
+        public int? DriverId { get; set; }
+        public string DriverName { get; set; } = string.Empty;
+        public string AccountCode { get; set; } = string.Empty;
+        public string AccountName { get; set; } = string.Empty;
+        public decimal TotalRevenue { get; set; }
+    }
+
     // Additional ViewModels
     public class EditJournalEntryViewModel
     {
