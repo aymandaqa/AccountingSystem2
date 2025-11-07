@@ -11,11 +11,11 @@ namespace AccountingSystem.Models
         [Display(Name = "سند الدفع")]
         PaymentVoucher = 1,
 
-        [Display(Name = "شاشة الإدخال الديناميكي")]
-        DynamicScreenEntry = 2,
-
         [Display(Name = "سند القبض")]
-        ReceiptVoucher = 4,
+        ReceiptVoucher = 2,
+
+        [Display(Name = "شاشة الإدخال الديناميكي")]
+        DynamicScreenEntry = 4,
 
         [Display(Name = "سند المصاريف")]
         DisbursementVoucher = 8,
