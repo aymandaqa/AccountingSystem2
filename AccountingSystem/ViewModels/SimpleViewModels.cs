@@ -489,12 +489,31 @@ namespace AccountingSystem.ViewModels
         public List<AccountTreeNodeViewModel> ParentAccountTree { get; set; } = new List<AccountTreeNodeViewModel>();
         public bool ParentAccountConfigured { get; set; }
         public string? SelectedParentAccountName { get; set; }
+        public List<DriverCodBranchSummaryViewModel> DriverCodBranchSummaries { get; set; } = new List<DriverCodBranchSummaryViewModel>();
     }
 
     public class CashBoxTreeViewModel
     {
         public List<AccountTreeNodeViewModel> Nodes { get; set; } = new List<AccountTreeNodeViewModel>();
         public bool ParentConfigured { get; set; }
+    }
+
+    public class DriverCodBranchSummaryViewModel
+    {
+        public int BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+        public decimal ShipmentTotal { get; set; }
+        public decimal ShipmentCod { get; set; }
+    }
+
+    public class DriverCodBranchDetailViewModel
+    {
+        public int BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+        public string DriverName { get; set; } = string.Empty;
+        public string DriverId { get; set; } = string.Empty;
+        public decimal ShipmentTotal { get; set; }
+        public decimal ShipmentCod { get; set; }
     }
 
     // Additional ViewModels

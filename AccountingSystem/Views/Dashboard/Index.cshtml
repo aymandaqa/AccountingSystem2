@@ -428,6 +428,20 @@
                                 </div>
                             }
 
+                            <div class="@accountTreeColumnClass">
+                                <div class="card account-tree-card shadow-sm border-0 h-100">
+                                    <div class="card-header d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <h5 class="card-title mb-0"><i class="fas fa-project-diagram ms-2"></i> تقرير تحصيل السائقين حسب الفروع</h5>
+                                            <span class="text-muted small">عرض هرمي لمبالغ الشحنات وCOD للسائقين في الفروع</span>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        @await Html.PartialAsync("~/Views/Dashboard/_DriverCodBranchTree.cshtml", Model.DriverCodBranchSummaries)
+                                    </div>
+                                </div>
+                            </div>
+
                             @*        @if (canViewAccounts)
                             {
                                 <div class="@accountTreeColumnClass">
@@ -1165,6 +1179,101 @@
                     background-color: transparent;
                 }
 
+        .driver-cod-tree {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+            .driver-cod-tree .tree-node {
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                background-color: #ffffff;
+                box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+            }
+
+            .driver-cod-tree .tree-node-content {
+                padding: 0.85rem 1rem;
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+            }
+
+            .driver-cod-tree .tree-node-info {
+                gap: 0.75rem;
+            }
+
+        .driver-cod-tree .tree-node-text {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+            .driver-cod-tree .toggle-btn {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s ease;
+            }
+
+                .driver-cod-tree .toggle-btn:hover {
+                    background-color: rgba(59, 130, 246, 0.12);
+                    color: #2563eb;
+                }
+
+            .driver-cod-tree .tree-node-text .node-title {
+                font-weight: 600;
+                color: #1e293b;
+            }
+
+            .driver-cod-tree .tree-node-text .node-subtitle {
+                color: #64748b;
+            }
+
+        .tree-node-metrics {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            min-width: 180px;
+        }
+
+            .tree-node-metrics .metric {
+                display: flex;
+                justify-content: space-between;
+                gap: 0.75rem;
+                align-items: baseline;
+            }
+
+            .tree-node-metrics .metric-label {
+                color: #64748b;
+                font-size: 0.85rem;
+            }
+
+            .tree-node-metrics .metric-value {
+                font-weight: 600;
+                color: #0f172a;
+            }
+
+        .driver-cod-tree .tree-children {
+            margin: 0 1.25rem 1.25rem 0;
+            border-right: 2px solid #e2e8f0;
+            padding: 0.75rem 1rem 0.75rem 0;
+            background-color: #f8fafc;
+        }
+
+            .driver-cod-tree .tree-children .tree-node {
+                background-color: #ffffff;
+                border: 1px solid #e2e8f0;
+                box-shadow: none;
+            }
+
+            .driver-cod-tree .tree-children .tree-node-content {
+                background-color: transparent;
+            }
+
             .cashbox-tree .account-code {
                 font-weight: 600;
                 color: #475569;
@@ -1627,6 +1736,63 @@
                     $children.slideDown(200);
                     $button.html('<i class="fas fa-minus"></i>');
                 }
+            });
+
+            var $driverCodTree = $('#driverCodTree');
+            var driverCodDetailsUrl = $driverCodTree.data('load-url');
+
+            $(document).on('click', '#driverCodTree .toggle-btn', function () {
+                var $button = $(this);
+                var $node = $button.closest('.tree-node');
+                var $children = $node.find('> .tree-children');
+
+                if (!$children.length) {
+                    return;
+                }
+
+                var isVisible = $children.is(':visible');
+                if (isVisible) {
+                    $children.slideUp(200);
+                    $button.html('<i class="fas fa-plus"></i>');
+                    return;
+                }
+
+                if ($children.data('loaded')) {
+                    $children.slideDown(200);
+                    $button.html('<i class="fas fa-minus"></i>');
+                    return;
+                }
+
+                var branchId = parseInt($node.data('branch-id')) || 0;
+                if (!driverCodDetailsUrl || !branchId) {
+                    $children.data('loaded', true);
+                    $children.html('<div class="alert alert-warning text-center my-2">لا يمكن تحميل بيانات السائقين لهذا الفرع.</div>');
+                    $children.slideDown(200);
+                    $button.html('<i class="fas fa-minus"></i>');
+                    return;
+                }
+
+                $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+                $.get(driverCodDetailsUrl, { branchId: branchId })
+                    .done(function (html) {
+                        var trimmed = $.trim(html);
+                        if (trimmed.length) {
+                            $children.html(trimmed);
+                        } else {
+                            $children.html('<div class="alert alert-light border text-center my-2">لا توجد بيانات للسائقين في هذا الفرع.</div>');
+                        }
+                        $children.data('loaded', true);
+                        $children.slideDown(200);
+                        $button.html('<i class="fas fa-minus"></i>');
+                    })
+                    .fail(function () {
+                        alert('تعذر تحميل بيانات السائقين، يرجى المحاولة مرة أخرى.');
+                        $button.html('<i class="fas fa-plus"></i>');
+                    })
+                    .always(function () {
+                        $button.prop('disabled', false);
+                    });
             });
 
             var $accountTypeTree = $('#dashboardAccountTypeTree');
