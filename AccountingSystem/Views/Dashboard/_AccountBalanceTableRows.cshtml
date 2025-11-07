@@ -1,0 +1,62 @@
+@model IEnumerable<AccountingSystem.ViewModels.AccountTreeNodeViewModel>
+@{
+    var selectedCurrencyCode = ViewData["SelectedCurrencyCode"] as string ?? string.Empty;
+    var baseCurrencyCode = ViewData["BaseCurrencyCode"] as string ?? string.Empty;
+}
+
+@foreach (var node in Model
+    .OrderBy(n => n.Id == -1 ? 1 : 0)
+    .ThenBy(n => n.Code))
+{
+    var level = node.Level;
+    var indent = Math.Max(0, (level - 1) * 18);
+    var hasChildren = node.Children.Any();
+    var isRoot = node.ParentId == null;
+    var showCurrency = !string.IsNullOrWhiteSpace(node.CurrencyCode) && node.Id != 0;
+    <tr class="dashboard-account-row @(isRoot ? "dashboard-account-row-root" : hasChildren ? "dashboard-account-row-group" : "dashboard-account-row-leaf")"
+        data-level="@level">
+        <td>
+            <div class="d-flex align-items-start">
+                <div class="flex-grow-1" style="margin-right:@(indent)px;">
+                    <div class="fw-semibold text-nowrap">
+                        @if (node.Id == 0)
+                        {
+                            @node.NameAr
+                        }
+                        else
+                        {
+                            if (!string.IsNullOrWhiteSpace(node.Code))
+                            {
+                                <span class="text-muted">@node.Code</span>
+                                <span class="mx-1">-</span>
+                            }
+                            @node.NameAr
+                        }
+                    </div>
+                    @if (showCurrency)
+                    {
+                        <div class="text-muted small">@node.CurrencyCode</div>
+                    }
+                </div>
+            </div>
+        </td>
+        <td class="text-end text-nowrap">
+            <span class="fw-semibold">@node.CurrentBalanceSelected.ToString("N2")</span>
+            @if (!string.IsNullOrWhiteSpace(selectedCurrencyCode))
+            {
+                <span class="text-muted">@selectedCurrencyCode</span>
+            }
+        </td>
+        <td class="text-end text-nowrap">
+            <span>@node.CurrentBalanceBase.ToString("N2")</span>
+            @if (!string.IsNullOrWhiteSpace(baseCurrencyCode))
+            {
+                <span class="text-muted">@baseCurrencyCode</span>
+            }
+        </td>
+    </tr>
+    if (hasChildren)
+    {
+        @await Html.PartialAsync("~/Views/Dashboard/_AccountBalanceTableRows.cshtml", node.Children.OrderBy(c => c.Code))
+    }
+}
