@@ -398,16 +398,18 @@ namespace AccountingSystem.Controllers
                 .Distinct()
                 .ToList();
 
-            var accountsQuery = _context.Accounts
+            IQueryable<Account> accountsQuery = _context.Accounts
                 .AsNoTracking()
-                .Where(a => accountCodes.Contains(a.Code!))
-                .Include(a => a.Currency)
-                .Include(a => a.Branch);
+                .Where(a => accountCodes.Contains(a.Code!));
 
             if (restrictBranches)
             {
                 accountsQuery = accountsQuery.Where(a => !a.BranchId.HasValue || normalizedBranchIds.Contains(a.BranchId.Value));
             }
+
+            accountsQuery = accountsQuery
+                .Include(a => a.Currency)
+                .Include(a => a.Branch);
 
             var accounts = await accountsQuery.ToDictionaryAsync(a => a.Code!);
 
