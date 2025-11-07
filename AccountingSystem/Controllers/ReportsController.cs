@@ -252,15 +252,15 @@ namespace AccountingSystem.Controllers
             return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
-        public async Task<IActionResult> DriverRevenueReport(DateTime? fromDate = null, DateTime? toDate = null)
+        public async Task<IActionResult> DriverRevenueReport(DateTime? fromDate = null, DateTime? toDate = null, string? driverSearch = null)
         {
-            var model = await BuildDriverRevenueReportViewModel(fromDate, toDate);
+            var model = await BuildDriverRevenueReportViewModel(fromDate, toDate, driverSearch);
             return View(model);
         }
 
-        public async Task<IActionResult> DriverRevenueReportExcel(DateTime? fromDate = null, DateTime? toDate = null)
+        public async Task<IActionResult> DriverRevenueReportExcel(DateTime? fromDate = null, DateTime? toDate = null, string? driverSearch = null)
         {
-            var model = await BuildDriverRevenueReportViewModel(fromDate, toDate);
+            var model = await BuildDriverRevenueReportViewModel(fromDate, toDate, driverSearch);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.AddWorksheet("DriverRevenue");
@@ -271,6 +271,12 @@ namespace AccountingSystem.Controllers
             worksheet.Cell(3, 1).Value = "إلى تاريخ";
             worksheet.Cell(3, 2).Value = model.ToDate.ToString("dd/MM/yyyy");
 
+            if (!string.IsNullOrWhiteSpace(model.SearchTerm))
+            {
+                worksheet.Cell(4, 1).Value = "كلمة البحث";
+                worksheet.Cell(4, 2).Value = model.SearchTerm;
+            }
+
             if (!model.HasResults)
             {
                 worksheet.Cell(5, 1).Value = "لا توجد بيانات للفترة المحددة.";
@@ -278,26 +284,30 @@ namespace AccountingSystem.Controllers
             else
             {
                 worksheet.Cell(5, 1).Value = "اسم السائق";
-                worksheet.Cell(5, 2).Value = "الحساب";
-                worksheet.Cell(5, 3).Value = $"إجمالي العائد ({model.BaseCurrencyCode})";
+                worksheet.Cell(5, 2).Value = "الفرع";
+                worksheet.Cell(5, 3).Value = "الحساب";
+                worksheet.Cell(5, 4).Value = $"إجمالي العائد ({model.BaseCurrencyCode})";
 
                 var currentRow = 6;
                 foreach (var row in model.Rows)
                 {
                     worksheet.Cell(currentRow, 1).Value = row.DriverName;
-                    worksheet.Cell(currentRow, 2).Value = string.IsNullOrWhiteSpace(row.AccountCode)
+                    worksheet.Cell(currentRow, 2).Value = string.IsNullOrWhiteSpace(row.BranchName)
+                        ? "-"
+                        : row.BranchName;
+                    worksheet.Cell(currentRow, 3).Value = string.IsNullOrWhiteSpace(row.AccountCode)
                         ? row.AccountName
                         : $"{row.AccountCode} - {row.AccountName}";
-                    worksheet.Cell(currentRow, 3).Value = Math.Round(row.TotalRevenue, 2, MidpointRounding.AwayFromZero);
+                    worksheet.Cell(currentRow, 4).Value = Math.Round(row.TotalRevenue, 2, MidpointRounding.AwayFromZero);
                     currentRow++;
                 }
 
                 worksheet.Cell(currentRow, 1).Value = "الإجمالي";
                 worksheet.Cell(currentRow, 1).Style.Font.Bold = true;
-                worksheet.Cell(currentRow, 3).Value = Math.Round(model.GrandTotal, 2, MidpointRounding.AwayFromZero);
-                worksheet.Cell(currentRow, 3).Style.Font.Bold = true;
+                worksheet.Cell(currentRow, 4).Value = Math.Round(model.GrandTotal, 2, MidpointRounding.AwayFromZero);
+                worksheet.Cell(currentRow, 4).Style.Font.Bold = true;
 
-                worksheet.Range(5, 1, 5, 3).Style.Font.Bold = true;
+                worksheet.Range(5, 1, 5, 4).Style.Font.Bold = true;
                 worksheet.Columns().AdjustToContents();
             }
 
@@ -5096,7 +5106,7 @@ namespace AccountingSystem.Controllers
             return currentRow;
         }
 
-        private async Task<DriverRevenueReportViewModel> BuildDriverRevenueReportViewModel(DateTime? fromDate, DateTime? toDate)
+        private async Task<DriverRevenueReportViewModel> BuildDriverRevenueReportViewModel(DateTime? fromDate, DateTime? toDate, string? driverSearch)
         {
             var today = DateTime.Today;
             var normalizedFrom = (fromDate ?? new DateTime(today.Year, today.Month, 1)).Date;
@@ -5109,12 +5119,15 @@ namespace AccountingSystem.Controllers
 
             var baseCurrency = await _context.Currencies.AsNoTracking().FirstAsync(c => c.IsBase);
 
+            var searchTerm = driverSearch?.Trim();
+
             var model = new DriverRevenueReportViewModel
             {
                 FromDate = normalizedFrom,
                 ToDate = normalizedTo,
                 BaseCurrencyCode = baseCurrency.Code,
-                FiltersApplied = true
+                FiltersApplied = true,
+                SearchTerm = searchTerm
             };
 
             var driverAccounts = await GetDriverAccountReportInfoAsync();
@@ -5163,7 +5176,7 @@ namespace AccountingSystem.Controllers
                 return model;
             }
 
-            var driverNames = await BuildDriverNameLookupAsync(driverAccounts);
+            var driverInfos = await BuildDriverInfoLookupAsync(driverAccounts);
             var rows = new List<DriverRevenueReportRowViewModel>();
             var processedAccounts = new HashSet<int>();
 
@@ -5184,18 +5197,37 @@ namespace AccountingSystem.Controllers
                     continue;
                 }
 
-                var driverName = info.DriverId.HasValue && driverNames.TryGetValue(info.DriverId.Value, out var resolvedName)
-                    ? resolvedName
+                DriverDisplayInfo? resolvedInfo = null;
+                if (info.DriverId.HasValue)
+                {
+                    driverInfos.TryGetValue(info.DriverId.Value, out resolvedInfo);
+                }
+
+                var driverName = resolvedInfo != null
+                    ? resolvedInfo.Name
                     : (!string.IsNullOrWhiteSpace(info.DriverIdRaw) ? $"سائق {info.DriverIdRaw}" : "سائق غير معروف");
+                var branchName = resolvedInfo?.BranchName ?? string.Empty;
 
                 rows.Add(new DriverRevenueReportRowViewModel
                 {
                     DriverId = info.DriverId,
                     DriverName = driverName,
+                    BranchName = branchName,
                     AccountCode = info.AccountCode,
                     AccountName = info.AccountName,
                     TotalRevenue = total
                 });
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                rows = rows
+                    .Where(r =>
+                        (!string.IsNullOrWhiteSpace(r.DriverName) && r.DriverName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                        || (!string.IsNullOrWhiteSpace(r.AccountCode) && r.AccountCode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                        || (!string.IsNullOrWhiteSpace(r.AccountName) && r.AccountName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                        || (!string.IsNullOrWhiteSpace(r.BranchName) && r.BranchName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
             }
 
             rows = rows
@@ -5296,7 +5328,7 @@ namespace AccountingSystem.Controllers
                 .ToList();
         }
 
-        private async Task<Dictionary<int, string>> BuildDriverNameLookupAsync(IEnumerable<DriverAccountReportInfo> driverAccounts)
+        private async Task<Dictionary<int, DriverDisplayInfo>> BuildDriverInfoLookupAsync(IEnumerable<DriverAccountReportInfo> driverAccounts)
         {
             var driverIds = driverAccounts
                 .Select(info => info.DriverId)
@@ -5305,11 +5337,11 @@ namespace AccountingSystem.Controllers
                 .Distinct()
                 .ToList();
 
-            var driverNames = new Dictionary<int, string>();
+            var driverInfos = new Dictionary<int, DriverDisplayInfo>();
 
             if (!driverIds.Any())
             {
-                return driverNames;
+                return driverInfos;
             }
 
             var drivers = await _roadContext.Drives
@@ -5321,9 +5353,17 @@ namespace AccountingSystem.Controllers
                     d.FirstName,
                     d.SecoundName,
                     d.FamilyName,
-                    d.Phone1
+                    d.Phone1,
+                    d.ActiveBranchId
                 })
                 .ToListAsync();
+
+            var branchIds = drivers
+                .Select(d => d.ActiveBranchId)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .Distinct()
+                .ToList();
 
             foreach (var driver in drivers)
             {
@@ -5345,33 +5385,88 @@ namespace AccountingSystem.Controllers
                     displayName = $"سائق {driver.Id}";
                 }
 
-                driverNames[driver.Id] = displayName;
+                driverInfos[driver.Id] = new DriverDisplayInfo
+                {
+                    Name = displayName,
+                    BranchId = driver.ActiveBranchId
+                };
             }
 
             var missingDriverIds = driverIds
-                .Where(id => !driverNames.ContainsKey(id))
+                .Where(id => !driverInfos.ContainsKey(id))
                 .ToList();
 
+            var fallbackDrivers = new List<(int DriverId, string? DriverName, int? BranchId)>();
             if (missingDriverIds.Any())
             {
-                var fallbackDrivers = await _roadContext.DriverPay
+                var fallbackResults = await _roadContext.DriverPay
                     .AsNoTracking()
                     .Where(d => missingDriverIds.Contains(d.DriverID))
-                    .Select(d => new { d.DriverID, d.DriverName })
+                    .Select(d => new { d.DriverID, d.DriverName, BranchId = (int?)d.BranchID })
                     .ToListAsync();
 
-                foreach (var driver in fallbackDrivers)
+                foreach (var driver in fallbackResults)
                 {
-                    if (!driverNames.ContainsKey(driver.DriverID))
+                    if (!driverInfos.ContainsKey(driver.DriverID))
                     {
-                        driverNames[driver.DriverID] = !string.IsNullOrWhiteSpace(driver.DriverName)
-                            ? driver.DriverName!
-                            : $"سائق {driver.DriverID}";
+                        fallbackDrivers.Add((driver.DriverID, driver.DriverName, driver.BranchId));
                     }
                 }
             }
 
-            return driverNames;
+            if (fallbackDrivers.Any())
+            {
+                branchIds.AddRange(fallbackDrivers
+                    .Select(f => f.BranchId)
+                    .Where(id => id.HasValue)
+                    .Select(id => id!.Value));
+            }
+
+            Dictionary<int, string> branchesById = new();
+            if (branchIds.Any())
+            {
+                var distinctBranchIds = branchIds.Distinct().ToList();
+                var branches = await _roadContext.CompanyBranches
+                    .AsNoTracking()
+                    .Where(b => distinctBranchIds.Contains(b.Id))
+                    .Select(b => new { b.Id, b.BranchName })
+                    .ToListAsync();
+
+                branchesById = branches.ToDictionary(b => b.Id, b => b.BranchName ?? string.Empty);
+            }
+
+            if (fallbackDrivers.Any())
+            {
+                foreach (var fallback in fallbackDrivers)
+                {
+                    if (driverInfos.ContainsKey(fallback.DriverId))
+                    {
+                        continue;
+                    }
+
+                    driverInfos[fallback.DriverId] = new DriverDisplayInfo
+                    {
+                        Name = !string.IsNullOrWhiteSpace(fallback.DriverName)
+                            ? fallback.DriverName!
+                            : $"سائق {fallback.DriverId}",
+                        BranchId = fallback.BranchId
+                    };
+                }
+            }
+
+            foreach (var info in driverInfos.Values)
+            {
+                if (info.BranchId.HasValue && branchesById.TryGetValue(info.BranchId.Value, out var branchName))
+                {
+                    info.BranchName = branchName;
+                }
+                else if (info.BranchId.HasValue)
+                {
+                    info.BranchName = $"فرع {info.BranchId.Value}";
+                }
+            }
+
+            return driverInfos;
         }
 
         private async Task<JournalEntryLineReportViewModel> BuildJournalEntryLineReportViewModel(DateTime? fromDate, DateTime? toDate, int? branchId, int? accountId, int? costCenterId, JournalEntryStatus? status, string? searchTerm, bool statusFilterProvided, bool includeOptions, bool includeAllLines, int pageNumber = 1, int pageSize = JournalEntryLinesPageSize)
@@ -5612,6 +5707,13 @@ namespace AccountingSystem.Controllers
             public int? AccountId { get; set; }
             public string AccountCode { get; set; } = string.Empty;
             public string AccountName { get; set; } = string.Empty;
+        }
+
+        private class DriverDisplayInfo
+        {
+            public string Name { get; set; } = string.Empty;
+            public int? BranchId { get; set; }
+            public string? BranchName { get; set; }
         }
 
         private class DriverPaymentHeaderInfo

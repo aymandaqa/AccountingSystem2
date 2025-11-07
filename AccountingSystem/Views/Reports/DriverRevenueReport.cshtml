@@ -21,7 +21,11 @@
                             <label class="form-label">إلى تاريخ</label>
                             <input type="date" name="toDate" class="form-control" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
                         </div>
-                        <div class="col-md-6 align-self-end">
+                        <div class="col-md-3">
+                            <label class="form-label">بحث عن السائق</label>
+                            <input type="text" name="driverSearch" class="form-control" value="@Model.SearchTerm" placeholder="ادخل اسم السائق أو الحساب" />
+                        </div>
+                        <div class="col-md-3 align-self-end">
                             <div class="d-flex gap-2 justify-content-end justify-content-md-start">
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-search me-1"></i>عرض التقرير
@@ -32,6 +36,7 @@
                                 <a asp-action="DriverRevenueReportExcel"
                                    asp-route-fromDate="@Model.FromDate.ToString("yyyy-MM-dd")"
                                    asp-route-toDate="@Model.ToDate.ToString("yyyy-MM-dd")"
+                                   asp-route-driverSearch="@Model.SearchTerm"
                                    class="btn btn-success">
                                     <i class="fas fa-file-excel me-1"></i>تصدير Excel
                                 </a>
@@ -54,6 +59,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th>اسم السائق</th>
+                                        <th>الفرع</th>
                                         <th>الحساب</th>
                                         <th class="text-end">إجمالي العائد (@Model.BaseCurrencyCode)</th>
                                     </tr>
@@ -63,6 +69,7 @@
                                     {
                                         <tr>
                                             <td>@row.DriverName</td>
+                                            <td>@(string.IsNullOrWhiteSpace(row.BranchName) ? "-" : row.BranchName)</td>
                                             <td>
                                                 @if (string.IsNullOrWhiteSpace(row.AccountCode))
                                                 {
@@ -79,7 +86,7 @@
                                 </tbody>
                                 <tfoot class="table-secondary">
                                     <tr class="fw-bold">
-                                        <td colspan="2">الإجمالي</td>
+                                        <td colspan="3">الإجمالي</td>
                                         <td class="text-end">@Model.GrandTotal.ToString("N2")</td>
                                     </tr>
                                 </tfoot>
