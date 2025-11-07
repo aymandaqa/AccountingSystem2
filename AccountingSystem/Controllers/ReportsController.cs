@@ -5134,27 +5134,24 @@ namespace AccountingSystem.Controllers
                 return model;
             }
 
-            var revenueLines = await (from driverLine in _context.JournalEntryLines.AsNoTracking()
-                                      where accountIds.Contains(driverLine.AccountId)
-                                      join journalEntry in _context.JournalEntries.AsNoTracking() on driverLine.JournalEntryId equals journalEntry.Id
-                                      where journalEntry.Status == JournalEntryStatus.Posted
-                                          && journalEntry.Date >= normalizedFrom
-                                          && journalEntry.Date <= normalizedTo
-                                      join revenueLine in _context.JournalEntryLines.AsNoTracking() on journalEntry.Id equals revenueLine.JournalEntryId
-                                      join revenueAccount in _context.Accounts.AsNoTracking() on revenueLine.AccountId equals revenueAccount.Id
-                                      where revenueAccount.AccountType == AccountType.Revenue
-                                      select new
-                                      {
-                                          driverLine.AccountId,
-                                          Amount = revenueLine.CreditAmount - revenueLine.DebitAmount
-                                      }).ToListAsync();
+            var driverAccountLines = await (from driverLine in _context.JournalEntryLines.AsNoTracking()
+                                             where accountIds.Contains(driverLine.AccountId)
+                                             join journalEntry in _context.JournalEntries.AsNoTracking() on driverLine.JournalEntryId equals journalEntry.Id
+                                             where journalEntry.Status == JournalEntryStatus.Posted
+                                                 && journalEntry.Date >= normalizedFrom
+                                                 && journalEntry.Date <= normalizedTo
+                                             select new
+                                             {
+                                                 driverLine.AccountId,
+                                                 Amount = driverLine.CreditAmount - driverLine.DebitAmount
+                                             }).ToListAsync();
 
-            if (!revenueLines.Any())
+            if (!driverAccountLines.Any())
             {
                 return model;
             }
 
-            var amountsByAccount = revenueLines
+            var amountsByAccount = driverAccountLines
                 .GroupBy(x => x.AccountId)
                 .ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
 
