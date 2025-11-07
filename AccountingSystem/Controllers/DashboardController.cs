@@ -555,6 +555,43 @@ namespace AccountingSystem.Controllers
                 });
             }
 
+            if (restrictBranches && normalizedBranchIds.Any())
+            {
+                var existingBranchIds = branchMap.Values
+                    .Where(b => b.BranchId.HasValue)
+                    .Select(b => b.BranchId!.Value)
+                    .ToHashSet();
+
+                var missingBranchIds = normalizedBranchIds
+                    .Where(id => !existingBranchIds.Contains(id))
+                    .ToList();
+
+                if (missingBranchIds.Any())
+                {
+                    var branchInfos = await _context.Branches
+                        .AsNoTracking()
+                        .Where(b => missingBranchIds.Contains(b.Id))
+                        .Select(b => new { b.Id, b.NameAr, b.NameEn })
+                        .ToDictionaryAsync(b => b.Id);
+
+                    foreach (var missingBranchId in missingBranchIds)
+                    {
+                        var branchInfo = branchInfos.TryGetValue(missingBranchId, out var info) ? info : null;
+                        var branchName = branchInfo != null
+                            ? (!string.IsNullOrWhiteSpace(branchInfo.NameAr)
+                                ? branchInfo.NameAr!
+                                : branchInfo.NameEn ?? $"فرع {missingBranchId}")
+                            : $"فرع {missingBranchId}";
+
+                        branchMap[$"branch-{missingBranchId}"] = new CustomerBranchAccountNode
+                        {
+                            BranchId = missingBranchId,
+                            BranchName = branchName
+                        };
+                    }
+                }
+            }
+
             foreach (var branchNode in branchMap.Values)
             {
                 branchNode.TotalBalanceBase = Round(branchNode.TotalBalanceBase);
