@@ -145,7 +145,7 @@
                                     </div>
                                 </div>
                                 <div class="col-12 col-lg-4">
-                                    <div class="card shadow-sm border-0 h-100">
+                                    <div class="card account-tree-card shadow-sm border-0 h-100">
                                         <div class="card-header d-flex align-items-center justify-content-between">
                                             <div>
                                                 <h5 class="card-title mb-0"><i class="fas fa-people-arrows ms-2"></i> أرصدة حسابات العملاء حسب الفروع</h5>
@@ -153,84 +153,14 @@
                                             </div>
                                         </div>
                                         <div class="card-body">
-                                            @if (!Model.CustomerAccountBranches.Any())
-                                            {
-                                                <div class="alert alert-info text-center mb-0">لا توجد حسابات عملاء مرتبطة لعرضها.</div>
+                                            @{
+                                                ViewData["FormatCurrency"] = formatCurrency;
+                                                ViewData["BaseCurrencyCode"] = Model.BaseCurrencyCode;
                                             }
-                                            else
-                                            {
-                                                <div class="accordion customer-branch-tree" id="dashboardCustomerBranchTree">
-                                                    @for (var index = 0; index < Model.CustomerAccountBranches.Count; index++)
-                                                    {
-                                                        var branch = Model.CustomerAccountBranches[index];
-                                                        var headingId = $"dashboardCustomerBranchHeading{index}";
-                                                        var collapseId = $"dashboardCustomerBranchCollapse{index}";
-                                                        <div class="accordion-item">
-                                                            <h2 class="accordion-header" id="@headingId">
-                                                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId" aria-expanded="false" aria-controls="@collapseId">
-                                                                    <div class="flex-grow-1 d-flex align-items-center justify-content-between gap-3">
-                                                                        <div>
-                                                                            <div class="fw-semibold">@branch.BranchName</div>
-                                                                            <div class="text-muted small">@branch.Customers.Count @((branch.Customers.Count == 1) ? "حساب" : "حسابات")</div>
-                                                                        </div>
-                                                                        <span class="badge bg-primary-subtle text-primary customer-branch-total">@formatCurrency(branch.TotalBalanceBase) @Model.BaseCurrencyCode</span>
-                                                                    </div>
-                                                                </button>
-                                                            </h2>
-                                                            <div id="@collapseId" class="accordion-collapse collapse" aria-labelledby="@headingId" data-bs-parent="#dashboardCustomerBranchTree">
-                                                                <div class="accordion-body">
-                                                                    @if (!branch.HasCustomers)
-                                                                    {
-                                                                        <div class="text-muted text-center">لا توجد حسابات تابعة لهذا الفرع.</div>
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        <div class="table-responsive">
-                                                                            <table class="table table-sm align-middle table-hover mb-0">
-                                                                                <thead>
-                                                                                    <tr>
-                                                                                        <th>العميل</th>
-                                                                                        <th>الحساب</th>
-                                                                                        <th class="text-end">الرصيد</th>
-                                                                                    </tr>
-                                                                                </thead>
-                                                                                <tbody>
-                                                                                    @foreach (var customer in branch.Customers)
-                                                                                    {
-                                                                                        <tr>
-                                                                                            <td>
-                                                                                                <div class="fw-semibold">@customer.CustomerName</div>
-                                                                                                @if (!string.IsNullOrWhiteSpace(customer.CustomerId))
-                                                                                                {
-                                                                                                    <div class="text-muted small">معرّف العميل: @customer.CustomerId</div>
-                                                                                                }
-                                                                                                @if (!string.IsNullOrWhiteSpace(customer.CustomerContact))
-                                                                                                {
-                                                                                                    <div class="text-muted small">@customer.CustomerContact</div>
-                                                                                                }
-                                                                                            </td>
-                                                                                            <td>
-                                                                                                <div class="fw-semibold">@customer.AccountCode</div>
-                                                                                                <div class="text-muted small">@customer.AccountName</div>
-                                                                                            </td>
-                                                                                            <td class="text-end">
-                                                                                                <div class="fw-semibold">@formatCurrency(customer.BalanceBase) @Model.BaseCurrencyCode</div>
-                                                                                                @if (!string.IsNullOrWhiteSpace(customer.AccountCurrencyCode) && customer.AccountCurrencyCode != Model.BaseCurrencyCode)
-                                                                                                {
-                                                                                                    <div class="text-muted small">@formatCurrency(customer.BalanceOriginal) @customer.AccountCurrencyCode</div>
-                                                                                                }
-                                                                                            </td>
-                                                                                        </tr>
-                                                                                    }
-                                                                                </tbody>
-                                                                            </table>
-                                                                        </div>
-                                                                    }
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    }
-                                                </div>
+                                            @await Html.PartialAsync("~/Views/Dashboard/_CustomerBranchTree.cshtml", Model.CustomerAccountBranches)
+                                            @{
+                                                ViewData["FormatCurrency"] = null;
+                                                ViewData["BaseCurrencyCode"] = null;
                                             }
                                         </div>
                                     </div>
@@ -413,27 +343,6 @@
             border-radius: 18px;
             min-height: 120px;
             background: rgba(79, 70, 229, 0.06);
-        }
-
-        .customer-branch-tree .accordion-button {
-            justify-content: space-between;
-            gap: 1rem;
-        }
-
-            .customer-branch-tree .accordion-button::after {
-                margin-left: 0;
-                margin-right: auto;
-            }
-
-        .customer-branch-tree .accordion-body {
-            background-color: rgba(0, 0, 0, 0.02);
-            border-radius: 0.75rem;
-        }
-
-        .customer-branch-tree .customer-branch-total {
-            font-size: 0.9rem;
-            border-radius: 999px;
-            padding-inline: 0.75rem;
         }
 
         .dashboard-side {
@@ -829,60 +738,6 @@
                     background-color: transparent;
                 }
 
-        .driver-cod-tree {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-            .driver-cod-tree .tree-node {
-                border: 1px solid #e2e8f0;
-                border-radius: 12px;
-                background-color: #ffffff;
-                box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
-            }
-
-            .driver-cod-tree .tree-node-content {
-                padding: 0.85rem 1rem;
-                display: flex;
-                align-items: center;
-                gap: 1rem;
-            }
-
-            .driver-cod-tree .tree-node-info {
-                gap: 0.75rem;
-            }
-
-            .driver-cod-tree .tree-node-text {
-                display: flex;
-                flex-direction: column;
-                gap: 0.25rem;
-            }
-
-            .driver-cod-tree .toggle-btn {
-                width: 32px;
-                height: 32px;
-                border-radius: 50%;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                transition: all 0.2s ease;
-            }
-
-                .driver-cod-tree .toggle-btn:hover {
-                    background-color: rgba(59, 130, 246, 0.12);
-                    color: #2563eb;
-                }
-
-            .driver-cod-tree .tree-node-text .node-title {
-                font-weight: 600;
-                color: #1e293b;
-            }
-
-            .driver-cod-tree .tree-node-text .node-subtitle {
-                color: #64748b;
-            }
-
         .tree-node-metrics {
             display: flex;
             flex-direction: column;
@@ -907,22 +762,66 @@
                 color: #0f172a;
             }
 
-        .driver-cod-tree .tree-children {
-            margin: 0 1.25rem 1.25rem 0;
-            border-right: 2px solid #e2e8f0;
-            padding: 0.75rem 1rem 0.75rem 0;
-            background-color: #f8fafc;
+        .driver-cod-tree,
+        .customer-branch-tree {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
         }
 
-            .driver-cod-tree .tree-children .tree-node {
-                background-color: #ffffff;
+            .driver-cod-tree .tree-node,
+            .customer-branch-tree .tree-node {
                 border: 1px solid #e2e8f0;
-                box-shadow: none;
+                border-radius: 12px;
+                background-color: #ffffff;
+                box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
             }
 
-            .driver-cod-tree .tree-children .tree-node-content {
-                background-color: transparent;
+            .driver-cod-tree .tree-node-content,
+            .customer-branch-tree .tree-node-content {
+                padding: 0.85rem 1rem;
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
             }
+
+            .driver-cod-tree .tree-node-info,
+            .customer-branch-tree .tree-node-info {
+                display: flex;
+                align-items: center;
+                gap: 0.65rem;
+                flex-wrap: wrap;
+            }
+
+            .driver-cod-tree .toggle-btn,
+            .customer-branch-tree .toggle-btn {
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s ease;
+            }
+
+                .driver-cod-tree .toggle-btn:hover,
+                .customer-branch-tree .toggle-btn:hover {
+                    background-color: rgba(79, 70, 229, 0.12);
+                    color: #4f46e5;
+                }
+
+            .driver-cod-tree .tree-children,
+            .customer-branch-tree .tree-children {
+                margin: 0 1.25rem 1rem 0;
+                border-right: 2px solid #e2e8f0;
+                padding: 0.75rem 1rem 0.75rem 0;
+                background-color: #f8fafc;
+            }
+
+                .driver-cod-tree .tree-children .tree-node,
+                .customer-branch-tree .tree-children .tree-node {
+                    box-shadow: none;
+                }
 
         .cashbox-tree .account-code {
             font-weight: 600;
@@ -1443,6 +1342,25 @@
                     .always(function () {
                         $button.prop('disabled', false);
                     });
+            });
+
+            $(document).on('click', '#customerBranchTree .toggle-btn', function () {
+                var $button = $(this);
+                var $node = $button.closest('.tree-node');
+                var $children = $node.find('> .tree-children');
+
+                if (!$children.length) {
+                    return;
+                }
+
+                var isVisible = $children.is(':visible');
+                if (isVisible) {
+                    $children.slideUp(200);
+                    $button.html('<i class="fas fa-plus"></i>');
+                } else {
+                    $children.slideDown(200);
+                    $button.html('<i class="fas fa-minus"></i>');
+                }
             });
 
             var $accountTypeTree = $('#dashboardAccountTypeTree');
