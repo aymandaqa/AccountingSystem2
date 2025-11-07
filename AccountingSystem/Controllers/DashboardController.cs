@@ -1,13 +1,16 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.Common;
+using System.Linq;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
-using AccountingSystem.ViewModels;
-using System.Linq;
-using System.Collections.Generic;
-using System.Security.Claims;
 using AccountingSystem.Services;
+using AccountingSystem.ViewModels;
 
 namespace AccountingSystem.Controllers
 {
@@ -15,12 +18,14 @@ namespace AccountingSystem.Controllers
     public class DashboardController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly RoadFnDbContext _roadContext;
         private readonly ILogger<DashboardController> _logger;
         private readonly ICurrencyService _currencyService;
 
-        public DashboardController(ApplicationDbContext context, ILogger<DashboardController> logger, ICurrencyService currencyService)
+        public DashboardController(ApplicationDbContext context, RoadFnDbContext roadContext, ILogger<DashboardController> logger, ICurrencyService currencyService)
         {
             _context = context;
+            _roadContext = roadContext;
             _logger = logger;
             _currencyService = currencyService;
         }
@@ -39,6 +44,12 @@ namespace AccountingSystem.Controllers
             }
 
             var treeData = await ComputeDashboardTreeAsync(userBranchIds, branchId, fromDate, toDate, currencyId);
+
+            var driverCodBranchIds = branchId.HasValue
+                ? new List<int> { branchId.Value }
+                : new List<int>(userBranchIds);
+
+            var driverCodSummaries = await GetDriverCodBranchSummariesAsync(driverCodBranchIds);
 
             var accountTypeTrees = treeData.RootNodes
                 .GroupBy(n => n.AccountType)
@@ -87,7 +98,8 @@ namespace AccountingSystem.Controllers
                 CashBoxParentAccountConfigured = treeData.CashBoxParentAccountConfigured,
                 ParentAccountTree = treeData.ParentAccountTree,
                 ParentAccountConfigured = treeData.ParentAccountConfigured,
-                SelectedParentAccountName = treeData.SelectedParentAccountName
+                SelectedParentAccountName = treeData.SelectedParentAccountName,
+                DriverCodBranchSummaries = driverCodSummaries
             };
 
             viewModel.NetIncome = viewModel.TotalRevenues - viewModel.TotalExpenses;
@@ -253,6 +265,171 @@ namespace AccountingSystem.Controllers
                 .ToListAsync();
 
             return Json(branches);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> LoadDriverCodBranchDetails(int branchId)
+        {
+            if (branchId <= 0)
+            {
+                return PartialView("~/Views/Dashboard/_DriverCodBranchDetails.cshtml", new List<DriverCodBranchDetailViewModel>());
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userBranchIds = await _context.UserBranches
+                .Where(ub => ub.UserId == userId)
+                .Select(ub => ub.BranchId)
+                .ToListAsync();
+
+            if (userBranchIds.Any() && !userBranchIds.Contains(branchId))
+            {
+                return PartialView("~/Views/Dashboard/_DriverCodBranchDetails.cshtml", new List<DriverCodBranchDetailViewModel>());
+            }
+
+            var details = await GetDriverCodBranchDetailsAsync(branchId);
+
+            return PartialView("~/Views/Dashboard/_DriverCodBranchDetails.cshtml", details);
+        }
+
+        private async Task<List<DriverCodBranchSummaryViewModel>> GetDriverCodBranchSummariesAsync(List<int> allowedBranchIds)
+        {
+            var results = new List<DriverCodBranchSummaryViewModel>();
+            var restrictBranches = allowedBranchIds?.Any() == true;
+
+            const string sql = @"select sum(p.ShipmentTotal) as ShipmentTotal,
+                                        sum(p.ShipmentCod) as ShipmentCod,
+                                        b.NameAr as Branch,
+                                        b.Id as BranchId
+                                 from  CARGOTest.dbo.DriverPayCOD p
+                                 left join AccountingSystemDbNew.dbo.Branches b on b.Code = p.ActiveBranchID
+                                 group by b.NameAr, b.Id";
+
+            var connection = _roadContext.Database.GetDbConnection();
+            var shouldClose = connection.State != ConnectionState.Open;
+
+            try
+            {
+                if (shouldClose)
+                {
+                    await connection.OpenAsync();
+                }
+
+                using var command = connection.CreateCommand();
+                command.CommandText = sql;
+                command.CommandType = CommandType.Text;
+
+                using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var branchIdValue = reader.IsDBNull(3) ? (int?)null : reader.GetInt32(3);
+
+                    if (!branchIdValue.HasValue)
+                    {
+                        continue;
+                    }
+
+                    if (restrictBranches && !allowedBranchIds.Contains(branchIdValue.Value))
+                    {
+                        continue;
+                    }
+
+                    var branchName = reader.IsDBNull(2) ? "فرع غير معروف" : reader.GetString(2);
+
+                    var summary = new DriverCodBranchSummaryViewModel
+                    {
+                        BranchId = branchIdValue.Value,
+                        BranchName = branchName,
+                        ShipmentTotal = reader.IsDBNull(0) ? 0m : Convert.ToDecimal(reader.GetValue(0)),
+                        ShipmentCod = reader.IsDBNull(1) ? 0m : Convert.ToDecimal(reader.GetValue(1))
+                    };
+
+                    results.Add(summary);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load Driver COD branch summaries");
+            }
+            finally
+            {
+                if (shouldClose && connection.State == ConnectionState.Open)
+                {
+                    await connection.CloseAsync();
+                }
+            }
+
+            return results
+                .OrderByDescending(r => r.ShipmentCod)
+                .ThenBy(r => r.BranchName)
+                .ToList();
+        }
+
+        private async Task<List<DriverCodBranchDetailViewModel>> GetDriverCodBranchDetailsAsync(int branchId)
+        {
+            var results = new List<DriverCodBranchDetailViewModel>();
+
+            const string sql = @"select   p.ShipmentTotal,
+                                            p.ShipmentCod,
+                                            b.NameAr   as Branch,
+                                            b.Id as BranchId,
+                                            p.DriverName,
+                                            p.DriverID
+                                     from   CARGOTest.dbo.DriverPayCOD p
+                                     left join AccountingSystemDbNew.dbo.Branches b on b.Code = p.ActiveBranchID
+                                     where b.Id = @BranchId";
+
+            var connection = _roadContext.Database.GetDbConnection();
+            var shouldClose = connection.State != ConnectionState.Open;
+
+            try
+            {
+                if (shouldClose)
+                {
+                    await connection.OpenAsync();
+                }
+
+                using var command = connection.CreateCommand();
+                command.CommandText = sql;
+                command.CommandType = CommandType.Text;
+
+                var parameter = command.CreateParameter();
+                parameter.ParameterName = "@BranchId";
+                parameter.Value = branchId;
+                parameter.DbType = DbType.Int32;
+                command.Parameters.Add(parameter);
+
+                using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var detail = new DriverCodBranchDetailViewModel
+                    {
+                        BranchId = branchId,
+                        BranchName = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                        DriverName = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
+                        DriverId = reader.IsDBNull(5) ? string.Empty : reader.GetValue(5)?.ToString() ?? string.Empty,
+                        ShipmentTotal = reader.IsDBNull(0) ? 0m : Convert.ToDecimal(reader.GetValue(0)),
+                        ShipmentCod = reader.IsDBNull(1) ? 0m : Convert.ToDecimal(reader.GetValue(1))
+                    };
+
+                    results.Add(detail);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load Driver COD branch details for branch {BranchId}", branchId);
+            }
+            finally
+            {
+                if (shouldClose && connection.State == ConnectionState.Open)
+                {
+                    await connection.CloseAsync();
+                }
+            }
+
+            return results
+                .OrderByDescending(r => r.ShipmentCod)
+                .ThenBy(r => r.DriverName)
+                .ToList();
         }
 
         private async Task<DashboardTreeComputationResult> ComputeDashboardTreeAsync(List<int> userBranchIds, int? branchId, DateTime? fromDate, DateTime? toDate, int? currencyId)
