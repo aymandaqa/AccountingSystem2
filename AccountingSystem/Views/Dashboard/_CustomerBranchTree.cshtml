@@ -1,0 +1,81 @@
+@model IReadOnlyList<AccountingSystem.ViewModels.CustomerBranchAccountNode>
+
+@{
+    var baseCurrencyCode = ViewData["BaseCurrencyCode"] as string ?? string.Empty;
+    var formatCurrency = ViewData["FormatCurrency"] as Func<decimal, string> ?? (value => value.ToString("N2"));
+}
+
+@if (Model == null || !Model.Any())
+{
+    <div class="alert alert-info text-center mb-0">
+        لا توجد حسابات عملاء مرتبطة لعرضها.
+    </div>
+}
+else
+{
+    <div id="customerBranchTree" class="tree-container customer-branch-tree">
+        @for (var index = 0; index < Model.Count; index++)
+        {
+            var branch = Model[index];
+            <div class="tree-node level-0" data-has-children="@branch.HasCustomers.ToString().ToLower()">
+                <div class="tree-node-content">
+                    <div class="tree-node-info">
+                        @if (branch.HasCustomers)
+                        {
+                            <button class="toggle-btn" type="button" aria-label="عرض تفاصيل عملاء الفرع">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        }
+                        else
+                        {
+                            <span style="width: 20px; display: inline-block;"></span>
+                        }
+                        <span class="account-name">@branch.BranchName</span>
+                        <small class="text-muted ms-2">@branch.Customers.Count @((branch.Customers.Count == 1) ? "حساب" : "حسابات")</small>
+                    </div>
+                    <div class="tree-node-metrics text-end ms-auto">
+                        <div class="metric">
+                            <span class="metric-label">إجمالي الرصيد</span>
+                            <span class="metric-value">@formatCurrency(branch.TotalBalanceBase) @baseCurrencyCode</span>
+                        </div>
+                    </div>
+                </div>
+
+                @if (branch.HasCustomers)
+                {
+                    <div class="tree-children" style="display:none;" data-loaded="true">
+                        @foreach (var customer in branch.Customers)
+                        {
+                            <div class="tree-node level-1" data-has-children="false">
+                                <div class="tree-node-content">
+                                    <div class="tree-node-info">
+                                        <span style="width: 20px; display: inline-block;"></span>
+                                        <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2">
+                                            <span class="account-name">@customer.CustomerName</span>
+                                            <small class="text-muted">@customer.AccountCode - @customer.AccountName</small>
+                                            @if (!string.IsNullOrWhiteSpace(customer.CustomerId))
+                                            {
+                                                <small class="text-muted">معرّف: @customer.CustomerId</small>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(customer.CustomerContact))
+                                            {
+                                                <small class="text-muted">@customer.CustomerContact</small>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="text-end ms-auto">
+                                        <div class="fw-semibold">@formatCurrency(customer.BalanceBase) @baseCurrencyCode</div>
+                                        @if (!string.IsNullOrWhiteSpace(customer.AccountCurrencyCode) && !string.Equals(customer.AccountCurrencyCode, baseCurrencyCode, System.StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <small class="text-muted">@formatCurrency(customer.BalanceOriginal) @customer.AccountCurrencyCode</small>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
