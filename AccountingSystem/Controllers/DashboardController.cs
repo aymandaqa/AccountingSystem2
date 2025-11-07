@@ -281,7 +281,12 @@ namespace AccountingSystem.Controllers
                 .Select(ub => ub.BranchId)
                 .ToListAsync();
 
-            if (userBranchIds.Any() && !userBranchIds.Contains(branchId))
+            if (!userBranchIds.Any())
+            {
+                return PartialView("~/Views/Dashboard/_DriverCodBranchDetails.cshtml", new List<DriverCodBranchDetailViewModel>());
+            }
+
+            if (!userBranchIds.Contains(branchId))
             {
                 return PartialView("~/Views/Dashboard/_DriverCodBranchDetails.cshtml", new List<DriverCodBranchDetailViewModel>());
             }
