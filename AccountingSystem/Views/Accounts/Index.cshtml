@@ -125,16 +125,64 @@
                                 </tbody>
                             </table>
                         </div>
-                        <nav>
-                            <ul class="pagination justify-content-center mt-3">
-                                @for (int i = 1; i <= Model.TotalPages; i++)
-                                {
-                                    <li class="page-item @(i == Model.Page ? "active" : "")">
-                                        <a class="page-link" href="?page=@i&searchTerm=@Model.SearchTerm">@i</a>
+                        @if (Model.TotalPages > 1)
+                        {
+                            var currentPage = Model.Page;
+                            var totalPages = Model.TotalPages;
+                            var windowSize = 2;
+                            var startPage = Math.Max(1, currentPage - windowSize);
+                            var endPage = Math.Min(totalPages, currentPage + windowSize);
+
+                            if (endPage - startPage < windowSize * 2)
+                            {
+                                var adjustment = windowSize * 2 - (endPage - startPage);
+                                startPage = Math.Max(1, startPage - adjustment / 2 - adjustment % 2);
+                                endPage = Math.Min(totalPages, endPage + adjustment / 2);
+                            }
+
+                            <nav aria-label="صفحات الحسابات">
+                                <ul class="pagination justify-content-center mt-3 flex-wrap gap-1">
+                                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                                        <a class="page-link" asp-action="Index" asp-route-page="@(currentPage <= 1 ? 1 : currentPage - 1)" asp-route-searchTerm="@Model.SearchTerm" tabindex="@(currentPage == 1 ? "-1" : "0")">السابق</a>
                                     </li>
-                                }
-                            </ul>
-                        </nav>
+
+                                    @if (startPage > 1)
+                                    {
+                                        <li class="page-item @(currentPage == 1 ? "active" : "")">
+                                            <a class="page-link" asp-action="Index" asp-route-page="1" asp-route-searchTerm="@Model.SearchTerm">1</a>
+                                        </li>
+
+                                        if (startPage > 2)
+                                        {
+                                            <li class="page-item disabled"><span class="page-link">…</span></li>
+                                        }
+                                    }
+
+                                    @for (var i = startPage; i <= endPage; i++)
+                                    {
+                                        <li class="page-item @(i == currentPage ? "active" : "")">
+                                            <a class="page-link" asp-action="Index" asp-route-page="@i" asp-route-searchTerm="@Model.SearchTerm">@i</a>
+                                        </li>
+                                    }
+
+                                    @if (endPage < totalPages)
+                                    {
+                                        if (endPage < totalPages - 1)
+                                        {
+                                            <li class="page-item disabled"><span class="page-link">…</span></li>
+                                        }
+
+                                        <li class="page-item @(currentPage == totalPages ? "active" : "")">
+                                            <a class="page-link" asp-action="Index" asp-route-page="@totalPages" asp-route-searchTerm="@Model.SearchTerm">@totalPages</a>
+                                        </li>
+                                    }
+
+                                    <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                                        <a class="page-link" asp-action="Index" asp-route-page="@(currentPage >= totalPages ? totalPages : currentPage + 1)" asp-route-searchTerm="@Model.SearchTerm" tabindex="@(currentPage == totalPages ? "-1" : "0")">التالي</a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        }
                     }
                     else
                     {
