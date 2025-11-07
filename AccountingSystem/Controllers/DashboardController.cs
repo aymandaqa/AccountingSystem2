@@ -52,7 +52,8 @@ namespace AccountingSystem.Controllers
                 : new List<int>(userBranchIds);
 
             var driverCodSummaries = await GetDriverCodBranchSummariesAsync(allowedBranchIds);
-            var customerAccountBranches = await GetCustomerAccountBranchesAsync(allowedBranchIds, treeData.BaseCurrency);
+            // Always display customer account balances across all branches, not just the user's assigned branches.
+            var customerAccountBranches = await GetCustomerAccountBranchesAsync(new List<int>(), treeData.BaseCurrency);
 
             var accountTypeTrees = treeData.RootNodes
                 .GroupBy(n => n.AccountType)
