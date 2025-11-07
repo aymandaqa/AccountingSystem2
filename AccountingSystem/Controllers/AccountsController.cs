@@ -115,6 +115,8 @@ namespace AccountingSystem.Controllers
                 }
             }
 
+            query = query.Where(a => a.IsActive);
+
             var nodes = await query
                 .OrderBy(a => a.IsActive ? 0 : 1)
                 .ThenBy(a => a.Code)
@@ -133,7 +135,7 @@ namespace AccountingSystem.Controllers
                     CanPostTransactions = a.CanPostTransactions,
                     ParentId = a.ParentId,
                     Level = a.Level,
-                    HasChildren = a.Children.Any()
+                    HasChildren = a.Children.Any(c => c.IsActive)
                 })
                 .ToListAsync();
 
@@ -167,6 +169,8 @@ namespace AccountingSystem.Controllers
                 }
             }
 
+            query = query.Where(a => a.IsActive);
+
             var accounts = await query
                 .OrderBy(a => a.IsActive ? 0 : 1)
                 .ThenBy(a => a.Code)
@@ -188,7 +192,7 @@ namespace AccountingSystem.Controllers
                     BranchId = a.BranchId,
                     BranchName = a.Branch != null ? a.Branch.NameAr : string.Empty,
                     Level = a.Level,
-                    HasChildren = a.Children.Any(),
+                    HasChildren = a.Children.Any(c => c.IsActive),
                     HasTransactions = false,
                     CurrencyCode = a.Currency.Code
                 })
@@ -207,7 +211,7 @@ namespace AccountingSystem.Controllers
             foreach (var type in accountTypes)
             {
                 var hasChildren = await _context.Accounts
-                    .AnyAsync(a => a.ParentId == null && a.AccountType == type);
+                    .AnyAsync(a => a.ParentId == null && a.AccountType == type && a.IsActive);
 
                 if (!hasChildren)
                 {
@@ -249,10 +253,10 @@ namespace AccountingSystem.Controllers
                 CanPostTransactions = account.CanPostTransactions,
                 ParentId = account.ParentId,
                 Level = account.Level,
-                HasChildren = account.Children.Any(),
+                HasChildren = account.Children.Any(c => c.IsActive),
                 Children = account.Children
-                    .OrderBy(c => c.IsActive ? 0 : 1)
-                    .ThenBy(c => c.Code)
+                    .Where(c => c.IsActive)
+                    .OrderBy(c => c.Code)
                     .Select(MapToTreeNode)
                     .ToList()
             };
