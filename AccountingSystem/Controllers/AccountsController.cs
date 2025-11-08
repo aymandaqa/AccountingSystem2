@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
@@ -97,6 +98,16 @@ namespace AccountingSystem.Controllers
         [HttpGet]
         public async Task<IActionResult> LoadTreeNodes(int? parentId, AccountType? accountType)
         {
+            var visibilityInfo = await BuildAccountVisibilityInfoAsync();
+            var visibleAccountIds = visibilityInfo.GetVisibleAccountIds(accountType);
+
+            if (!visibleAccountIds.Any())
+            {
+                return PartialView("_AccountTreeNode", new List<AccountTreeNodeViewModel>());
+            }
+
+            var visibleAccountIdsList = visibleAccountIds.ToList();
+
             IQueryable<Account> query = _context.Accounts
                 .Include(a => a.Parent)
                 .Include(a => a.Currency);
@@ -115,7 +126,7 @@ namespace AccountingSystem.Controllers
                 }
             }
 
-            query = query.Where(a => a.IsActive);
+            query = query.Where(a => visibleAccountIdsList.Contains(a.Id));
 
             var nodes = await query
                 .OrderBy(a => a.IsActive ? 0 : 1)
@@ -135,7 +146,7 @@ namespace AccountingSystem.Controllers
                     CanPostTransactions = a.CanPostTransactions,
                     ParentId = a.ParentId,
                     Level = a.Level,
-                    HasChildren = a.Children.Any(c => c.IsActive)
+                    HasChildren = a.Children.Any(c => visibleAccountIdsList.Contains(c.Id))
                 })
                 .ToListAsync();
 
@@ -150,6 +161,16 @@ namespace AccountingSystem.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAccountChildren(int? parentId, AccountType? accountType)
         {
+            var visibilityInfo = await BuildAccountVisibilityInfoAsync();
+            var visibleAccountIds = visibilityInfo.GetVisibleAccountIds(accountType);
+
+            if (!visibleAccountIds.Any())
+            {
+                return PartialView("_AccountTreeManageList", new List<AccountViewModel>());
+            }
+
+            var visibleAccountIdsList = visibleAccountIds.ToList();
+
             IQueryable<Account> query = _context.Accounts
                 .Include(a => a.Branch)
                 .Include(a => a.Currency)
@@ -169,7 +190,7 @@ namespace AccountingSystem.Controllers
                 }
             }
 
-            query = query.Where(a => a.IsActive);
+            query = query.Where(a => visibleAccountIdsList.Contains(a.Id));
 
             var accounts = await query
                 .OrderBy(a => a.IsActive ? 0 : 1)
@@ -192,7 +213,7 @@ namespace AccountingSystem.Controllers
                     BranchId = a.BranchId,
                     BranchName = a.Branch != null ? a.Branch.NameAr : string.Empty,
                     Level = a.Level,
-                    HasChildren = a.Children.Any(c => c.IsActive),
+                    HasChildren = a.Children.Any(c => visibleAccountIdsList.Contains(c.Id)),
                     HasTransactions = false,
                     CurrencyCode = a.Currency.Code
                 })
@@ -203,6 +224,7 @@ namespace AccountingSystem.Controllers
 
         private async Task<List<AccountTreeNodeViewModel>> BuildRootTreeNodesAsync()
         {
+            var visibilityInfo = await BuildAccountVisibilityInfoAsync();
             var accountTypes = Enum.GetValues(typeof(AccountType))
                 .Cast<AccountType>();
 
@@ -210,10 +232,9 @@ namespace AccountingSystem.Controllers
 
             foreach (var type in accountTypes)
             {
-                var hasChildren = await _context.Accounts
-                    .AnyAsync(a => a.ParentId == null && a.AccountType == type && a.IsActive);
+                var visibleIds = visibilityInfo.GetVisibleAccountIds(type);
 
-                if (!hasChildren)
+                if (!visibleIds.Any())
                 {
                     continue;
                 }
@@ -234,6 +255,137 @@ namespace AccountingSystem.Controllers
             }
 
             return treeNodes;
+        }
+
+        private async Task<AccountVisibilityInfo> BuildAccountVisibilityInfoAsync()
+        {
+            var accounts = await _context.Accounts
+                .Select(a => new AccountHierarchyInfo
+                {
+                    Id = a.Id,
+                    ParentId = a.ParentId,
+                    IsActive = a.IsActive,
+                    AccountType = a.AccountType
+                })
+                .ToListAsync();
+
+            var accountsById = accounts.ToDictionary(a => a.Id);
+            var rootTypeCache = new Dictionary<int, AccountType>();
+            var visibleAccountIds = new HashSet<int>();
+            var visibleAccountIdsByType = new Dictionary<AccountType, HashSet<int>>();
+
+            foreach (var account in accounts.Where(a => a.IsActive))
+            {
+                var rootType = ResolveRootType(account.Id);
+
+                if (!visibleAccountIdsByType.TryGetValue(rootType, out var idsForType))
+                {
+                    idsForType = new HashSet<int>();
+                    visibleAccountIdsByType[rootType] = idsForType;
+                }
+
+                AddAccountAndAncestors(account.Id, idsForType);
+                AddAccountAndAncestors(account.Id, visibleAccountIds);
+            }
+
+            return new AccountVisibilityInfo(visibleAccountIds, visibleAccountIdsByType);
+
+            AccountType ResolveRootType(int accountId)
+            {
+                if (rootTypeCache.TryGetValue(accountId, out var cachedType))
+                {
+                    return cachedType;
+                }
+
+                var traversalPath = new List<int>();
+                var currentId = accountId;
+                var rootType = accountsById.TryGetValue(accountId, out var startingAccount)
+                    ? startingAccount.AccountType
+                    : AccountType.Asset;
+
+                while (true)
+                {
+                    traversalPath.Add(currentId);
+
+                    if (!accountsById.TryGetValue(currentId, out var currentAccount))
+                    {
+                        break;
+                    }
+
+                    rootType = currentAccount.AccountType;
+
+                    if (!currentAccount.ParentId.HasValue)
+                    {
+                        break;
+                    }
+
+                    currentId = currentAccount.ParentId.Value;
+                }
+
+                foreach (var id in traversalPath)
+                {
+                    rootTypeCache[id] = rootType;
+                }
+
+                return rootType;
+            }
+
+            void AddAccountAndAncestors(int accountId, HashSet<int> target)
+            {
+                var currentId = accountId;
+
+                while (true)
+                {
+                    if (!target.Add(currentId))
+                    {
+                        break;
+                    }
+
+                    if (!accountsById.TryGetValue(currentId, out var currentAccount) || !currentAccount.ParentId.HasValue)
+                    {
+                        break;
+                    }
+
+                    currentId = currentAccount.ParentId.Value;
+                }
+            }
+        }
+
+        private sealed class AccountVisibilityInfo
+        {
+            private readonly HashSet<int> _visibleAccountIds;
+            private readonly Dictionary<AccountType, HashSet<int>> _visibleAccountIdsByType;
+
+            public AccountVisibilityInfo(
+                HashSet<int> visibleAccountIds,
+                Dictionary<AccountType, HashSet<int>> visibleAccountIdsByType)
+            {
+                _visibleAccountIds = visibleAccountIds;
+                _visibleAccountIdsByType = visibleAccountIdsByType;
+            }
+
+            public IReadOnlyCollection<int> GetVisibleAccountIds(AccountType? accountType)
+            {
+                if (accountType.HasValue)
+                {
+                    if (_visibleAccountIdsByType.TryGetValue(accountType.Value, out var ids))
+                    {
+                        return ids;
+                    }
+
+                    return Array.Empty<int>();
+                }
+
+                return _visibleAccountIds;
+            }
+        }
+
+        private sealed class AccountHierarchyInfo
+        {
+            public int Id { get; set; }
+            public int? ParentId { get; set; }
+            public bool IsActive { get; set; }
+            public AccountType AccountType { get; set; }
         }
 
         private AccountTreeNodeViewModel MapToTreeNode(Account account)
