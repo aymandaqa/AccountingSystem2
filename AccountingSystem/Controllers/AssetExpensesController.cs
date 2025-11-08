@@ -26,17 +26,20 @@ namespace AccountingSystem.Controllers
         private readonly UserManager<User> _userManager;
         private readonly IWorkflowService _workflowService;
         private readonly IAssetExpenseProcessor _assetExpenseProcessor;
+        private readonly IAttachmentStorageService _attachmentStorageService;
 
         public AssetExpensesController(
             ApplicationDbContext context,
             UserManager<User> userManager,
             IWorkflowService workflowService,
-            IAssetExpenseProcessor assetExpenseProcessor)
+            IAssetExpenseProcessor assetExpenseProcessor,
+            IAttachmentStorageService attachmentStorageService)
         {
             _context = context;
             _userManager = userManager;
             _workflowService = workflowService;
             _assetExpenseProcessor = assetExpenseProcessor;
+            _attachmentStorageService = attachmentStorageService;
         }
 
         private async Task<List<int>> GetUserBranchIdsAsync(string userId)
@@ -174,6 +177,8 @@ namespace AccountingSystem.Controllers
                     IsCash = e.IsCash,
                     Date = e.Date,
                     Notes = e.Notes,
+                    AttachmentFileName = e.AttachmentFileName,
+                    AttachmentFilePath = e.AttachmentFilePath,
                     JournalEntryId = journalEntryId,
                     JournalEntryNumber = journalEntryNumber,
                     WorkflowStatus = instance?.Status
@@ -452,6 +457,8 @@ namespace AccountingSystem.Controllers
                 model.ExchangeRate = currency?.ExchangeRate ?? 1m;
             }
 
+            var attachmentResult = await _attachmentStorageService.SaveAsync(model.Attachment, "asset-expenses");
+
             var assetExpense = new AssetExpense
             {
                 AssetId = model.AssetId,
@@ -462,6 +469,8 @@ namespace AccountingSystem.Controllers
                 ExchangeRate = model.ExchangeRate,
                 Date = model.Date,
                 Notes = model.Notes,
+                AttachmentFileName = attachmentResult?.FileName,
+                AttachmentFilePath = attachmentResult?.FilePath,
                 IsCash = model.IsCash,
                 CreatedById = user.Id
             };
@@ -556,6 +565,8 @@ namespace AccountingSystem.Controllers
                 _context.WorkflowInstances.Remove(workflowInstance);
             }
 
+            _attachmentStorageService.Delete(expense.AttachmentFilePath);
+
             _context.AssetExpenses.Remove(expense);
 
             await _context.SaveChangesAsync();
@@ -602,6 +613,7 @@ namespace AccountingSystem.Controllers
 
         private async Task RemoveAssetExpenseAsync(AssetExpense assetExpense)
         {
+            _attachmentStorageService.Delete(assetExpense.AttachmentFilePath);
             _context.AssetExpenses.Remove(assetExpense);
             await _context.SaveChangesAsync();
         }
