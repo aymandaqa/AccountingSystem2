@@ -61,7 +61,7 @@
 
                         <!-- جدول بنود القيد -->
                         <div class="card border-secondary mb-3">
-                            <div class="card-header bg-light">
+                        <div class="card-header bg-light">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <h6 class="mb-0">بنود القيد</h6>
                                     <button type="button" class="btn btn-sm btn-success" onclick="addJournalLine()">
@@ -97,6 +97,48 @@
                                     </table>
                                 </div>
 
+                                <template id="journalLineTemplate">
+                                    <tr>
+                                        <td>
+                                            <select data-name-template="Lines[__index__].AccountId" class="form-select account-select" required>
+                                                <option value="">اختر الحساب</option>
+                                                @if (Model?.Accounts != null)
+                                                {
+                                                    @foreach (var account in Model.Accounts)
+                                                    {
+                                                        <option value="@account.Value">@account.Text</option>
+                                                    }
+                                                }
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input data-name-template="Lines[__index__].Description" value="-" type="text" class="form-control" placeholder="بيان البند" />
+                                        </td>
+                                        <td>
+                                            <select data-name-template="Lines[__index__].CostCenterId" class="form-select cost-center-select" data-placeholder="بدون">
+                                                @if (Model?.CostCenters != null)
+                                                {
+                                                    @foreach (var costCenter in Model.CostCenters)
+                                                    {
+                                                        <option value="@costCenter.Value">@costCenter.Text</option>
+                                                    }
+                                                }
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input data-name-template="Lines[__index__].DebitAmount" value="0" type="number" step="0.01" min="0" class="form-control debit-amount" onchange="calculateTotals()" />
+                                        </td>
+                                        <td>
+                                            <input data-name-template="Lines[__index__].CreditAmount" value="0" type="number" step="0.01" min="0" class="form-control credit-amount" onchange="calculateTotals()" />
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="removeJournalLine(this)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+
                                 <!-- تنبيه التوازن -->
                                 <div id="balanceAlert" class="alert alert-warning d-none">
                                     <i class="fas fa-exclamation-triangle me-2"></i>
@@ -130,54 +172,37 @@
         let lineIndex = 0;
 
         function addJournalLine() {
+            const template = document.getElementById('journalLineTemplate');
             const tbody = document.getElementById('journalLinesBody');
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>
-                    <select name="Lines[${lineIndex}].AccountId" class="form-select account-select" required>
-                        <option value="">اختر الحساب</option>
-        @if (Model?.Accounts != null)
-        {
-            @foreach (var account in Model.Accounts)
-            {
-                                                <option value="@account.Value">@account.Text</option>
+
+            if (!template || !tbody) {
+                return;
             }
-        }
-                    </select>
-                </td>
-                <td>
-                        <input name="Lines[${lineIndex}].Description" value="-"  type="text" class="form-control" placeholder="بيان البند" />
-                </td>
-                <td>
-                    <select name="Lines[${lineIndex}].CostCenterId" class="form-select cost-center-select" data-placeholder="بدون">
-                        @if (Model?.CostCenters != null)
-        {
-            @foreach (var costCenter in Model.CostCenters)
-            {
-                                            <option value="@costCenter.Value">@costCenter.Text</option>
+
+            const fragment = template.content.cloneNode(true);
+            const row = fragment.querySelector('tr');
+
+            if (!row) {
+                return;
             }
-        }
-                    </select>
-                </td>
-                <td>
-                        <input name="Lines[${lineIndex}].DebitAmount" value="0"  type="number" step="0.01" min="0" class="form-control debit-amount" onchange="calculateTotals()" />
-                </td>
-                <td>
-                        <input name="Lines[${lineIndex}].CreditAmount" value="0"  type="number" step="0.01" min="0" class="form-control credit-amount" onchange="calculateTotals()" />
-                </td>
-                <td>
-                    <button type="button" class="btn btn-sm btn-danger" onclick="removeJournalLine(this)">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            `;
+
+            row.querySelectorAll('[data-name-template]').forEach(element => {
+                const templateName = element.getAttribute('data-name-template');
+                if (templateName) {
+                    element.setAttribute('name', templateName.replace(/__index__/g, lineIndex));
+                    element.removeAttribute('data-name-template');
+                }
+            });
+
             tbody.appendChild(row);
+
             $(row).find('.account-select').select2({ width: '100%' });
             $(row).find('.cost-center-select').select2({
                 width: '100%',
                 allowClear: true,
                 placeholder: 'بدون'
             });
+
             lineIndex++;
             calculateTotals();
         }
