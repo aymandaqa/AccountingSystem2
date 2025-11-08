@@ -148,7 +148,7 @@ namespace AccountingSystem.Controllers
                         var depreciationFrequencyColumn = GetOptionalColumn("دورية الإهلاك", "Depreciation Frequency");
                         var purchaseDateColumn = GetOptionalColumn("تاريخ الشراء", "Purchase Date");
 
-                        IXLCell? GetCell(IXLRow row, int? columnIndex)
+                        IXLCell? GetCell(IXLRangeRow row, int? columnIndex)
                         {
                             if (!columnIndex.HasValue || columnIndex.Value <= 0)
                             {

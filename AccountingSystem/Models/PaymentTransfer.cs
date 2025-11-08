@@ -30,6 +30,12 @@ namespace AccountingSystem.Models
 
         public string? CurrencyBreakdownJson { get; set; }
 
+        [StringLength(260)]
+        public string? AttachmentFileName { get; set; }
+
+        [StringLength(500)]
+        public string? AttachmentFilePath { get; set; }
+
         public TransferStatus Status { get; set; } = TransferStatus.Pending;
 
         public int? JournalEntryId { get; set; }

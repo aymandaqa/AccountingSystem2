@@ -4,7 +4,7 @@
 }
 
 <div class="container-fluid">
-    <form asp-action="Create" method="post" class="row g-3">
+    <form asp-action="Create" method="post" class="row g-3" enctype="multipart/form-data">
         <div class="col-12">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
         </div>
@@ -61,6 +61,11 @@
             <label class="form-label">ملاحظات</label>
             <textarea asp-for="Notes" class="form-control"></textarea>
             <span asp-validation-for="Notes" class="text-danger"></span>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">المرفق (اختياري)</label>
+            <input type="file" name="attachment" class="form-control" />
+            <div class="form-text">أرفق صورة أو ملف لدعم السند عند الحاجة.</div>
         </div>
         <div class="col-12">
             <button type="submit" class="btn btn-primary">حفظ</button>

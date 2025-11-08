@@ -3,6 +3,7 @@ using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -21,14 +22,16 @@ namespace AccountingSystem.Controllers
         private readonly UserManager<User> _userManager;
         private readonly IAuthorizationService _authorizationService;
         private readonly IJournalEntryService _journalEntryService;
+        private readonly IAttachmentStorageService _attachmentStorageService;
         private const string IntermediaryAccountSettingKeyPrefix = "TransferIntermediaryAccountId";
 
-        public TransfersController(ApplicationDbContext context, UserManager<User> userManager, IAuthorizationService authorizationService, IJournalEntryService journalEntryService)
+        public TransfersController(ApplicationDbContext context, UserManager<User> userManager, IAuthorizationService authorizationService, IJournalEntryService journalEntryService, IAttachmentStorageService attachmentStorageService)
         {
             _context = context;
             _userManager = userManager;
             _authorizationService = authorizationService;
             _journalEntryService = journalEntryService;
+            _attachmentStorageService = attachmentStorageService;
         }
 
         public async Task<IActionResult> Index()
@@ -239,6 +242,13 @@ namespace AccountingSystem.Controllers
                 CurrencyBreakdownJson = breakdownJson
             };
 
+            var attachmentResult = await _attachmentStorageService.SaveAsync(model.Attachment, "transfers");
+            if (attachmentResult != null)
+            {
+                transfer.AttachmentFilePath = attachmentResult.FilePath;
+                transfer.AttachmentFileName = attachmentResult.FileName;
+            }
+
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
@@ -361,7 +371,9 @@ namespace AccountingSystem.Controllers
                 ReceiverId = transfer.ReceiverId,
                 Amount = transfer.Amount,
                 Notes = transfer.Notes,
-                ReturnUrl = returnUrl
+                ReturnUrl = returnUrl,
+                ExistingAttachmentPath = transfer.AttachmentFilePath,
+                ExistingAttachmentName = transfer.AttachmentFileName
             };
 
             if (!await PopulateEditViewModelAsync(model, transfer))
@@ -494,6 +506,20 @@ namespace AccountingSystem.Controllers
             transfer.Notes = model.Notes;
             transfer.CurrencyBreakdownJson = breakdownJson;
 
+            if (model.RemoveAttachment && !string.IsNullOrEmpty(transfer.AttachmentFilePath))
+            {
+                _attachmentStorageService.Delete(transfer.AttachmentFilePath);
+                transfer.AttachmentFilePath = null;
+                transfer.AttachmentFileName = null;
+            }
+
+            var newAttachmentResult = await _attachmentStorageService.SaveAsync(model.Attachment, "transfers", transfer.AttachmentFilePath);
+            if (newAttachmentResult != null)
+            {
+                transfer.AttachmentFilePath = newAttachmentResult.FilePath;
+                transfer.AttachmentFileName = newAttachmentResult.FileName;
+            }
+
             await UpdateSenderJournalEntryAsync(transfer, receiver, finalAmount, model.Notes ?? string.Empty, fromAccount.CurrencyId);
 
             await _context.SaveChangesAsync();
@@ -531,9 +557,16 @@ namespace AccountingSystem.Controllers
                 _context.JournalEntries.Remove(transfer.SenderJournalEntry);
             }
 
+            var attachmentPath = transfer.AttachmentFilePath;
+
             _context.PaymentTransfers.Remove(transfer);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
+
+            if (!string.IsNullOrEmpty(attachmentPath))
+            {
+                _attachmentStorageService.Delete(attachmentPath);
+            }
 
             return RedirectAfterAction(returnUrl);
         }
@@ -805,6 +838,16 @@ namespace AccountingSystem.Controllers
             model.CurrencyId = senderAccount.CurrencyId;
             model.CurrencyCode = senderAccount.Currency?.Code ?? string.Empty;
             model.SenderBranch = transfer.FromBranch?.NameAr ?? string.Empty;
+
+            if (string.IsNullOrEmpty(model.ExistingAttachmentPath))
+            {
+                model.ExistingAttachmentPath = transfer.AttachmentFilePath;
+            }
+
+            if (string.IsNullOrEmpty(model.ExistingAttachmentName))
+            {
+                model.ExistingAttachmentName = transfer.AttachmentFileName;
+            }
 
             return true;
         }

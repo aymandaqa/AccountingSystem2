@@ -41,6 +41,7 @@
                 <th>العملة</th>
                 <th>سعر الصرف</th>
                 <th>المبلغ</th>
+                <th>المرفق</th>
                 <th>الحالة</th>
                 <th>ملاحظات</th>
                 <th>الفرع</th>
@@ -57,6 +58,18 @@
                     <td>@v.Currency.Code</td>
                     <td>@v.ExchangeRate.ToString("N6")</td>
                     <td>@v.Amount.ToString("N2")</td>
+                    <td>
+                        @if (!string.IsNullOrWhiteSpace(v.AttachmentFilePath))
+                        {
+                            <a href="@Url.Content(v.AttachmentFilePath)" target="_blank" rel="noopener">
+                                @(string.IsNullOrWhiteSpace(v.AttachmentFileName) ? "عرض المرفق" : v.AttachmentFileName)
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="text-muted">-</span>
+                        }
+                    </td>
                     <td>
                         @switch (v.Status)
                         {

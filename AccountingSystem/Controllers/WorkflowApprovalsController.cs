@@ -126,6 +126,7 @@ namespace AccountingSystem.Controllers
                 if (action.WorkflowInstance.DocumentType == WorkflowDocumentType.PaymentVoucher && vouchers.TryGetValue(action.WorkflowInstance.DocumentId, out var voucher))
                 {
                     model.PaymentVoucher = voucher;
+                    AppendAttachment(model, voucher.AttachmentFilePath, voucher.AttachmentFileName);
                 }
                 else if (action.WorkflowInstance.DocumentType == WorkflowDocumentType.DynamicScreenEntry && dynamicEntries.TryGetValue(action.WorkflowInstance.DocumentId, out var entry))
                 {
@@ -138,6 +139,7 @@ namespace AccountingSystem.Controllers
                     {
                         model.CurrencyCode = receipt.Currency?.Code;
                     }
+                    AppendAttachment(model, receipt.AttachmentFilePath, receipt.AttachmentFileName);
                 }
                 else if (action.WorkflowInstance.DocumentType == WorkflowDocumentType.DisbursementVoucher && disbursementVouchers.TryGetValue(action.WorkflowInstance.DocumentId, out var disbursement))
                 {
@@ -146,6 +148,7 @@ namespace AccountingSystem.Controllers
                     {
                         model.CurrencyCode = disbursement.Currency?.Code;
                     }
+                    AppendAttachment(model, disbursement.AttachmentFilePath, disbursement.AttachmentFileName);
                 }
                 else if (action.WorkflowInstance.DocumentType == WorkflowDocumentType.AssetExpense && assetExpenses.TryGetValue(action.WorkflowInstance.DocumentId, out var assetExpense))
                 {
@@ -196,6 +199,20 @@ namespace AccountingSystem.Controllers
             await _workflowService.ProcessActionAsync(actionId, user.Id, approve: false, notes: notes);
             TempData["Error"] = "تم رفض الطلب";
             return RedirectToAction(nameof(Index));
+        }
+
+        private static void AppendAttachment(WorkflowApprovalViewModel model, string? path, string? name)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return;
+            }
+
+            model.Attachments.Add(new WorkflowAttachmentViewModel
+            {
+                FilePath = path,
+                FileName = string.IsNullOrWhiteSpace(name) ? "عرض المرفق" : name
+            });
         }
 
         private string GetTitle(WorkflowInstance instance)

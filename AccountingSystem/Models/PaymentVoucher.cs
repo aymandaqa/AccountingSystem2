@@ -30,6 +30,12 @@ namespace AccountingSystem.Models
         [StringLength(500)]
         public string? Notes { get; set; }
 
+        [StringLength(260)]
+        public string? AttachmentFileName { get; set; }
+
+        [StringLength(500)]
+        public string? AttachmentFilePath { get; set; }
+
         public string CreatedById { get; set; } = string.Empty;
 
         public bool IsCash { get; set; }

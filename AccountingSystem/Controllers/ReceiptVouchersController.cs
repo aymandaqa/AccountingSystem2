@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
@@ -23,17 +24,20 @@ namespace AccountingSystem.Controllers
         private readonly UserManager<User> _userManager;
         private readonly IWorkflowService _workflowService;
         private readonly IReceiptVoucherProcessor _receiptVoucherProcessor;
+        private readonly IAttachmentStorageService _attachmentStorageService;
 
         public ReceiptVouchersController(
             ApplicationDbContext context,
             UserManager<User> userManager,
             IWorkflowService workflowService,
-            IReceiptVoucherProcessor receiptVoucherProcessor)
+            IReceiptVoucherProcessor receiptVoucherProcessor,
+            IAttachmentStorageService attachmentStorageService)
         {
             _context = context;
             _userManager = userManager;
             _workflowService = workflowService;
             _receiptVoucherProcessor = receiptVoucherProcessor;
+            _attachmentStorageService = attachmentStorageService;
         }
 
         private async Task<List<int>> GetUserBranchIdsAsync(string userId)
@@ -173,7 +177,7 @@ namespace AccountingSystem.Controllers
         [HttpPost]
         [Authorize(Policy = "receiptvouchers.create")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(ReceiptVoucher model)
+        public async Task<IActionResult> Create(ReceiptVoucher model, IFormFile? attachment)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -294,6 +298,13 @@ namespace AccountingSystem.Controllers
                 }
                 ViewBag.Suppliers = suppliers;
                 return View(model);
+            }
+
+            var attachmentResult = await _attachmentStorageService.SaveAsync(attachment, "receipt-vouchers");
+            if (attachmentResult != null)
+            {
+                model.AttachmentFilePath = attachmentResult.FilePath;
+                model.AttachmentFileName = attachmentResult.FileName;
             }
 
             var currency = await _context.Currencies.FindAsync(model.CurrencyId);
@@ -461,9 +472,16 @@ namespace AccountingSystem.Controllers
                 _context.WorkflowInstances.Remove(voucher.WorkflowInstance);
             }
 
+            var attachmentPath = voucher.AttachmentFilePath;
+
             _context.ReceiptVouchers.Remove(voucher);
 
             await _context.SaveChangesAsync();
+
+            if (!string.IsNullOrEmpty(attachmentPath))
+            {
+                _attachmentStorageService.Delete(attachmentPath);
+            }
 
             return RedirectToAction(nameof(Index), new { fromDate, toDate });
         }

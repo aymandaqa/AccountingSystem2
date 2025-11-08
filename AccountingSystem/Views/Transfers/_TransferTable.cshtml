@@ -30,6 +30,7 @@
             <th>فرع الاستقبال</th>
             <th>المبلغ</th>
             <th>تفاصيل الفئات</th>
+            <th>المرفق</th>
             <th>الحالة</th>
             <th>التاريخ</th>
             <th></th>
@@ -54,6 +55,18 @@
                             <li>@label: @entry.Value</li>
                         }
                     </ul>
+                }
+                else
+                {
+                    <span class="text-muted">-</span>
+                }
+            </td>
+            <td>
+                @if (!string.IsNullOrWhiteSpace(item.AttachmentFilePath))
+                {
+                    <a href="@Url.Content(item.AttachmentFilePath)" target="_blank" rel="noopener">
+                        @(string.IsNullOrWhiteSpace(item.AttachmentFileName) ? "عرض المرفق" : item.AttachmentFileName)
+                    </a>
                 }
                 else
                 {

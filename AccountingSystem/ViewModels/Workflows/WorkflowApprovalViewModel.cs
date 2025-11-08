@@ -2,6 +2,7 @@ using AccountingSystem.Models;
 using AccountingSystem.Models.DynamicScreens;
 using AccountingSystem.Models.Workflows;
 using System;
+using System.Collections.Generic;
 
 namespace AccountingSystem.ViewModels.Workflows
 {
@@ -21,5 +22,12 @@ namespace AccountingSystem.ViewModels.Workflows
         public decimal Amount { get; set; }
         public decimal AmountInBase { get; set; }
         public string? CurrencyCode { get; set; }
+        public List<WorkflowAttachmentViewModel> Attachments { get; set; } = new();
+    }
+
+    public class WorkflowAttachmentViewModel
+    {
+        public string FileName { get; set; } = string.Empty;
+        public string FilePath { get; set; } = string.Empty;
     }
 }

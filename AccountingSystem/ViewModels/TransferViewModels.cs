@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using AccountingSystem.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace AccountingSystem.ViewModels
@@ -23,6 +24,9 @@ namespace AccountingSystem.ViewModels
         public string? Notes { get; set; }
 
         public string SenderBranch { get; set; } = string.Empty;
+
+        [Display(Name = "المرفق (اختياري)")]
+        public IFormFile? Attachment { get; set; }
 
         public IEnumerable<SelectListItem> Receivers { get; set; } = new List<SelectListItem>();
 
@@ -82,6 +86,16 @@ namespace AccountingSystem.ViewModels
         public string SenderBranch { get; set; } = string.Empty;
 
         public IEnumerable<SelectListItem> Receivers { get; set; } = new List<SelectListItem>();
+
+        [Display(Name = "المرفق (اختياري)")]
+        public IFormFile? Attachment { get; set; }
+
+        public string? ExistingAttachmentPath { get; set; }
+
+        public string? ExistingAttachmentName { get; set; }
+
+        [Display(Name = "إزالة المرفق الحالي")]
+        public bool RemoveAttachment { get; set; }
 
         public Dictionary<string, string> ReceiverBranches { get; set; } = new();
 
