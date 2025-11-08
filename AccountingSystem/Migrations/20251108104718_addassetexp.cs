@@ -1,12 +1,13 @@
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace AccountingSystem.Migrations
 {
     /// <inheritdoc />
-    public partial class AddAssetExpenseAttachments : Migration
+    public partial class addassetexp : Migration
     {
+        /// <inheritdoc />
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {

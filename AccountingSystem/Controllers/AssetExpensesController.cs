@@ -445,6 +445,16 @@ namespace AccountingSystem.Controllers
                 ModelState.AddModelError(string.Empty, "لا يوجد حساب/فرع للدفع مضبوط للمستخدم");
             }
 
+            if (model.IsCash)
+            {
+                var chashacc = await _context.Accounts.FirstOrDefaultAsync(t => t.Id == user.PaymentAccountId);
+
+                if (chashacc?.CurrentBalance < model.Amount)
+                {
+                    ModelState.AddModelError(string.Empty, "لا يوجد رصيد كافي في الصندوق");
+
+                }
+            }
             if (!ModelState.IsValid)
             {
                 await PopulateCreateAssetExpenseModelAsync(model, userBranchIds);
@@ -477,6 +487,7 @@ namespace AccountingSystem.Controllers
 
             if (assetExpense.IsCash)
             {
+
                 assetExpense.AccountId = user.PaymentAccountId;
             }
 
