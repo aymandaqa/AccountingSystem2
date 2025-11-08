@@ -412,8 +412,15 @@ namespace AccountingSystem.Controllers
                 }
                 if (model.IsCash && user.PaymentAccountId.HasValue)
                 {
-                    var paymentAccount = await _context.Accounts.FindAsync(user.PaymentAccountId.Value);
-                    if (paymentAccount != null)
+                    var paymentAccount = await _context.Accounts
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(a => a.Id == user.PaymentAccountId.Value);
+
+                    if (paymentAccount == null)
+                    {
+                        ModelState.AddModelError(string.Empty, "حساب الدفع غير موجود");
+                    }
+                    else
                     {
                         if (paymentAccount.CurrencyId != expenseAccount.CurrencyId)
                         {
