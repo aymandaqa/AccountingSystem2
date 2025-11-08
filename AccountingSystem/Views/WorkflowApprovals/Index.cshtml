@@ -60,6 +60,22 @@ else
                     </div>
                 }
                 <p>@request.Description</p>
+                @if (request.Attachments.Any())
+                {
+                    <div class="mb-3">
+                        <div class="fw-bold">المرفقات</div>
+                        <ul class="list-unstyled mb-0">
+                            @foreach (var attachment in request.Attachments)
+                            {
+                                <li>
+                                    <a href="@Url.Content(attachment.FilePath)" target="_blank" rel="noopener">
+                                        @attachment.FileName
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
                 @if (request.PaymentVoucher != null)
                 {
                     <div class="row g-3">

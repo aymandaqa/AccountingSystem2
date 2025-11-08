@@ -4,7 +4,7 @@
 }
 
 <div class="container-fluid">
-    <form asp-action="Create" method="post" class="row g-3">
+    <form asp-action="Create" method="post" class="row g-3" enctype="multipart/form-data">
         <div class="col-md-6">
             <label class="form-label">المورد</label>
             <select asp-for="SupplierId" class="form-select" id="supplierSelect">
@@ -47,6 +47,11 @@
         <div class="col-md-6">
             <label class="form-label">ملاحظات</label>
             <textarea asp-for="Notes" class="form-control"></textarea>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">المرفق (اختياري)</label>
+            <input type="file" name="attachment" class="form-control" />
+            <div class="form-text">يمكنك إرفاق صورة أو مستند يدعم السند.</div>
         </div>
         <div class="col-12">
             <button type="submit" class="btn btn-primary">حفظ</button>

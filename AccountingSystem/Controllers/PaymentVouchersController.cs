@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
@@ -22,13 +23,15 @@ namespace AccountingSystem.Controllers
         private readonly UserManager<User> _userManager;
         private readonly IWorkflowService _workflowService;
         private readonly IPaymentVoucherProcessor _paymentVoucherProcessor;
+        private readonly IAttachmentStorageService _attachmentStorageService;
 
-        public PaymentVouchersController(ApplicationDbContext context, UserManager<User> userManager, IWorkflowService workflowService, IPaymentVoucherProcessor paymentVoucherProcessor)
+        public PaymentVouchersController(ApplicationDbContext context, UserManager<User> userManager, IWorkflowService workflowService, IPaymentVoucherProcessor paymentVoucherProcessor, IAttachmentStorageService attachmentStorageService)
         {
             _context = context;
             _userManager = userManager;
             _workflowService = workflowService;
             _paymentVoucherProcessor = paymentVoucherProcessor;
+            _attachmentStorageService = attachmentStorageService;
         }
 
         private async Task PopulatePaymentAccountSelectListAsync()
@@ -113,7 +116,7 @@ namespace AccountingSystem.Controllers
         [HttpPost]
         [Authorize(Policy = "paymentvouchers.create")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(PaymentVoucher model)
+        public async Task<IActionResult> Create(PaymentVoucher model, IFormFile? attachment)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null || user.PaymentAccountId == null || user.PaymentBranchId == null)
@@ -179,6 +182,8 @@ namespace AccountingSystem.Controllers
                 await PopulatePaymentAccountSelectListAsync();
                 return View(model);
             }
+
+            await AttachFileIfPresentAsync(model, attachment, "payment-vouchers");
 
             return await FinalizeCreationAsync(model, user);
         }
@@ -251,7 +256,7 @@ namespace AccountingSystem.Controllers
         [HttpPost]
         [Authorize(Policy = "paymentvouchers.create")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateFromAgent(PaymentVoucher model)
+        public async Task<IActionResult> CreateFromAgent(PaymentVoucher model, IFormFile? attachment)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null || user.PaymentAccountId == null || user.PaymentBranchId == null)
@@ -314,6 +319,8 @@ namespace AccountingSystem.Controllers
                 ViewBag.CurrencyCode = agent?.Account?.Currency?.Code;
                 return View(model);
             }
+
+            await AttachFileIfPresentAsync(model, attachment, "payment-vouchers");
 
             return await FinalizeCreationAsync(model, user);
         }
@@ -435,9 +442,16 @@ namespace AccountingSystem.Controllers
 
             _context.JournalEntryLines.RemoveRange(journalEntries.SelectMany(j => j.Lines));
             _context.JournalEntries.RemoveRange(journalEntries);
+            var attachmentPath = voucher.AttachmentFilePath;
+
             _context.PaymentVouchers.Remove(voucher);
 
             await _context.SaveChangesAsync();
+
+            if (!string.IsNullOrEmpty(attachmentPath))
+            {
+                _attachmentStorageService.Delete(attachmentPath);
+            }
 
             return RedirectToAction(nameof(Index), new { fromDate, toDate });
         }
@@ -481,6 +495,21 @@ namespace AccountingSystem.Controllers
             }
 
             return RedirectToAction(nameof(Index));
+        }
+
+        private async Task AttachFileIfPresentAsync(PaymentVoucher voucher, IFormFile? attachment, string category)
+        {
+            if (attachment == null)
+            {
+                return;
+            }
+
+            var result = await _attachmentStorageService.SaveAsync(attachment, category, voucher.AttachmentFilePath);
+            if (result != null)
+            {
+                voucher.AttachmentFilePath = result.FilePath;
+                voucher.AttachmentFileName = result.FileName;
+            }
         }
 
         private IQueryable<PaymentVoucher> BuildQuery(User user, List<int> userBranchIds, DateTime? fromDate, DateTime? toDate)

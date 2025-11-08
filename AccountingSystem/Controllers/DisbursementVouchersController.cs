@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
@@ -21,17 +22,20 @@ namespace AccountingSystem.Controllers
         private readonly UserManager<User> _userManager;
         private readonly IWorkflowService _workflowService;
         private readonly IDisbursementVoucherProcessor _disbursementVoucherProcessor;
+        private readonly IAttachmentStorageService _attachmentStorageService;
 
         public DisbursementVouchersController(
             ApplicationDbContext context,
             UserManager<User> userManager,
             IWorkflowService workflowService,
-            IDisbursementVoucherProcessor disbursementVoucherProcessor)
+            IDisbursementVoucherProcessor disbursementVoucherProcessor,
+            IAttachmentStorageService attachmentStorageService)
         {
             _context = context;
             _userManager = userManager;
             _workflowService = workflowService;
             _disbursementVoucherProcessor = disbursementVoucherProcessor;
+            _attachmentStorageService = attachmentStorageService;
         }
 
         private async Task<List<int>> GetUserBranchIdsAsync(string userId)
@@ -85,7 +89,7 @@ namespace AccountingSystem.Controllers
         [HttpPost]
         [Authorize(Policy = "disbursementvouchers.create")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(DisbursementVoucher model)
+        public async Task<IActionResult> Create(DisbursementVoucher model, IFormFile? attachment)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null || user.PaymentAccountId == null || user.PaymentBranchId == null)
@@ -133,6 +137,13 @@ namespace AccountingSystem.Controllers
                     .Select(s => new { s.Id, s.NameAr, CurrencyId = s.Account!.CurrencyId, CurrencyCode = s.Account.Currency.Code })
                     .ToListAsync();
                 return View(model);
+            }
+
+            var attachmentResult = await _attachmentStorageService.SaveAsync(attachment, "disbursement-vouchers");
+            if (attachmentResult != null)
+            {
+                model.AttachmentFilePath = attachmentResult.FilePath;
+                model.AttachmentFileName = attachmentResult.FileName;
             }
 
             var currency = await _context.Currencies.FindAsync(model.CurrencyId);
@@ -297,9 +308,16 @@ namespace AccountingSystem.Controllers
                 _context.WorkflowInstances.Remove(voucher.WorkflowInstance);
             }
 
+            var attachmentPath = voucher.AttachmentFilePath;
+
             _context.DisbursementVouchers.Remove(voucher);
 
             await _context.SaveChangesAsync();
+
+            if (!string.IsNullOrEmpty(attachmentPath))
+            {
+                _attachmentStorageService.Delete(attachmentPath);
+            }
 
             return RedirectToAction(nameof(Index), new { fromDate, toDate });
         }
