@@ -157,6 +157,7 @@ namespace AccountingSystem.Controllers
                     {
                         model.CurrencyCode = assetExpense.Currency?.Code;
                     }
+                    AppendAttachment(model, assetExpense.AttachmentFilePath, assetExpense.AttachmentFileName);
                 }
 
                 viewModels.Add(model);

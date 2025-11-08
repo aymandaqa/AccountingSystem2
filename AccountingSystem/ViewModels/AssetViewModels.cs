@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using AccountingSystem.Models.Workflows;
-using AccountingSystem.Models;
 using System.Linq;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using AccountingSystem.Models;
+using AccountingSystem.Models.Workflows;
 
 namespace AccountingSystem.ViewModels
 {
@@ -115,6 +116,8 @@ namespace AccountingSystem.ViewModels
         public bool IsCash { get; set; }
         public DateTime Date { get; set; }
         public string? Notes { get; set; }
+        public string? AttachmentFileName { get; set; }
+        public string? AttachmentFilePath { get; set; }
         public int? JournalEntryId { get; set; }
         public string? JournalEntryNumber { get; set; }
         public WorkflowInstanceStatus? WorkflowStatus { get; set; }
@@ -153,6 +156,9 @@ namespace AccountingSystem.ViewModels
 
         [Display(Name = "ملاحظات")]
         public string? Notes { get; set; }
+
+        [Display(Name = "المرفق")]
+        public IFormFile? Attachment { get; set; }
 
         public IEnumerable<SelectListItem> Assets { get; set; } = Enumerable.Empty<SelectListItem>();
         public IEnumerable<AssetExpenseAccountOption> ExpenseAccounts { get; set; } = Enumerable.Empty<AssetExpenseAccountOption>();
