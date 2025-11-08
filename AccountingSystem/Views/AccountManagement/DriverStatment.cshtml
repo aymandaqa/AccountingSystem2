@@ -143,12 +143,10 @@
                                                   enableStickyHeader="true" height="400px" gridLines="Both"
                                                   enableRtl="@rtl" allowPaging="false" allowSorting="true" allowFiltering="true"
                                                   allowTextWrap="true"
-                                                  allowSelection="true" rowSelected="rowSelected" recordClick="recordClick"
-                                                  toolbar="@(new List<string>() {   "Edit", "Cancel", "Update"  })">
+                                                  allowSelection="true" rowSelected="rowSelected" recordClick="recordClick">
                                             <e-data-manager url="/AccountManagement/UrlDatasourceDriverStatment?DriverId=0"
-                                                            updateUrl="/AccountManagement/update"
                                                             adaptor="UrlAdaptor"></e-data-manager>
-                                            <e-grid-editSettings allowEditing="true"></e-grid-editSettings>
+                                            <e-grid-editSettings allowEditing="false"></e-grid-editSettings>
 
                                             <e-grid-filterSettings type="Excel"></e-grid-filterSettings>
                                             <e-grid-aggregates>
@@ -177,7 +175,7 @@
                                                 <e-grid-column field="PaidAmountFromShipmentFees" allowEditing="false" headerText="المبلغ المدفوع من رسوم التوصيل" width="120"></e-grid-column>
                                                 <e-grid-column field="ShipmentTotal" allowEditing="false" headerText="المجموع الكلي" width="120"></e-grid-column>
                                                 <e-grid-column field="CommissionPerItem" allowEditing="false" headerText="العمولة لكل شحنة" width="120"></e-grid-column>
-                                                <e-grid-column field="DriverExtraComisionValue" allowEditing="true" headerText="عمولةاضافية للسائق" width="120"></e-grid-column>
+                                                <e-grid-column field="DriverExtraComisionValue" allowEditing="false" headerText="عمولةاضافية للسائق" width="120"></e-grid-column>
                                                 <e-grid-column field="ShipmentExtraFees" allowEditing="false" headerText="العمولة الاضافية" width="120"></e-grid-column>
                                                 <e-grid-column field="ShipmentPrice" allowEditing="false" headerText="سعر الشحنه" width="120"></e-grid-column>
                                                 <e-grid-column field="ShipmentCod" allowEditing="false" headerText="الصافي" width="120"></e-grid-column>
