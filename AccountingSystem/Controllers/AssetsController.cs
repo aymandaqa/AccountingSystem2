@@ -64,8 +64,12 @@ namespace AccountingSystem.Controllers
             {
                 var assetTypes = await _context.AssetTypes
                     .Include(t => t.Account)
+                    .AsNoTracking()
                     .ToListAsync();
                 var branches = await _context.Branches
+                    .AsNoTracking()
+                    .ToListAsync();
+                var suppliers = await _context.Suppliers
                     .AsNoTracking()
                     .ToListAsync();
 
@@ -95,6 +99,64 @@ namespace AccountingSystem.Controllers
                     }
                     else
                     {
+                        var headerLookup = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                        var headerRow = range.FirstRow();
+                        foreach (var cell in headerRow.CellsUsed())
+                        {
+                            var headerValue = cell.GetValue<string>()?.Trim();
+                            if (!string.IsNullOrWhiteSpace(headerValue) && !headerLookup.ContainsKey(headerValue))
+                            {
+                                headerLookup[headerValue] = cell.Address.ColumnNumber;
+                            }
+                        }
+
+                        int GetColumnOrDefault(int fallback, params string[] candidates)
+                        {
+                            foreach (var candidate in candidates)
+                            {
+                                if (headerLookup.TryGetValue(candidate, out var index))
+                                {
+                                    return index;
+                                }
+                            }
+                            return fallback;
+                        }
+
+                        int? GetOptionalColumn(params string[] candidates)
+                        {
+                            foreach (var candidate in candidates)
+                            {
+                                if (headerLookup.TryGetValue(candidate, out var index))
+                                {
+                                    return index;
+                                }
+                            }
+                            return null;
+                        }
+
+                        var nameColumn = GetColumnOrDefault(1, "اسم الأصل", "Asset Name", "Name");
+                        var assetTypeColumn = GetColumnOrDefault(2, "نوع الأصل", "Asset Type", "Type");
+                        var branchColumn = GetColumnOrDefault(3, "الفرع", "Branch");
+                        var assetNumberColumn = GetColumnOrDefault(4, "رقم الأصل", "Asset Number", "Number");
+                        var openingBalanceColumn = GetColumnOrDefault(5, "الرصيد الافتتاحي", "Opening Balance");
+                        var notesColumn = GetColumnOrDefault(6, "الملاحظات", "Notes");
+                        var supplierColumn = GetOptionalColumn("المورد", "Supplier");
+                        var purchaseAmountColumn = GetOptionalColumn("قيمة الشراء", "Purchase Amount");
+                        var originalCostColumn = GetOptionalColumn("قيمة الأصل", "Original Cost", "Asset Cost");
+                        var salvageValueColumn = GetOptionalColumn("قيمة الخردة", "Salvage Value", "Residual Value");
+                        var depreciationPeriodsColumn = GetOptionalColumn("العمر الافتراضي", "Depreciation Periods", "Useful Life");
+                        var depreciationFrequencyColumn = GetOptionalColumn("دورية الإهلاك", "Depreciation Frequency");
+                        var purchaseDateColumn = GetOptionalColumn("تاريخ الشراء", "Purchase Date");
+
+                        IXLCell? GetCell(IXLRow row, int? columnIndex)
+                        {
+                            if (!columnIndex.HasValue || columnIndex.Value <= 0)
+                            {
+                                return null;
+                            }
+                            return row.Cell(columnIndex.Value);
+                        }
+
                         foreach (var excelRow in range.RowsUsed().Skip(1))
                         {
                             var usedCells = excelRow.CellsUsed().ToList();
@@ -104,14 +166,14 @@ namespace AccountingSystem.Controllers
                             }
 
                             var rowNumber = excelRow.RowNumber();
-                            var name = excelRow.Cell(1).GetValue<string>().Trim();
+                            var name = excelRow.Cell(nameColumn).GetValue<string>().Trim();
                             if (string.IsNullOrEmpty(name))
                             {
                                 errors.Add($"السطر {rowNumber}: اسم الأصل مطلوب.");
                                 continue;
                             }
 
-                            var assetTypeValue = excelRow.Cell(2).GetValue<string>().Trim();
+                            var assetTypeValue = excelRow.Cell(assetTypeColumn).GetValue<string>().Trim();
                             if (string.IsNullOrEmpty(assetTypeValue))
                             {
                                 errors.Add($"السطر {rowNumber}: نوع الأصل مطلوب.");
@@ -134,7 +196,7 @@ namespace AccountingSystem.Controllers
                                 continue;
                             }
 
-                            var branchValue = excelRow.Cell(3).GetValue<string>().Trim();
+                            var branchValue = excelRow.Cell(branchColumn).GetValue<string>().Trim();
                             if (string.IsNullOrEmpty(branchValue))
                             {
                                 errors.Add($"السطر {rowNumber}: الفرع مطلوب.");
@@ -160,7 +222,7 @@ namespace AccountingSystem.Controllers
                             }
 
                             decimal openingBalance = 0;
-                            var openingCell = excelRow.Cell(5);
+                            var openingCell = excelRow.Cell(openingBalanceColumn);
                             if (!openingCell.IsEmpty())
                             {
                                 if (openingCell.TryGetValue<decimal>(out var openingDecimal))
@@ -184,10 +246,286 @@ namespace AccountingSystem.Controllers
                                 }
                             }
 
+                            if (openingBalance < 0)
+                            {
+                                errors.Add($"السطر {rowNumber}: قيمة الرصيد الافتتاحي يجب أن تكون أكبر من أو تساوي صفر.");
+                                continue;
+                            }
+
+                            decimal? purchaseAmount = null;
+                            var purchaseAmountCell = GetCell(excelRow, purchaseAmountColumn);
+                            if (purchaseAmountCell != null && !purchaseAmountCell.IsEmpty())
+                            {
+                                if (purchaseAmountCell.TryGetValue<decimal>(out var purchaseDecimal))
+                                {
+                                    purchaseAmount = purchaseDecimal;
+                                }
+                                else
+                                {
+                                    var purchaseText = purchaseAmountCell.GetValue<string>();
+                                    if (!string.IsNullOrWhiteSpace(purchaseText) &&
+                                        (decimal.TryParse(purchaseText, NumberStyles.Any, CultureInfo.InvariantCulture, out purchaseDecimal) ||
+                                         decimal.TryParse(purchaseText, NumberStyles.Any, CultureInfo.CurrentCulture, out purchaseDecimal)))
+                                    {
+                                        purchaseAmount = purchaseDecimal;
+                                    }
+                                    else
+                                    {
+                                        errors.Add($"السطر {rowNumber}: لا يمكن تحويل قيمة الشراء \"{purchaseText}\".");
+                                        continue;
+                                    }
+                                }
+
+                                if (purchaseAmount < 0)
+                                {
+                                    errors.Add($"السطر {rowNumber}: قيمة الشراء يجب أن تكون موجبة.");
+                                    continue;
+                                }
+                            }
+
+                            decimal? originalCost = null;
+                            var originalCostCell = GetCell(excelRow, originalCostColumn);
+                            if (originalCostCell != null && !originalCostCell.IsEmpty())
+                            {
+                                if (originalCostCell.TryGetValue<decimal>(out var originalCostDecimal))
+                                {
+                                    originalCost = originalCostDecimal;
+                                }
+                                else
+                                {
+                                    var originalCostText = originalCostCell.GetValue<string>();
+                                    if (!string.IsNullOrWhiteSpace(originalCostText) &&
+                                        (decimal.TryParse(originalCostText, NumberStyles.Any, CultureInfo.InvariantCulture, out originalCostDecimal) ||
+                                         decimal.TryParse(originalCostText, NumberStyles.Any, CultureInfo.CurrentCulture, out originalCostDecimal)))
+                                    {
+                                        originalCost = originalCostDecimal;
+                                    }
+                                    else
+                                    {
+                                        errors.Add($"السطر {rowNumber}: لا يمكن تحويل قيمة الأصل \"{originalCostText}\".");
+                                        continue;
+                                    }
+                                }
+
+                                if (originalCost < 0)
+                                {
+                                    errors.Add($"السطر {rowNumber}: قيمة الأصل يجب أن تكون موجبة.");
+                                    continue;
+                                }
+                            }
+
+                            decimal? salvageValue = null;
+                            var salvageValueCell = GetCell(excelRow, salvageValueColumn);
+                            if (salvageValueCell != null && !salvageValueCell.IsEmpty())
+                            {
+                                if (salvageValueCell.TryGetValue<decimal>(out var salvageDecimal))
+                                {
+                                    salvageValue = salvageDecimal;
+                                }
+                                else
+                                {
+                                    var salvageText = salvageValueCell.GetValue<string>();
+                                    if (!string.IsNullOrWhiteSpace(salvageText) &&
+                                        (decimal.TryParse(salvageText, NumberStyles.Any, CultureInfo.InvariantCulture, out salvageDecimal) ||
+                                         decimal.TryParse(salvageText, NumberStyles.Any, CultureInfo.CurrentCulture, out salvageDecimal)))
+                                    {
+                                        salvageValue = salvageDecimal;
+                                    }
+                                    else
+                                    {
+                                        errors.Add($"السطر {rowNumber}: لا يمكن تحويل قيمة الخردة \"{salvageText}\".");
+                                        continue;
+                                    }
+                                }
+
+                                if (salvageValue < 0)
+                                {
+                                    errors.Add($"السطر {rowNumber}: قيمة الخردة يجب أن تكون موجبة.");
+                                    continue;
+                                }
+                            }
+
+                            int? depreciationPeriods = null;
+                            var depreciationPeriodsCell = GetCell(excelRow, depreciationPeriodsColumn);
+                            if (depreciationPeriodsCell != null && !depreciationPeriodsCell.IsEmpty())
+                            {
+                                if (depreciationPeriodsCell.TryGetValue<int>(out var periodsValue))
+                                {
+                                    depreciationPeriods = periodsValue;
+                                }
+                                else
+                                {
+                                    var periodsText = depreciationPeriodsCell.GetValue<string>();
+                                    if (!string.IsNullOrWhiteSpace(periodsText) && int.TryParse(periodsText, NumberStyles.Any, CultureInfo.InvariantCulture, out periodsValue))
+                                    {
+                                        depreciationPeriods = periodsValue;
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(periodsText) && int.TryParse(periodsText, NumberStyles.Any, CultureInfo.CurrentCulture, out periodsValue))
+                                    {
+                                        depreciationPeriods = periodsValue;
+                                    }
+                                    else
+                                    {
+                                        errors.Add($"السطر {rowNumber}: لا يمكن تحويل قيمة العمر الافتراضي \"{periodsText}\".");
+                                        continue;
+                                    }
+                                }
+
+                                if (depreciationPeriods <= 0)
+                                {
+                                    errors.Add($"السطر {rowNumber}: العمر الافتراضي يجب أن يكون عدداً موجباً.");
+                                    continue;
+                                }
+                            }
+
+                            DepreciationFrequency? depreciationFrequency = null;
+                            var depreciationFrequencyCell = GetCell(excelRow, depreciationFrequencyColumn);
+                            if (depreciationFrequencyCell != null && !depreciationFrequencyCell.IsEmpty())
+                            {
+                                var frequencyText = depreciationFrequencyCell.GetValue<string>()?.Trim();
+                                if (!string.IsNullOrWhiteSpace(frequencyText))
+                                {
+                                    switch (frequencyText.ToLowerInvariant())
+                                    {
+                                        case "شهري":
+                                        case "شهرية":
+                                        case "monthly":
+                                            depreciationFrequency = DepreciationFrequency.Monthly;
+                                            break;
+                                        case "سنوي":
+                                        case "سنوياً":
+                                        case "سنويا":
+                                        case "yearly":
+                                        case "annual":
+                                            depreciationFrequency = DepreciationFrequency.Yearly;
+                                            break;
+                                        default:
+                                            errors.Add($"السطر {rowNumber}: دورية الإهلاك \"{frequencyText}\" غير معروفة. استخدم شهري أو سنوي.");
+                                            continue;
+                                    }
+                                }
+                            }
+
+                            DateTime? purchaseDate = null;
+                            var purchaseDateCell = GetCell(excelRow, purchaseDateColumn);
+                            if (purchaseDateCell != null && !purchaseDateCell.IsEmpty())
+                            {
+                                if (purchaseDateCell.TryGetValue<DateTime>(out var excelDate))
+                                {
+                                    purchaseDate = excelDate.Date;
+                                }
+                                else
+                                {
+                                    var purchaseDateText = purchaseDateCell.GetValue<string>()?.Trim();
+                                    if (!string.IsNullOrWhiteSpace(purchaseDateText))
+                                    {
+                                        var formats = new[] { "dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd", "MM/dd/yyyy", "M/d/yyyy" };
+                                        if (DateTime.TryParseExact(purchaseDateText, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate) ||
+                                            DateTime.TryParse(purchaseDateText, CultureInfo.CurrentCulture, DateTimeStyles.None, out parsedDate))
+                                        {
+                                            purchaseDate = parsedDate.Date;
+                                        }
+                                        else
+                                        {
+                                            errors.Add($"السطر {rowNumber}: تعذر قراءة تاريخ الشراء \"{purchaseDateText}\".");
+                                            continue;
+                                        }
+                                    }
+                                }
+                            }
+
+                            Supplier? supplier = null;
+                            var supplierText = GetCell(excelRow, supplierColumn)?.GetValue<string>()?.Trim();
+                            if (!string.IsNullOrWhiteSpace(supplierText))
+                            {
+                                supplier = suppliers.FirstOrDefault(s =>
+                                    string.Equals(s.NameAr, supplierText, StringComparison.OrdinalIgnoreCase) ||
+                                    (!string.IsNullOrWhiteSpace(s.NameEn) && string.Equals(s.NameEn, supplierText, StringComparison.OrdinalIgnoreCase)));
+
+                                if (supplier == null)
+                                {
+                                    errors.Add($"السطر {rowNumber}: المورد \"{supplierText}\" غير معروف.");
+                                    continue;
+                                }
+
+                                if (!purchaseAmount.HasValue || purchaseAmount.Value <= 0)
+                                {
+                                    errors.Add($"السطر {rowNumber}: قيمة الشراء مطلوبة عند تحديد المورد.");
+                                    continue;
+                                }
+                            }
+                            else if (purchaseAmount.HasValue && purchaseAmount.Value > 0)
+                            {
+                                errors.Add($"السطر {rowNumber}: يرجى تحديد المورد المرتبط بقيمة الشراء.");
+                                continue;
+                            }
+
+                            if (assetType.IsDepreciable)
+                            {
+                                if (!assetType.DepreciationExpenseAccountId.HasValue)
+                                {
+                                    errors.Add($"السطر {rowNumber}: نوع الأصل \"{assetType.Name}\" لا يحتوي على حساب مصروف الإهلاك.");
+                                    continue;
+                                }
+
+                                if (!assetType.AccumulatedDepreciationAccountId.HasValue)
+                                {
+                                    errors.Add($"السطر {rowNumber}: نوع الأصل \"{assetType.Name}\" لا يحتوي على حساب مجمع الإهلاك.");
+                                    continue;
+                                }
+
+                                if (!originalCost.HasValue || originalCost.Value <= 0)
+                                {
+                                    errors.Add($"السطر {rowNumber}: قيمة الأصل مطلوبة للأصول القابلة للإهلاك.");
+                                    continue;
+                                }
+
+                                var salvage = salvageValue ?? 0m;
+                                if (salvage < 0)
+                                {
+                                    errors.Add($"السطر {rowNumber}: قيمة الخردة يجب أن تكون موجبة.");
+                                    continue;
+                                }
+
+                                if (salvageValue.HasValue && salvageValue.Value > originalCost.Value)
+                                {
+                                    errors.Add($"السطر {rowNumber}: قيمة الخردة يجب ألا تتجاوز قيمة الأصل.");
+                                    continue;
+                                }
+
+                                if (!depreciationPeriods.HasValue || depreciationPeriods.Value <= 0)
+                                {
+                                    errors.Add($"السطر {rowNumber}: العمر الافتراضي مطلوب للأصول القابلة للإهلاك.");
+                                    continue;
+                                }
+
+                                if (!depreciationFrequency.HasValue)
+                                {
+                                    errors.Add($"السطر {rowNumber}: يرجى تحديد دورية الإهلاك (شهري أو سنوي).");
+                                    continue;
+                                }
+
+                                openingBalance = originalCost.Value;
+                            }
+                            else if (purchaseAmount.HasValue && purchaseAmount.Value > 0)
+                            {
+                                openingBalance = purchaseAmount.Value;
+                            }
+
                             var accountResult = await _accountService.CreateAccountAsync(name, assetType.AccountId);
 
-                            var assetNumber = excelRow.Cell(4).GetValue<string>()?.Trim();
-                            var notes = excelRow.Cell(6).GetValue<string>()?.Trim();
+                            var assetNumber = excelRow.Cell(assetNumberColumn).GetValue<string>()?.Trim();
+                            var notes = excelRow.Cell(notesColumn).GetValue<string>()?.Trim();
+
+                            var bookValue = openingBalance;
+                            if (assetType.IsDepreciable && originalCost.HasValue)
+                            {
+                                bookValue = originalCost.Value;
+                            }
+                            else if (!assetType.IsDepreciable && purchaseAmount.HasValue && purchaseAmount.Value > 0)
+                            {
+                                bookValue = purchaseAmount.Value;
+                            }
 
                             var asset = new Asset
                             {
@@ -197,7 +535,16 @@ namespace AccountingSystem.Controllers
                                 AssetNumber = string.IsNullOrWhiteSpace(assetNumber) ? null : assetNumber,
                                 Notes = string.IsNullOrWhiteSpace(notes) ? null : notes,
                                 OpeningBalance = openingBalance,
-                                AccountId = accountResult.Id
+                                AccountId = accountResult.Id,
+                                OriginalCost = originalCost,
+                                SalvageValue = salvageValue,
+                                DepreciationPeriods = depreciationPeriods,
+                                DepreciationFrequency = depreciationFrequency,
+                                PurchaseDate = purchaseDate,
+                                SupplierId = supplier?.Id,
+                                PurchaseAmount = purchaseAmount,
+                                AccumulatedDepreciation = 0,
+                                BookValue = bookValue
                             };
 
                             assetsToAdd.Add(asset);
