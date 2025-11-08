@@ -72,6 +72,10 @@ namespace AccountingSystem.Controllers
                 var suppliers = await _context.Suppliers
                     .AsNoTracking()
                     .ToListAsync();
+                var capitalAccounts = await _context.Accounts
+                    .Where(a => a.AccountType == AccountType.Equity && a.CanPostTransactions)
+                    .AsNoTracking()
+                    .ToListAsync();
 
                 var existingAssets = await _context.Assets
                     .Select(a => new { a.BranchId, a.Name })
@@ -142,6 +146,7 @@ namespace AccountingSystem.Controllers
                         var notesColumn = GetColumnOrDefault(6, "الملاحظات", "Notes");
                         var supplierColumn = GetOptionalColumn("المورد", "Supplier");
                         var purchaseAmountColumn = GetOptionalColumn("قيمة الشراء", "Purchase Amount");
+                        var capitalAccountColumn = GetOptionalColumn("حساب رأس المال", "Capital Account", "CapitalAccount");
                         var originalCostColumn = GetOptionalColumn("قيمة الأصل", "Original Cost", "Asset Cost");
                         var salvageValueColumn = GetOptionalColumn("قيمة الخردة", "Salvage Value", "Residual Value");
                         var depreciationPeriodsColumn = GetOptionalColumn("العمر الافتراضي", "Depreciation Periods", "Useful Life");
@@ -155,6 +160,49 @@ namespace AccountingSystem.Controllers
                                 return null;
                             }
                             return row.Cell(columnIndex.Value);
+                        }
+
+                        Account? ResolveCapitalAccount(string? value)
+                        {
+                            if (string.IsNullOrWhiteSpace(value))
+                            {
+                                return null;
+                            }
+
+                            var trimmed = value.Trim();
+                            if (string.IsNullOrEmpty(trimmed))
+                            {
+                                return null;
+                            }
+
+                            var normalized = trimmed;
+                            var hyphenIndex = trimmed.IndexOf('-');
+                            if (hyphenIndex >= 0)
+                            {
+                                var possibleCode = trimmed[..hyphenIndex].Trim();
+                                if (!string.IsNullOrEmpty(possibleCode))
+                                {
+                                    normalized = possibleCode;
+                                }
+                            }
+
+                            Account? account = capitalAccounts.FirstOrDefault(a =>
+                                string.Equals(a.Code, normalized, StringComparison.OrdinalIgnoreCase));
+
+                            if (account == null)
+                            {
+                                account = capitalAccounts.FirstOrDefault(a =>
+                                    string.Equals(a.Code, trimmed, StringComparison.OrdinalIgnoreCase) ||
+                                    string.Equals(a.NameAr, trimmed, StringComparison.OrdinalIgnoreCase) ||
+                                    (!string.IsNullOrWhiteSpace(a.NameEn) && string.Equals(a.NameEn, trimmed, StringComparison.OrdinalIgnoreCase)));
+                            }
+
+                            if (account == null && int.TryParse(normalized, out var accountId))
+                            {
+                                account = capitalAccounts.FirstOrDefault(a => a.Id == accountId);
+                            }
+
+                            return account;
                         }
 
                         foreach (var excelRow in range.RowsUsed().Skip(1))
@@ -454,9 +502,34 @@ namespace AccountingSystem.Controllers
                                     continue;
                                 }
                             }
-                            else if (purchaseAmount.HasValue && purchaseAmount.Value > 0)
+
+                            Account? capitalAccount = null;
+                            var capitalAccountText = GetCell(excelRow, capitalAccountColumn)?.GetValue<string>();
+                            if (!string.IsNullOrWhiteSpace(capitalAccountText))
                             {
-                                errors.Add($"السطر {rowNumber}: يرجى تحديد المورد المرتبط بقيمة الشراء.");
+                                capitalAccount = ResolveCapitalAccount(capitalAccountText);
+                                if (capitalAccount == null)
+                                {
+                                    errors.Add($"السطر {rowNumber}: حساب رأس المال \"{capitalAccountText.Trim()}\" غير معروف.");
+                                    continue;
+                                }
+
+                                if (supplier != null)
+                                {
+                                    errors.Add($"السطر {rowNumber}: يرجى اختيار حساب واحد للقيد: المورد أو رأس المال.");
+                                    continue;
+                                }
+
+                                if (assetType.Account != null && assetType.Account.CurrencyId != capitalAccount.CurrencyId)
+                                {
+                                    errors.Add($"السطر {rowNumber}: يجب أن تكون عملة حساب الأصل مطابقة لعملة حساب رأس المال.");
+                                    continue;
+                                }
+                            }
+
+                            if (supplier == null && capitalAccount == null && purchaseAmount.HasValue && purchaseAmount.Value > 0)
+                            {
+                                errors.Add($"السطر {rowNumber}: يرجى اختيار حساب المورد أو حساب رأس المال.");
                                 continue;
                             }
 
