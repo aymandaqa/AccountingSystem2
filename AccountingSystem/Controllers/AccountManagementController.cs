@@ -1,9 +1,11 @@
 ﻿using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.Services;
+using DocumentFormat.OpenXml.Office2010.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Roadfn.Models;
@@ -11,9 +13,9 @@ using Roadfn.ViewModel;
 using Syncfusion.EJ2.Base;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Security.Claims;
 using System.Text;
-using System.Linq;
 using User = AccountingSystem.Models.User;
 
 namespace Roadfn.Controllers
@@ -1401,6 +1403,279 @@ namespace Roadfn.Controllers
         }
 
 
+
+        //[HttpGet]
+        //public async Task<IActionResult> PayToDriver2()
+        //{
+        //    //string userId = User.Claims.SingleOrDefault(x => x.Type.Equals(ClaimTypes.NameIdentifier)).Value;
+        //    //var user = await _context.Users.FindAsync(Convert.ToInt32(userId));
+        //    SqlConnection con = new SqlConnection("Data Source=172.16.200.98;Initial Catalog=RoadDbProd;User Id=roadfn;Password=@adrajod!e#ln1klJ*$P;MultipleActiveResultSets=true;TrustServerCertificate=True;");
+
+        //    SqlCommand cmd = new SqlCommand("select * from migracc s\r\nwhere s.ShipmentTrackingNo not in (\r\nSELECT  substring(Description,21,2222222)\r\n  FROM [AccountingSystemDbProd].[dbo].[JournalEntries]\r\n\r\n)", con);
+        //    cmd.CommandType = CommandType.Text;
+        //    DataTable dataTable = new DataTable();
+
+        //    SqlDataAdapter sqlDataAdapter = new SqlDataAdapter(cmd);
+        //    sqlDataAdapter.Fill(dataTable);
+
+        //    foreach (DataRow DTitem in dataTable.Rows)
+        //    {
+
+        //        List<RptDriverPay> rptDriverPay = new List<RptDriverPay>();
+        //        RptDriverPay rptDriverPay1 = new RptDriverPay();
+        //        rptDriverPay1.Id = Convert.ToInt32(DTitem["ID"].ToString());
+        //        rptDriverPay1.ShipmentTrackingNo = DTitem["ShipmentTrackingNo"].ToString();
+        //        rptDriverPay1.ShipmentId = Convert.ToInt64(DTitem["ID"].ToString());
+        //        rptDriverPay1.EntryDate = Convert.ToDateTime(DTitem["EntryDate"].ToString());
+        //        rptDriverPay1.DriverName = DTitem["DriverName"].ToString();
+        //        rptDriverPay1.ClientName = DTitem["bussName"].ToString();
+        //        rptDriverPay1.CityName = "";
+        //        rptDriverPay1.AreaName = "";
+        //        rptDriverPay1.ShipmentTotal = Convert.ToDecimal(DTitem["ShipmentTotal"].ToString());
+        //        rptDriverPay1.OldStatus = 0;
+        //        rptDriverPay1.NewStatus = 0;
+        //        rptDriverPay1.CommissionPerItem = Convert.ToDecimal(DTitem["DeiverCommission"].ToString());
+        //        rptDriverPay1.ShipmentPrice = Convert.ToDecimal(DTitem["supplierCash"].ToString());
+        //        rptDriverPay1.PaidAmountFromShipmentFees = 0;
+        //        rptDriverPay1.DriverExtraComisionValue = 0;
+        //        rptDriverPay1.ShipmentCod = Convert.ToDecimal(DTitem["TotalCashCOD"].ToString());
+        //        rptDriverPay1.ShipmentExtraFees = 0;
+        //        rptDriverPay1.DriverId = Convert.ToInt32(DTitem["DriverID"].ToString());
+
+        //        rptDriverPay.Add(rptDriverPay1);
+
+
+        //        var user = await _userManager.FindByEmailAsync(DTitem["UserName"].ToString());
+        //        if (user == null)
+        //        {
+        //            return Unauthorized();
+        //        }
+
+        //        if (rptDriverPay.Count > 0)
+        //        {
+
+
+        //            var cashAccount = await _accontext.UserPaymentAccounts
+        //                .Where(u => u.UserId == user.Id && u.CurrencyId == 1)
+        //                .FirstOrDefaultAsync();
+        //            if (cashAccount == null)
+        //            {
+        //                return BadRequest("لا يوجد حساب صندوق مرتبط بالمستخدم الحالي");
+        //            }
+
+        //            var driverParentSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "DriverParentAccountId");
+        //            if (driverParentSetting == null)
+        //            {
+        //                return BadRequest("إعدادات حساب السائق غير متوفرة");
+        //            }
+
+        //            var driverParentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == driverParentSetting.Value);
+        //            if (driverParentAccount == null)
+        //            {
+        //                return BadRequest("الحساب الرئيسي للسائق غير موجود");
+        //            }
+
+        //            var revenueAccountSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "RevenueAccountCode");
+        //            if (revenueAccountSetting == null)
+        //            {
+        //                return BadRequest("إعدادات حساب الإيرادات غير متوفرة");
+        //            }
+
+        //            var revenueAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == revenueAccountSetting.Value);
+        //            if (revenueAccount == null)
+        //            {
+        //                return BadRequest("حساب الإيرادات غير موجود");
+        //            }
+
+        //            var driverPaymentHeader = new DriverPaymentHeader();
+        //            var driverPayments = new List<DriverPaymentDetail>();
+        //            driverPaymentHeader = await _context.DriverPaymentHeader.FirstOrDefaultAsync(t => t.Id == Convert.ToInt64(DTitem["HeaderID"].ToString()));
+
+        //            var listpay = new List<RptDriverPay>();
+        //            foreach (var item in rptDriverPay)
+        //            {
+        //                var shipmentsPay = rptDriverPay.Where(t => t.Id == Convert.ToInt64(item.Id)).FirstOrDefault();
+        //                if (shipmentsPay != null)
+        //                {
+        //                    driverPayments.Add(new DriverPaymentDetail
+        //                    {
+        //                        HeaderId = driverPaymentHeader.Id,
+        //                        ComisionValue = shipmentsPay.CommissionPerItem,
+        //                        ShipmentId = shipmentsPay.ShipmentId,
+        //                        ShipmentTrackingNo = shipmentsPay.ShipmentTrackingNo,
+        //                        DriverExtraComisionValue = shipmentsPay.DriverExtraComisionValue,
+        //                        CompanyRevenueValue = shipmentsPay.ShipmentCod - shipmentsPay.ShipmentPrice,
+        //                    });
+        //                    listpay.Add(shipmentsPay);
+        //                }
+        //            }
+
+        //            var driverAccount = await EnsureDriverAccountAsync(listpay, driverParentAccount);
+        //            if (driverAccount == null)
+        //            {
+        //                return BadRequest("تعذر تحديد حساب السائق");
+        //            }
+
+        //            var customerParentSetting = await _accontext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "CustomerParentAccountId");
+        //            if (customerParentSetting == null)
+        //            {
+        //                return BadRequest("إعدادات حساب العميل غير متوفرة");
+        //            }
+
+        //            var customerParentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == customerParentSetting.Value);
+        //            if (customerParentAccount == null)
+        //            {
+        //                return BadRequest("الحساب الرئيسي للعميل غير موجود");
+        //            }
+        //            var customerAccountsCache = new Dictionary<int, Account>();
+
+        //            foreach (var item in listpay)
+        //            {
+        //                var id1 = item.ShipmentId;
+
+        //                var sh = await _context.Shipments.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(id1));
+
+        //                var area = await _context.Areas.FirstOrDefaultAsync(t => t.Id == sh.ClientAreaId);
+
+        //                Agent? agent = null;
+        //                Account? agentAccount = null;
+        //                if (user.AgentId.HasValue)
+        //                {
+        //                    agent = await _accontext.Agents.FirstOrDefaultAsync(s => s.Id == user.AgentId.Value);
+        //                    if (agent?.AccountId != null)
+        //                    {
+        //                        agentAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Id == agent.AccountId);
+        //                    }
+        //                }
+
+        //                var customerUser = await _context.Users.FirstOrDefaultAsync(t => t.Id == Convert.ToInt32(sh.BusinessUserId));
+        //                if (customerUser == null)
+        //                {
+        //                    continue;
+        //                }
+
+        //                var Accbrn = await _accontext.Branches.FirstOrDefaultAsync(t => t.Code == customerUser.CompanyBranchId.ToString());
+        //                if (Accbrn == null)
+        //                {
+        //                    continue;
+        //                }
+
+        //                var customerAccount = await EnsureCustomerAccountAsync(customerUser, customerAccountsCache, customerParentAccount);
+        //                if (customerAccount == null)
+        //                {
+        //                    return BadRequest("تعذر تحديد حساب العميل");
+        //                }
+
+        //                var Paytxn = item;
+        //                var lines = new List<JournalEntryLine>();
+
+
+
+        //                #region CashAccounts txn
+        //                var tottxn = new JournalEntryLine();
+        //                tottxn.AccountId = cashAccount.AccountId;
+        //                tottxn.DebitAmount = 0;
+        //                tottxn.CreditAmount = 0;
+        //                if (Convert.ToDecimal(Paytxn.ShipmentTotal) <= 0)
+        //                {
+
+        //                    tottxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentTotal) * -1;
+
+        //                }
+        //                else
+        //                {
+        //                    tottxn.DebitAmount = Convert.ToDecimal(Paytxn.ShipmentTotal);
+        //                }
+        //                tottxn.Reference = driverPaymentHeader.Id.ToString();
+        //                tottxn.Description = $"قبض من سائق مبلغ تحصيل {sh.ShipmentTrackingNo}";
+        //                lines.Add(tottxn);
+        //                #endregion
+
+        //                #region DriverAttxn txn
+        //                var DriverAttxn = new JournalEntryLine();
+        //                DriverAttxn.AccountId = driverAccount.Id;
+        //                DriverAttxn.CreditAmount = Convert.ToDecimal(Paytxn.CommissionPerItem);
+        //                DriverAttxn.Reference = driverPaymentHeader.Id.ToString();
+        //                DriverAttxn.Description = $"ذمة سائق عمولة {sh.ShipmentTrackingNo}";
+
+        //                lines.Add(DriverAttxn);
+        //                #endregion
+
+        //                #region CustomerAccounttxn txn
+        //                var CustomerAccounttxn = new JournalEntryLine();
+        //                CustomerAccounttxn.AccountId = customerAccount.Id;
+        //                CustomerAccounttxn.DebitAmount = 0;
+        //                CustomerAccounttxn.CreditAmount = 0;
+        //                if (Convert.ToDecimal(Paytxn.ShipmentPrice) <= 0)
+        //                {
+        //                    CustomerAccounttxn.DebitAmount = Convert.ToDecimal(Paytxn.ShipmentPrice) * -1;
+        //                }
+        //                else
+        //                {
+        //                    CustomerAccounttxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentPrice);
+        //                }
+        //                CustomerAccounttxn.Reference = driverPaymentHeader.Id.ToString();
+        //                CustomerAccounttxn.Description = $"ذمة مورد مبلغ تحصيل {sh.ShipmentTrackingNo}";
+        //                lines.Add(CustomerAccounttxn);
+        //                #endregion
+
+
+
+
+        //                #region RevenueAccounttxn txn
+        //                var RevenueAccounttxn = new JournalEntryLine();
+        //                RevenueAccounttxn.AccountId = revenueAccount.Id;
+        //                RevenueAccounttxn.DebitAmount = 0;
+        //                RevenueAccounttxn.CreditAmount = 0;
+        //                if (Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice) <= 0)
+        //                {
+        //                    RevenueAccounttxn.DebitAmount = Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice) * -1;
+        //                }
+        //                else
+        //                {
+        //                    RevenueAccounttxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice);
+        //                }
+        //                RevenueAccounttxn.Reference = driverPaymentHeader.Id.ToString();
+        //                RevenueAccounttxn.Description = $"ايراد خدمة  {sh.ShipmentTrackingNo}";
+        //                lines.Add(RevenueAccounttxn);
+        //                #endregion
+
+        //                #region pay DriverAttxn txn
+        //                var PayDriverAttxn = new JournalEntryLine();
+        //                PayDriverAttxn.AccountId = driverAccount.Id;
+        //                PayDriverAttxn.DebitAmount = Convert.ToDecimal(Paytxn.CommissionPerItem);
+        //                PayDriverAttxn.Reference = driverPaymentHeader.Id.ToString();
+        //                PayDriverAttxn.Description = $"دفع عمولة سائق  {sh.ShipmentTrackingNo}";
+        //                lines.Add(PayDriverAttxn);
+        //                #endregion
+
+        //                #region pay DriverAttxn CashAccounts txn
+        //                var PayCashAccountsDriverAttxn = new JournalEntryLine();
+        //                PayCashAccountsDriverAttxn.AccountId = cashAccount.AccountId;
+        //                PayCashAccountsDriverAttxn.CreditAmount = Convert.ToDecimal(Paytxn.CommissionPerItem);
+        //                PayCashAccountsDriverAttxn.Reference = driverPaymentHeader.Id.ToString();
+        //                PayCashAccountsDriverAttxn.Description = $"دفع عمولة سائق  {sh.ShipmentTrackingNo}";
+        //                lines.Add(PayCashAccountsDriverAttxn);
+        //                #endregion
+
+        //                await _journalEntryService.CreateJournalEntryAsync(
+        //                    DateTime.Now,
+        //                    "DriverInvoice_" + driverPaymentHeader.Id + "_" + sh.ShipmentTrackingNo,
+        //                    Accbrn.Id,
+        //                    user.Id,
+        //                    lines,
+        //                    JournalEntryStatus.Posted,
+        //                    reference: $"DriverInvoice:{driverPaymentHeader.Id}");
+
+        //            }
+        //        }
+
+        //    }
+        //    return Ok();
+        //}
+
+
+
         [HttpPost]
         public async Task<IActionResult> PayToBusniss([FromBody] List<PayToBus> PayToBus, int dariverID)
         {
@@ -1637,6 +1912,54 @@ namespace Roadfn.Controllers
             return (null, bisnessUserPaymentHeader);
         }
 
+        private async Task<Account?> EnsureDriverAccountAsync1(int driverId, Account driverParentAccount)
+        {
+
+
+            var driver = await _context.Drives.FirstOrDefaultAsync(t => t.Id == driverId);
+            if (driver == null)
+            {
+                return null;
+            }
+
+            var mapping = await _accontext.DriverMappingAccounts.FirstOrDefaultAsync(t => t.DriverId == driver.Id.ToString());
+            if (mapping != null)
+            {
+                var mappedAccount = await _accontext.Accounts.FirstOrDefaultAsync(t => t.Code == mapping.AccountCode);
+                if (mappedAccount != null)
+                {
+                    return mappedAccount;
+                }
+            }
+
+            var accountName = $"{driver.Id}_{(driver.FirstName ?? string.Empty)} {(driver.FamilyName ?? string.Empty)} {(driver.Phone1 ?? string.Empty)}".Trim();
+            var (accountId, _) = await _accountService.CreateAccountAsync(accountName, driverParentAccount.Id);
+            var newAccount = await _accontext.Accounts.FirstOrDefaultAsync(a => a.Id == accountId);
+            if (newAccount == null)
+            {
+                return null;
+            }
+
+            if (mapping == null)
+            {
+                mapping = new DriverMappingAccount
+                {
+                    DriverId = driver.Id.ToString(),
+                    AccountId = newAccount.Id.ToString(),
+                    AccountCode = newAccount.Code,
+                };
+                await _accontext.DriverMappingAccounts.AddAsync(mapping);
+            }
+            else
+            {
+                mapping.AccountId = newAccount.Id.ToString();
+                mapping.AccountCode = newAccount.Code;
+                _accontext.DriverMappingAccounts.Update(mapping);
+            }
+
+            await _accontext.SaveChangesAsync();
+            return newAccount;
+        }
         private async Task<Account?> EnsureDriverAccountAsync(IEnumerable<RptDriverPay> driverPayments, Account driverParentAccount)
         {
             var driverId = driverPayments.FirstOrDefault(p => p.DriverId.HasValue)?.DriverId;
