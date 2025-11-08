@@ -94,7 +94,7 @@ namespace AccountingSystem.Services
                 }
 
                 var paymentAccount = await _context.Accounts
-                    .Include(a => a.Currency)
+                    .AsNoTracking()
                     .FirstOrDefaultAsync(a => a.Id == loadedExpense.AccountId.Value, cancellationToken);
 
                 if (paymentAccount == null)
