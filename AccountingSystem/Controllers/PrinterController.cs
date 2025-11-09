@@ -142,7 +142,7 @@ namespace Roadfn.Controllers
         {
             var header = await _context.BisnessUserPaymentHeader.FindAsync(Convert.ToInt64(BisnessUserPaymentHeaders));
 
-            var details = await _context.PayBusinessSlipView.Where(t => t.Id == header.Id).ToListAsync();
+            var details = await _context.PayBusinessSlipView.Where(t => t.PaymentHeader == header.Id).ToListAsync();
 
             DataTable table = new DataTable();
             //DataColumn dataColumn1 = new DataColumn("ID");
@@ -231,7 +231,7 @@ namespace Roadfn.Controllers
             document.Replace("{Act User Name}", usera?.FirstName + " " + usera?.LastName, true, true);
             document.Replace("{address}", buss?.Address, true, true);
             document.Replace("{mobile}", buss?.MobileNo1, true, true);
-            document.Replace("{area}", t.BranchName.ToString(), true, true);
+            document.Replace("{area}", t.BranchName?.ToString(), true, true);
 
             //Adds a new table into Word document
             WTable table1 = new WTable(document);

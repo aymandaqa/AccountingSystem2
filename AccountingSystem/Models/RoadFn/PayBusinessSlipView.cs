@@ -2,7 +2,8 @@
 {
     public partial class PayBusinessSlipView
     {
-        public long Id { get; set; }
+        public int Id { get; set; }
+        public long PaymentHeader { get; set; }
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
         public string? ClientName { get; set; }

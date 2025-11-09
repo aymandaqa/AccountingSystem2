@@ -191,18 +191,18 @@ namespace AccountingSystem.Services
         private async Task<long> GetNextCounterValueAsync(DbTransaction? transaction, string key, int year, CancellationToken cancellationToken)
         {
             const string Sql = @"SET NOCOUNT ON;
-DECLARE @output TABLE(Value bigint);
+                                DECLARE @output TABLE(Value bigint);
 
-MERGE Counters WITH (HOLDLOCK) AS target
-USING (SELECT @key AS [Key], @year AS [Year]) AS source
-ON target.[Key] = source.[Key] AND target.[Year] = source.[Year]
-WHEN MATCHED THEN
-    UPDATE SET target.[Value] = target.[Value] + 1
-WHEN NOT MATCHED THEN
-    INSERT ([Key], [Year], [Value]) VALUES (source.[Key], source.[Year], 1)
-OUTPUT inserted.[Value] INTO @output;
+                                MERGE Counters WITH (HOLDLOCK) AS target
+                                USING (SELECT @key AS [Key], @year AS [Year]) AS source
+                                ON target.[Key] = source.[Key] AND target.[Year] = source.[Year]
+                                WHEN MATCHED THEN
+                                    UPDATE SET target.[Value] = target.[Value] + 1
+                                WHEN NOT MATCHED THEN
+                                    INSERT ([Key], [Year], [Value]) VALUES (source.[Key], source.[Year], 1)
+                                OUTPUT inserted.[Value] INTO @output;
 
-SELECT TOP (1) Value FROM @output;";
+                                SELECT TOP (1) Value FROM @output;";
 
             var connection = transaction?.Connection ?? _context.Database.GetDbConnection();
             var shouldCloseConnection = connection.State != ConnectionState.Open;
