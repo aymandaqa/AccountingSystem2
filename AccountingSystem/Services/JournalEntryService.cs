@@ -3,6 +3,7 @@ using AccountingSystem.Models;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -95,74 +96,86 @@ namespace AccountingSystem.Services
                 totalCredit = lineItems.Sum(l => l.CreditAmount);
             }
 
-            var entry = new JournalEntry
+            return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
-                Number = string.IsNullOrWhiteSpace(number)
-                    ? await GenerateJournalEntryNumber()
-                    : number!,
-                Date = date,
-                Description = description,
-                Reference = reference,
-                BranchId = branchId,
-                CreatedById = createdById,
-                TotalDebit = totalDebit,
-                TotalCredit = totalCredit,
-                Status = status
-            };
+                await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
 
-            foreach (var line in lineItems)
-            {
-                entry.Lines.Add(new JournalEntryLine
+                try
                 {
-                    AccountId = line.AccountId,
-                    Description = string.IsNullOrWhiteSpace(line.Description) ? entry.Description : line.Description,
-                    Reference = line.Reference,
-                    DebitAmount = line.DebitAmount,
-                    CreditAmount = line.CreditAmount,
-                    CostCenterId = line.CostCenterId
-                });
-            }
+                    var entry = new JournalEntry
+                    {
+                        Number = string.IsNullOrWhiteSpace(number)
+                            ? await GenerateJournalEntryNumberCore()
+                            : number!,
+                        Date = date,
+                        Description = description,
+                        Reference = reference,
+                        BranchId = branchId,
+                        CreatedById = createdById,
+                        TotalDebit = totalDebit,
+                        TotalCredit = totalCredit,
+                        Status = status
+                    };
 
-            _context.JournalEntries.Add(entry);
+                    foreach (var line in lineItems)
+                    {
+                        entry.Lines.Add(new JournalEntryLine
+                        {
+                            AccountId = line.AccountId,
+                            Description = string.IsNullOrWhiteSpace(line.Description) ? entry.Description : line.Description,
+                            Reference = line.Reference,
+                            DebitAmount = line.DebitAmount,
+                            CreditAmount = line.CreditAmount,
+                            CostCenterId = line.CostCenterId
+                        });
+                    }
 
-            if (status == JournalEntryStatus.Posted)
-            {
-                await UpdateAccountBalances(entry);
-            }
+                    _context.JournalEntries.Add(entry);
 
-            await _context.SaveChangesAsync();
-            return entry;
+                    if (status == JournalEntryStatus.Posted)
+                    {
+                        await UpdateAccountBalances(entry);
+                    }
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return entry;
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            });
         }
 
         public async Task<string> GenerateJournalEntryNumber()
         {
+            return await GenerateJournalEntryNumberCore();
+        }
+
+        private async Task<string> GenerateJournalEntryNumberCore()
+        {
             var year = System.DateTime.Now.Year;
             var prefix = $"JE{year}";
 
-            var existingNumbers = await _context.JournalEntries
+            var latestNumber = await _context.JournalEntries
                 .Where(j => j.Number.StartsWith(prefix))
+                .OrderByDescending(j => j.Number)
                 .Select(j => j.Number)
-                .ToListAsync();
+                .FirstOrDefaultAsync();
 
-            if (existingNumbers.Count == 0)
+            var nextSequence = 1;
+
+            if (!string.IsNullOrWhiteSpace(latestNumber) &&
+                latestNumber.Length > prefix.Length &&
+                int.TryParse(latestNumber.Substring(prefix.Length), out var sequence))
             {
-                return $"{prefix}001";
+                nextSequence = sequence + 1;
             }
 
-            var maxSequence = existingNumbers
-                .Select(n => n.Length > prefix.Length && int.TryParse(n.Substring(prefix.Length), out var seq) ? seq : 0)
-                .DefaultIfEmpty(0)
-                .Max();
-
-            string candidate;
-            do
-            {
-                maxSequence++;
-                candidate = $"{prefix}{maxSequence:D3}";
-            }
-            while (await _context.JournalEntries.AnyAsync(j => j.Number == candidate));
-
-            return candidate;
+            return $"{prefix}{nextSequence:D3}";
         }
 
         private async Task UpdateAccountBalances(JournalEntry entry)
