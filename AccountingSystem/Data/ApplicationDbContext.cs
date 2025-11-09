@@ -79,6 +79,7 @@ namespace AccountingSystem.Data
         public DbSet<CompoundJournalDefinition> CompoundJournalDefinitions { get; set; }
         public DbSet<CompoundJournalExecutionLog> CompoundJournalExecutionLogs { get; set; }
         public DbSet<Agent> Agents { get; set; }
+        public DbSet<Counter> Counters { get; set; }
 
         public override int SaveChanges()
         {
@@ -186,6 +187,13 @@ namespace AccountingSystem.Data
                     .WithMany()
                     .HasForeignKey(e => e.BranchId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<Counter>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Key).IsRequired().HasMaxLength(100);
+                entity.HasIndex(e => new { e.Key, e.Year }).IsUnique();
             });
 
             // CostCenter configuration

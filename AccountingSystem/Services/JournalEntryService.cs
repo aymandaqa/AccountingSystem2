@@ -1,10 +1,13 @@
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AccountingSystem.Services
@@ -13,6 +16,7 @@ namespace AccountingSystem.Services
     {
         private readonly ApplicationDbContext _context;
         private const string BalancingAccountSettingKey = "JournalEntryBalancingAccountId";
+        private const string JournalEntryCounterKey = "JournalEntry";
 
         public JournalEntryService(ApplicationDbContext context)
         {
@@ -155,27 +159,85 @@ namespace AccountingSystem.Services
             return await GenerateJournalEntryNumberCore();
         }
 
-        private async Task<string> GenerateJournalEntryNumberCore()
+        private async Task<string> GenerateJournalEntryNumberCore(CancellationToken cancellationToken = default)
         {
             var year = System.DateTime.Now.Year;
             var prefix = $"JE{year}";
 
-            var latestNumber = await _context.JournalEntries
-                .Where(j => j.Number.StartsWith(prefix))
-                .OrderByDescending(j => j.Number)
-                .Select(j => j.Number)
-                .FirstOrDefaultAsync();
+            var currentTransaction = _context.Database.CurrentTransaction;
 
-            var nextSequence = 1;
+            var sequenceValue = currentTransaction != null
+                ? await GetNextCounterValueAsync(currentTransaction.GetDbTransaction(), JournalEntryCounterKey, year, cancellationToken)
+                : await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+                {
+                    await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
 
-            if (!string.IsNullOrWhiteSpace(latestNumber) &&
-                latestNumber.Length > prefix.Length &&
-                int.TryParse(latestNumber.Substring(prefix.Length), out var sequence))
+                    try
+                    {
+                        var value = await GetNextCounterValueAsync(transaction.GetDbTransaction(), JournalEntryCounterKey, year, cancellationToken);
+                        await transaction.CommitAsync(cancellationToken);
+                        return value;
+                    }
+                    catch
+                    {
+                        await transaction.RollbackAsync(cancellationToken);
+                        throw;
+                    }
+                });
+
+            return $"{prefix}{sequenceValue:D9}";
+        }
+
+        private async Task<long> GetNextCounterValueAsync(DbTransaction? transaction, string key, int year, CancellationToken cancellationToken)
+        {
+            const string Sql = @"SET NOCOUNT ON;
+DECLARE @output TABLE(Value bigint);
+
+MERGE Counters WITH (HOLDLOCK) AS target
+USING (SELECT @key AS [Key], @year AS [Year]) AS source
+ON target.[Key] = source.[Key] AND target.[Year] = source.[Year]
+WHEN MATCHED THEN
+    UPDATE SET target.[Value] = target.[Value] + 1
+WHEN NOT MATCHED THEN
+    INSERT ([Key], [Year], [Value]) VALUES (source.[Key], source.[Year], 1)
+OUTPUT inserted.[Value] INTO @output;
+
+SELECT TOP (1) Value FROM @output;";
+
+            var connection = transaction?.Connection ?? _context.Database.GetDbConnection();
+            var shouldCloseConnection = connection.State != ConnectionState.Open;
+
+            if (shouldCloseConnection)
             {
-                nextSequence = sequence + 1;
+                await connection.OpenAsync(cancellationToken);
             }
 
-            return $"{prefix}{nextSequence:D3}";
+            await using var command = connection.CreateCommand();
+            command.CommandText = Sql;
+            command.Transaction = transaction ?? _context.Database.CurrentTransaction?.GetDbTransaction();
+
+            var keyParameter = command.CreateParameter();
+            keyParameter.ParameterName = "@key";
+            keyParameter.Value = key;
+            command.Parameters.Add(keyParameter);
+
+            var yearParameter = command.CreateParameter();
+            yearParameter.ParameterName = "@year";
+            yearParameter.Value = year;
+            command.Parameters.Add(yearParameter);
+
+            try
+            {
+                var result = await command.ExecuteScalarAsync(cancellationToken);
+                return Convert.ToInt64(result);
+            }
+            finally
+            {
+                if (shouldCloseConnection && transaction == null)
+                {
+                    await connection.CloseAsync();
+                }
+            }
         }
 
         private async Task UpdateAccountBalances(JournalEntry entry)
