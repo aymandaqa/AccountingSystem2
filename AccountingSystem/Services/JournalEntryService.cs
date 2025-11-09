@@ -100,48 +100,43 @@ namespace AccountingSystem.Services
                 totalCredit = lineItems.Sum(l => l.CreditAmount);
             }
 
-            return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            var currentTransaction = _context.Database.CurrentTransaction;
+
+            if (currentTransaction != null)
+            {
+                return await CreateJournalEntryCoreAsync(
+                    date,
+                    description,
+                    branchId,
+                    createdById,
+                    lineItems,
+                    status,
+                    reference,
+                    number,
+                    totalDebit,
+                    totalCredit);
+            }
+
+            var executionStrategy = _context.Database.CreateExecutionStrategy();
+
+            return await executionStrategy.ExecuteAsync(async () =>
             {
                 await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
 
                 try
                 {
-                    var entry = new JournalEntry
-                    {
-                        Number = string.IsNullOrWhiteSpace(number)
-                            ? await GenerateJournalEntryNumberCore()
-                            : number!,
-                        Date = date,
-                        Description = description,
-                        Reference = reference,
-                        BranchId = branchId,
-                        CreatedById = createdById,
-                        TotalDebit = totalDebit,
-                        TotalCredit = totalCredit,
-                        Status = status
-                    };
+                    var entry = await CreateJournalEntryCoreAsync(
+                        date,
+                        description,
+                        branchId,
+                        createdById,
+                        lineItems,
+                        status,
+                        reference,
+                        number,
+                        totalDebit,
+                        totalCredit);
 
-                    foreach (var line in lineItems)
-                    {
-                        entry.Lines.Add(new JournalEntryLine
-                        {
-                            AccountId = line.AccountId,
-                            Description = string.IsNullOrWhiteSpace(line.Description) ? entry.Description : line.Description,
-                            Reference = line.Reference,
-                            DebitAmount = line.DebitAmount,
-                            CreditAmount = line.CreditAmount,
-                            CostCenterId = line.CostCenterId
-                        });
-                    }
-
-                    _context.JournalEntries.Add(entry);
-
-                    if (status == JournalEntryStatus.Posted)
-                    {
-                        await UpdateAccountBalances(entry);
-                    }
-
-                    await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
 
                     return entry;
@@ -254,6 +249,58 @@ namespace AccountingSystem.Services
                 account.CurrentBalance += netAmount;
                 account.UpdatedAt = System.DateTime.Now;
             }
+        }
+
+        private async Task<JournalEntry> CreateJournalEntryCoreAsync(
+            System.DateTime date,
+            string description,
+            int branchId,
+            string createdById,
+            IReadOnlyCollection<JournalEntryLine> lineItems,
+            JournalEntryStatus status,
+            string? reference,
+            string? number,
+            decimal totalDebit,
+            decimal totalCredit)
+        {
+            var entry = new JournalEntry
+            {
+                Number = string.IsNullOrWhiteSpace(number)
+                    ? await GenerateJournalEntryNumberCore()
+                    : number!,
+                Date = date,
+                Description = description,
+                Reference = reference,
+                BranchId = branchId,
+                CreatedById = createdById,
+                TotalDebit = totalDebit,
+                TotalCredit = totalCredit,
+                Status = status
+            };
+
+            foreach (var line in lineItems)
+            {
+                entry.Lines.Add(new JournalEntryLine
+                {
+                    AccountId = line.AccountId,
+                    Description = string.IsNullOrWhiteSpace(line.Description) ? entry.Description : line.Description,
+                    Reference = line.Reference,
+                    DebitAmount = line.DebitAmount,
+                    CreditAmount = line.CreditAmount,
+                    CostCenterId = line.CostCenterId
+                });
+            }
+
+            _context.JournalEntries.Add(entry);
+
+            if (status == JournalEntryStatus.Posted)
+            {
+                await UpdateAccountBalances(entry);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return entry;
         }
     }
 }
