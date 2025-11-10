@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AccountingSystem.Extensions;
+using AccountingSystem.ViewModels;
 
 namespace AccountingSystem.Controllers
 {
@@ -92,10 +93,53 @@ namespace AccountingSystem.Controllers
                 .OrderByDescending(v => v.Date)
                 .ToListAsync();
 
+            var journalEntryLookup = new Dictionary<int, (int Id, string Number, string Reference)>();
+
+            if (vouchers.Any())
+            {
+                var referenceMap = vouchers.ToDictionary(
+                    v => v.SupplierId.HasValue ? $"سند مصاريف:{v.Id}" : $"سند دفع وكيل:{v.Id}",
+                    v => v.Id);
+
+                var references = referenceMap.Keys.ToList();
+
+                var journalEntries = await _context.JournalEntries
+                    .Where(j => j.Reference != null && references.Contains(j.Reference))
+                    .Select(j => new { j.Id, j.Number, j.Reference })
+                    .ToListAsync();
+
+                foreach (var entry in journalEntries)
+                {
+                    if (entry.Reference != null && referenceMap.TryGetValue(entry.Reference, out var voucherId))
+                    {
+                        journalEntryLookup[voucherId] = (entry.Id, entry.Number, entry.Reference);
+                    }
+                }
+            }
+
+            var model = vouchers.Select(v =>
+            {
+                if (journalEntryLookup.TryGetValue(v.Id, out var entry))
+                {
+                    return new PaymentVoucherListItemViewModel
+                    {
+                        Voucher = v,
+                        JournalEntryId = entry.Id,
+                        JournalEntryNumber = entry.Number,
+                        JournalEntryReference = entry.Reference
+                    };
+                }
+
+                return new PaymentVoucherListItemViewModel
+                {
+                    Voucher = v
+                };
+            }).ToList();
+
             ViewBag.FromDate = fromDate?.ToString("yyyy-MM-dd");
             ViewBag.ToDate = toDate?.ToString("yyyy-MM-dd");
 
-            return View(vouchers);
+            return View(model);
         }
 
         [Authorize(Policy = "paymentvouchers.create")]
@@ -517,6 +561,7 @@ namespace AccountingSystem.Controllers
             var vouchersQuery = _context.PaymentVouchers
                 .Include(v => v.Supplier).ThenInclude(s => s.Account)
                 .Include(v => v.Agent).ThenInclude(a => a.Account)
+                .Include(v => v.Account)
                 .Include(v => v.Currency)
                 .Include(v => v.CreatedBy)
                     .ThenInclude(u => u.PaymentBranch)
