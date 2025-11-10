@@ -1050,7 +1050,7 @@ namespace AccountingSystem.Controllers
                     Id = entry.Id,
                     Number = entry.Number,
                     Date = entry.Date,
-                    DateFormatted = entry.Date.ToString("dd/MM/yyyy"),
+                    DateFormatted = entry.Date.ToString("dd/MM/yyyy HH:mm"),
                     DateGroup = entry.Date.ToString("yyyy-MM"),
                     Description = entry.Description,
                     Reference = entry.Reference ?? string.Empty,
