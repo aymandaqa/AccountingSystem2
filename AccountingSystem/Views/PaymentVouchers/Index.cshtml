@@ -1,5 +1,5 @@
 @using AccountingSystem.Models
-@model IEnumerable<AccountingSystem.Models.PaymentVoucher>
+@model IEnumerable<AccountingSystem.ViewModels.PaymentVoucherListItemViewModel>
 @{
     ViewData["Title"] = "سندات الدفع";
 }
@@ -36,6 +36,8 @@
         <thead class="table-dark">
             <tr>
                 <th>التاريخ</th>
+                <th>الوقت</th>
+                <th>حساب المصروف</th>
                 <th>المورد</th>
                 <th>الوكيل</th>
                 <th>العملة</th>
@@ -43,16 +45,32 @@
                 <th>المبلغ</th>
                 <th>المرفق</th>
                 <th>الحالة</th>
+                <th>القيد المالي</th>
                 <th>ملاحظات</th>
                 <th>الفرع</th>
                 <th class="text-end">إجراءات</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var v in Model)
+            @foreach (var item in Model)
             {
+                var v = item.Voucher;
                 <tr>
                     <td>@v.Date.ToString("dd/MM/yyyy")</td>
+                    <td>@v.Date.ToString("HH:mm")</td>
+                    <td>
+                        @if (v.Account != null)
+                        {
+                            <div class="d-flex flex-column align-items-start">
+                                <span class="fw-semibold">@v.Account.NameAr</span>
+                                <small class="text-muted">@v.Account.Code</small>
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="text-muted">-</span>
+                        }
+                    </td>
                     <td>@(v.Supplier != null ? v.Supplier.NameAr : "-")</td>
                     <td>@(v.Agent != null ? v.Agent.Name : "-")</td>
                     <td>@v.Currency.Code</td>
@@ -85,6 +103,27 @@
                             default:
                                 <span class="badge bg-secondary">مسودة</span>
                                 break;
+                        }
+                    </td>
+                    <td>
+                        @if (item.JournalEntryId.HasValue)
+                        {
+                            <div class="d-flex flex-column align-items-start gap-1">
+                                <span class="fw-semibold">@item.JournalEntryReference</span>
+                                <small class="text-muted">رقم القيد: @item.JournalEntryNumber</small>
+                                <a asp-controller="JournalEntries"
+                                   asp-action="Details"
+                                   asp-route-id="@item.JournalEntryId.Value"
+                                   asp-require-permission="journal.view"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-book-open me-1"></i>
+                                    عرض القيد
+                                </a>
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="text-muted">لا يوجد قيد</span>
                         }
                     </td>
                     <td>@(string.IsNullOrWhiteSpace(v.Notes) ? "-" : v.Notes)</td>
