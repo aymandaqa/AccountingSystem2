@@ -111,15 +111,15 @@ namespace AccountingSystem.Services
                     throw new InvalidOperationException("عملة حساب الوكيل لا تطابق عملة حساب الدفع.");
                 }
 
-                if (loadedVoucher.Amount > agentAccount.CurrentBalance)
+                if (selectedAccount.Nature == AccountNature.Debit && loadedVoucher.Amount > selectedAccount.CurrentBalance)
                 {
-                    throw new InvalidOperationException("الرصيد المتاح في حساب الوكيل لا يكفي لإتمام العملية.");
+                    throw new InvalidOperationException("الرصيد المتاح في حساب الدفع لا يكفي لإتمام العملية.");
                 }
 
                 lines = new List<JournalEntryLine>
                 {
-                    new JournalEntryLine { AccountId = selectedAccount.Id, DebitAmount = loadedVoucher.Amount, Description = "سند دفع وكيل" },
-                    new JournalEntryLine { AccountId = agentAccount.Id, CreditAmount = loadedVoucher.Amount, Description = "سند دفع وكيل" }
+                    new JournalEntryLine { AccountId = agentAccount.Id, DebitAmount = loadedVoucher.Amount, Description = "سند دفع وكيل" },
+                    new JournalEntryLine { AccountId = selectedAccount.Id, CreditAmount = loadedVoucher.Amount, Description = "سند دفع وكيل" }
                 };
 
                 reference = $"سند دفع وكيل:{loadedVoucher.Id}";
