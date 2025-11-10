@@ -160,10 +160,11 @@ namespace AccountingSystem.Services
                 loadedExpense.Date,
                 description,
                 loadedExpense.Asset.BranchId,
-                approvedById,
+                loadedExpense.CreatedById,
                 lines,
                 JournalEntryStatus.Posted,
-                reference: reference);
+                reference: reference,
+                approvedById: approvedById);
         }
     }
 }

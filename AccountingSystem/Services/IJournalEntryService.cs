@@ -14,7 +14,8 @@ namespace AccountingSystem.Services
             IEnumerable<JournalEntryLine> lines,
             JournalEntryStatus status,
             string? reference = null,
-            string? number = null);
+            string? number = null,
+            string? approvedById = null);
 
         Task<string> GenerateJournalEntryNumber();
 

@@ -137,10 +137,11 @@ namespace AccountingSystem.Services
                     loadedVoucher.Date,
                     description,
                     loadedVoucher.CreatedBy.PaymentBranchId ?? throw new InvalidOperationException("Creator branch is required"),
-                    approvedById,
+                    loadedVoucher.CreatedById,
                     lines,
                     JournalEntryStatus.Posted,
-                    reference: reference);
+                    reference: reference,
+                    approvedById: approvedById);
             }
 
             loadedVoucher.Status = PaymentVoucherStatus.Approved;

@@ -54,10 +54,11 @@ namespace AccountingSystem.Services
                     loadedVoucher.Date,
                     loadedVoucher.Notes ?? "سند قبض",
                     loadedVoucher.CreatedBy.PaymentBranchId.Value,
-                    approvedById,
+                    loadedVoucher.CreatedById,
                     lines,
                     JournalEntryStatus.Posted,
-                    reference: reference);
+                    reference: reference,
+                    approvedById: approvedById);
             }
 
             loadedVoucher.Status = ReceiptVoucherStatus.Approved;

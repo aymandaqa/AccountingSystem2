@@ -31,7 +31,8 @@ namespace AccountingSystem.Services
             IEnumerable<JournalEntryLine> lines,
             JournalEntryStatus status,
             string? reference = null,
-            string? number = null)
+            string? number = null,
+            string? approvedById = null)
         {
             if (lines == null || !lines.Any())
                 throw new System.ArgumentException("Entry must contain at least one line", nameof(lines));
@@ -113,6 +114,7 @@ namespace AccountingSystem.Services
                     status,
                     reference,
                     number,
+                    approvedById,
                     totalDebit,
                     totalCredit);
             }
@@ -134,6 +136,7 @@ namespace AccountingSystem.Services
                         status,
                         reference,
                         number,
+                        approvedById,
                         totalDebit,
                         totalCredit);
 
@@ -260,6 +263,7 @@ namespace AccountingSystem.Services
             JournalEntryStatus status,
             string? reference,
             string? number,
+            string? approvedById,
             decimal totalDebit,
             decimal totalCredit)
         {
@@ -275,7 +279,9 @@ namespace AccountingSystem.Services
                 CreatedById = createdById,
                 TotalDebit = totalDebit,
                 TotalCredit = totalCredit,
-                Status = status
+                Status = status,
+                ApprovedById = approvedById,
+                ApprovedAt = approvedById != null ? System.DateTime.Now : null
             };
 
             foreach (var line in lineItems)
