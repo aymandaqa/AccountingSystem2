@@ -298,9 +298,9 @@ namespace AccountingSystem.Controllers
                 ModelState.AddModelError(nameof(PaymentVoucher.AgentId), "عملة حساب الوكيل لا تطابق عملة حساب الدفع.");
             }
 
-            if (agent?.Account != null && model.Amount > agent.Account.CurrentBalance)
+            if (paymentAccount != null && paymentAccount.Nature == AccountNature.Debit && model.Amount > paymentAccount.CurrentBalance)
             {
-                ModelState.AddModelError(nameof(PaymentVoucher.Amount), "الرصيد المتاح في حساب الوكيل لا يكفي لإتمام العملية.");
+                ModelState.AddModelError(nameof(PaymentVoucher.Amount), "الرصيد المتاح في حساب الدفع لا يكفي لإتمام العملية.");
             }
 
             if (agent?.Account != null && paymentAccount != null)
