@@ -30,6 +30,7 @@
             <th>فرع الاستقبال</th>
             <th>المبلغ</th>
             <th>تفاصيل الفئات</th>
+            <th>ملاحظات</th>
             <th>المرفق</th>
             <th>الحالة</th>
             <th>التاريخ</th>
@@ -37,91 +38,94 @@
         </tr>
     </thead>
     <tbody>
-    @foreach (var item in Model)
-    {
-        <tr>
-            <td>@(item.Sender?.FullName ?? item.SenderId)</td>
-            <td>@item.FromBranch?.NameAr</td>
-            <td>@(item.Receiver?.FullName ?? item.ReceiverId)</td>
-            <td>@item.ToBranch?.NameAr</td>
-            <td>@item.Amount</td>
-            <td>
-                @if (breakdowns.TryGetValue(item.Id, out var units) && units.Any())
-                {
-                    <ul class="mb-0 small">
-                        @foreach (var entry in units.OrderByDescending(kvp => kvp.Key))
-                        {
-                            var label = unitNames.TryGetValue(entry.Key, out var name) ? name : $"فئة رقم {entry.Key}";
-                            <li>@label: @entry.Value</li>
-                        }
-                    </ul>
-                }
-                else
-                {
-                    <span class="text-muted">-</span>
-                }
-            </td>
-            <td>
-                @if (!string.IsNullOrWhiteSpace(item.AttachmentFilePath))
-                {
-                    <a href="@Url.Content(item.AttachmentFilePath)" target="_blank" rel="noopener">
-                        @(string.IsNullOrWhiteSpace(item.AttachmentFileName) ? "عرض المرفق" : item.AttachmentFileName)
-                    </a>
-                }
-                else
-                {
-                    <span class="text-muted">-</span>
-                }
-            </td>
-            <td>
-                @if (statusStyles.TryGetValue(item.Status, out var style))
-                {
-                    <span class="badge @style.CssClass">@style.Label</span>
-                }
-                else
-                {
-                    <span class="badge bg-secondary">@item.Status</span>
-                }
-            </td>
-            <td>@item.CreatedAt.ToString("dd/MM/yyyy")</td>
-            <td>
-                <div class="d-flex flex-column gap-1">
-                    @if (item.Status == TransferStatus.Pending)
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@(item.Sender?.FullName ?? item.SenderId)</td>
+                <td>@item.FromBranch?.NameAr</td>
+                <td>@(item.Receiver?.FullName ?? item.ReceiverId)</td>
+                <td>@item.ToBranch?.NameAr</td>
+                <td>@item.Amount</td>
+                <td>
+                    @if (breakdowns.TryGetValue(item.Id, out var units) && units.Any())
                     {
-                        var canApprove = isManageView ? canManageTransfers : item.ReceiverId == currentUserId;
-                        var canEdit = canManageTransfers || item.SenderId == currentUserId;
+                        <ul class="mb-0 small">
+                            @foreach (var entry in units.OrderByDescending(kvp => kvp.Key))
+                            {
+                                var label = unitNames.TryGetValue(entry.Key, out var name) ? name : $"فئة رقم {entry.Key}";
+                                <li>@label: @entry.Value</li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <span class="text-muted">-</span>
+                    }
+                </td>
 
-                        if (canApprove)
+                <td>@item.Notes</td>
+
+                <td>
+                    @if (!string.IsNullOrWhiteSpace(item.AttachmentFilePath))
+                    {
+                        <a href="@Url.Content(item.AttachmentFilePath)" target="_blank" rel="noopener">
+                            @(string.IsNullOrWhiteSpace(item.AttachmentFileName) ? "عرض المرفق" : item.AttachmentFileName)
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="text-muted">-</span>
+                    }
+                </td>
+                <td>
+                    @if (statusStyles.TryGetValue(item.Status, out var style))
+                    {
+                        <span class="badge @style.CssClass">@style.Label</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">@item.Status</span>
+                    }
+                </td>
+                <td>@item.CreatedAt.ToString("dd/MM/yyyy")</td>
+                <td>
+                    <div class="d-flex flex-column gap-1">
+                        @if (item.Status == TransferStatus.Pending)
                         {
-                            <div class="d-flex flex-wrap gap-2">
-                                <a class="text-success" asp-action="Approve" asp-route-id="@item.Id" asp-route-accept="true" asp-route-returnUrl="@returnUrl" asp-require-permission="@approvePermission">استلام</a>
-                                <a class="text-danger" asp-action="Approve" asp-route-id="@item.Id" asp-route-accept="false" asp-route-returnUrl="@returnUrl" asp-require-permission="@approvePermission">رفض</a>
-                            </div>
+                            var canApprove = isManageView ? canManageTransfers : item.ReceiverId == currentUserId;
+                            var canEdit = canManageTransfers || item.SenderId == currentUserId;
+
+                            if (canApprove)
+                            {
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a class="text-success" asp-action="Approve" asp-route-id="@item.Id" asp-route-accept="true" asp-route-returnUrl="@returnUrl" asp-require-permission="@approvePermission">استلام</a>
+                                    <a class="text-danger" asp-action="Approve" asp-route-id="@item.Id" asp-route-accept="false" asp-route-returnUrl="@returnUrl" asp-require-permission="@approvePermission">رفض</a>
+                                </div>
+                            }
+
+                            if (canEdit)
+                            {
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a asp-action="Edit" asp-route-id="@item.Id" asp-route-returnUrl="@returnUrl" asp-require-permission="@editPermission">تعديل</a>
+                                    <form asp-action="Delete" asp-route-id="@item.Id" asp-route-returnUrl="@returnUrl" method="post" class="d-inline" asp-require-permission="@deletePermission">
+                                        <button type="submit" class="btn btn-link p-0 m-0 align-baseline text-danger">حذف</button>
+                                    </form>
+                                </div>
+                            }
                         }
 
-                        if (canEdit)
+                        @if (item.SenderJournalEntryId.HasValue)
                         {
-                            <div class="d-flex flex-wrap gap-2">
-                                <a asp-action="Edit" asp-route-id="@item.Id" asp-route-returnUrl="@returnUrl" asp-require-permission="@editPermission">تعديل</a>
-                                <form asp-action="Delete" asp-route-id="@item.Id" asp-route-returnUrl="@returnUrl" method="post" class="d-inline" asp-require-permission="@deletePermission">
-                                    <button type="submit" class="btn btn-link p-0 m-0 align-baseline text-danger">حذف</button>
-                                </form>
-                            </div>
+                            <a asp-action="PrintSend" asp-route-id="@item.Id" asp-route-returnUrl="@returnUrl" asp-require-permission="@printPermission" target="_blank" rel="noopener">طباعة سند إرسال</a>
                         }
-                    }
 
-                    @if (item.SenderJournalEntryId.HasValue)
-                    {
-                        <a asp-action="PrintSend" asp-route-id="@item.Id" asp-route-returnUrl="@returnUrl" asp-require-permission="@printPermission" target="_blank" rel="noopener">طباعة سند إرسال</a>
-                    }
-
-                    @if (item.Status == TransferStatus.Accepted && item.JournalEntryId.HasValue)
-                    {
-                        <a asp-action="PrintReceive" asp-route-id="@item.Id" asp-route-returnUrl="@returnUrl" asp-require-permission="@printPermission" target="_blank" rel="noopener">طباعة سند استلام</a>
-                    }
-                </div>
-            </td>
-        </tr>
-    }
+                        @if (item.Status == TransferStatus.Accepted && item.JournalEntryId.HasValue)
+                        {
+                            <a asp-action="PrintReceive" asp-route-id="@item.Id" asp-route-returnUrl="@returnUrl" asp-require-permission="@printPermission" target="_blank" rel="noopener">طباعة سند استلام</a>
+                        }
+                    </div>
+                </td>
+            </tr>
+        }
     </tbody>
 </table>
