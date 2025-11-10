@@ -25,7 +25,10 @@
                 @foreach (var branch in Model.Branches)
                 {
                     var isSelected = Model.Filters.FromBranchId.HasValue && Model.Filters.FromBranchId.Value.ToString() == branch.Value;
-                    <option value="@branch.Value" @(isSelected ? "selected" : null)>@branch.Text</option>
+                    <option value="@branch.Value" @if (isSelected)
+                        {
+                            <text>selected</text>
+                        }>@branch.Text</option>
                 }
             </select>
         </div>
@@ -36,7 +39,10 @@
                 @foreach (var branch in Model.Branches)
                 {
                     var isSelected = Model.Filters.ToBranchId.HasValue && Model.Filters.ToBranchId.Value.ToString() == branch.Value;
-                    <option value="@branch.Value" @(isSelected ? "selected" : null)>@branch.Text</option>
+                    <option value="@branch.Value" @if (isSelected)
+                        {
+                            <text>selected</text>
+                        }>@branch.Text</option>
                 }
             </select>
         </div>
