@@ -1,15 +1,65 @@
 @using AccountingSystem.Models
+@using AccountingSystem.ViewModels
 @using System.Linq
-@model IEnumerable<AccountingSystem.Models.PaymentTransfer>
+@model TransferManagementViewModel
 @{
     ViewData["Title"] = "إدارة الحوالات";
-    var pending = Model.Where(t => t.Status == TransferStatus.Pending).ToList();
-    var accepted = Model.Where(t => t.Status == TransferStatus.Accepted).ToList();
-    var rejected = Model.Where(t => t.Status == TransferStatus.Rejected).ToList();
+    var pending = Model.Transfers.Where(t => t.Status == TransferStatus.Pending).ToList();
+    var accepted = Model.Transfers.Where(t => t.Status == TransferStatus.Accepted).ToList();
+    var rejected = Model.Transfers.Where(t => t.Status == TransferStatus.Rejected).ToList();
 }
 
 <h2 class="mb-3">إدارة الحوالات</h2>
 <p class="text-muted">استعرض جميع الحوالات في النظام وتابع حالتها أو قم بتعديلها والموافقة عليها.</p>
+
+<form method="get" class="card card-body mb-4">
+    <div class="row g-3">
+        <div class="col-lg-3 col-md-6">
+            <label class="form-label" for="searchTerm">بحث في الجميع</label>
+            <input type="text" class="form-control" id="searchTerm" name="SearchTerm" value="@Model.Filters.SearchTerm" placeholder="ابحث عن مرسل، مستلم، فرع أو مبلغ" />
+        </div>
+        <div class="col-lg-2 col-md-6">
+            <label class="form-label" for="fromBranch">فرع الإرسال</label>
+            <select class="form-select" id="fromBranch" name="FromBranchId">
+                <option value="">الكل</option>
+                @foreach (var branch in Model.Branches)
+                {
+                    var isSelected = Model.Filters.FromBranchId.HasValue && Model.Filters.FromBranchId.Value.ToString() == branch.Value;
+                    <option value="@branch.Value" @(isSelected ? "selected" : null)>@branch.Text</option>
+                }
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-6">
+            <label class="form-label" for="toBranch">فرع الاستقبال</label>
+            <select class="form-select" id="toBranch" name="ToBranchId">
+                <option value="">الكل</option>
+                @foreach (var branch in Model.Branches)
+                {
+                    var isSelected = Model.Filters.ToBranchId.HasValue && Model.Filters.ToBranchId.Value.ToString() == branch.Value;
+                    <option value="@branch.Value" @(isSelected ? "selected" : null)>@branch.Text</option>
+                }
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-6">
+            <label class="form-label" for="fromDate">من تاريخ</label>
+            <input type="date" class="form-control" id="fromDate" name="FromDate" value="@Model.Filters.FromDate?.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-lg-2 col-md-6">
+            <label class="form-label" for="toDate">إلى تاريخ</label>
+            <input type="date" class="form-control" id="toDate" name="ToDate" value="@Model.Filters.ToDate?.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-12 d-flex flex-wrap gap-2 justify-content-between">
+            <div class="d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-primary">بحث</button>
+                <a asp-action="Manage" class="btn btn-outline-secondary">إعادة تعيين</a>
+            </div>
+            <button type="submit" class="btn btn-success" formaction="@Url.Action("ManageExportExcel")">
+                <i class="fa-solid fa-file-excel me-1"></i>
+                تصدير إلى Excel
+            </button>
+        </div>
+    </div>
+</form>
 
 <ul class="nav nav-tabs" id="manageTransferTabs" role="tablist">
     <li class="nav-item" role="presentation">

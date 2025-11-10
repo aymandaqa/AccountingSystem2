@@ -12,6 +12,9 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Text.Json;
 using AccountingSystem.Services;
+using ClosedXML.Excel;
+using System.Globalization;
+using System.IO;
 
 namespace AccountingSystem.Controllers
 {
@@ -72,14 +75,20 @@ namespace AccountingSystem.Controllers
         }
 
         [Authorize(Policy = "transfers.manage")]
-        public async Task<IActionResult> Manage()
+        public async Task<IActionResult> Manage([FromQuery] TransferManagementFilters? filters)
         {
+            filters ??= new TransferManagementFilters();
+            filters.Normalize();
+
             var transfersQuery = _context.PaymentTransfers
+                .AsNoTracking()
                 .Include(t => t.Sender)
                 .Include(t => t.Receiver)
                 .Include(t => t.FromBranch)
                 .Include(t => t.ToBranch)
                 .AsQueryable();
+
+            transfersQuery = ApplyTransferManagementFilters(transfersQuery, filters);
 
             var transfers = await transfersQuery
                 .OrderByDescending(t => t.CreatedAt)
@@ -87,10 +96,92 @@ namespace AccountingSystem.Controllers
 
             await PrepareTransferViewBagsAsync(transfers);
 
+            var branchOptions = await _context.Branches
+                .AsNoTracking()
+                .OrderBy(b => b.NameAr)
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = b.NameAr
+                })
+                .ToListAsync();
+
+            var viewModel = new TransferManagementViewModel
+            {
+                Filters = filters,
+                Transfers = transfers,
+                Branches = branchOptions
+            };
+
             ViewBag.CurrentUserId = _userManager.GetUserId(User);
             ViewBag.CanManageTransfers = true;
             ViewBag.IsManageView = true;
-            return View(transfers);
+            return View(viewModel);
+        }
+
+        [Authorize(Policy = "transfers.manage")]
+        public async Task<IActionResult> ManageExportExcel([FromQuery] TransferManagementFilters? filters)
+        {
+            filters ??= new TransferManagementFilters();
+            filters.Normalize();
+
+            var transfersQuery = _context.PaymentTransfers
+                .AsNoTracking()
+                .Include(t => t.Sender)
+                .Include(t => t.Receiver)
+                .Include(t => t.FromBranch)
+                .Include(t => t.ToBranch)
+                .AsQueryable();
+
+            transfersQuery = ApplyTransferManagementFilters(transfersQuery, filters);
+
+            var transfers = await transfersQuery
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Transfers");
+
+            worksheet.Cell(1, 1).Value = "المرسل";
+            worksheet.Cell(1, 2).Value = "فرع الإرسال";
+            worksheet.Cell(1, 3).Value = "المستلم";
+            worksheet.Cell(1, 4).Value = "فرع الاستقبال";
+            worksheet.Cell(1, 5).Value = "المبلغ";
+            worksheet.Cell(1, 6).Value = "الحالة";
+            worksheet.Cell(1, 7).Value = "التاريخ";
+            worksheet.Cell(1, 8).Value = "ملاحظات";
+            worksheet.Row(1).Style.Font.Bold = true;
+
+            var statusLabels = new Dictionary<TransferStatus, string>
+            {
+                [TransferStatus.Pending] = "قيد الانتظار",
+                [TransferStatus.Accepted] = "مقبولة",
+                [TransferStatus.Rejected] = "مرفوضة"
+            };
+
+            var row = 2;
+            foreach (var transfer in transfers)
+            {
+                worksheet.Cell(row, 1).Value = transfer.Sender?.FullName ?? transfer.SenderId;
+                worksheet.Cell(row, 2).Value = transfer.FromBranch?.NameAr ?? string.Empty;
+                worksheet.Cell(row, 3).Value = transfer.Receiver?.FullName ?? transfer.ReceiverId;
+                worksheet.Cell(row, 4).Value = transfer.ToBranch?.NameAr ?? string.Empty;
+                worksheet.Cell(row, 5).Value = transfer.Amount;
+                worksheet.Cell(row, 6).Value = statusLabels.TryGetValue(transfer.Status, out var label) ? label : transfer.Status.ToString();
+                worksheet.Cell(row, 7).Value = transfer.CreatedAt;
+                worksheet.Cell(row, 7).Style.DateFormat.Format = "yyyy-MM-dd";
+                worksheet.Cell(row, 8).Value = transfer.Notes ?? string.Empty;
+                row++;
+            }
+
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            var fileName = $"Transfers_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+            return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
         [Authorize(Policy = "transfers.create")]
@@ -884,6 +975,66 @@ namespace AccountingSystem.Controllers
 
             ViewBag.TransferCurrencyBreakdowns = breakdowns;
             ViewBag.CurrencyUnitNames = unitNames;
+        }
+
+        private IQueryable<PaymentTransfer> ApplyTransferManagementFilters(
+            IQueryable<PaymentTransfer> query,
+            TransferManagementFilters filters)
+        {
+            if (filters.FromBranchId.HasValue)
+            {
+                var fromBranchId = filters.FromBranchId.Value;
+                query = query.Where(t => t.FromBranchId == fromBranchId);
+            }
+
+            if (filters.ToBranchId.HasValue)
+            {
+                var toBranchId = filters.ToBranchId.Value;
+                query = query.Where(t => t.ToBranchId == toBranchId);
+            }
+
+            if (!string.IsNullOrEmpty(filters.SearchTerm))
+            {
+                var likeFilter = $"%{filters.SearchTerm}%";
+                decimal? numericSearch = null;
+
+                if (decimal.TryParse(filters.SearchTerm, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsedAmount))
+                {
+                    numericSearch = parsedAmount;
+                }
+                else if (decimal.TryParse(filters.SearchTerm, NumberStyles.Number, CultureInfo.CurrentCulture, out parsedAmount))
+                {
+                    numericSearch = parsedAmount;
+                }
+                else if (decimal.TryParse(filters.SearchTerm, NumberStyles.Number, CultureInfo.GetCultureInfo("ar-SA"), out parsedAmount))
+                {
+                    numericSearch = parsedAmount;
+                }
+
+                query = query.Where(t =>
+                    (t.Sender != null && t.Sender.FullName != null && EF.Functions.Like(t.Sender.FullName, likeFilter)) ||
+                    (t.Sender != null && t.Sender.UserName != null && EF.Functions.Like(t.Sender.UserName, likeFilter)) ||
+                    (t.Receiver != null && t.Receiver.FullName != null && EF.Functions.Like(t.Receiver.FullName, likeFilter)) ||
+                    (t.Receiver != null && t.Receiver.UserName != null && EF.Functions.Like(t.Receiver.UserName, likeFilter)) ||
+                    (t.FromBranch != null && t.FromBranch.NameAr != null && EF.Functions.Like(t.FromBranch.NameAr, likeFilter)) ||
+                    (t.ToBranch != null && t.ToBranch.NameAr != null && EF.Functions.Like(t.ToBranch.NameAr, likeFilter)) ||
+                    (t.Notes != null && EF.Functions.Like(t.Notes, likeFilter)) ||
+                    (numericSearch.HasValue && t.Amount == numericSearch.Value));
+            }
+
+            if (filters.FromDate.HasValue)
+            {
+                var fromDate = filters.FromDate.Value.Date;
+                query = query.Where(t => t.CreatedAt >= fromDate);
+            }
+
+            if (filters.ToDate.HasValue)
+            {
+                var toDateExclusive = filters.ToDate.Value.Date.AddDays(1);
+                query = query.Where(t => t.CreatedAt < toDateExclusive);
+            }
+
+            return query;
         }
 
         private async Task<(Account? Account, string? ErrorMessage)> GetIntermediaryAccountAsync(int currencyId)
