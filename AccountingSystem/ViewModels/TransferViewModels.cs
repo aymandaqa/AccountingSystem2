@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using AccountingSystem.Models;
@@ -123,5 +124,52 @@ namespace AccountingSystem.ViewModels
         public Account? IntermediaryAccount { get; set; }
 
         public string? ReturnUrl { get; set; }
+    }
+
+    public class TransferManagementFilters
+    {
+        [Display(Name = "بحث في الجميع")]
+        public string? SearchTerm { get; set; }
+
+        [Display(Name = "فرع الإرسال")]
+        public int? FromBranchId { get; set; }
+
+        [Display(Name = "فرع الاستقبال")]
+        public int? ToBranchId { get; set; }
+
+        [Display(Name = "من تاريخ")]
+        [DataType(DataType.Date)]
+        public DateTime? FromDate { get; set; }
+
+        [Display(Name = "إلى تاريخ")]
+        [DataType(DataType.Date)]
+        public DateTime? ToDate { get; set; }
+
+        public bool HasFilters =>
+            !string.IsNullOrWhiteSpace(SearchTerm) ||
+            FromBranchId.HasValue ||
+            ToBranchId.HasValue ||
+            FromDate.HasValue ||
+            ToDate.HasValue;
+
+        public void Normalize()
+        {
+            SearchTerm = string.IsNullOrWhiteSpace(SearchTerm) ? null : SearchTerm.Trim();
+
+            if (FromDate.HasValue)
+                FromDate = FromDate.Value.Date;
+
+            if (ToDate.HasValue)
+                ToDate = ToDate.Value.Date;
+        }
+    }
+
+    public class TransferManagementViewModel
+    {
+        public TransferManagementFilters Filters { get; set; } = new();
+
+        public List<PaymentTransfer> Transfers { get; set; } = new();
+
+        public IEnumerable<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
     }
 }
