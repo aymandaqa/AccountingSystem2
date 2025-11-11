@@ -27,7 +27,11 @@ namespace AccountingSystem.Controllers
             _userManager = userManager;
         }
 
-        private IQueryable<Supplier> BuildSuppliersQuery(string? search, int? branchId, SupplierBalanceFilter balanceFilter)
+        private IQueryable<Supplier> BuildSuppliersQuery(
+            string? search,
+            int? branchId,
+            SupplierBalanceFilter balanceFilter,
+            IReadOnlyCollection<int> userBranchIds)
         {
             var suppliersQuery = _context.Suppliers
                 .AsNoTracking()
@@ -37,6 +41,12 @@ namespace AccountingSystem.Controllers
                 .Include(s => s.SupplierBranches)
                     .ThenInclude(sb => sb.Branch)
                 .AsQueryable();
+
+            if (userBranchIds.Count > 0)
+            {
+                suppliersQuery = suppliersQuery.Where(s =>
+                    s.SupplierBranches.Any(sb => userBranchIds.Contains(sb.BranchId)));
+            }
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -72,6 +82,17 @@ namespace AccountingSystem.Controllers
             int page = 1,
             int pageSize = 10)
         {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Challenge();
+            }
+
+            var userBranchIds = await _context.UserBranches
+                .Where(ub => ub.UserId == user.Id)
+                .Select(ub => ub.BranchId)
+                .ToListAsync();
+
             var allowedPageSizes = new[] { 10, 25, 50, 100 };
             if (!allowedPageSizes.Contains(pageSize))
             {
@@ -80,7 +101,7 @@ namespace AccountingSystem.Controllers
 
             page = Math.Max(1, page);
 
-            var suppliersQuery = BuildSuppliersQuery(search, branchId, balanceFilter);
+            var suppliersQuery = BuildSuppliersQuery(search, branchId, balanceFilter, userBranchIds);
 
             var totalCount = await suppliersQuery.CountAsync();
             var totalPages = pageSize > 0 ? (int)Math.Ceiling(totalCount / (double)pageSize) : 0;
@@ -101,8 +122,18 @@ namespace AccountingSystem.Controllers
                 .Take(pageSize)
                 .ToListAsync();
 
-            var branches = await _context.Branches
-                .AsNoTracking()
+            var branchesQuery = _context.Branches.AsNoTracking();
+
+            if (userBranchIds.Count > 0)
+            {
+                branchesQuery = branchesQuery.Where(b => userBranchIds.Contains(b.Id));
+            }
+            else if (user.PaymentBranchId.HasValue)
+            {
+                branchesQuery = branchesQuery.Where(b => b.Id == user.PaymentBranchId.Value);
+            }
+
+            var branches = await branchesQuery
                 .OrderBy(b => b.NameAr)
                 .Select(b => new SelectListItem
                 {
@@ -116,6 +147,7 @@ namespace AccountingSystem.Controllers
             ViewBag.SelectedBalanceFilter = balanceFilter;
             ViewBag.PageSize = pageSize;
             ViewBag.PageSizeOptions = allowedPageSizes;
+            ViewBag.UserBranchIds = userBranchIds;
 
             var model = new PaginatedListViewModel<Supplier>
             {
@@ -135,7 +167,18 @@ namespace AccountingSystem.Controllers
             int? branchId,
             SupplierBalanceFilter balanceFilter = SupplierBalanceFilter.All)
         {
-            var suppliers = await BuildSuppliersQuery(search, branchId, balanceFilter)
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Challenge();
+            }
+
+            var userBranchIds = await _context.UserBranches
+                .Where(ub => ub.UserId == user.Id)
+                .Select(ub => ub.BranchId)
+                .ToListAsync();
+
+            var suppliers = await BuildSuppliersQuery(search, branchId, balanceFilter, userBranchIds)
                 .OrderBy(s => s.NameAr)
                 .ThenBy(s => s.Id)
                 .ToListAsync();

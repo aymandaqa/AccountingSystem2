@@ -15,6 +15,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using AccountingSystem.Extensions;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace AccountingSystem.Controllers
 {
@@ -49,7 +50,7 @@ namespace AccountingSystem.Controllers
                 .ToListAsync();
         }
 
-        public async Task<IActionResult> Index(DateTime? fromDate = null, DateTime? toDate = null, string? searchTerm = null, int page = 1, int pageSize = 25)
+        public async Task<IActionResult> Index(DateTime? fromDate = null, DateTime? toDate = null, string? searchTerm = null, int? branchId = null, int page = 1, int pageSize = 25)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -63,7 +64,7 @@ namespace AccountingSystem.Controllers
             var normalizedPageSize = pageSize <= 0 ? 25 : Math.Min(pageSize, 100);
             var currentPage = Math.Max(page, 1);
 
-            var vouchersQuery = BuildQuery(user, userBranchIds, fromDate, toDate);
+            var vouchersQuery = BuildQuery(user, userBranchIds, fromDate, toDate, branchId);
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
@@ -123,6 +124,29 @@ namespace AccountingSystem.Controllers
                     };
                 })
                 .ToList();
+
+            var branchesQuery = _context.Branches.AsNoTracking();
+
+            if (userBranchIds.Any())
+            {
+                branchesQuery = branchesQuery.Where(b => userBranchIds.Contains(b.Id));
+            }
+            else if (user.PaymentBranchId.HasValue)
+            {
+                branchesQuery = branchesQuery.Where(b => b.Id == user.PaymentBranchId.Value);
+            }
+
+            var branchOptions = await branchesQuery
+                .OrderBy(b => b.NameAr)
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = string.IsNullOrWhiteSpace(b.NameAr) ? b.NameEn ?? b.Code : b.NameAr
+                })
+                .ToListAsync();
+
+            ViewBag.UserBranches = branchOptions;
+            ViewBag.SelectedBranchId = branchId;
 
             var model = new PaginatedListViewModel<ReceiptVoucherListItemViewModel>
             {
@@ -425,7 +449,7 @@ namespace AccountingSystem.Controllers
         }
 
         [Authorize(Policy = "receiptvouchers.view")]
-        public async Task<IActionResult> ExportExcel(DateTime? fromDate = null, DateTime? toDate = null)
+        public async Task<IActionResult> ExportExcel(DateTime? fromDate = null, DateTime? toDate = null, int? branchId = null, string? searchTerm = null)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -436,7 +460,14 @@ namespace AccountingSystem.Controllers
                 .Select(ub => ub.BranchId)
                 .ToListAsync();
 
-            var vouchers = await BuildQuery(user, userBranchIds, fromDate, toDate)
+            var vouchersQuery = BuildQuery(user, userBranchIds, fromDate, toDate, branchId);
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                vouchersQuery = ApplySearchFilters(vouchersQuery, searchTerm.Trim());
+            }
+
+            var vouchers = await vouchersQuery
                 .OrderByDescending(v => v.Date)
                 .ToListAsync();
 
@@ -487,7 +518,7 @@ namespace AccountingSystem.Controllers
         [HttpPost]
         [Authorize(Policy = "receiptvouchers.delete")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(int id, DateTime? fromDate = null, DateTime? toDate = null, string? searchTerm = null, int page = 1, int pageSize = 25)
+        public async Task<IActionResult> Delete(int id, DateTime? fromDate = null, DateTime? toDate = null, string? searchTerm = null, int? branchId = null, int page = 1, int pageSize = 25)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -554,7 +585,7 @@ namespace AccountingSystem.Controllers
                 _attachmentStorageService.Delete(attachmentPath);
             }
 
-            return RedirectToAction(nameof(Index), new { fromDate, toDate, searchTerm, page, pageSize });
+            return RedirectToAction(nameof(Index), new { fromDate, toDate, searchTerm, branchId, page, pageSize });
         }
 
         private static decimal? TryParseDecimal(string term)
@@ -587,7 +618,7 @@ namespace AccountingSystem.Controllers
             return null;
         }
 
-        private IQueryable<ReceiptVoucher> BuildQuery(User user, List<int> userBranchIds, DateTime? fromDate, DateTime? toDate)
+        private IQueryable<ReceiptVoucher> BuildQuery(User user, List<int> userBranchIds, DateTime? fromDate, DateTime? toDate, int? branchId)
         {
             var vouchersQuery = _context.ReceiptVouchers
                 .Include(v => v.Account)
@@ -613,6 +644,12 @@ namespace AccountingSystem.Controllers
             {
                 vouchersQuery = vouchersQuery
                     .Where(v => v.CreatedById == user.Id);
+            }
+
+            if (branchId.HasValue)
+            {
+                vouchersQuery = vouchersQuery.Where(v =>
+                    v.CreatedBy.PaymentBranchId.HasValue && v.CreatedBy.PaymentBranchId.Value == branchId.Value);
             }
 
             if (fromDate.HasValue)
