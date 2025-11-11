@@ -176,18 +176,18 @@ namespace AccountingSystem.Controllers
                 {
                     model.WorkflowInstanceId = instance.Id;
                     await _context.SaveChangesAsync();
-                    TempData["InfoMessage"] = "تم إرسال سند الصرف لاعتمادات الموافقة";
+                    TempData["InfoMessage"] = "تم إرسال سند الدفع لاعتمادات الموافقة";
                 }
                 else
                 {
                     await _disbursementVoucherProcessor.FinalizeAsync(model, user.Id);
-                    TempData["SuccessMessage"] = "تم إنشاء سند الصرف واعتماده فوراً";
+                    TempData["SuccessMessage"] = "تم إنشاء سند الدفع واعتماده فوراً";
                 }
             }
             else
             {
                 await _disbursementVoucherProcessor.FinalizeAsync(model, user.Id);
-                TempData["SuccessMessage"] = "تم إنشاء سند الصرف واعتماده فوراً";
+                TempData["SuccessMessage"] = "تم إنشاء سند الدفع واعتماده فوراً";
             }
 
             return RedirectToAction(nameof(Index));

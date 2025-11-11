@@ -285,9 +285,9 @@ namespace AccountingSystem.Services
         {
             return documentType switch
             {
-                WorkflowDocumentType.PaymentVoucher => "طلب موافقة سند دفع",
+                WorkflowDocumentType.PaymentVoucher => "طلب موافقة سند صرف",
                 WorkflowDocumentType.ReceiptVoucher => "طلب موافقة سند قبض",
-                WorkflowDocumentType.DisbursementVoucher => "طلب موافقة سند صرف",
+                WorkflowDocumentType.DisbursementVoucher => "طلب موافقة سند دفع",
                 WorkflowDocumentType.DynamicScreenEntry => "طلب موافقة حركة ديناميكية",
                 WorkflowDocumentType.AssetExpense => "طلب موافقة مصروف أصل",
                 _ => "طلب موافقة"
@@ -299,9 +299,9 @@ namespace AccountingSystem.Services
             var amountSuffix = GetAmountDescription(instance);
             return instance.DocumentType switch
             {
-                WorkflowDocumentType.PaymentVoucher => $"يوجد سند دفع رقم {instance.DocumentId} بانتظار الموافقة{amountSuffix}",
+                WorkflowDocumentType.PaymentVoucher => $"يوجد سند صرف رقم {instance.DocumentId} بانتظار الموافقة{amountSuffix}",
                 WorkflowDocumentType.ReceiptVoucher => $"يوجد سند قبض رقم {instance.DocumentId} بانتظار الموافقة{amountSuffix}",
-                WorkflowDocumentType.DisbursementVoucher => $"يوجد سند صرف رقم {instance.DocumentId} بانتظار الموافقة{amountSuffix}",
+                WorkflowDocumentType.DisbursementVoucher => $"يوجد سند دفع رقم {instance.DocumentId} بانتظار الموافقة{amountSuffix}",
                 WorkflowDocumentType.DynamicScreenEntry => $"يوجد طلب على شاشة ديناميكية رقم {instance.DocumentId} بانتظار الموافقة{amountSuffix}",
                 WorkflowDocumentType.AssetExpense => $"يوجد مصروف أصل رقم {instance.DocumentId} بانتظار الموافقة{amountSuffix}",
                 _ => $"هناك مستند رقم {instance.DocumentId} بانتظار الموافقة{amountSuffix}"
