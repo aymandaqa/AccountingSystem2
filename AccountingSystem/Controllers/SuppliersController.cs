@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using AccountingSystem.Data;
 using AccountingSystem.Extensions;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using ClosedXML.Excel;
 
 namespace AccountingSystem.Controllers
 {
@@ -25,16 +27,15 @@ namespace AccountingSystem.Controllers
             _userManager = userManager;
         }
 
-        // GET: Suppliers
-        public async Task<IActionResult> Index(string? search)
+        private IQueryable<Supplier> BuildSuppliersQuery(string? search, int? branchId, SupplierBalanceFilter balanceFilter)
         {
             var suppliersQuery = _context.Suppliers
+                .AsNoTracking()
                 .Include(s => s.Account)
                     .ThenInclude(a => a.Currency)
                 .Include(s => s.CreatedBy)
                 .Include(s => s.SupplierBranches)
                     .ThenInclude(sb => sb.Branch)
-                .Include(s => s.CreatedBy)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
@@ -46,14 +47,167 @@ namespace AccountingSystem.Controllers
                     (s.Email != null && EF.Functions.Like(s.Email, $"%{search}%")));
             }
 
+            if (branchId.HasValue)
+            {
+                suppliersQuery = suppliersQuery.Where(s =>
+                    s.SupplierBranches.Any(sb => sb.BranchId == branchId.Value));
+            }
+
+            suppliersQuery = balanceFilter switch
+            {
+                SupplierBalanceFilter.Positive => suppliersQuery.Where(s => s.Account != null && s.Account.CurrentBalance > 0),
+                SupplierBalanceFilter.Negative => suppliersQuery.Where(s => s.Account != null && s.Account.CurrentBalance < 0),
+                SupplierBalanceFilter.Zero => suppliersQuery.Where(s => s.Account != null && s.Account.CurrentBalance == 0),
+                _ => suppliersQuery
+            };
+
+            return suppliersQuery;
+        }
+
+        // GET: Suppliers
+        public async Task<IActionResult> Index(
+            string? search,
+            int? branchId,
+            SupplierBalanceFilter balanceFilter = SupplierBalanceFilter.All,
+            int page = 1,
+            int pageSize = 10)
+        {
+            var allowedPageSizes = new[] { 10, 25, 50, 100 };
+            if (!allowedPageSizes.Contains(pageSize))
+            {
+                pageSize = allowedPageSizes.First();
+            }
+
+            page = Math.Max(1, page);
+
+            var suppliersQuery = BuildSuppliersQuery(search, branchId, balanceFilter);
+
+            var totalCount = await suppliersQuery.CountAsync();
+            var totalPages = pageSize > 0 ? (int)Math.Ceiling(totalCount / (double)pageSize) : 0;
+            if (totalPages > 0 && page > totalPages)
+            {
+                page = totalPages;
+            }
+
+            if (page <= 0)
+            {
+                page = 1;
+            }
+
             var suppliers = await suppliersQuery
+                .OrderBy(s => s.NameAr)
+                .ThenBy(s => s.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var branches = await _context.Branches
+                .AsNoTracking()
+                .OrderBy(b => b.NameAr)
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = string.IsNullOrWhiteSpace(b.NameAr) ? b.NameEn ?? b.Code : b.NameAr
+                })
+                .ToListAsync();
+
+            ViewBag.Branches = branches;
+            ViewBag.SelectedBranchId = branchId;
+            ViewBag.SelectedBalanceFilter = balanceFilter;
+            ViewBag.PageSize = pageSize;
+            ViewBag.PageSizeOptions = allowedPageSizes;
+
+            var model = new PaginatedListViewModel<Supplier>
+            {
+                Items = suppliers,
+                TotalCount = totalCount,
+                PageIndex = page,
+                PageSize = pageSize,
+                SearchTerm = search
+            };
+
+            return View(model);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExportExcel(
+            string? search,
+            int? branchId,
+            SupplierBalanceFilter balanceFilter = SupplierBalanceFilter.All)
+        {
+            var suppliers = await BuildSuppliersQuery(search, branchId, balanceFilter)
                 .OrderBy(s => s.NameAr)
                 .ThenBy(s => s.Id)
                 .ToListAsync();
 
-            ViewBag.Search = search;
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Suppliers");
 
-            return View(suppliers);
+            worksheet.Cell(1, 1).Value = "اسم المورد";
+            worksheet.Cell(1, 2).Value = "رقم الهاتف";
+            worksheet.Cell(1, 3).Value = "البريد الإلكتروني";
+            worksheet.Cell(1, 4).Value = "الصلاحيات";
+            worksheet.Cell(1, 5).Value = "الفروع";
+            worksheet.Cell(1, 6).Value = "المستخدم";
+            worksheet.Cell(1, 7).Value = "تاريخ الإنشاء";
+            worksheet.Cell(1, 8).Value = "رصيد المورد";
+            worksheet.Cell(1, 9).Value = "العملة";
+
+            worksheet.Row(1).Style.Font.Bold = true;
+
+            var row = 2;
+            foreach (var supplier in suppliers)
+            {
+                worksheet.Cell(row, 1).Value = supplier.NameAr;
+                worksheet.Cell(row, 2).Value = supplier.Phone ?? string.Empty;
+                worksheet.Cell(row, 3).Value = supplier.Email ?? string.Empty;
+
+                var permissions = Enum.GetValues(typeof(SupplierAuthorization))
+                    .Cast<SupplierAuthorization>()
+                    .Where(a => a != SupplierAuthorization.None && supplier.AuthorizedOperations.HasFlag(a))
+                    .Select(a => a.GetDisplayName())
+                    .ToList();
+                worksheet.Cell(row, 4).Value = permissions.Count == 0 ? "-" : string.Join("، ", permissions);
+
+                var branchNames = supplier.SupplierBranches != null && supplier.SupplierBranches.Any()
+                    ? supplier.SupplierBranches
+                        .Where(sb => sb.Branch != null)
+                        .Select(sb => !string.IsNullOrWhiteSpace(sb.Branch!.NameAr)
+                            ? sb.Branch!.NameAr
+                            : (sb.Branch!.NameEn ?? sb.Branch!.Code))
+                        .ToList()
+                    : new List<string>();
+                worksheet.Cell(row, 5).Value = branchNames.Count == 0 ? "-" : string.Join("، ", branchNames);
+
+                worksheet.Cell(row, 6).Value = supplier.CreatedBy?.FullName ?? "-";
+                worksheet.Cell(row, 7).Value = supplier.CreatedAt;
+                worksheet.Cell(row, 7).Style.DateFormat.Format = "yyyy-MM-dd HH:mm";
+
+                if (supplier.Account != null)
+                {
+                    worksheet.Cell(row, 8).Value = supplier.Account.CurrentBalance;
+                    worksheet.Cell(row, 8).Style.NumberFormat.Format = "#,##0.00";
+                    worksheet.Cell(row, 9).Value = supplier.Account.Currency?.Code ?? string.Empty;
+                }
+                else
+                {
+                    worksheet.Cell(row, 8).Value = "-";
+                    worksheet.Cell(row, 9).Value = string.Empty;
+                }
+
+                row++;
+            }
+
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            var fileName = $"Suppliers_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+            return File(stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
         }
 
         // GET: Suppliers/Create
@@ -180,11 +334,11 @@ namespace AccountingSystem.Controllers
                     NameAr = model.NameAr,
                     NameEn = model.NameEn,
                     Phone = model.Phone,
-                Email = model.Email,
-                IsActive = model.IsActive,
-                AuthorizedOperations = CombineAuthorizations(model.SelectedAuthorizations),
-                AccountId = account.Id,
-                CreatedById = user.Id,
+                    Email = model.Email,
+                    IsActive = model.IsActive,
+                    AuthorizedOperations = CombineAuthorizations(model.SelectedAuthorizations),
+                    AccountId = account.Id,
+                    CreatedById = user.Id,
                     CreatedAt = DateTime.Now
                 };
 
