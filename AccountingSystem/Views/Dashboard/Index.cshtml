@@ -235,6 +235,19 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="col-12">
+                                    <div class="card shadow-sm border-0 h-100">
+                                        <div class="card-header d-flex align-items-center justify-content-between">
+                                            <div>
+                                                <h5 class="card-title mb-0"><i class="fas fa-truck-loading ms-2"></i> ملخص شحنات الأعمال حسب الفروع</h5>
+                                                <span class="text-muted small">اختر الفرع للاطلاع على تفاصيل الشحنات المسجلة بداخله.</span>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            @await Html.PartialAsync("~/Views/Dashboard/_BusinessShipmentBranchSummaryTable.cshtml", Model.BusinessShipmentBranchSummaries)
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         }
 
@@ -1439,6 +1452,81 @@
                     .fail(function () {
                         alert('تعذر تحميل بيانات السائقين، يرجى المحاولة مرة أخرى.');
                         $button.html('<i class="fas fa-plus"></i>');
+                    })
+                    .always(function () {
+                        $button.prop('disabled', false);
+                    });
+            });
+
+            var $businessShipmentBranchTable = $('#businessShipmentBranchTable');
+            var businessShipmentDetailsUrl = $businessShipmentBranchTable.data('details-url');
+
+            $(document).on('click', '.business-shipment-branch-toggle', function () {
+                var $button = $(this);
+                var $row = $button.closest('.business-shipment-branch-row');
+                var canLoad = String($row.data('can-load-details')) === 'true';
+
+                if (!canLoad) {
+                    return;
+                }
+
+                var branchId = parseInt($row.data('branch-id')) || 0;
+                if (!branchId) {
+                    return;
+                }
+
+                var detailsRowSelector = $row.data('details-row');
+                if (!detailsRowSelector) {
+                    return;
+                }
+
+                var $detailsRow = $(detailsRowSelector);
+                if (!$detailsRow.length) {
+                    return;
+                }
+
+                var $container = $detailsRow.find('.business-shipment-details-container');
+                var isVisible = $detailsRow.is(':visible');
+
+                if (isVisible) {
+                    $detailsRow.hide();
+                    $button.html('<i class="fas fa-plus"></i>').attr('aria-expanded', 'false');
+                    return;
+                }
+
+                if ($container.data('loaded')) {
+                    $detailsRow.show();
+                    $button.html('<i class="fas fa-minus"></i>').attr('aria-expanded', 'true');
+                    return;
+                }
+
+                if (!businessShipmentDetailsUrl) {
+                    $container.html('<div class="alert alert-warning text-center mb-0">لا يمكن تحميل بيانات هذا الفرع حالياً.</div>');
+                    $container.data('loaded', true);
+                    $detailsRow.show();
+                    $button.html('<i class="fas fa-minus"></i>').attr('aria-expanded', 'true');
+                    return;
+                }
+
+                $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+                $.get(businessShipmentDetailsUrl, { branchId: branchId })
+                    .done(function (html) {
+                        var trimmed = $.trim(html);
+                        if (trimmed.length) {
+                            $container.html(trimmed);
+                        } else {
+                            $container.html('<div class="alert alert-light border text-center mb-0">لا توجد شحنات مسجلة لهذا الفرع.</div>');
+                        }
+                        $container.data('loaded', true);
+                        $detailsRow.show();
+                        $button.html('<i class="fas fa-minus"></i>').attr('aria-expanded', 'true');
+                    })
+                    .fail(function () {
+                        $container.html('<div class="alert alert-danger text-center mb-0">تعذر تحميل الشحنات، يرجى المحاولة مرة أخرى.</div>');
+                        $container.data('loaded', false);
+                        $detailsRow.show();
+                        $button.html('<i class="fas fa-minus"></i>').attr('aria-expanded', 'true');
                     })
                     .always(function () {
                         $button.prop('disabled', false);

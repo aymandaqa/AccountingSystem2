@@ -1,0 +1,82 @@
+@using System.Globalization
+@model IReadOnlyList<AccountingSystem.ViewModels.BusinessShipmentBranchSummaryViewModel>
+
+@{
+    var culture = CultureInfo.CreateSpecificCulture("ar-SA");
+    Func<decimal, string> formatCurrency = value => string.Format(culture, "{0:N2}", value);
+}
+
+@if (Model == null || !Model.Any())
+{
+    <div class="alert alert-info text-center mb-0">
+        لا توجد بيانات شحنات أعمال متاحة حالياً.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="businessShipmentBranchTable" data-details-url="@Url.Action("LoadBusinessShipmentPriceDetails", "Dashboard")">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">الفرع</th>
+                    <th scope="col" class="text-center">عدد الشحنات</th>
+                    <th scope="col" class="text-end">إجمالي المبالغ</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var index = 0; index < Model.Count; index++)
+                {
+                    var branch = Model[index];
+                    var detailsRowId = $"businessShipmentBranchDetails{index}";
+                    var canLoad = branch.CanLoadDetails;
+                    <tr class="business-shipment-branch-row"
+                        data-branch-id="@(branch.BranchId ?? 0)"
+                        data-road-branch-id="@(branch.RoadCompanyBranchId ?? 0)"
+                        data-can-load-details="@canLoad.ToString().ToLowerInvariant()"
+                        data-details-row="#@detailsRowId">
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                @if (canLoad)
+                                {
+                                    <button type="button" class="btn btn-link text-decoration-none p-0 business-shipment-branch-toggle" aria-expanded="false">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="text-muted"><i class="fas fa-minus-circle"></i></span>
+                                }
+                                <div>
+                                    <div class="fw-semibold">@branch.BranchName</div>
+                                    @if (branch.BranchId.HasValue)
+                                    {
+                                        <div class="text-muted small">معرّف الفرع: @branch.BranchId</div>
+                                    }
+                                    else if (branch.RoadCompanyBranchId.HasValue)
+                                    {
+                                        <div class="text-muted small">معرّف Road: @branch.RoadCompanyBranchId</div>
+                                    }
+                                    @if (!canLoad)
+                                    {
+                                        <div class="text-muted small">لا يمكن عرض تفاصيل هذا الفرع.</div>
+                                    }
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-primary-subtle text-primary">@branch.ShipmentCount</span>
+                        </td>
+                        <td class="text-end">
+                            <span class="fw-semibold">@formatCurrency(branch.TotalShipmentPrice)</span>
+                        </td>
+                    </tr>
+                    <tr id="@detailsRowId" class="business-shipment-branch-details" style="display:none;">
+                        <td colspan="3">
+                            <div class="business-shipment-details-container border rounded-3 p-3 bg-light" data-loaded="false"></div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

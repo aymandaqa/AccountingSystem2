@@ -52,6 +52,7 @@ namespace AccountingSystem.Controllers
                 : new List<int>(userBranchIds);
 
             var driverCodSummaries = await GetDriverCodBranchSummariesAsync(allowedBranchIds);
+            var businessShipmentBranches = await GetBusinessShipmentBranchSummariesAsync(allowedBranchIds);
             // Always display customer account balances across all branches, not just the user's assigned branches.
             var customerAccountBranches = await GetCustomerAccountBranchesAsync(new List<int>(), treeData.BaseCurrency);
 
@@ -104,6 +105,7 @@ namespace AccountingSystem.Controllers
                 ParentAccountConfigured = treeData.ParentAccountConfigured,
                 SelectedParentAccountName = treeData.SelectedParentAccountName,
                 DriverCodBranchSummaries = driverCodSummaries,
+                BusinessShipmentBranchSummaries = businessShipmentBranches,
                 CustomerAccountBranches = customerAccountBranches
             };
 
@@ -296,6 +298,30 @@ namespace AccountingSystem.Controllers
             return PartialView("~/Views/Dashboard/_DriverCodBranchDetails.cshtml", details);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> LoadBusinessShipmentPriceDetails(int branchId)
+        {
+            if (branchId <= 0)
+            {
+                return PartialView("~/Views/Dashboard/_BusinessShipmentPricesTable.cshtml", new List<BusinessShipmentPriceViewModel>());
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userBranchIds = await _context.UserBranches
+                .Where(ub => ub.UserId == userId)
+                .Select(ub => ub.BranchId)
+                .ToListAsync();
+
+            if (userBranchIds.Any() && !userBranchIds.Contains(branchId))
+            {
+                return PartialView("~/Views/Dashboard/_BusinessShipmentPricesTable.cshtml", new List<BusinessShipmentPriceViewModel>());
+            }
+
+            var shipments = await GetBusinessShipmentPriceDetailsAsync(branchId);
+
+            return PartialView("~/Views/Dashboard/_BusinessShipmentPricesTable.cshtml", shipments);
+        }
+
         private async Task<List<DriverCodBranchSummaryViewModel>> GetDriverCodBranchSummariesAsync(List<int> allowedBranchIds)
         {
             var results = new List<DriverCodBranchSummaryViewModel>();
@@ -366,6 +392,141 @@ namespace AccountingSystem.Controllers
             return results
                 .OrderByDescending(r => r.ShipmentCod)
                 .ThenBy(r => r.BranchName)
+                .ToList();
+        }
+
+        private async Task<List<BusinessShipmentBranchSummaryViewModel>> GetBusinessShipmentBranchSummariesAsync(List<int> allowedBranchIds)
+        {
+            var results = new List<BusinessShipmentBranchSummaryViewModel>();
+            var restrictBranches = allowedBranchIds?.Any() == true;
+
+            try
+            {
+                var branchMetadata = await _context.Branches
+                    .AsNoTracking()
+                    .Select(b => new { b.Id, b.NameAr, b.Code })
+                    .ToListAsync();
+
+                var branchByRoadId = new Dictionary<int, (int BranchId, string BranchName)>();
+
+                foreach (var branch in branchMetadata)
+                {
+                    if (int.TryParse(branch.Code, out var parsedCode))
+                    {
+                        var resolvedName = !string.IsNullOrWhiteSpace(branch.NameAr) ? branch.NameAr : $"فرع {branch.Id}";
+                        branchByRoadId[parsedCode] = (branch.Id, resolvedName);
+                    }
+                }
+
+                var grouped = await _roadContext.BusinessPayShipmentPrices
+                    .AsNoTracking()
+                    .GroupBy(s => s.CompanyBranchId)
+                    .Select(g => new
+                    {
+                        CompanyBranchId = g.Key,
+                        TotalShipmentPrice = g.Sum(s => s.ShipmentPrice ?? 0m),
+                        ShipmentCount = g.Count()
+                    })
+                    .ToListAsync();
+
+                foreach (var item in grouped)
+                {
+                    int? branchId = null;
+                    string branchName = "فرع غير محدد";
+
+                    if (item.CompanyBranchId.HasValue && branchByRoadId.TryGetValue(item.CompanyBranchId.Value, out var mappedBranch))
+                    {
+                        branchId = mappedBranch.BranchId;
+                        branchName = mappedBranch.BranchName;
+                    }
+                    else if (item.CompanyBranchId.HasValue)
+                    {
+                        branchName = $"فرع Road #{item.CompanyBranchId.Value}";
+                    }
+
+                    if (restrictBranches && (!branchId.HasValue || !allowedBranchIds.Contains(branchId.Value)))
+                    {
+                        continue;
+                    }
+
+                    results.Add(new BusinessShipmentBranchSummaryViewModel
+                    {
+                        BranchId = branchId,
+                        RoadCompanyBranchId = item.CompanyBranchId,
+                        BranchName = branchName,
+                        TotalShipmentPrice = item.TotalShipmentPrice,
+                        ShipmentCount = item.ShipmentCount
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load business shipment branch summaries");
+            }
+
+            return results
+                .OrderByDescending(r => r.TotalShipmentPrice)
+                .ThenBy(r => r.BranchName)
+                .ToList();
+        }
+
+        private async Task<List<BusinessShipmentPriceViewModel>> GetBusinessShipmentPriceDetailsAsync(int branchId)
+        {
+            const int maxResults = 200;
+            var results = new List<BusinessShipmentPriceViewModel>();
+
+            try
+            {
+                var branch = await _context.Branches
+                    .AsNoTracking()
+                    .Select(b => new { b.Id, b.NameAr, b.Code })
+                    .FirstOrDefaultAsync(b => b.Id == branchId);
+
+                if (branch == null || !int.TryParse(branch.Code, out var roadBranchId))
+                {
+                    return results;
+                }
+
+                var shipments = await _roadContext.BusinessPayShipmentPrices
+                    .AsNoTracking()
+                    .Where(s => s.CompanyBranchId == roadBranchId)
+                    .OrderByDescending(s => s.EntryDate ?? DateTime.MinValue)
+                    .ThenByDescending(s => s.Id)
+                    .Take(maxResults)
+                    .ToListAsync();
+
+                var branchName = !string.IsNullOrWhiteSpace(branch.NameAr) ? branch.NameAr : $"فرع {branch.Id}";
+
+                foreach (var shipment in shipments)
+                {
+                    results.Add(new BusinessShipmentPriceViewModel
+                    {
+                        Id = shipment.Id,
+                        ShipmentTrackingNo = shipment.ShipmentTrackingNo,
+                        ShipmentId = shipment.ShipmentId,
+                        EntryDate = shipment.EntryDate,
+                        BusinessId = shipment.BusinessId,
+                        BusinessName = !string.IsNullOrWhiteSpace(shipment.BusinessName) ? shipment.BusinessName! : "غير محدد",
+                        ClientName = shipment.ClientName ?? string.Empty,
+                        CityName = shipment.CityName ?? string.Empty,
+                        AreaName = shipment.AreaName ?? string.Empty,
+                        ShipmentPrice = shipment.ShipmentPrice ?? 0m,
+                        Status = shipment.Status ?? string.Empty,
+                        DriverId = shipment.DriverId,
+                        CompanyBranchId = shipment.CompanyBranchId,
+                        BranchName = branchName,
+                        BranchId = branch.Id
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load business shipment price details for branch {BranchId}", branchId);
+            }
+
+            return results
+                .OrderByDescending(r => r.EntryDate ?? DateTime.MinValue)
+                .ThenByDescending(r => r.Id)
                 .ToList();
         }
 
