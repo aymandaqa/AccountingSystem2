@@ -3,7 +3,9 @@
 @using AccountingSystem.Extensions
 @using AccountingSystem.ViewModels
 @using Microsoft.AspNetCore.Mvc.Rendering
+@using System.Globalization
 @using System.Linq
+
 @{
     ViewData["Title"] = "الموردين";
     var searchValue = Model.SearchTerm ?? string.Empty;
@@ -16,180 +18,244 @@
     var branches = ViewBag.Branches as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
     var balanceFilterOptions = Enum.GetValues(typeof(SupplierBalanceFilter)).Cast<SupplierBalanceFilter>();
 }
-<h1 class="mb-3">الموردين</h1>
-@Html.AntiForgeryToken()
-<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-3">
-    <div class="d-flex flex-column flex-sm-row gap-2">
-        <a class="btn btn-primary" href="@Url.Action("Create")" asp-require-permission="suppliers.create">إضافة مورد</a>
-        <a class="btn btn-success"
-           asp-action="ExportExcel"
-           asp-route-search="@searchValue"
-           asp-route-branchId="@selectedBranchId"
-           asp-route-balanceFilter="@selectedBalanceFilter"
-           asp-require-permission="suppliers.view">تصدير Excel</a>
-    </div>
-    <form method="get" class="row g-2 align-items-end" asp-action="Index">
-        <div class="col-12 col-md-auto">
-            <label for="supplier-search" class="form-label">بحث في الجميع</label>
-            <input type="text" id="supplier-search" name="search" value="@searchValue" class="form-control" placeholder="ابحث بالاسم أو الهاتف أو البريد" />
-        </div>
-        <div class="col-12 col-md-auto">
-            <label for="branchId" class="form-label">الفرع</label>
-            <select id="branchId" name="branchId" class="form-select">
-                <option value="">الجميع</option>
-                @foreach (var branch in branches)
-                {
-                    <option value="@branch.Value" selected="@(selectedBranchId.HasValue && branch.Value == selectedBranchId.Value.ToString() ? "selected" : null)">@branch.Text</option>
-                }
-            </select>
-        </div>
-        <div class="col-12 col-md-auto">
-            <label for="balanceFilter" class="form-label">الرصيد</label>
-            <select id="balanceFilter" name="balanceFilter" class="form-select">
-                @foreach (var option in balanceFilterOptions)
-                {
-                    <option value="@option" selected="@(option == selectedBalanceFilter ? "selected" : null)">@option.GetDisplayName()</option>
-                }
-            </select>
-        </div>
-        <div class="col-12 col-md-auto">
-            <label for="pageSize" class="form-label">عدد السجلات</label>
-            <select id="pageSize" name="pageSize" class="form-select">
-                @foreach (var option in pageSizeOptions)
-                {
-                    <option value="@option" selected="@(option == pageSize ? "selected" : null)">@option</option>
-                }
-            </select>
-        </div>
-        <div class="col-12 col-md-auto d-flex gap-2">
-            <input type="hidden" name="page" value="1" />
-            <button type="submit" class="btn btn-secondary">تطبيق</button>
-            <a class="btn btn-outline-secondary" href="@Url.Action("Index")">مسح</a>
-        </div>
-    </form>
+
+<div id="suppliersAntiForgery" class="d-none">
+    @Html.AntiForgeryToken()
 </div>
-<table class="table table-bordered align-middle">
-    <thead class="table-light">
-        <tr>
-            <th>الاسم</th>
-            <th>التليفون</th>
-            <th>البريد الإلكتروني</th>
-            <th>الصلاحيات</th>
-            <th>الفروع المسموح بها</th>
-            <th>المستخدم</th>
-            <th>وقت الإنشاء</th>
-            <th class="text-end">رصيد المورد</th>
-            <th>الإجراءات</th>
-        </tr>
-    </thead>
-    <tbody>
-        @if (Model.Items.Any())
-        {
-            foreach (var item in Model.Items)
-            {
-                <tr>
-                    <td>@item.NameAr</td>
-                    <td>@(string.IsNullOrWhiteSpace(item.Phone) ? "-" : item.Phone)</td>
-                    <td>@(string.IsNullOrWhiteSpace(item.Email) ? "-" : item.Email)</td>
-                    <td>
-                        @{
-                            var permissions = Enum.GetValues(typeof(SupplierAuthorization))
-                                .Cast<SupplierAuthorization>()
-                                .Where(a => a != SupplierAuthorization.None && item.AuthorizedOperations.HasFlag(a))
-                                .Select(a => a.GetDisplayName())
-                                .ToList();
-                            var permissionsText = permissions.Count == 0 ? "-" : string.Join("، ", permissions);
-                        }
-                        @permissionsText
-                    </td>
-                    <td>
-                        @{
-                            var branchNames = item.SupplierBranches != null && item.SupplierBranches.Any()
-                                ? item.SupplierBranches
-                                    .Where(sb => sb.Branch != null)
-                                    .Select(sb => !string.IsNullOrWhiteSpace(sb.Branch!.NameAr)
-                                        ? sb.Branch!.NameAr
-                                        : (sb.Branch!.NameEn ?? sb.Branch!.Code))
-                                    .ToList()
-                                : new List<string>();
-                            var branchesText = branchNames.Count == 0 ? "-" : string.Join("، ", branchNames);
-                        }
-                        @branchesText
-                    </td>
-                    <td>@(item.CreatedBy?.FullName ?? "-")</td>
-                    <td>@item.CreatedAt.ToString("g")</td>
-                    <td class="text-end">
-                        @if (item.Account != null)
-                        {
-                            var balanceText = item.Account.CurrentBalance.ToString("N2");
-                            var currencyCode = item.Account.Currency?.Code;
-                            if (!string.IsNullOrWhiteSpace(currencyCode))
-                            {
-                                balanceText += $" {currencyCode}";
-                            }
-                            @balanceText
-                        }
-                        else
-                        {
-                            @("-")
-                        }
-                    </td>
-                    <td>
-                        <div class="btn-group btn-group-sm" role="group">
-                            @if (item.AccountId.HasValue)
-                            {
-                                <a class="btn btn-success" href="@Url.Action("AccountStatement", "Reports", new { accountId = item.AccountId })" target="_blank" asp-require-permission="reports.accountstatement" title="كشف الحساب">
-                                    <i class="fas fa-file-alt"></i>
-                                </a>
-                            }
-                            <a class="btn btn-warning" href="@Url.Action("Edit", new { id = item.Id })" asp-require-permission="suppliers.edit" title="تعديل">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <button class="btn btn-danger" onclick="deleteSupplier(@item.Id)" asp-require-permission="suppliers.delete" title="حذف">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            }
-        }
-        else
-        {
-            <tr>
-                <td colspan="9" class="text-center">لا توجد نتائج مطابقة للبحث الحالي.</td>
-            </tr>
-        }
-    </tbody>
-</table>
-@if (Model.TotalPages > 1)
+
+@if (TempData["Success"] is string successMessage)
 {
-    var startPage = Math.Max(1, Model.PageIndex - 2);
-    var endPage = Math.Min(Model.TotalPages, Model.PageIndex + 2);
-    <nav aria-label="صفحات الموردين">
-        <ul class="pagination justify-content-center flex-wrap">
-            <li class="page-item @(Model.PageIndex == 1 ? "disabled" : null)">
-                <a class="page-link" href="@Url.Action("Index", new { page = Model.PageIndex - 1, pageSize = Model.PageSize, search = searchValue, branchId = selectedBranchId, balanceFilter = selectedBalanceFilter })">السابق</a>
-            </li>
-            @for (var pageNumber = startPage; pageNumber <= endPage; pageNumber++)
-            {
-                <li class="page-item @(pageNumber == Model.PageIndex ? "active" : null)">
-                    <a class="page-link" href="@Url.Action("Index", new { page = pageNumber, pageSize = Model.PageSize, search = searchValue, branchId = selectedBranchId, balanceFilter = selectedBalanceFilter })">@pageNumber</a>
-                </li>
-            }
-            <li class="page-item @(Model.PageIndex == Model.TotalPages ? "disabled" : null)">
-                <a class="page-link" href="@Url.Action("Index", new { page = Model.PageIndex + 1, pageSize = Model.PageSize, search = searchValue, branchId = selectedBranchId, balanceFilter = selectedBalanceFilter })">التالي</a>
-            </li>
-        </ul>
-    </nav>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @successMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="إغلاق"></button>
+    </div>
 }
+@if (TempData["Error"] is string errorMessage)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @errorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="إغلاق"></button>
+    </div>
+}
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white py-3 d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+            <h1 class="h4 mb-1">إدارة الموردين</h1>
+            <p class="text-muted mb-0">تحكم كامل في بيانات الموردين مع إمكانية البحث في كل عمود كما في جداول Excel.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-primary" href="@Url.Action("Create")" asp-require-permission="suppliers.create">
+                <i class="fas fa-plus-circle ms-1"></i> مورد جديد
+            </a>
+            <a class="btn btn-success"
+               asp-action="ExportExcel"
+               asp-route-search="@searchValue"
+               asp-route-branchId="@selectedBranchId"
+               asp-route-balanceFilter="@selectedBalanceFilter"
+               asp-require-permission="suppliers.view">
+                <i class="fas fa-file-excel ms-1"></i> تصدير Excel
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end mb-4" asp-action="Index">
+            <div class="col-12 col-md-4">
+                <label for="supplier-search" class="form-label">بحث عام</label>
+                <input type="text" id="supplier-search" name="search" value="@searchValue" class="form-control" placeholder="ابحث بالاسم أو الهاتف أو البريد" />
+            </div>
+            <div class="col-12 col-md-3">
+                <label for="branchId" class="form-label">فرع المورد</label>
+                <select id="branchId" name="branchId" class="form-select">
+                    <option value="">كل الفروع المسموح بها</option>
+                    @foreach (var branch in branches)
+                    {
+                        <option value="@branch.Value" selected="@(selectedBranchId.HasValue && branch.Value == selectedBranchId?.ToString() ? "selected" : null)">@branch.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-md-3">
+                <label for="balanceFilter" class="form-label">حالة الرصيد</label>
+                <select id="balanceFilter" name="balanceFilter" class="form-select">
+                    @foreach (var option in balanceFilterOptions)
+                    {
+                        <option value="@option" selected="@(option == selectedBalanceFilter ? "selected" : null)">@option.GetDisplayName()</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-md-2">
+                <label for="pageSize" class="form-label">عدد السجلات</label>
+                <select id="pageSize" name="pageSize" class="form-select">
+                    @foreach (var option in pageSizeOptions)
+                    {
+                        <option value="@option" selected="@(option == pageSize ? "selected" : null)">@option</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 d-flex flex-wrap gap-2 justify-content-end">
+                <input type="hidden" name="page" value="1" />
+                <button type="submit" class="btn btn-secondary"><i class="fas fa-filter ms-1"></i> تطبيق</button>
+                <a class="btn btn-outline-secondary" href="@Url.Action("Index")"><i class="fas fa-undo ms-1"></i> إعادة تعيين</a>
+            </div>
+        </form>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+            <span class="text-muted small">استخدم شريط البحث في كل عمود للحصول على النتائج المطلوبة بسرعة.</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="suppliers-table-reset">
+                <i class="fas fa-eraser ms-1"></i> مسح مرشحات الجدول
+            </button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle" data-table-filter data-table-filter-reset="#suppliers-table-reset">
+                <thead class="table-light align-middle">
+                    <tr>
+                        <th scope="col">الاسم</th>
+                        <th scope="col">التليفون</th>
+                        <th scope="col">البريد الإلكتروني</th>
+                        <th scope="col">الصلاحيات</th>
+                        <th scope="col">الفروع المسموح بها</th>
+                        <th scope="col">المستخدم</th>
+                        <th scope="col">وقت الإنشاء</th>
+                        <th scope="col" class="text-end">رصيد المورد</th>
+                        <th scope="col" class="text-end">الإجراءات</th>
+                    </tr>
+                    <tr class="table-secondary filters-row">
+                        <th>
+                            <input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="0" />
+                        </th>
+                        <th>
+                            <input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="1" />
+                        </th>
+                        <th>
+                            <input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="2" />
+                        </th>
+                        <th>
+                            <input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="3" />
+                        </th>
+                        <th>
+                            <input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="4" />
+                        </th>
+                        <th>
+                            <input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="5" />
+                        </th>
+                        <th>
+                            <div class="d-flex gap-2">
+                                <input type="date" class="form-control form-control-sm" data-filter-column="6" data-filter-type="date-min" />
+                                <input type="date" class="form-control form-control-sm" data-filter-column="6" data-filter-type="date-max" />
+                            </div>
+                        </th>
+                        <th>
+                            <div class="d-flex gap-2">
+                                <input type="number" step="0.01" class="form-control form-control-sm" placeholder="من" data-filter-column="7" data-filter-type="number-min" />
+                                <input type="number" step="0.01" class="form-control form-control-sm" placeholder="إلى" data-filter-column="7" data-filter-type="number-max" />
+                            </div>
+                        </th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        var permissions = Enum.GetValues(typeof(SupplierAuthorization))
+                            .Cast<SupplierAuthorization>()
+                            .Where(a => a != SupplierAuthorization.None && item.AuthorizedOperations.HasFlag(a))
+                            .Select(a => a.GetDisplayName())
+                            .ToList();
+                        var permissionsText = permissions.Count == 0 ? "-" : string.Join("، ", permissions);
+                        var branchNames = item.SupplierBranches != null && item.SupplierBranches.Any()
+                            ? item.SupplierBranches
+                                .Where(sb => sb.Branch != null)
+                                .Select(sb => !string.IsNullOrWhiteSpace(sb.Branch!.NameAr)
+                                    ? sb.Branch!.NameAr
+                                    : (sb.Branch!.NameEn ?? sb.Branch!.Code))
+                                .ToList()
+                            : new List<string>();
+                        var branchesText = branchNames.Count == 0 ? "-" : string.Join("، ", branchNames);
+                        var createdByName = item.CreatedBy?.FullName ?? "-";
+                        var createdDateValue = item.CreatedAt.ToString("yyyy-MM-dd");
+                        var createdDateDisplay = item.CreatedAt.ToString("g");
+                        var balanceValue = item.Account?.CurrentBalance ?? 0m;
+                        var balanceDisplay = item.Account != null
+                            ? string.Format(CultureInfo.CurrentCulture, "{0:N2}{1}", balanceValue, string.IsNullOrWhiteSpace(item.Account.Currency?.Code) ? string.Empty : $" {item.Account.Currency!.Code}")
+                            : "-";
+                        var balanceNumeric = balanceValue.ToString("G17", CultureInfo.InvariantCulture);
+                        var phoneValue = string.IsNullOrWhiteSpace(item.Phone) ? "-" : item.Phone;
+                        var emailValue = string.IsNullOrWhiteSpace(item.Email) ? "-" : item.Email;
+                    <tr>
+                        <td data-filter-value="@item.NameAr">@item.NameAr</td>
+                        <td data-filter-value="@phoneValue">@phoneValue</td>
+                        <td data-filter-value="@emailValue">@emailValue</td>
+                        <td data-filter-value="@permissionsText">@permissionsText</td>
+                        <td data-filter-value="@branchesText">@branchesText</td>
+                        <td data-filter-value="@createdByName">@createdByName</td>
+                        <td data-filter-value="@createdDateDisplay" data-filter-date="@createdDateValue">@createdDateDisplay</td>
+                        <td class="text-end" data-filter-value="@balanceDisplay" data-filter-numeric="@balanceNumeric">@balanceDisplay</td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm" role="group">
+                                @if (item.AccountId.HasValue)
+                                {
+                                    <a class="btn btn-outline-success"
+                                       href="@Url.Action("AccountStatement", "Reports", new { accountId = item.AccountId })"
+                                       target="_blank"
+                                       asp-require-permission="reports.accountstatement"
+                                       title="كشف الحساب">
+                                        <i class="fas fa-file-alt"></i>
+                                    </a>
+                                }
+                                <a class="btn btn-outline-warning" href="@Url.Action("Edit", new { id = item.Id })" asp-require-permission="suppliers.edit" title="تعديل">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger" onclick="deleteSupplier(@item.Id)" asp-require-permission="suppliers.delete" title="حذف">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    }
+                    <tr class="no-results @(Model.Items.Any() ? "d-none" : string.Empty)">
+                        <td colspan="9" class="text-center text-muted">لا توجد نتائج مطابقة للمرشحات الحالية.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        @if (Model.TotalPages > 1)
+        {
+            var startPage = Math.Max(1, Model.PageIndex - 2);
+            var endPage = Math.Min(Model.TotalPages, Model.PageIndex + 2);
+            <nav aria-label="صفحات الموردين" class="mt-3">
+                <ul class="pagination justify-content-center flex-wrap mb-0">
+                    <li class="page-item @(Model.PageIndex == 1 ? "disabled" : null)">
+                        <a class="page-link" href="@Url.Action("Index", new { page = Model.PageIndex - 1, pageSize = Model.PageSize, search = searchValue, branchId = selectedBranchId, balanceFilter = selectedBalanceFilter })">السابق</a>
+                    </li>
+                    @for (var pageNumber = startPage; pageNumber <= endPage; pageNumber++)
+                    {
+                        <li class="page-item @(pageNumber == Model.PageIndex ? "active" : null)">
+                            <a class="page-link" href="@Url.Action("Index", new { page = pageNumber, pageSize = Model.PageSize, search = searchValue, branchId = selectedBranchId, balanceFilter = selectedBalanceFilter })">@pageNumber</a>
+                        </li>
+                    }
+                    <li class="page-item @(Model.PageIndex == Model.TotalPages ? "disabled" : null)">
+                        <a class="page-link" href="@Url.Action("Index", new { page = Model.PageIndex + 1, pageSize = Model.PageSize, search = searchValue, branchId = selectedBranchId, balanceFilter = selectedBalanceFilter })">التالي</a>
+                    </li>
+                </ul>
+            </nav>
+        }
+    </div>
+</div>
+
 @section Scripts {
+    <script src="~/js/table-filters.js" asp-append-version="true"></script>
     <script>
         function deleteSupplier(id) {
-            if (confirm('هل أنت متأكد من حذف المورد؟')) {
-                $.post('@Url.Action("Delete")', { id: id }, function () {
+            if (!confirm('هل أنت متأكد من حذف المورد؟')) {
+                return;
+            }
+
+            $.post('@Url.Action("Delete")', { id: id })
+                .done(function () {
                     location.reload();
                 });
-            }
         }
     </script>
 }
