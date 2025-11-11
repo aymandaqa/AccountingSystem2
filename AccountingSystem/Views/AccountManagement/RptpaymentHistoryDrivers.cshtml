@@ -1,0 +1,171 @@
+﻿@{
+    var rtl = true;
+}
+<title>دفعات السائق - roadfn </title>
+
+<div class="container-full">
+    <!-- Content Header (Page header) -->
+    <div class="content-header">
+        <div class="d-flex align-items-center">
+            <div class="me-auto">
+                <h3 class="page-title">فواتير السائق اليومية </h3>
+                <div class="d-inline-block align-items-center">
+                    <nav>
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="#"><i class="mdi Home">الرئيسية</i></a></li>
+                            <li class="breadcrumb-item active" aria-current="page">فواتير السائق اليومية </li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <section class="content">
+        <div class="row">
+            <div class="col-12">
+                <div class="box">
+                    <div class="box-body">
+                        <div class="table-responsive col-12" id="bodytarg2">
+                            <table class="table" style="font-size:15px; color:#1dbfc1">
+                                <tbody>
+                                    <tr>
+
+                                        <th style="width:100%">
+                                            <button class="btn btn-primary btn-sm" id="Excel" onclick="ExportExcel()">  <i class="ti-layout"></i> اكسل</button>
+                                            <button class="btn btn-primary btn-sm" onclick="print()" id="Print">  <i class="ti-printer"></i> طباعة</button>
+                                            <button class="btn btn-primary btn-sm" id="reload" onclick="Refresh()">  <i class="ti-reload"></i> تحديث</button>
+                                            <button class="btn btn-primary btn-sm" id="reload" onclick="PrintSlip()">  <i class="ti-printer"></i> طباعة الفاتورة </button>
+                                            <button class="btn btn-primary btn-sm" id="reload" onclick=" Search()">  <i class="ti-search"></i> بحث</button>
+                                        </th>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col=md-12">
+                            <div class="row">
+                                @*      <div class="col-xs-6 col-sm-3">
+                                <ejs-dropdownlist id="City" name="City" Query="new ej.data.Query()"
+                                allowFiltering="true" dataSource="@ViewBag.city" placeholder="المدينة"  >
+                                <e-dropdownlist-fields text="FirstName" value="Id"></e-dropdownlist-fields>
+                                </ejs-dropdownlist>
+                                </div>*@
+                                <div class="col-xs-6 col-sm-4">
+                                    <ejs-dropdownlist id="CompanyBranches" name="CompanyBranches" Query="new ej.data.Query()"
+                                                      allowFiltering="true" dataSource="@ViewBag.CompanyBranches" placeholder="الفرع">
+
+
+                                        <e-dropdownlist-fields text="BranchName" value="Id"></e-dropdownlist-fields>
+                                    </ejs-dropdownlist>
+                                </div>
+                                <div class="col-xs-6 col-sm-3">
+                                    <ejs-datepicker id="datepickerFromDate" format="yyyy-MM-dd" value="DateTime.Now.AddDays(-1)" placeholder="من تاريخ"></ejs-datepicker>
+                                </div> <div class="col-xs-6 col-sm-3">
+                                    <ejs-datepicker id="datepickerToDate" format="yyyy-MM-dd" value="DateTime.Now" placeholder="الى تاريخ"></ejs-datepicker>
+                                </div>
+                            </div>
+
+                        </div>
+                        <ejs-grid id="Grid" gridLines="Both" enableRtl="@rtl" allowPaging="false" allowSorting="true" allowFiltering="true"
+                                  width="100%"
+                                  allowExcelExport="true" allowPdfExport="true"
+                                  enableStickyHeader="true" height="400px" allowTextWrap="true"
+                                  allowSelection="true">
+                            <e-data-manager url="/AccountManagement/UrlDatasourceRPTPaymentHistoryDriver" adaptor="UrlAdaptor"></e-data-manager>
+                            <e-grid-filterSettings type="Menu"></e-grid-filterSettings>
+                            <e-grid-aggregates>
+                                <e-grid-aggregate>
+                                    <e-aggregate-columns>
+                                        <e-aggregate-column field="TotalCod" type="Sum" footerTemplate="الصافي:${Sum}"></e-aggregate-column>
+                                        <e-aggregate-column field="shipmentCount" type="Sum" footerTemplate="عدد الشحنات:${Sum}"></e-aggregate-column>
+                                        <e-aggregate-column field="SumOfComison" type="Sum" footerTemplate="العمولات:${Sum}"></e-aggregate-column>
+                                        <e-aggregate-column field="Total" type="Sum" footerTemplate="المبلغ:${Sum}"></e-aggregate-column>
+                                    </e-aggregate-columns>
+                                </e-grid-aggregate>
+                            </e-grid-aggregates>
+                            <e-grid-columns>
+                                <e-grid-column type="checkbox" width="50"></e-grid-column>
+
+                                <e-grid-column field="Id" headerText="رقم الفاتورة" width="120" allowEditing="false" isPrimaryKey="true"></e-grid-column>
+                                @*<e-grid-column field="CityCode" headerText="City Code" width="120"></e-grid-column>*@
+                                <e-grid-column field="PaymentDate" format="dd/MM/yyyy hh:mm" type="date" headerText="تاريخ الدفع" width="120"></e-grid-column>
+                                <e-grid-column field="DriverId" Visible="false" headerText="DriverId" width="120"></e-grid-column>
+                                <e-grid-column field="DriverName" headerText="اسم السائق" width="120"></e-grid-column>
+                                <e-grid-column field="TotalCod" headerText="الصافي" width="120"></e-grid-column>
+                                <e-grid-column field="shipmentCount" headerText="عدد الشحنات" width="120"></e-grid-column>
+                                <e-grid-column field="SumOfComison" headerText="مجموع العمولات" width="120"></e-grid-column>
+                                <e-grid-column field="Total" headerText="اجمالي المبلغ" width="120"></e-grid-column>
+                                <e-grid-column field="EntryUser" headerText="المستخدم" width="120"></e-grid-column>
+                            </e-grid-columns>
+                        </ejs-grid>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- /.content -->
+
+</div>
+
+<script>
+
+
+    function Refresh() {
+        var CompanyBranches = document.getElementById('CompanyBranches').ej2_instances[0];
+        var datepickerFromDate = document.getElementById('datepickerFromDate').ej2_instances[0];
+        var datepickerToDate = document.getElementById('datepickerToDate').ej2_instances[0];
+        var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+        if (datepickerFromDate.value == null || datepickerToDate.value == null) {
+            return;
+        }
+        grid1.dataSource = new ej.data.DataManager({
+            url: '/AccountManagement/UrlDatasourceRPTPaymentHistoryDriver?fromDate=' + datepickerFromDate.value.toDateString() + '&toDate=' + datepickerToDate.value.toDateString() + '&CompanyBranches=' + CompanyBranches.value,
+            adaptor: new ej.data.UrlAdaptor()
+        });
+
+    }
+
+    function Search() {
+        var CompanyBranches = document.getElementById('CompanyBranches').ej2_instances[0];
+        var datepickerFromDate = document.getElementById('datepickerFromDate').ej2_instances[0];
+        var datepickerToDate = document.getElementById('datepickerToDate').ej2_instances[0];
+
+        var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+        if (datepickerFromDate.value == null || datepickerToDate.value == null) {
+            return;
+        }
+        grid1.dataSource = new ej.data.DataManager({
+            url: '/AccountManagement/UrlDatasourceRPTPaymentHistoryDriver?fromDate=' + datepickerFromDate.value.toDateString() + '&toDate=' + datepickerToDate.value.toDateString() + '&CompanyBranches=' + CompanyBranches.value,
+            adaptor: new ej.data.UrlAdaptor()
+        });
+
+    }
+    function ExportExcel() {
+        var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+        grid1.excelExport();
+    }
+
+    function print() {
+        var grid1 = document.getElementById('Grid').ej2_instances[0]; // Grid instance
+        grid1.print();
+    }
+
+    function PrintSlip() {
+
+
+        var grid = document.getElementById("Grid").ej2_instances[0];
+        var selectedRecords = grid.getSelectedRecords();
+
+
+        var ids = "";
+        for (var k in selectedRecords) {
+            ids += selectedRecords[k].Id + ",";
+
+        }
+        window.open('/AccountManagement/PrintDriverSlip?id=' + ids, "_blank");
+    }
+
+
+</script>

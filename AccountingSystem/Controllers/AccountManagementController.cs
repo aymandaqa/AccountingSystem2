@@ -528,6 +528,93 @@ namespace Roadfn.Controllers
             return dm.RequiresCounts ? Json(new { result = DataSource, count = count }) : Json(DataSource);
         }
 
+
+        public async Task<IActionResult> UrlDatasourceRPTPaymentHistoryUser([FromBody] DataManagerRequest dm, DateTime? fromDate, DateTime? toDate, int CompanyBranches)
+        {
+            if (fromDate == null && toDate == null)
+            {
+                fromDate = DateTime.Now.AddDays(-1);
+                toDate = DateTime.Now;
+            }
+            var DataSource = _context.RPTPaymentHistoryUsers.Where(t => t.PaymentDate >= fromDate && t.PaymentDate <= toDate.Value.AddHours(23).AddMinutes(59) && t.BranchNameId == CompanyBranches).AsQueryable();
+
+            DataOperations operation = new DataOperations();
+            if (dm.Search != null && dm.Search.Count > 0)
+            {
+                DataSource = operation.PerformSearching(DataSource, dm.Search);  //Search
+            }
+            if (dm.Sorted != null && dm.Sorted.Count > 0) //Sorting
+            {
+                DataSource = operation.PerformSorting(DataSource, dm.Sorted);
+            }
+            if (dm.Where != null && dm.Where.Count > 0) //Filtering
+            {
+                DataSource = operation.PerformFiltering(DataSource, dm.Where, dm.Where[0].Operator);
+            }
+            int count = DataSource.Count();
+            if (dm.Skip != 0)
+            {
+                DataSource = operation.PerformSkip(DataSource, dm.Skip);   //Paging
+            }
+            if (dm.Take != 0)
+            {
+                DataSource = operation.PerformTake(DataSource, dm.Take);
+            }
+            return dm.RequiresCounts ? Json(new { result = DataSource, count = count }) : Json(DataSource);
+        }
+        public async Task<IActionResult> RptpaymentHistoryDrivers()
+        {
+
+            var user = await _accontext.Users.FirstOrDefaultAsync(t => t.UserName == User.Identity.Name);
+
+            var br = user.DriverAccountBranchIds.Split(",");
+            ViewBag.CompanyBranches = await _context.CompanyBranches.Where(t => br.Contains(t.Id.ToString())).ToListAsync();
+
+            return View();
+        }
+
+        public async Task<IActionResult> RPTPaymentHistoryUsers()
+        {
+            var user = await _accontext.Users.FirstOrDefaultAsync(t => t.UserName == User.Identity.Name);
+
+            var br = user.BusinessAccountBranchIds.Split(",");
+            ViewBag.CompanyBranches = await _context.CompanyBranches.Where(t => br.Contains(t.Id.ToString())).ToListAsync();
+            return View();
+        }
+
+        public async Task<IActionResult> UrlDatasourceRPTPaymentHistoryDriver([FromBody] DataManagerRequest dm, DateTime? fromDate, DateTime? toDate, int CompanyBranches)
+        {
+            if (fromDate == null && toDate == null)
+            {
+                fromDate = DateTime.Now.AddDays(-1);
+                toDate = DateTime.Now;
+            }
+            var DataSource = _context.RptpaymentHistoryDrivers.Where(t => t.PaymentDate >= fromDate && t.PaymentDate <= toDate.Value.AddHours(23).AddMinutes(59) && t.BranchNameId == CompanyBranches).AsQueryable();
+
+            DataOperations operation = new DataOperations();
+            if (dm.Search != null && dm.Search.Count > 0)
+            {
+                DataSource = operation.PerformSearching(DataSource, dm.Search);  //Search
+            }
+            if (dm.Sorted != null && dm.Sorted.Count > 0) //Sorting
+            {
+                DataSource = operation.PerformSorting(DataSource, dm.Sorted);
+            }
+            if (dm.Where != null && dm.Where.Count > 0) //Filtering
+            {
+                DataSource = operation.PerformFiltering(DataSource, dm.Where, dm.Where[0].Operator);
+            }
+            int count = DataSource.Count();
+            if (dm.Skip != 0)
+            {
+                DataSource = operation.PerformSkip(DataSource, dm.Skip);   //Paging
+            }
+            if (dm.Take != 0)
+            {
+                DataSource = operation.PerformTake(DataSource, dm.Take);
+            }
+            return dm.RequiresCounts ? Json(new { result = DataSource, count = count }) : Json(DataSource);
+        }
         [Authorize(Policy = "accountmanagement.businessstatementbulk")]
         public async Task<IActionResult> BusinessStatementBulk()
         {
@@ -962,72 +1049,6 @@ namespace Roadfn.Controllers
         public IActionResult UrlDatasourceBusinessRetStatementBulk([FromBody] DataManagerRequest dm, int? branchId)
         {
             var DataSource = _context.BusinessRetStatementBulk.Where(t => t.CompanyBranchID == branchId);
-
-            DataOperations operation = new DataOperations();
-            if (dm.Search != null && dm.Search.Count > 0)
-            {
-                DataSource = operation.PerformSearching(DataSource, dm.Search);  //Search
-            }
-            if (dm.Sorted != null && dm.Sorted.Count > 0) //Sorting
-            {
-                DataSource = operation.PerformSorting(DataSource, dm.Sorted);
-            }
-            if (dm.Where != null && dm.Where.Count > 0) //Filtering
-            {
-                DataSource = operation.PerformFiltering(DataSource, dm.Where, dm.Where[0].Operator);
-            }
-            int count = DataSource.Count();
-            if (dm.Skip != 0)
-            {
-                DataSource = operation.PerformSkip(DataSource, dm.Skip);   //Paging
-            }
-            if (dm.Take != 0)
-            {
-                DataSource = operation.PerformTake(DataSource, dm.Take);
-            }
-            return dm.RequiresCounts ? Json(new { result = DataSource, count = count }) : Json(DataSource);
-        }
-        public IActionResult UrlDatasourceRPTPaymentHistoryDriver([FromBody] DataManagerRequest dm, int? DriverID, DateTime? fromDate, DateTime? toDate)
-        {
-            if (fromDate == null && toDate == null)
-            {
-                fromDate = DateTime.Now.AddDays(-1);
-                toDate = DateTime.Now;
-            }
-            var DataSource = _context.RptpaymentHistoryDriver.Where(t => t.DriverId == DriverID && t.PaymentDate >= fromDate && t.PaymentDate <= toDate).AsQueryable();
-
-            DataOperations operation = new DataOperations();
-            if (dm.Search != null && dm.Search.Count > 0)
-            {
-                DataSource = operation.PerformSearching(DataSource, dm.Search);  //Search
-            }
-            if (dm.Sorted != null && dm.Sorted.Count > 0) //Sorting
-            {
-                DataSource = operation.PerformSorting(DataSource, dm.Sorted);
-            }
-            if (dm.Where != null && dm.Where.Count > 0) //Filtering
-            {
-                DataSource = operation.PerformFiltering(DataSource, dm.Where, dm.Where[0].Operator);
-            }
-            int count = DataSource.Count();
-            if (dm.Skip != 0)
-            {
-                DataSource = operation.PerformSkip(DataSource, dm.Skip);   //Paging
-            }
-            if (dm.Take != 0)
-            {
-                DataSource = operation.PerformTake(DataSource, dm.Take);
-            }
-            return dm.RequiresCounts ? Json(new { result = DataSource, count = count }) : Json(DataSource);
-        }
-        public IActionResult UrlDatasourceRPTPaymentHistoryUser([FromBody] DataManagerRequest dm, int? userID, DateTime? fromDate, DateTime? toDate)
-        {
-            if (fromDate == null && toDate == null)
-            {
-                fromDate = DateTime.Now.AddDays(-1);
-                toDate = DateTime.Now;
-            }
-            var DataSource = _context.RPTPaymentHistoryUsers.Where(t => t.UserID == userID && t.PaymentDate >= fromDate && t.PaymentDate <= toDate).AsQueryable();
 
             DataOperations operation = new DataOperations();
             if (dm.Search != null && dm.Search.Count > 0)

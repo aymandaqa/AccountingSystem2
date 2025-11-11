@@ -114,6 +114,8 @@ namespace AccountingSystem.Data
             Console.WriteLine($"Save Chagnes Failed at {DateTime.Now}");
 
         }
+        public virtual DbSet<RptpaymentHistoryDriver> RptpaymentHistoryDrivers { get; set; }
+
         public virtual DbSet<CustomerInvoiceRequest> CustomerInvoiceRequest { get; set; }
         public virtual DbSet<PayBusinessSlipView> PayBusinessSlipView { get; set; }
 

@@ -571,6 +571,28 @@
                                         </a>
                                     </li>
                                 }
+                                @if (canUserPayment)
+                                {
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="AccountManagement"
+                                           asp-action="RPTPaymentHistoryUsers"
+                                           asp-require-permission="accountmanagement.userpayment">
+                                            فواتير العملاء اليومية
+                                        </a>
+                                    </li>
+                                }
+                                @if (canDriverStatment)
+                                {
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="AccountManagement"
+                                           asp-action="RptpaymentHistoryDrivers"
+                                           asp-require-permission="accountmanagement.driverstatment">
+                                            فواتير السائق اليومية
+                                        </a>
+                                    </li>
+                                }
                             </ul>
                         </li>
                     }

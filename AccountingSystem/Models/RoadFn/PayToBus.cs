@@ -1,5 +1,6 @@
 ﻿namespace Roadfn.ViewModel
 {
+
     public class PayToBus
     {
         public int Id { get; set; }
