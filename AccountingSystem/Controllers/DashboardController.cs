@@ -56,7 +56,11 @@ namespace AccountingSystem.Controllers
             // Always display customer account balances across all branches, not just the user's assigned branches.
             var customerAccountBranches = await GetCustomerAccountBranchesAsync(new List<int>(), treeData.BaseCurrency);
 
-            var totalAccountBalancesBase = treeData.TotalsByType.Values.Sum(t => t.Base);
+            var totalAccountBalancesBase = treeData.TotalsByType.TryGetValue(AccountType.Assets, out var assetTotals)
+                ? assetTotals.Base
+                : treeData.RootNodes
+                    .Where(n => n.AccountType == AccountType.Assets)
+                    .Sum(n => n.BalanceBase);
             var totalCustomerAccountBalancesBase = customerAccountBranches.Sum(b => b.TotalBalanceBase);
             var totalDriverCodCollection = driverCodSummaries.Sum(s => s.ShipmentCod);
             var totalSuppliersInTransit = businessShipmentBranches.Sum(s => s.TotalShipmentPrice);
