@@ -67,6 +67,14 @@ namespace AccountingSystem.Controllers
                 pageSize = maxPageSize;
             }
 
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Challenge();
+            }
+
+            var userBranchIds = await GetUserBranchIdsAsync(user.Id);
+
             var query = _context.AssetExpenses
                 .AsNoTracking()
                 .Include(e => e.Asset).ThenInclude(a => a.Branch)
@@ -74,6 +82,19 @@ namespace AccountingSystem.Controllers
                 .Include(e => e.Supplier)
                 .Include(e => e.CreatedBy)
                 .AsQueryable();
+
+            if (userBranchIds.Any())
+            {
+                query = query.Where(e => userBranchIds.Contains(e.Asset.BranchId));
+            }
+            else if (user.PaymentBranchId.HasValue)
+            {
+                query = query.Where(e => e.Asset.BranchId == user.PaymentBranchId.Value);
+            }
+            else
+            {
+                query = query.Where(e => e.CreatedById == user.Id);
+            }
 
             var trimmedSearch = string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm.Trim();
 
@@ -203,6 +224,14 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "assetexpenses.view")]
         public async Task<IActionResult> ExportExcel(string? searchTerm, bool showMyExpenses = false)
         {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Challenge();
+            }
+
+            var userBranchIds = await GetUserBranchIdsAsync(user.Id);
+
             var query = _context.AssetExpenses
                 .AsNoTracking()
                 .Include(e => e.Asset).ThenInclude(a => a.Branch)
@@ -210,6 +239,19 @@ namespace AccountingSystem.Controllers
                 .Include(e => e.Supplier)
                 .Include(e => e.CreatedBy)
                 .AsQueryable();
+
+            if (userBranchIds.Any())
+            {
+                query = query.Where(e => userBranchIds.Contains(e.Asset.BranchId));
+            }
+            else if (user.PaymentBranchId.HasValue)
+            {
+                query = query.Where(e => e.Asset.BranchId == user.PaymentBranchId.Value);
+            }
+            else
+            {
+                query = query.Where(e => e.CreatedById == user.Id);
+            }
 
             var trimmedSearch = string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm.Trim();
 
