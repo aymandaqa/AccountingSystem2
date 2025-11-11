@@ -37,7 +37,14 @@
             <select id="pageSize" name="pageSize" class="form-select">
                 @foreach (var option in pageSizeOptions)
                 {
-                    <option value="@option" @(Model.PageSize == option ? "selected" : null)>@option</option>
+                    if (Model.PageSize == option)
+                    {
+                        <option value="@option" selected>@option</option>
+                    }
+                    else
+                    {
+                        <option value="@option">@option</option>
+                    }
                 }
             </select>
         </div>
