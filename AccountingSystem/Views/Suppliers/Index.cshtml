@@ -39,7 +39,7 @@
                 <option value="">الجميع</option>
                 @foreach (var branch in branches)
                 {
-                    <option value="@branch.Value" @(selectedBranchId.HasValue && branch.Value == selectedBranchId.Value.ToString() ? "selected" : null)>@branch.Text</option>
+                    <option value="@branch.Value" selected="@(selectedBranchId.HasValue && branch.Value == selectedBranchId.Value.ToString() ? "selected" : null)">@branch.Text</option>
                 }
             </select>
         </div>
@@ -48,7 +48,7 @@
             <select id="balanceFilter" name="balanceFilter" class="form-select">
                 @foreach (var option in balanceFilterOptions)
                 {
-                    <option value="@option" @(option == selectedBalanceFilter ? "selected" : null)>@option.GetDisplayName()</option>
+                    <option value="@option" selected="@(option == selectedBalanceFilter ? "selected" : null)">@option.GetDisplayName()</option>
                 }
             </select>
         </div>
@@ -57,7 +57,7 @@
             <select id="pageSize" name="pageSize" class="form-select">
                 @foreach (var option in pageSizeOptions)
                 {
-                    <option value="@option" @(option == pageSize ? "selected" : null)>@option</option>
+                    <option value="@option" selected="@(option == pageSize ? "selected" : null)">@option</option>
                 }
             </select>
         </div>
