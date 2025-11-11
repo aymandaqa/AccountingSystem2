@@ -1,6 +1,8 @@
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.Services;
+using AccountingSystem.ViewModels;
+using System;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -21,15 +23,67 @@ namespace AccountingSystem.Controllers
             _accountService = accountService;
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 20)
         {
-            var agents = await _context.Agents
-                .Include(a => a.Branch)
-                .Include(a => a.Account)
+            const int defaultPageSize = 20;
+            const int maxPageSize = 100;
+
+            if (page < 1)
+            {
+                page = 1;
+            }
+
+            if (pageSize < 1)
+            {
+                pageSize = defaultPageSize;
+            }
+
+            pageSize = Math.Min(pageSize, maxPageSize);
+
+            var query = _context.Agents
+                .AsNoTracking();
+
+            var totalCount = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+            if (totalPages == 0)
+            {
+                totalPages = 1;
+            }
+
+            if (page > totalPages)
+            {
+                page = totalPages;
+            }
+
+            var agents = await query
                 .OrderBy(a => a.Name)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(a => new AgentListItemViewModel
+                {
+                    Id = a.Id,
+                    Name = a.Name,
+                    BranchName = a.Branch != null ? a.Branch.NameAr : null,
+                    Address = a.Address,
+                    AccountId = a.AccountId,
+                    AccountCode = a.Account != null ? a.Account.Code : null,
+                    AccountName = a.Account != null ? a.Account.NameAr : null,
+                    AccountBalance = a.Account != null ? (decimal?)a.Account.CurrentBalance : null,
+                    AccountCurrencyCode = a.Account != null && a.Account.Currency != null ? a.Account.Currency.Code : null
+                })
                 .ToListAsync();
 
-            return View(agents);
+            var viewModel = new AgentsIndexViewModel
+            {
+                Agents = agents,
+                CurrentPage = page,
+                PageSize = pageSize,
+                TotalPages = totalPages,
+                TotalCount = totalCount
+            };
+
+            return View(viewModel);
         }
 
         [Authorize(Policy = "agents.create")]
