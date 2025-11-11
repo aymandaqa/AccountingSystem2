@@ -8,7 +8,11 @@
     var accepted = Model.Transfers.Where(t => t.Status == TransferStatus.Accepted).ToList();
     var rejected = Model.Transfers.Where(t => t.Status == TransferStatus.Rejected).ToList();
 }
-
+<style>
+    .nav-link {
+        color: #34588f;
+    }
+</style>
 <h2 class="mb-3">إدارة الحوالات</h2>
 <p class="text-muted">استعرض جميع الحوالات في النظام وتابع حالتها أو قم بتعديلها والموافقة عليها.</p>
 
