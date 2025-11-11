@@ -11,6 +11,7 @@ using AccountingSystem.ViewModels;
 using ClosedXML.Excel;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using AccountingSystem.Extensions;
@@ -48,7 +49,7 @@ namespace AccountingSystem.Controllers
                 .ToListAsync();
         }
 
-        public async Task<IActionResult> Index(DateTime? fromDate = null, DateTime? toDate = null)
+        public async Task<IActionResult> Index(DateTime? fromDate = null, DateTime? toDate = null, string? searchTerm = null, int page = 1, int pageSize = 25)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -59,10 +60,23 @@ namespace AccountingSystem.Controllers
                 .Select(ub => ub.BranchId)
                 .ToListAsync();
 
+            var normalizedPageSize = pageSize <= 0 ? 25 : Math.Min(pageSize, 100);
+            var currentPage = Math.Max(page, 1);
+
             var vouchersQuery = BuildQuery(user, userBranchIds, fromDate, toDate);
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                vouchersQuery = ApplySearchFilters(vouchersQuery, searchTerm.Trim());
+            }
+
+            var totalCount = await vouchersQuery.CountAsync();
 
             var vouchers = await vouchersQuery
                 .OrderByDescending(v => v.Date)
+                .ThenByDescending(v => v.Id)
+                .Skip((currentPage - 1) * normalizedPageSize)
+                .Take(normalizedPageSize)
                 .ToListAsync();
 
             var voucherReferences = vouchers
@@ -89,7 +103,7 @@ namespace AccountingSystem.Controllers
                 }
             }
 
-            var model = vouchers
+            var items = vouchers
                 .Select(v =>
                 {
                     if (journalEntryLookup.TryGetValue(v.Id, out var entry))
@@ -110,10 +124,67 @@ namespace AccountingSystem.Controllers
                 })
                 .ToList();
 
-            ViewBag.FromDate = fromDate?.ToString("yyyy-MM-dd");
-            ViewBag.ToDate = toDate?.ToString("yyyy-MM-dd");
+            var model = new PaginatedListViewModel<ReceiptVoucherListItemViewModel>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageIndex = currentPage,
+                PageSize = normalizedPageSize,
+                SearchTerm = searchTerm,
+                FromDate = fromDate,
+                ToDate = toDate
+            };
 
             return View(model);
+        }
+
+        private IQueryable<ReceiptVoucher> ApplySearchFilters(IQueryable<ReceiptVoucher> query, string term)
+        {
+            var likeTerm = $"%{term}%";
+            var normalized = term.ToLowerInvariant();
+            var decimalTerm = TryParseDecimal(term);
+            var dateTerm = TryParseDate(term);
+            var statusMatches = new List<ReceiptVoucherStatus>();
+
+            if (normalized.Contains("معتمد") || normalized.Contains("approved"))
+            {
+                statusMatches.Add(ReceiptVoucherStatus.Approved);
+            }
+
+            if (normalized.Contains("مرفوض") || normalized.Contains("rejected"))
+            {
+                statusMatches.Add(ReceiptVoucherStatus.Rejected);
+            }
+
+            if (normalized.Contains("بانتظار") || normalized.Contains("انتظار") || normalized.Contains("pending"))
+            {
+                statusMatches.Add(ReceiptVoucherStatus.PendingApproval);
+            }
+
+            int? voucherId = int.TryParse(term, out var parsedId) ? parsedId : null;
+
+            return query.Where(v =>
+                (v.Supplier != null && (EF.Functions.Like(v.Supplier.NameAr, likeTerm) || EF.Functions.Like(v.Supplier.NameEn ?? string.Empty, likeTerm))) ||
+                EF.Functions.Like(v.PaymentAccount.NameAr, likeTerm) ||
+                EF.Functions.Like(v.Account.NameAr, likeTerm) ||
+                EF.Functions.Like(v.Currency.Code, likeTerm) ||
+                EF.Functions.Like(v.Notes ?? string.Empty, likeTerm) ||
+                EF.Functions.Like(v.AttachmentFileName ?? string.Empty, likeTerm) ||
+                EF.Functions.Like(v.AttachmentFilePath ?? string.Empty, likeTerm) ||
+                EF.Functions.Like(v.CreatedBy.FirstName, likeTerm) ||
+                EF.Functions.Like(v.CreatedBy.LastName, likeTerm) ||
+                (v.CreatedBy.PaymentBranch != null && EF.Functions.Like(v.CreatedBy.PaymentBranch.NameAr, likeTerm)) ||
+                (v.ApprovedBy != null && (EF.Functions.Like(v.ApprovedBy.FirstName, likeTerm) || EF.Functions.Like(v.ApprovedBy.LastName, likeTerm))) ||
+                (decimalTerm.HasValue && (v.Amount == decimalTerm.Value || v.ExchangeRate == decimalTerm.Value || (v.Amount * v.ExchangeRate) == decimalTerm.Value)) ||
+                (dateTerm.HasValue &&
+                    (EF.Functions.DateDiffDay(v.Date, dateTerm.Value) == 0 ||
+                    (v.ApprovedAt.HasValue && EF.Functions.DateDiffDay(v.ApprovedAt.Value, dateTerm.Value) == 0))) ||
+                (voucherId.HasValue && v.Id == voucherId.Value) ||
+                statusMatches.Contains(v.Status) ||
+                _context.JournalEntries.Any(j =>
+                    j.Reference != null &&
+                    j.Reference == string.Concat("RCV:", v.Id) &&
+                    (EF.Functions.Like(j.Number, likeTerm) || EF.Functions.Like(j.Reference, likeTerm))));
         }
 
         [Authorize(Policy = "receiptvouchers.create")]
@@ -416,7 +487,7 @@ namespace AccountingSystem.Controllers
         [HttpPost]
         [Authorize(Policy = "receiptvouchers.delete")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(int id, DateTime? fromDate = null, DateTime? toDate = null)
+        public async Task<IActionResult> Delete(int id, DateTime? fromDate = null, DateTime? toDate = null, string? searchTerm = null, int page = 1, int pageSize = 25)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -483,7 +554,37 @@ namespace AccountingSystem.Controllers
                 _attachmentStorageService.Delete(attachmentPath);
             }
 
-            return RedirectToAction(nameof(Index), new { fromDate, toDate });
+            return RedirectToAction(nameof(Index), new { fromDate, toDate, searchTerm, page, pageSize });
+        }
+
+        private static decimal? TryParseDecimal(string term)
+        {
+            if (decimal.TryParse(term, NumberStyles.Any, CultureInfo.InvariantCulture, out var invariantResult))
+            {
+                return invariantResult;
+            }
+
+            if (decimal.TryParse(term, NumberStyles.Any, CultureInfo.CurrentCulture, out var currentResult))
+            {
+                return currentResult;
+            }
+
+            return null;
+        }
+
+        private static DateTime? TryParseDate(string term)
+        {
+            if (DateTime.TryParse(term, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var invariantResult))
+            {
+                return invariantResult;
+            }
+
+            if (DateTime.TryParse(term, CultureInfo.CurrentCulture, DateTimeStyles.AssumeLocal, out var currentResult))
+            {
+                return currentResult;
+            }
+
+            return null;
         }
 
         private IQueryable<ReceiptVoucher> BuildQuery(User user, List<int> userBranchIds, DateTime? fromDate, DateTime? toDate)
@@ -495,7 +596,8 @@ namespace AccountingSystem.Controllers
                 .Include(v => v.Supplier)
                 .Include(v => v.CreatedBy)
                     .ThenInclude(u => u.PaymentBranch)
-                .AsQueryable();
+                .Include(v => v.ApprovedBy)
+                .AsNoTracking();
 
             if (userBranchIds.Any())
             {
