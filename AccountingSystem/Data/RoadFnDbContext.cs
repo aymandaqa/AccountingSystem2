@@ -147,6 +147,7 @@ namespace AccountingSystem.Data
         public virtual DbSet<DriverPay> DriverPay { get; set; }
         public virtual DbSet<BussPaymentsHist> BussPaymentsHist { get; set; }
         public virtual DbSet<BussRetPaymentsHist> BussRetPaymentsHist { get; set; }
+        public virtual DbSet<BusinessPayShipmentPrice> BusinessPayShipmentPrices { get; set; }
         public virtual DbSet<BusinessReturnedBulk> BusinessReturnedBulk { get; set; }
         public virtual DbSet<InvoiceStatus> InvoiceStatus { get; set; }
         public virtual DbSet<RptDriverPaySlip> RptDriverPaySlip { get; set; }

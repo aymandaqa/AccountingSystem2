@@ -491,6 +491,7 @@ namespace AccountingSystem.ViewModels
         public string? SelectedParentAccountName { get; set; }
         public List<DriverCodBranchSummaryViewModel> DriverCodBranchSummaries { get; set; } = new List<DriverCodBranchSummaryViewModel>();
         public List<CustomerBranchAccountNode> CustomerAccountBranches { get; set; } = new List<CustomerBranchAccountNode>();
+        public List<BusinessShipmentBranchSummaryViewModel> BusinessShipmentBranchSummaries { get; set; } = new List<BusinessShipmentBranchSummaryViewModel>();
     }
 
     public class CashBoxTreeViewModel
@@ -515,6 +516,35 @@ namespace AccountingSystem.ViewModels
         public string DriverId { get; set; } = string.Empty;
         public decimal ShipmentTotal { get; set; }
         public decimal ShipmentCod { get; set; }
+    }
+
+    public class BusinessShipmentPriceViewModel
+    {
+        public long Id { get; set; }
+        public string? ShipmentTrackingNo { get; set; }
+        public long? ShipmentId { get; set; }
+        public DateTime? EntryDate { get; set; }
+        public int? BusinessId { get; set; }
+        public string BusinessName { get; set; } = string.Empty;
+        public string ClientName { get; set; } = string.Empty;
+        public string CityName { get; set; } = string.Empty;
+        public string AreaName { get; set; } = string.Empty;
+        public decimal ShipmentPrice { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public int? DriverId { get; set; }
+        public int? CompanyBranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+        public int? BranchId { get; set; }
+    }
+
+    public class BusinessShipmentBranchSummaryViewModel
+    {
+        public int? BranchId { get; set; }
+        public int? RoadCompanyBranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+        public decimal TotalShipmentPrice { get; set; }
+        public int ShipmentCount { get; set; }
+        public bool CanLoadDetails => BranchId.HasValue;
     }
 
     public class DriverRevenueReportViewModel
