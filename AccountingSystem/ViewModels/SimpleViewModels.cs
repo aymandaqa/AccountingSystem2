@@ -492,6 +492,12 @@ namespace AccountingSystem.ViewModels
         public List<DriverCodBranchSummaryViewModel> DriverCodBranchSummaries { get; set; } = new List<DriverCodBranchSummaryViewModel>();
         public List<CustomerBranchAccountNode> CustomerAccountBranches { get; set; } = new List<CustomerBranchAccountNode>();
         public List<BusinessShipmentBranchSummaryViewModel> BusinessShipmentBranchSummaries { get; set; } = new List<BusinessShipmentBranchSummaryViewModel>();
+        public decimal TotalAccountBalancesSumBase { get; set; }
+        public decimal TotalCustomerAccountBalancesSumBase { get; set; }
+        public decimal NetAccountsAfterCustomersBase { get; set; }
+        public decimal TotalDriverCodCollection { get; set; }
+        public decimal TotalSuppliersInTransit { get; set; }
+        public decimal NetDriverCodAfterSuppliers { get; set; }
     }
 
     public class CashBoxTreeViewModel

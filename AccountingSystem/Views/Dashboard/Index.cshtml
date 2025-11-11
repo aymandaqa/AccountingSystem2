@@ -82,6 +82,58 @@
 
                         @if (canViewCashBoxes)
                         {
+                            var accountNetClass = Model.NetAccountsAfterCustomersBase >= 0 ? "text-success" : "text-danger";
+                            var driverNetClass = Model.NetDriverCodAfterSuppliers >= 0 ? "text-success" : "text-danger";
+
+                            <div class="row g-4 mb-4 dashboard-summary-row">
+                                <div class="col-12 col-xl-6">
+                                    <div class="card dashboard-summary-card shadow-sm border-0 h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                                                <div>
+                                                    <h5 class="card-title mb-1">صافي أرصدة الحسابات</h5>
+                                                    <div class="text-muted small">مجموع أرصدة الحسابات حسب النوع مطروح منه أرصدة حسابات العملاء حسب الفروع.</div>
+                                                </div>
+                                                <span class="fs-4 fw-bold @accountNetClass">@formatCurrency(Model.NetAccountsAfterCustomersBase) @Model.BaseCurrencyCode</span>
+                                            </div>
+                                            <div class="summary-breakdown">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span class="text-muted">مجموع أرصدة الحسابات</span>
+                                                    <span class="fw-semibold">@formatCurrency(Model.TotalAccountBalancesSumBase) @Model.BaseCurrencyCode</span>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span class="text-muted">أرصدة حسابات العملاء</span>
+                                                    <span class="fw-semibold text-danger">- @formatCurrency(Math.Abs(Model.TotalCustomerAccountBalancesSumBase)) @Model.BaseCurrencyCode</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-6">
+                                    <div class="card dashboard-summary-card shadow-sm border-0 h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                                                <div>
+                                                    <h5 class="card-title mb-1">صافي تحصيل السائقين</h5>
+                                                    <div class="text-muted small">مجموع تقرير تحصيل السائقين حسب الفروع مطروح منه مستحقات الموردين في الطريق.</div>
+                                                </div>
+                                                <span class="fs-4 fw-bold @driverNetClass">@formatCurrency(Model.NetDriverCodAfterSuppliers) @Model.BaseCurrencyCode</span>
+                                            </div>
+                                            <div class="summary-breakdown">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span class="text-muted">إجمالي تحصيل السائقين (COD)</span>
+                                                    <span class="fw-semibold">@formatCurrency(Model.TotalDriverCodCollection) @Model.BaseCurrencyCode</span>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span class="text-muted">مستحقات الموردين في الطريق</span>
+                                                    <span class="fw-semibold text-danger">- @formatCurrency(Math.Abs(Model.TotalSuppliersInTransit)) @Model.BaseCurrencyCode</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="row g-4 dashboard-widget-cards">
                                 <div class="col-12 col-lg-5">
                                     <div class="card account-tree-card shadow-sm border-0 h-100">
@@ -322,6 +374,20 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 1.5rem;
+        }
+
+        .dashboard-summary-row .dashboard-summary-card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(16, 185, 129, 0.08));
+        }
+
+        .dashboard-summary-card .card-title {
+            font-size: 1.05rem;
+        }
+
+        .dashboard-summary-card .summary-breakdown {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
         }
 
         .dashboard-widget {

@@ -56,6 +56,11 @@ namespace AccountingSystem.Controllers
             // Always display customer account balances across all branches, not just the user's assigned branches.
             var customerAccountBranches = await GetCustomerAccountBranchesAsync(new List<int>(), treeData.BaseCurrency);
 
+            var totalAccountBalancesBase = treeData.TotalsByType.Values.Sum(t => t.Base);
+            var totalCustomerAccountBalancesBase = customerAccountBranches.Sum(b => b.TotalBalanceBase);
+            var totalDriverCodCollection = driverCodSummaries.Sum(s => s.ShipmentCod);
+            var totalSuppliersInTransit = businessShipmentBranches.Sum(s => s.TotalShipmentPrice);
+
             var accountTypeTrees = treeData.RootNodes
                 .GroupBy(n => n.AccountType)
                 .Select(g => new AccountTreeNodeViewModel
@@ -106,7 +111,13 @@ namespace AccountingSystem.Controllers
                 SelectedParentAccountName = treeData.SelectedParentAccountName,
                 DriverCodBranchSummaries = driverCodSummaries,
                 BusinessShipmentBranchSummaries = businessShipmentBranches,
-                CustomerAccountBranches = customerAccountBranches
+                CustomerAccountBranches = customerAccountBranches,
+                TotalAccountBalancesSumBase = totalAccountBalancesBase,
+                TotalCustomerAccountBalancesSumBase = totalCustomerAccountBalancesBase,
+                NetAccountsAfterCustomersBase = totalAccountBalancesBase - totalCustomerAccountBalancesBase,
+                TotalDriverCodCollection = totalDriverCodCollection,
+                TotalSuppliersInTransit = totalSuppliersInTransit,
+                NetDriverCodAfterSuppliers = totalDriverCodCollection - totalSuppliersInTransit
             };
 
             viewModel.NetIncome = viewModel.TotalRevenues - viewModel.TotalExpenses;
