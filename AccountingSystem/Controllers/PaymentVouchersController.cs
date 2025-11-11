@@ -216,7 +216,8 @@ namespace AccountingSystem.Controllers
                 statusMatches.Contains(v.Status) ||
                 _context.JournalEntries.Any(j =>
                     j.Reference != null &&
-                    j.Reference == (v.SupplierId.HasValue ? string.Concat("سند مصاريف:", v.Id) : string.Concat("سند دفع وكيل:", v.Id)) &&
+                    (j.Reference == "سند مصاريف:" + v.Id.ToString() ||
+                     j.Reference == "سند دفع وكيل:" + v.Id.ToString()) &&
                     (EF.Functions.Like(j.Number, likeTerm) || EF.Functions.Like(j.Reference, likeTerm))));
         }
 
