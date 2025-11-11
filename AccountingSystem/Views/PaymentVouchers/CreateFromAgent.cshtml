@@ -4,7 +4,7 @@
 }
 
 <div class="container-fluid">
-    <form asp-action="CreateFromAgent" method="post" class="row g-3" enctype="multipart/form-data">
+    <form asp-action="CreateFromAgent" method="post" class="row g-3" enctype="multipart/form-data" id="paymentVoucherAgentForm">
         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
         <input asp-for="AgentId" type="hidden" />
         <input asp-for="AccountId" type="hidden" />
@@ -14,18 +14,18 @@
 
         <div class="col-md-6">
             <label class="form-label">الوكيل</label>
-            <input type="text" class="form-control" value="@ViewBag.Agent?.Name" readonly />
+            <input type="text" class="form-control" value="@ViewBag.Agent?.Name" readonly id="agentNameDisplay" />
             <span asp-validation-for="AgentId" class="text-danger"></span>
         </div>
         <div class="col-md-6">
             <label class="form-label">حساب الدفع</label>
-            <input type="text" class="form-control" value="@(ViewBag.PaymentAccount != null ? ($"{ViewBag.PaymentAccount.Code} - {ViewBag.PaymentAccount.NameAr}") : string.Empty)" readonly />
+            <input type="text" class="form-control" value="@(ViewBag.PaymentAccount != null ? ($"{ViewBag.PaymentAccount.Code} - {ViewBag.PaymentAccount.NameAr}") : string.Empty)" readonly id="paymentAccountDisplay" />
             <span asp-validation-for="AccountId" class="text-danger"></span>
         </div>
 
         <div class="col-md-6">
             <label class="form-label">العملة</label>
-            <input type="text" class="form-control" value="@ViewBag.CurrencyCode" readonly />
+            <input type="text" class="form-control" value="@ViewBag.CurrencyCode" readonly id="agentCurrencyDisplay" />
         </div>
 
         <div class="col-md-6">
@@ -54,6 +54,111 @@
     </form>
 </div>
 
+<div class="modal fade" id="paymentVoucherAgentConfirmModal" tabindex="-1" aria-labelledby="paymentVoucherAgentConfirmLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="paymentVoucherAgentConfirmLabel">تأكيد إضافة الحركة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">يرجى مراجعة ملخص السند قبل الحفظ:</p>
+                <ul class="list-group" id="paymentVoucherAgentSummary"></ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">عودة للتعديل</button>
+                <button type="button" class="btn btn-primary" id="paymentVoucherAgentConfirmBtn">تأكيد الحفظ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('paymentVoucherAgentForm');
+            const modalElement = document.getElementById('paymentVoucherAgentConfirmModal');
+            const summaryList = document.getElementById('paymentVoucherAgentSummary');
+            const confirmBtn = document.getElementById('paymentVoucherAgentConfirmBtn');
+
+            if (!form) {
+                return;
+            }
+
+            const useModal = typeof bootstrap !== 'undefined' && modalElement && summaryList && confirmBtn;
+            let isConfirmed = false;
+            let confirmationModal = null;
+
+            function formatValue(value, fallback = 'غير محدد') {
+                if (value && value.toString().trim() !== '') {
+                    return value;
+                }
+                return fallback;
+            }
+
+            function buildSummaryItems() {
+                const agentNameInput = document.getElementById('agentNameDisplay');
+                const accountDisplayInput = document.getElementById('paymentAccountDisplay');
+                const currencyDisplay = document.getElementById('agentCurrencyDisplay');
+                const amountInput = document.getElementById('Amount');
+                const dateInput = document.getElementById('Date');
+                const notesInput = document.getElementById('Notes');
+
+                return [
+                    { label: 'الوكيل', value: agentNameInput ? agentNameInput.value : '@(ViewBag.Agent?.Name ?? string.Empty)' },
+                    { label: 'حساب الدفع', value: accountDisplayInput ? accountDisplayInput.value : '@(ViewBag.PaymentAccount != null ? ($"{ViewBag.PaymentAccount.Code} - {ViewBag.PaymentAccount.NameAr}") : string.Empty)' },
+                    { label: 'العملة', value: currencyDisplay ? currencyDisplay.value : '@ViewBag.CurrencyCode' },
+                    { label: 'المبلغ', value: amountInput ? amountInput.value : '' },
+                    { label: 'التاريخ', value: dateInput ? dateInput.value : '' },
+                    { label: 'ملاحظات', value: notesInput ? notesInput.value : '', fallback: 'لا توجد ملاحظات' }
+                ];
+            }
+
+            if (useModal) {
+                confirmationModal = new bootstrap.Modal(modalElement);
+
+                form.addEventListener('submit', function (event) {
+                    if (isConfirmed) {
+                        isConfirmed = false;
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    const items = buildSummaryItems();
+                    summaryList.innerHTML = '';
+                    items.forEach(item => {
+                        const li = document.createElement('li');
+                        li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                        li.innerHTML = `<span>${item.label}</span><span class="fw-bold">${formatValue(item.value, item.fallback || 'غير محدد')}</span>`;
+                        summaryList.appendChild(li);
+                    });
+
+                    confirmationModal.show();
+                });
+
+                confirmBtn.addEventListener('click', function () {
+                    isConfirmed = true;
+                    confirmationModal.hide();
+                    form.requestSubmit();
+                });
+            } else {
+                form.addEventListener('submit', function (event) {
+                    if (isConfirmed) {
+                        isConfirmed = false;
+                        return;
+                    }
+
+                    event.preventDefault();
+                    const items = buildSummaryItems();
+                    const summaryText = items.map(item => `${item.label}: ${formatValue(item.value, item.fallback || 'غير محدد')}`).join('\n');
+                    if (window.confirm(`يرجى تأكيد تفاصيل السند:\n\n${summaryText}`)) {
+                        isConfirmed = true;
+                        form.submit();
+                    }
+                });
+            }
+        });
+    </script>
 }

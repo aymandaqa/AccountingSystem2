@@ -10,7 +10,7 @@
             <h3 class="card-title">إضافة مصروف لأصل</h3>
         </div>
         <div class="card-body">
-            <form asp-action="Create" method="post" enctype="multipart/form-data" class="row g-3">
+            <form asp-action="Create" method="post" enctype="multipart/form-data" class="row g-3" id="assetExpenseForm">
                 <div class="col-12">
                     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                 </div>
@@ -93,6 +93,25 @@
     </div>
 </div>
 
+<div class="modal fade" id="assetExpenseConfirmModal" tabindex="-1" aria-labelledby="assetExpenseConfirmLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assetExpenseConfirmLabel">تأكيد إضافة الحركة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">يرجى مراجعة ملخص الحركة قبل الحفظ:</p>
+                <ul class="list-group" id="assetExpenseSummary"></ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">عودة للتعديل</button>
+                <button type="button" class="btn btn-primary" id="assetExpenseConfirmBtn">تأكيد الحفظ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
@@ -101,6 +120,10 @@
             const currencyDisplay = document.getElementById('currencyDisplay');
             const currencyId = document.getElementById('currencyId');
             const supplierSelect = document.getElementById('supplierSelect');
+            const form = document.getElementById('assetExpenseForm');
+            const modalElement = document.getElementById('assetExpenseConfirmModal');
+            const summaryList = document.getElementById('assetExpenseSummary');
+            const confirmBtn = document.getElementById('assetExpenseConfirmBtn');
 
             function updateCurrency() {
                 if (!expenseSelect) return;
@@ -137,6 +160,86 @@
 
             updateCurrency();
             filterSuppliers(currencyId.value);
+
+            if (form) {
+                const useModal = typeof bootstrap !== 'undefined' && modalElement && summaryList && confirmBtn;
+                let isConfirmed = false;
+                let confirmationModal = null;
+
+                function formatValue(value, fallback = 'غير محدد') {
+                    if (value && value.toString().trim() !== '') {
+                        return value;
+                    }
+                    return fallback;
+                }
+
+                function buildSummaryItems() {
+                    const assetSelect = document.getElementById('AssetId');
+                    const paymentTypeSelect = document.getElementById('paymentType');
+                    const expenseAccountSelect = document.getElementById('expenseAccountSelect');
+                    const amountInput = document.getElementById('Amount');
+                    const dateInput = document.getElementById('Date');
+                    const notesInput = document.getElementById('Notes');
+
+                    const currencyText = currencyDisplay ? currencyDisplay.value : '';
+
+                    return [
+                        { label: 'الأصل', value: assetSelect ? assetSelect.options[assetSelect.selectedIndex]?.text?.trim() : '' },
+                        { label: 'حساب المصروف', value: expenseAccountSelect ? expenseAccountSelect.options[expenseAccountSelect.selectedIndex]?.text?.trim() : '' },
+                        { label: 'المورد', value: supplierSelect ? supplierSelect.options[supplierSelect.selectedIndex]?.text?.trim() : '' },
+                        { label: 'طريقة الدفع', value: paymentTypeSelect ? paymentTypeSelect.options[paymentTypeSelect.selectedIndex]?.text?.trim() : '' },
+                        { label: 'العملة', value: currencyText },
+                        { label: 'المبلغ', value: amountInput ? amountInput.value : '' },
+                        { label: 'التاريخ', value: dateInput ? dateInput.value : '' },
+                        { label: 'ملاحظات', value: notesInput ? notesInput.value : '', fallback: 'لا توجد ملاحظات' }
+                    ];
+                }
+
+                if (useModal) {
+                    confirmationModal = new bootstrap.Modal(modalElement);
+
+                    form.addEventListener('submit', function (event) {
+                        if (isConfirmed) {
+                            isConfirmed = false;
+                            return;
+                        }
+
+                        event.preventDefault();
+
+                        const items = buildSummaryItems();
+                        summaryList.innerHTML = '';
+                        items.forEach(item => {
+                            const li = document.createElement('li');
+                            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                            li.innerHTML = `<span>${item.label}</span><span class="fw-bold">${formatValue(item.value, item.fallback || 'غير محدد')}</span>`;
+                            summaryList.appendChild(li);
+                        });
+
+                        confirmationModal.show();
+                    });
+
+                    confirmBtn.addEventListener('click', function () {
+                        isConfirmed = true;
+                        confirmationModal.hide();
+                        form.requestSubmit();
+                    });
+                } else {
+                    form.addEventListener('submit', function (event) {
+                        if (isConfirmed) {
+                            isConfirmed = false;
+                            return;
+                        }
+
+                        event.preventDefault();
+                        const items = buildSummaryItems();
+                        const summaryText = items.map(item => `${item.label}: ${formatValue(item.value, item.fallback || 'غير محدد')}`).join('\n');
+                        if (window.confirm(`يرجى تأكيد تفاصيل الحركة:\n\n${summaryText}`)) {
+                            isConfirmed = true;
+                            form.submit();
+                        }
+                    });
+                }
+            }
         });
     </script>
 }

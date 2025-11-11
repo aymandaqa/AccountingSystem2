@@ -4,7 +4,7 @@
 }
 
 <div class="container-fluid">
-    <form asp-action="Create" method="post" class="row g-3" enctype="multipart/form-data">
+    <form asp-action="Create" method="post" class="row g-3" enctype="multipart/form-data" id="paymentVoucherForm">
         <div class="col-md-6">
             <label class="form-label">المورد</label>
             <select asp-for="SupplierId" class="form-select" id="supplierSelect">
@@ -59,6 +59,25 @@
     </form>
 </div>
 
+<div class="modal fade" id="paymentVoucherConfirmModal" tabindex="-1" aria-labelledby="paymentVoucherConfirmLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="paymentVoucherConfirmLabel">تأكيد إضافة الحركة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">يرجى مراجعة ملخص السند قبل الحفظ:</p>
+                <ul class="list-group" id="paymentVoucherSummary"></ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">عودة للتعديل</button>
+                <button type="button" class="btn btn-primary" id="paymentVoucherConfirmBtn">تأكيد الحفظ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -66,6 +85,11 @@
             const accountSelect = document.getElementById('accountSelect');
             const currencyDisplay = document.getElementById('currencyDisplay');
             const currencyId = document.getElementById('currencyId');
+            const paymentTypeSelect = document.getElementById('paymentType');
+            const form = document.getElementById('paymentVoucherForm');
+            const modalElement = document.getElementById('paymentVoucherConfirmModal');
+            const summaryList = document.getElementById('paymentVoucherSummary');
+            const confirmBtn = document.getElementById('paymentVoucherConfirmBtn');
 
             function updateCurrency() {
                 const option = supplierSelect.options[supplierSelect.selectedIndex];
@@ -87,6 +111,80 @@
 
             supplierSelect.addEventListener('change', updateCurrency);
             updateCurrency();
+
+            if (form) {
+                const useModal = typeof bootstrap !== 'undefined' && modalElement && summaryList && confirmBtn;
+                let isConfirmed = false;
+                let confirmationModal = null;
+
+                function formatValue(value, fallback = 'غير محدد') {
+                    if (value && value.toString().trim() !== '') {
+                        return value;
+                    }
+                    return fallback;
+                }
+
+                function buildSummaryItems() {
+                    const amountInput = document.getElementById('Amount');
+                    const dateInput = document.getElementById('Date');
+                    const notesInput = document.getElementById('Notes');
+
+                    return [
+                        { label: 'المورد', value: supplierSelect ? supplierSelect.options[supplierSelect.selectedIndex]?.text?.trim() : '' },
+                        { label: 'نوع الدفع', value: paymentTypeSelect ? paymentTypeSelect.options[paymentTypeSelect.selectedIndex]?.text?.trim() : '' },
+                        { label: 'الحساب', value: accountSelect ? accountSelect.options[accountSelect.selectedIndex]?.text?.trim() : '' },
+                        { label: 'العملة', value: currencyDisplay ? currencyDisplay.value : '' },
+                        { label: 'المبلغ', value: amountInput ? amountInput.value : '' },
+                        { label: 'التاريخ', value: dateInput ? dateInput.value : '' },
+                        { label: 'ملاحظات', value: notesInput ? notesInput.value : '', fallback: 'لا توجد ملاحظات' }
+                    ];
+                }
+
+                if (useModal) {
+                    confirmationModal = new bootstrap.Modal(modalElement);
+
+                    form.addEventListener('submit', function (event) {
+                        if (isConfirmed) {
+                            isConfirmed = false;
+                            return;
+                        }
+
+                        event.preventDefault();
+
+                        const items = buildSummaryItems();
+                        summaryList.innerHTML = '';
+                        items.forEach(item => {
+                            const li = document.createElement('li');
+                            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                            li.innerHTML = `<span>${item.label}</span><span class="fw-bold">${formatValue(item.value, item.fallback || 'غير محدد')}</span>`;
+                            summaryList.appendChild(li);
+                        });
+
+                        confirmationModal.show();
+                    });
+
+                    confirmBtn.addEventListener('click', function () {
+                        isConfirmed = true;
+                        confirmationModal.hide();
+                        form.requestSubmit();
+                    });
+                } else {
+                    form.addEventListener('submit', function (event) {
+                        if (isConfirmed) {
+                            isConfirmed = false;
+                            return;
+                        }
+
+                        event.preventDefault();
+                        const items = buildSummaryItems();
+                        const summaryText = items.map(item => `${item.label}: ${formatValue(item.value, item.fallback || 'غير محدد')}`).join('\n');
+                        if (window.confirm(`يرجى تأكيد تفاصيل السند:\n\n${summaryText}`)) {
+                            isConfirmed = true;
+                            form.submit();
+                        }
+                    });
+                }
+            }
         });
     </script>
 }
