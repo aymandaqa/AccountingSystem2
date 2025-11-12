@@ -132,10 +132,42 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="col-12">
+                                    <div class="card dashboard-summary-card shadow-sm border-0 h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                                                <div>
+                                                    <h5 class="card-title mb-1">إجماليات التقارير حسب الفروع</h5>
+                                                    <div class="text-muted small">مقارنة مباشرة بين تحصيل السائقين، أرصدة العملاء ومستحقات الموردين.</div>
+                                                </div>
+                                            </div>
+                                            <div class="row g-4 align-items-stretch text-center text-md-start">
+                                                <div class="col-12 col-md-4">
+                                                    <div class="border rounded-3 p-3 h-100 bg-white bg-opacity-50">
+                                                        <div class="text-muted small mb-1">إجمالي تحصيل السائقين (COD)</div>
+                                                        <div class="fs-5 fw-semibold">@formatCurrency(Model.TotalDriverCodCollection) @Model.BaseCurrencyCode</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-md-4">
+                                                    <div class="border rounded-3 p-3 h-100 bg-white bg-opacity-50">
+                                                        <div class="text-muted small mb-1">إجمالي أرصدة حسابات العملاء</div>
+                                                        <div class="fs-5 fw-semibold">@formatCurrency(Model.TotalCustomerAccountBalancesSumBase) @Model.BaseCurrencyCode</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-md-4">
+                                                    <div class="border rounded-3 p-3 h-100 bg-white bg-opacity-50">
+                                                        <div class="text-muted small mb-1">إجمالي مستحقات الموردين في الطريق</div>
+                                                        <div class="fs-5 fw-semibold">@formatCurrency(Model.TotalSuppliersInTransit) @Model.BaseCurrencyCode</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="row g-4 dashboard-widget-cards">
-                                <div class="col-12 col-lg-5">
+                                <div class="col-12 col-xl-5">
                                     <div class="card account-tree-card shadow-sm border-0 h-100">
                                         <div class="card-header d-flex align-items-center justify-content-between">
                                             <div>
@@ -183,120 +215,75 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-12 col-lg-4">
-                                    <div class="card account-tree-card shadow-sm border-0 h-100">
-                                        <div class="card-header d-flex align-items-center justify-content-between">
-                                            <div>
-                                                <h5 class="card-title mb-0"><i class="fas fa-project-diagram ms-2"></i> تقرير تحصيل السائقين حسب الفروع</h5>
-                                                <span class="text-muted small">عرض هرمي لمبالغ الشحنات وCOD للسائقين في الفروع</span>
-                                            </div>
-                                        </div>
-                                        <div class="card-body">
-                                            @await Html.PartialAsync("~/Views/Dashboard/_DriverCodBranchTree.cshtml", Model.DriverCodBranchSummaries)
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-12 col-lg-3">
+                                <div class="col-12 col-xl-7">
                                     <div class="card shadow-sm border-0 h-100">
                                         <div class="card-header d-flex align-items-center justify-content-between">
                                             <div>
-                                                <h5 class="card-title mb-0"><i class="fas fa-people-arrows ms-2"></i> أرصدة حسابات العملاء حسب الفروع</h5>
-                                                <span class="text-muted small">إجمالي أرصدة الحسابات المرتبطة بالعملاء بحسب الفرع مع تفاصيل كل حساب.</span>
+                                                <h5 class="card-title mb-0"><i class="fas fa-layer-group ms-2"></i> نظرة موحدة على الفروع</h5>
+                                                <span class="text-muted small">دمج بيانات تحصيل السائقين، أرصدة العملاء ومستحقات الموردين في جدول واحد.</span>
                                             </div>
                                         </div>
                                         <div class="card-body">
-                                            @if (!Model.CustomerAccountBranches.Any())
+                                            @if (!Model.BranchFinancialSummaries.Any())
                                             {
-                                                <div class="alert alert-info text-center mb-0">لا توجد حسابات عملاء مرتبطة لعرضها.</div>
+                                                <div class="alert alert-info text-center mb-0">لا توجد بيانات لعرضها ضمن التقارير.</div>
                                             }
                                             else
                                             {
-                                                <div class="accordion customer-branch-tree" id="dashboardCustomerBranchTree">
-                                                    @for (var index = 0; index < Model.CustomerAccountBranches.Count; index++)
-                                                    {
-                                                        var branch = Model.CustomerAccountBranches[index];
-                                                        var headingId = $"dashboardCustomerBranchHeading{index}";
-                                                        var collapseId = $"dashboardCustomerBranchCollapse{index}";
-                                                        <div class="accordion-item">
-                                                            <h2 class="accordion-header" id="@headingId">
-                                                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId" aria-expanded="false" aria-controls="@collapseId">
-                                                                    <div class="flex-grow-1 d-flex align-items-center justify-content-between gap-3">
-                                                                        <div>
-                                                                            <div class="fw-semibold">@branch.BranchName</div>
-                                                                            <div class="text-muted small">@branch.Customers.Count @((branch.Customers.Count == 1) ? "حساب" : "حسابات")</div>
-                                                                        </div>
-                                                                        <span class="badge bg-primary-subtle text-primary customer-branch-total">@formatCurrency(branch.TotalBalanceBase) @Model.BaseCurrencyCode</span>
-                                                                    </div>
-                                                                </button>
-                                                            </h2>
-                                                            <div id="@collapseId" class="accordion-collapse collapse" aria-labelledby="@headingId" data-bs-parent="#dashboardCustomerBranchTree">
-                                                                <div class="accordion-body">
-                                                                    @if (!branch.HasCustomers)
-                                                                    {
-                                                                        <div class="text-muted text-center">لا توجد حسابات تابعة لهذا الفرع.</div>
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        <div class="table-responsive">
-                                                                            <table class="table table-sm align-middle table-hover mb-0">
-                                                                                <thead>
-                                                                                    <tr>
-                                                                                        <th>العميل</th>
-                                                                                        <th>الحساب</th>
-                                                                                        <th class="text-end">الرصيد</th>
-                                                                                    </tr>
-                                                                                </thead>
-                                                                                <tbody>
-                                                                                    @foreach (var customer in branch.Customers)
-                                                                                    {
-                                                                                        <tr>
-                                                                                            <td>
-                                                                                                <div class="fw-semibold">@customer.CustomerName</div>
-                                                                                                @if (!string.IsNullOrWhiteSpace(customer.CustomerId))
-                                                                                                {
-                                                                                                    <div class="text-muted small">معرّف العميل: @customer.CustomerId</div>
-                                                                                                }
-                                                                                                @if (!string.IsNullOrWhiteSpace(customer.CustomerContact))
-                                                                                                {
-                                                                                                    <div class="text-muted small">@customer.CustomerContact</div>
-                                                                                                }
-                                                                                            </td>
-                                                                                            <td>
-                                                                                                <div class="fw-semibold">@customer.AccountCode</div>
-                                                                                                <div class="text-muted small">@customer.AccountName</div>
-                                                                                            </td>
-                                                                                            <td class="text-end">
-                                                                                                <div class="fw-semibold">@formatCurrency(customer.BalanceBase) @Model.BaseCurrencyCode</div>
-                                                                                                @if (!string.IsNullOrWhiteSpace(customer.AccountCurrencyCode) && customer.AccountCurrencyCode != Model.BaseCurrencyCode)
-                                                                                                {
-                                                                                                    <div class="text-muted small">@formatCurrency(customer.BalanceOriginal) @customer.AccountCurrencyCode</div>
-                                                                                                }
-                                                                                            </td>
-                                                                                        </tr>
-                                                                                    }
-                                                                                </tbody>
-                                                                            </table>
-                                                                        </div>
-                                                                    }
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    }
+                                                var totalDriverShipments = Model.BranchFinancialSummaries.Sum(x => x.DriverShipmentTotal);
+                                                var totalSupplierShipmentCount = Model.BranchFinancialSummaries.Sum(x => x.SupplierShipmentCount);
+                                                <div class="table-responsive">
+                                                    <table class="table table-hover align-middle mb-0">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th scope="col">الفرع</th>
+                                                                <th scope="col" class="text-end">إجمالي الشحنات (السائقين)</th>
+                                                                <th scope="col" class="text-end">مبالغ الـ COD</th>
+                                                                <th scope="col" class="text-end">أرصدة حسابات العملاء</th>
+                                                                <th scope="col" class="text-center">عدد شحنات الموردين</th>
+                                                                <th scope="col" class="text-end">مستحقات الموردين في الطريق</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach (var branch in Model.BranchFinancialSummaries)
+                                                            {
+                                                                <tr>
+                                                                    <td>
+                                                                        <div class="fw-semibold">@branch.BranchName</div>
+                                                                        @if (branch.BranchId.HasValue)
+                                                                        {
+                                                                            <div class="text-muted small">معرّف الفرع: @branch.BranchId</div>
+                                                                        }
+                                                                        else if (branch.RoadCompanyBranchId.HasValue)
+                                                                        {
+                                                                            <div class="text-muted small">معرّف Road: @branch.RoadCompanyBranchId</div>
+                                                                        }
+                                                                    </td>
+                                                                    <td class="text-end">@formatCurrency(branch.DriverShipmentTotal) @Model.BaseCurrencyCode</td>
+                                                                    <td class="text-end text-success">@formatCurrency(branch.DriverCodAmount) @Model.BaseCurrencyCode</td>
+                                                                    <td class="text-end">@formatCurrency(branch.CustomerBalanceBase) @Model.BaseCurrencyCode</td>
+                                                                    <td class="text-center">
+                                                                        <span class="badge bg-primary-subtle text-primary">@branch.SupplierShipmentCount.ToString("N0")</span>
+                                                                    </td>
+                                                                    <td class="text-end">@formatCurrency(branch.SuppliersInTransit) @Model.BaseCurrencyCode</td>
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                        <tfoot class="table-light">
+                                                            <tr>
+                                                                <th scope="row">الإجمالي</th>
+                                                                <th class="text-end">@formatCurrency(totalDriverShipments) @Model.BaseCurrencyCode</th>
+                                                                <th class="text-end">@formatCurrency(Model.TotalDriverCodCollection) @Model.BaseCurrencyCode</th>
+                                                                <th class="text-end">@formatCurrency(Model.TotalCustomerAccountBalancesSumBase) @Model.BaseCurrencyCode</th>
+                                                                <th class="text-center">
+                                                                    <span class="badge bg-primary-subtle text-primary">@totalSupplierShipmentCount.ToString("N0")</span>
+                                                                </th>
+                                                                <th class="text-end">@formatCurrency(Model.TotalSuppliersInTransit) @Model.BaseCurrencyCode</th>
+                                                            </tr>
+                                                        </tfoot>
+                                                    </table>
                                                 </div>
                                             }
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <div class="card shadow-sm border-0 h-100">
-                                        <div class="card-header d-flex align-items-center justify-content-between">
-                                            <div>
-                                                <h5 class="card-title mb-0"><i class="fas fa-truck-loading ms-2"></i>مستحقات الموردين في الطريق</h5>
-                                                <span class="text-muted small">مستحقات الموردين في الطريق مع السائق</span>
-                                            </div>
-                                        </div>
-                                        <div class="card-body">
-                                            @await Html.PartialAsync("~/Views/Dashboard/_BusinessShipmentBranchSummaryTable.cshtml", Model.BusinessShipmentBranchSummaries)
                                         </div>
                                     </div>
                                 </div>
