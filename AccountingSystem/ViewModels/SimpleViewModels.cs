@@ -526,9 +526,9 @@ namespace AccountingSystem.ViewModels
 
     public class BusinessShipmentPriceViewModel
     {
-        public long Id { get; set; }
+        public int Id { get; set; }
         public string? ShipmentTrackingNo { get; set; }
-        public long? ShipmentId { get; set; }
+        public int? ShipmentId { get; set; }
         public DateTime? EntryDate { get; set; }
         public int? BusinessId { get; set; }
         public string BusinessName { get; set; } = string.Empty;

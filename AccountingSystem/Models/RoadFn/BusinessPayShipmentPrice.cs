@@ -8,12 +8,12 @@ namespace Roadfn.Models
     public class BusinessPayShipmentPrice
     {
         [Key]
-        public long Id { get; set; }
+        public int Id { get; set; }
 
         [StringLength(100)]
         public string? ShipmentTrackingNo { get; set; }
 
-        public long? ShipmentId { get; set; }
+        public int? ShipmentId { get; set; }
 
         public DateTime? EntryDate { get; set; }
 
