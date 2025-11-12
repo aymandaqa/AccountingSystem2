@@ -250,11 +250,15 @@
                                                                 <tr>
                                                                     <td>
                                                                         <div class="fw-semibold">@branch.BranchName</div>
-                                                                        @if (branch.BranchId.HasValue)
+                                                                        @if (!string.IsNullOrWhiteSpace(branch.BranchCode))
+                                                                        {
+                                                                            <div class="text-muted small">كود الفرع: @branch.BranchCode</div>
+                                                                        }
+                                                                        else if (branch.BranchId.HasValue)
                                                                         {
                                                                             <div class="text-muted small">معرّف الفرع: @branch.BranchId</div>
                                                                         }
-                                                                        else if (branch.RoadCompanyBranchId.HasValue)
+                                                                        if (branch.RoadCompanyBranchId.HasValue)
                                                                         {
                                                                             <div class="text-muted small">معرّف Road: @branch.RoadCompanyBranchId</div>
                                                                         }
