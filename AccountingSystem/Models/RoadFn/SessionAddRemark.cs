@@ -16,5 +16,6 @@ namespace Roadfn.Models
         public int? OldStatus { get; set; }
         public int? NewStatus { get; set; }
         public int? BranchId { get; set; }
+        public string? UserIDName { get; set; }
     }
 }

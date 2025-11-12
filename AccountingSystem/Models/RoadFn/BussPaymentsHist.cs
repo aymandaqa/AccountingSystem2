@@ -12,6 +12,7 @@ namespace Roadfn.Models
         public int Iuser { get; set; }
         public int DriverId { get; set; }
         public int StatusId { get; set; }
+        public string? IuserName { get; set; }
     }
     public class BussRetPaymentsHist
     {

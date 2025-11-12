@@ -195,22 +195,11 @@ namespace Roadfn.Controllers
 
             return View();
         }
-        [Authorize(Policy = "accountmanagement.receiveretpayments")]
-        public async Task<IActionResult> ReceiveRetPayments()
-        {
-            ViewBag.Driver = from t1 in _context.Users
-                             where t1.UserType == "4"
-                             select new { t1.Id, Name = $"{t1.UserName}-{t1.FirstName} {t1.LastName}" };
-            //ViewBag.city = await _context.Cities.ToListAsync();
-            ViewBag.CompanyBranches = await _context.CompanyBranches.ToListAsync();
 
-            return View();
-        }
         [HttpPost]
         public async Task<IActionResult> ReceivingPayments([FromBody] List<InvoiceBusinessUserShipments> invoiceBusinessUserShipments)
         {
-            string userId = User.Claims.SingleOrDefault(x => x.Type.Equals(ClaimTypes.NameIdentifier)).Value;
-            var user = await _context.Users.Where(t => t.Id == Convert.ToInt32(userId)).FirstOrDefaultAsync();
+            string userId = User.Identity.Name;
             var msg = "";
             foreach (var item1 in invoiceBusinessUserShipments)
             {
@@ -226,7 +215,8 @@ namespace Roadfn.Controllers
                     bussPaymentsHist.StatusId = 2;
                     bussPaymentsHist.DriverId = Convert.ToInt32(inv.DriverId);
                     bussPaymentsHist.BisnessUserPaymentHeader = inv.Id;
-                    bussPaymentsHist.Iuser = Convert.ToInt32(userId);
+                    bussPaymentsHist.Iuser = 0;
+                    bussPaymentsHist.IuserName = userId;
                     await _context.BussPaymentsHist.AddAsync(bussPaymentsHist);
                     await _context.SaveChangesAsync();
 
@@ -258,7 +248,8 @@ namespace Roadfn.Controllers
                             shipmentLog.ShipmentId = ship.Id;
                             shipmentLog.EntryDate = DateTime.Now;
                             shipmentLog.EntryDateTine = DateTime.Now;
-                            shipmentLog.UserId = Convert.ToInt32(userId);
+                            shipmentLog.UserId = 0;
+                            shipmentLog.UserIDName = userId;
                             shipmentLog.Status = newstatus;
                             shipmentLog.ClientName = ship.ClientName;
                             shipmentLog.ClientPhone = ship.ClientPhone;
@@ -274,7 +265,8 @@ namespace Roadfn.Controllers
 
                             SessionAddRemark sessionAddRemark = new SessionAddRemark();
                             sessionAddRemark.ShipmentId = ship.Id;
-                            sessionAddRemark.UserId = Convert.ToInt32(userId);
+                            sessionAddRemark.UserId = 0;
+                            sessionAddRemark.UserIDName = userId;
                             sessionAddRemark.EntryDateTime = DateTime.Now;
                             sessionAddRemark.OldStatus = ship.Status;
                             sessionAddRemark.NewStatus = newstatus;
@@ -299,127 +291,7 @@ namespace Roadfn.Controllers
             return Json(msg);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> ReceivingRetPayments([FromBody] List<InvoiceBusinessUserShipments> invoiceBusinessUserShipments)
-        {
-            string userId = User.Claims.SingleOrDefault(x => x.Type.Equals(ClaimTypes.NameIdentifier)).Value;
-            var user = await _context.Users.Where(t => t.Id == Convert.ToInt32(userId)).FirstOrDefaultAsync();
-            var msg = "";
-            foreach (var item1 in invoiceBusinessUserShipments)
-            {
-                var inv = await _context.BisnessUserReturnHeader.Where(t => t.Id == item1.ID).FirstOrDefaultAsync();
-                if (inv != null)
-                {
-                    inv.StatusId = 4;
-                    _context.BisnessUserReturnHeader.Update(inv);
-                    await _context.SaveChangesAsync();
-                    msg += Environment.NewLine + $"تم تسليم الفاتورة {inv.Id} ";
 
-                    BussRetPaymentsHist bussPaymentsHist = new BussRetPaymentsHist();
-                    bussPaymentsHist.StatusId = 2;
-                    bussPaymentsHist.DriverId = Convert.ToInt32(inv.DriverId);
-                    bussPaymentsHist.BisnessUserPaymentHeader = inv.Id;
-                    bussPaymentsHist.Iuser = Convert.ToInt32(userId);
-                    await _context.BussRetPaymentsHist.AddAsync(bussPaymentsHist);
-                    await _context.SaveChangesAsync();
-
-                    //var details = await _context.BisnessUserPaymentDetails.Where(t => t.HeaderId == inv.Id).ToListAsync();
-
-                    //var statusinv = await _context.InvoiceStatus.FindAsync(2);
-                    //List<Shipment> listpay = new List<Shipment>();
-                    //foreach (var item in details)
-                    //{
-                    //    listpay.Add(await _context.Shipments.FindAsync(Convert.ToInt32(item.ShipmentId)));
-                    //}
-                    //foreach (var item in listpay)
-                    //{
-                    //    var ship = await _context.Shipments.FindAsync(Convert.ToInt32(item.Id));
-                    //    if (ship != null)
-                    //    {
-                    //        var newstatus = 0;
-                    //        if (ship.RetStatus == true || ship.ShipmentTrackingNo.Contains("_ex"))
-                    //        {
-                    //            newstatus = 23;
-                    //        }
-                    //        else
-                    //        {
-                    //            newstatus = statusinv.TransferShipmentStatusTo;
-                    //        }
-
-                    //        //add Submitted status
-                    //        ShipmentLog shipmentLog = new ShipmentLog();
-                    //        shipmentLog.ShipmentId = ship.Id;
-                    //        shipmentLog.EntryDate = DateTime.Now;
-                    //        shipmentLog.EntryDateTine = DateTime.Now;
-                    //        shipmentLog.UserId = Convert.ToInt32(userId);
-                    //        shipmentLog.Status = newstatus;
-                    //        shipmentLog.ClientName = ship.ClientName;
-                    //        shipmentLog.ClientPhone = ship.ClientPhone;
-                    //        shipmentLog.FromCityId = ship.FromCityId;
-                    //        shipmentLog.ClientCityId = ship.ClientCityId;
-                    //        shipmentLog.ClientAreaId = ship.ClientAreaId;
-                    //        shipmentLog.IsUserBusiness = ship.IsUserBusiness;
-                    //        shipmentLog.SenderName = ship.SenderName;
-                    //        shipmentLog.SenderTel = ship.SenderTel;
-                    //        shipmentLog.BusinessUserId = ship.BusinessUserId;
-                    //        await _context.ShipmentLogs.AddAsync(shipmentLog);
-                    //        await _context.SaveChangesAsync();
-
-                    //        SessionAddRemark sessionAddRemark = new SessionAddRemark();
-                    //        sessionAddRemark.ShipmentId = ship.Id;
-                    //        sessionAddRemark.UserId = Convert.ToInt32(userId);
-                    //        sessionAddRemark.EntryDateTime = DateTime.Now;
-                    //        sessionAddRemark.OldStatus = ship.Status;
-                    //        sessionAddRemark.NewStatus = newstatus;
-                    //        sessionAddRemark.EntryDate = DateTime.Now;
-                    //        ship.LastUpdate = DateTime.Now;
-                    //        ship.Status = newstatus;
-                    //        ship.DriverId = 0;
-                    //        _context.Shipments.Update(ship);
-                    //        await _context.SaveChangesAsync();
-                    //        await _context.SessionAddRemarks.AddAsync(sessionAddRemark);
-                    //        await _context.SaveChangesAsync();
-                    //    }
-                    //}
-                }
-                else
-                {
-                    msg += Environment.NewLine + $"لم يتم العثور على الفاتورة {inv.Id} ";
-
-                }
-            }
-
-            return Json(msg);
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> changeDriver([FromBody] List<InvoiceBusinessUserShipments> invoiceBusinessUserShipments, int DriverId)
-        {
-            string userId = User.Claims.SingleOrDefault(x => x.Type.Equals(ClaimTypes.NameIdentifier)).Value;
-            var user = await _context.Users.Where(t => t.Id == Convert.ToInt32(userId)).FirstOrDefaultAsync();
-            var msg = "";
-            foreach (var item1 in invoiceBusinessUserShipments)
-            {
-                var inv = await _context.BisnessUserPaymentHeader.Where(t => t.Id == item1.ID).FirstOrDefaultAsync();
-                if (inv != null)
-                {
-                    inv.DriverId = DriverId;
-                    _context.BisnessUserPaymentHeader.Update(inv);
-                    await _context.SaveChangesAsync();
-                    msg += Environment.NewLine + $"تم تغيير السائق للفاتورة {inv.Id} ";
-
-                    BussPaymentsHist bussPaymentsHist = new BussPaymentsHist();
-                    bussPaymentsHist.StatusId = Convert.ToInt32(inv.StatusId);
-                    bussPaymentsHist.DriverId = Convert.ToInt32(inv.DriverId);
-                    bussPaymentsHist.BisnessUserPaymentHeader = inv.Id;
-                    bussPaymentsHist.Iuser = Convert.ToInt32(userId);
-                    await _context.BussPaymentsHist.AddAsync(bussPaymentsHist);
-                    await _context.SaveChangesAsync();
-                }
-            }
-
-            return Json(msg);
-        }
 
 
         [HttpPost]
@@ -454,53 +326,12 @@ namespace Roadfn.Controllers
 
         public async Task<IActionResult> UrlDatasourceInvoiceBusinessUserShipments([FromBody] DataManagerRequest dm, string barcode = "")
         {
-            string userId = User.Claims.SingleOrDefault(x => x.Type.Equals(ClaimTypes.NameIdentifier)).Value;
-            var user = await _context.Users.Where(t => t.Id == Convert.ToInt32(userId)).FirstOrDefaultAsync();
-
 
             var DataSource = _context.InvoiceBusinessUserShipments.Where(t => t.StatusId == 1).AsQueryable();
             var codes = barcode.Split(",");
             if (!string.IsNullOrEmpty(barcode))
             {
                 DataSource = _context.InvoiceBusinessUserShipments.Where(t => t.StatusId == 1 && codes.Contains(t.ID.ToString())).AsQueryable();
-            }
-
-            DataOperations operation = new DataOperations();
-            if (dm.Search != null && dm.Search.Count > 0)
-            {
-                DataSource = operation.PerformSearching(DataSource, dm.Search);  //Search
-            }
-            if (dm.Sorted != null && dm.Sorted.Count > 0) //Sorting
-            {
-                DataSource = operation.PerformSorting(DataSource, dm.Sorted);
-            }
-            if (dm.Where != null && dm.Where.Count > 0) //Filtering
-            {
-                DataSource = operation.PerformFiltering(DataSource, dm.Where, dm.Where[0].Operator);
-            }
-            int count = DataSource.Count();
-            if (dm.Skip != 0)
-            {
-                DataSource = operation.PerformSkip(DataSource, dm.Skip);   //Paging
-            }
-            if (dm.Take != 0)
-            {
-                DataSource = operation.PerformTake(DataSource, dm.Take);
-            }
-            return dm.RequiresCounts ? Json(new { result = DataSource, count = count }) : Json(DataSource);
-        }
-
-        public async Task<IActionResult> UrlDatasourceInvoiceRetBusinessUserShipments([FromBody] DataManagerRequest dm, string barcode = "", string BranchId = "")
-        {
-            string userId = User.Claims.SingleOrDefault(x => x.Type.Equals(ClaimTypes.NameIdentifier)).Value;
-            var user = await _context.Users.Where(t => t.Id == Convert.ToInt32(userId)).FirstOrDefaultAsync();
-
-
-            var DataSource = _context.InvoiceRetBusinessUserShipments.Where(t => t.StatusId == 3 && t.EmpNameBranchID.ToString() == BranchId).AsQueryable();
-            var codes = barcode.Split(",");
-            if (!string.IsNullOrEmpty(barcode))
-            {
-                DataSource = _context.InvoiceRetBusinessUserShipments.Where(t => t.StatusId == 3 && codes.Contains(t.ID.ToString())).AsQueryable();
             }
 
             DataOperations operation = new DataOperations();
@@ -687,6 +518,35 @@ namespace Roadfn.Controllers
         public IActionResult PrintSlip()
         {
             return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> changeDriver([FromBody] List<InvoiceBusinessUserShipments> invoiceBusinessUserShipments, int DriverId)
+        {
+            string userId = User.Identity.Name;
+            var msg = "";
+            foreach (var item1 in invoiceBusinessUserShipments)
+            {
+                var inv = await _context.BisnessUserPaymentHeader.Where(t => t.Id == item1.ID).FirstOrDefaultAsync();
+                if (inv != null)
+                {
+                    inv.DriverId = DriverId;
+                    _context.BisnessUserPaymentHeader.Update(inv);
+                    await _context.SaveChangesAsync();
+                    msg += Environment.NewLine + $"تم تغيير السائق للفاتورة {inv.Id} ";
+
+                    BussPaymentsHist bussPaymentsHist = new BussPaymentsHist();
+                    bussPaymentsHist.StatusId = Convert.ToInt32(inv.StatusId);
+                    bussPaymentsHist.DriverId = Convert.ToInt32(inv.DriverId);
+                    bussPaymentsHist.BisnessUserPaymentHeader = inv.Id;
+                    bussPaymentsHist.Iuser = 0;
+                    bussPaymentsHist.IuserName = userId;
+                    await _context.BussPaymentsHist.AddAsync(bussPaymentsHist);
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            return Json(msg);
         }
 
         public IActionResult UrlDatasourceDriverStatment([FromBody] DataManagerRequest dm, int DriverId)
@@ -1389,6 +1249,7 @@ namespace Roadfn.Controllers
                         shipmentLog.EntryDate = DateTime.Now;
                         shipmentLog.EntryDateTine = DateTime.Now;
                         shipmentLog.UserId = 0;// Convert.ToInt32(userId);
+                        shipmentLog.UserIDName = User.Identity.Name;// Convert.ToInt32(userId);
                         shipmentLog.Status = ship.Status;
                         shipmentLog.ClientName = ship.ClientName;
                         shipmentLog.ClientPhone = ship.ClientPhone;
@@ -1405,6 +1266,7 @@ namespace Roadfn.Controllers
                         SessionAddRemark sessionAddRemark = new SessionAddRemark();
                         sessionAddRemark.ShipmentId = ship.Id;
                         sessionAddRemark.UserId = 0;// Convert.ToInt32(userId);
+                        sessionAddRemark.UserIDName = User.Identity.Name; // Convert.ToInt32(userId);
                         sessionAddRemark.EntryDateTime = DateTime.Now;
                         sessionAddRemark.OldStatus = ship.Status;
                         sessionAddRemark.NewStatus = Convert.ToInt32(StatusEnum.InAccounting);
@@ -1797,6 +1659,7 @@ namespace Roadfn.Controllers
             bussPaymentsHist.DriverId = driverId;
             bussPaymentsHist.BisnessUserPaymentHeader = bisnessUserPaymentHeader.Id;
             bussPaymentsHist.Iuser = loginUserId;
+            bussPaymentsHist.IuserName = User.Identity.Name;
             await _context.BussPaymentsHist.AddAsync(bussPaymentsHist);
             await _context.SaveChangesAsync();
 
@@ -1892,7 +1755,9 @@ namespace Roadfn.Controllers
                     shipmentLog.ShipmentId = ship.Id;
                     shipmentLog.EntryDate = DateTime.Now;
                     shipmentLog.EntryDateTine = DateTime.Now;
-                    shipmentLog.UserId = loginUserId;
+                    shipmentLog.UserId = 0;
+                    shipmentLog.UserIDName = User.Identity.Name;
+
 
                     shipmentLog.Status = statusinv.TransferShipmentStatusTo;
 
@@ -1912,7 +1777,8 @@ namespace Roadfn.Controllers
 
                     SessionAddRemark sessionAddRemark = new SessionAddRemark();
                     sessionAddRemark.ShipmentId = ship.Id;
-                    sessionAddRemark.UserId = loginUserId;
+                    sessionAddRemark.UserId = 0;
+                    sessionAddRemark.UserIDName = User.Identity.Name; ;
                     sessionAddRemark.EntryDateTime = DateTime.Now;
                     sessionAddRemark.OldStatus = ship.Status;
 

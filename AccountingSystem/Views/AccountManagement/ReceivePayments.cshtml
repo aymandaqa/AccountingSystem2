@@ -1,8 +1,40 @@
 ﻿@{
     var rtl = true;
 }
-<title>تسليم فواتير - roadfn </title>
+<style>
 
+    #spinner-div {
+        position: fixed;
+        display: none;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        text-align: center;
+        background-color: rgba(255, 255, 255, 0.8);
+        z-index: 214748364799;
+    }
+
+    .loader {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        z-index: 214748364799;
+        width: 120px;
+        height: 120px;
+        margin: -76px 0 0 -76px;
+        border: 16px solid #f3f3f3;
+        border-radius: 50%;
+        border-top: 16px solid #3498db;
+        -webkit-animation: spin 2s linear infinite;
+        animation: spin 2s linear infinite;
+    }
+</style>
+<title>تسليم فواتير - roadfn </title>
+<div id="spinner-div" class="pt-5">
+    <div class="loader"></div>
+
+</div>
 <div class="container-full">
     <!-- Content Header (Page header) -->
     <div class="content-header">

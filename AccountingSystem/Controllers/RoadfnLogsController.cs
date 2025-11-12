@@ -14,27 +14,14 @@ using System.Security.Claims;
 namespace AccountingSystem.Controllers
 {
 
-    [Authorize(Policy = "roadfn.logs")]
+    [Authorize]
 
     public class RoadfnLogsController : Controller
     {
         private RoadFnDbContext _context;
-        private ApplicationDbContext _accontext;
-        private readonly IWebHostEnvironment _env;
-        private readonly IConfiguration iConfig;
-        private readonly IJournalEntryService _journalEntryService;
-        private readonly IAccountService _accountService;
-        private readonly UserManager<User> _userManager;
-        public RoadfnLogsController(RoadFnDbContext context, UserManager<User> userManager, IWebHostEnvironment env, IConfiguration iConfig, IJournalEntryService journalEntryService, IAccountService accountService, ApplicationDbContext accontext)
+        public RoadfnLogsController(RoadFnDbContext context)
         {
             _context = context;
-            _env = env;
-            this.iConfig = iConfig;
-            _journalEntryService = journalEntryService;
-            _accountService = accountService;
-            _accontext = accontext;
-            _userManager = userManager;
-
         }
 
         public IActionResult Index()

@@ -24,5 +24,6 @@ namespace Roadfn.Models
         public int? BusinessUserId { get; set; }
         public string? SenderName { get; set; }
         public string? SenderTel { get; set; }
+        public string? UserIDName { get; set; }
     }
 }
