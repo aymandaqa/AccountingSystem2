@@ -31,6 +31,14 @@ namespace AccountingSystem.Controllers
         }
 
         private sealed record RoadUserInfo(string? FirstName, string? LastName, string? UserName, string? Mobile, int? BranchId);
+
+        private sealed class SupplierOutstandingBranchSummary
+        {
+            public int? BranchId { get; init; }
+            public int? RoadCompanyBranchId { get; init; }
+            public string BranchName { get; init; } = string.Empty;
+            public decimal OutstandingAmount { get; init; }
+        }
         [Authorize]
         public async Task<IActionResult> Index(int? branchId = null, DateTime? fromDate = null, DateTime? toDate = null, int? currencyId = null)
         {
@@ -95,6 +103,7 @@ namespace AccountingSystem.Controllers
 
             var driverCodSummaries = await GetDriverCodBranchSummariesAsync(allowedBranchIds);
             var businessShipmentBranches = await GetBusinessShipmentBranchSummariesAsync(allowedBranchIds);
+            var outstandingSupplierSummaries = await GetOutstandingSupplierBranchSummariesAsync(allowedBranchIds);
             // Always display customer account balances across all branches, not just the user's assigned branches.
             var customerAccountBranches = await GetCustomerAccountBranchesAsync(new List<int>(), treeData.BaseCurrency);
 
@@ -221,6 +230,19 @@ namespace AccountingSystem.Controllers
                 aggregate.SuppliersInTransit += shipmentBranch.TotalShipmentPrice;
             }
 
+            foreach (var outstandingBranch in outstandingSupplierSummaries)
+            {
+                var branchName = string.IsNullOrWhiteSpace(outstandingBranch.BranchName)
+                    ? ResolveBranchDisplayName(outstandingBranch.BranchId)
+                    : outstandingBranch.BranchName;
+                var aggregate = GetOrCreateAggregate(
+                    outstandingBranch.BranchId,
+                    outstandingBranch.RoadCompanyBranchId,
+                    branchName,
+                    ResolveBranchCode(outstandingBranch.BranchId));
+                aggregate.OutstandingSupplierDues += outstandingBranch.OutstandingAmount;
+            }
+
             var branchFinancialSummaries = branchAggregates.Values
                 .OrderBy(a => string.IsNullOrWhiteSpace(a.BranchCode) ? a.BranchName : a.BranchCode)
                 .ThenBy(a => a.BranchName)
@@ -234,6 +256,7 @@ namespace AccountingSystem.Controllers
             var totalCustomerAccountBalancesBase = customerAccountBranches.Sum(b => b.TotalBalanceBase);
             var totalDriverCodCollection = driverCodSummaries.Sum(s => s.ShipmentCod);
             var totalSuppliersInTransit = businessShipmentBranches.Sum(s => s.TotalShipmentPrice);
+            var totalOutstandingSupplierDues = outstandingSupplierSummaries.Sum(s => s.OutstandingAmount);
 
             var accountTypeTrees = treeData.RootNodes
                 .GroupBy(n => n.AccountType)
@@ -292,6 +315,7 @@ namespace AccountingSystem.Controllers
                 NetAccountsAfterCustomersBase = totalAccountBalancesBase - totalCustomerAccountBalancesBase,
                 TotalDriverCodCollection = totalDriverCodCollection,
                 TotalSuppliersInTransit = totalSuppliersInTransit,
+                TotalOutstandingSupplierDues = totalOutstandingSupplierDues,
                 NetDriverCodAfterSuppliers = totalDriverCodCollection - totalSuppliersInTransit
             };
 
@@ -592,62 +616,58 @@ namespace AccountingSystem.Controllers
             var results = new List<BusinessShipmentBranchSummaryViewModel>();
             var restrictBranches = allowedBranchIds?.Any() == true;
 
+            const string sql = @"SELECT
+                                        SUM(ISNULL(p.ShipmentPrice, 0)) AS ShipmentPrice,
+                                        COUNT(*) AS ShipmentCount,
+                                        p.CompanyBranchID,
+                                        b.Id AS BranchId,
+                                        b.NameAr AS BranchName
+                                   FROM CARGOTest.dbo.BusinessPayShipmentPrice p
+                                   LEFT JOIN AccountingSystemDbNew.dbo.Branches b ON b.Id = p.CompanyBranchID
+                                   GROUP BY p.CompanyBranchID, b.Id, b.NameAr";
+
+            var connection = _roadContext.Database.GetDbConnection();
+            var shouldClose = connection.State != ConnectionState.Open;
+
             try
             {
-                var branchMetadata = await _context.Branches
-                    .AsNoTracking()
-                    .Select(b => new { b.Id, b.NameAr, b.Code })
-                    .ToListAsync();
-
-                var branchByRoadId = new Dictionary<int, (int BranchId, string BranchName)>();
-
-                foreach (var branch in branchMetadata)
+                if (shouldClose)
                 {
-                    if (int.TryParse(branch.Code, out var parsedCode))
-                    {
-                        var resolvedName = !string.IsNullOrWhiteSpace(branch.NameAr) ? branch.NameAr : $"فرع {branch.Id}";
-                        branchByRoadId[parsedCode] = (branch.Id, resolvedName);
-                    }
+                    await connection.OpenAsync();
                 }
 
-                var grouped = await _roadContext.BusinessPayShipmentPrices
-                    .AsNoTracking()
-                    .GroupBy(s => s.CompanyBranchId)
-                    .Select(g => new
-                    {
-                        CompanyBranchId = g.Key,
-                        TotalShipmentPrice = g.Sum(s => s.ShipmentPrice ?? 0m),
-                        ShipmentCount = g.Count()
-                    })
-                    .ToListAsync();
+                using var command = connection.CreateCommand();
+                command.CommandText = sql;
+                command.CommandType = CommandType.Text;
 
-                foreach (var item in grouped)
+                using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
                 {
-                    int? branchId = null;
-                    string branchName = "فرع غير محدد";
+                    var shipmentPrice = reader.IsDBNull(0) ? 0m : Convert.ToDecimal(reader.GetValue(0));
+                    var shipmentCount = reader.IsDBNull(1) ? 0 : Convert.ToInt32(reader.GetValue(1));
+                    var roadBranchId = reader.IsDBNull(2) ? (int?)null : reader.GetInt32(2);
+                    var branchIdValue = reader.IsDBNull(3) ? (int?)null : reader.GetInt32(3);
+                    var branchName = reader.IsDBNull(4) ? string.Empty : reader.GetString(4);
 
-                    if (item.CompanyBranchId.HasValue && branchByRoadId.TryGetValue(item.CompanyBranchId.Value, out var mappedBranch))
-                    {
-                        branchId = mappedBranch.BranchId;
-                        branchName = mappedBranch.BranchName;
-                    }
-                    else if (item.CompanyBranchId.HasValue)
-                    {
-                        branchName = $"فرع Road #{item.CompanyBranchId.Value}";
-                    }
+                    var resolvedBranchId = branchIdValue ?? roadBranchId;
 
-                    if (restrictBranches && (!branchId.HasValue || !allowedBranchIds.Contains(branchId.Value)))
+                    if (restrictBranches && (!resolvedBranchId.HasValue || !allowedBranchIds.Contains(resolvedBranchId.Value)))
                     {
                         continue;
                     }
 
+                    if (string.IsNullOrWhiteSpace(branchName))
+                    {
+                        branchName = resolvedBranchId.HasValue ? $"فرع {resolvedBranchId.Value}" : "فرع غير محدد";
+                    }
+
                     results.Add(new BusinessShipmentBranchSummaryViewModel
                     {
-                        BranchId = branchId,
-                        RoadCompanyBranchId = item.CompanyBranchId,
+                        BranchId = branchIdValue,
+                        RoadCompanyBranchId = roadBranchId,
                         BranchName = branchName,
-                        TotalShipmentPrice = item.TotalShipmentPrice,
-                        ShipmentCount = item.ShipmentCount
+                        TotalShipmentPrice = shipmentPrice,
+                        ShipmentCount = shipmentCount
                     });
                 }
             }
@@ -655,9 +675,91 @@ namespace AccountingSystem.Controllers
             {
                 _logger.LogError(ex, "Failed to load business shipment branch summaries");
             }
+            finally
+            {
+                if (shouldClose && connection.State == ConnectionState.Open)
+                {
+                    await connection.CloseAsync();
+                }
+            }
 
             return results
                 .OrderByDescending(r => r.TotalShipmentPrice)
+                .ThenBy(r => r.BranchName)
+                .ToList();
+        }
+
+        private async Task<List<SupplierOutstandingBranchSummary>> GetOutstandingSupplierBranchSummariesAsync(List<int> allowedBranchIds)
+        {
+            var results = new List<SupplierOutstandingBranchSummary>();
+            var restrictBranches = allowedBranchIds?.Any() == true;
+
+            const string sql = @"SELECT
+                                        SUM(ISNULL(f.ShipmentPrice, 0)) AS OutstandingAmount,
+                                        f.CompanyBranchID,
+                                        b.Id AS BranchId,
+                                        b.NameAr AS BranchName
+                                   FROM CARGOTest.dbo.BusinessStatementBulk f
+                                   LEFT JOIN AccountingSystemDbNew.dbo.Branches b ON b.Code = CONVERT(nvarchar(50), f.CompanyBranchID)
+                                   GROUP BY f.CompanyBranchID, b.Id, b.NameAr";
+
+            var connection = _roadContext.Database.GetDbConnection();
+            var shouldClose = connection.State != ConnectionState.Open;
+
+            try
+            {
+                if (shouldClose)
+                {
+                    await connection.OpenAsync();
+                }
+
+                using var command = connection.CreateCommand();
+                command.CommandText = sql;
+                command.CommandType = CommandType.Text;
+
+                using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var outstandingAmount = reader.IsDBNull(0) ? 0m : Convert.ToDecimal(reader.GetValue(0));
+                    var roadBranchId = reader.IsDBNull(1) ? (int?)null : reader.GetInt32(1);
+                    var branchIdValue = reader.IsDBNull(2) ? (int?)null : reader.GetInt32(2);
+                    var branchName = reader.IsDBNull(3) ? string.Empty : reader.GetString(3);
+
+                    var resolvedBranchId = branchIdValue ?? roadBranchId;
+
+                    if (restrictBranches && (!resolvedBranchId.HasValue || !allowedBranchIds.Contains(resolvedBranchId.Value)))
+                    {
+                        continue;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(branchName))
+                    {
+                        branchName = resolvedBranchId.HasValue ? $"فرع {resolvedBranchId.Value}" : "فرع غير محدد";
+                    }
+
+                    results.Add(new SupplierOutstandingBranchSummary
+                    {
+                        BranchId = branchIdValue,
+                        RoadCompanyBranchId = roadBranchId,
+                        BranchName = branchName,
+                        OutstandingAmount = outstandingAmount
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load outstanding supplier branch summaries");
+            }
+            finally
+            {
+                if (shouldClose && connection.State == ConnectionState.Open)
+                {
+                    await connection.CloseAsync();
+                }
+            }
+
+            return results
+                .OrderByDescending(r => r.OutstandingAmount)
                 .ThenBy(r => r.BranchName)
                 .ToList();
         }

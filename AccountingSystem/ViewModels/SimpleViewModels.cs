@@ -499,6 +499,7 @@ namespace AccountingSystem.ViewModels
         public decimal TotalDriverCodCollection { get; set; }
         public decimal TotalSuppliersInTransit { get; set; }
         public decimal NetDriverCodAfterSuppliers { get; set; }
+        public decimal TotalOutstandingSupplierDues { get; set; }
     }
 
     public class CashBoxTreeViewModel
@@ -565,6 +566,7 @@ namespace AccountingSystem.ViewModels
         public decimal CustomerBalanceBase { get; set; }
         public int SupplierShipmentCount { get; set; }
         public decimal SuppliersInTransit { get; set; }
+        public decimal OutstandingSupplierDues { get; set; }
     }
 
     public class DriverRevenueReportViewModel
