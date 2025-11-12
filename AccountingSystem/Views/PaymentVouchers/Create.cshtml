@@ -5,6 +5,9 @@
 
 <div class="container-fluid">
     <form asp-action="Create" method="post" class="row g-3" enctype="multipart/form-data" id="paymentVoucherForm">
+        <div class="col-12">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        </div>
         <div class="col-md-6">
             <label class="form-label">المورد</label>
             <select asp-for="SupplierId" class="form-select" id="supplierSelect">
@@ -13,6 +16,7 @@
                     <option value="@s.Id" data-account-id="@s.AccountId" data-currency-id="@s.CurrencyId" data-currency-code="@s.CurrencyCode">@s.NameAr</option>
                 }
             </select>
+            <span asp-validation-for="SupplierId" class="text-danger"></span>
         </div>
         <div class="col-md-6">
             <label class="form-label">نوع الدفع</label>
@@ -20,6 +24,7 @@
                 <option value="true">نقدي</option>
                 <option value="false">غير نقدي</option>
             </select>
+            <span asp-validation-for="IsCash" class="text-danger"></span>
         </div>
         <div class="col-md-6" id="accountContainer">
             <label class="form-label">الحساب</label>
@@ -29,6 +34,7 @@
                     <option value="@a.Id" data-currency-id="@a.CurrencyId" data-currency-code="@a.CurrencyCode">@a.Code - @a.NameAr (@a.CurrencyCode)</option>
                 }
             </select>
+            <span asp-validation-for="AccountId" class="text-danger"></span>
         </div>
         <div class="col-md-6">
             <label class="form-label">العملة</label>
@@ -39,14 +45,17 @@
         <div class="col-md-6">
             <label class="form-label">المبلغ</label>
             <input asp-for="Amount" class="form-control" />
+            <span asp-validation-for="Amount" class="text-danger"></span>
         </div>
         <div class="col-md-6">
             <label class="form-label">التاريخ</label>
             <input asp-for="Date" type="date" class="form-control" />
+            <span asp-validation-for="Date" class="text-danger"></span>
         </div>
         <div class="col-md-6">
             <label class="form-label">ملاحظات</label>
             <textarea asp-for="Notes" class="form-control"></textarea>
+            <span asp-validation-for="Notes" class="text-danger"></span>
         </div>
         <div class="col-md-6">
             <label class="form-label">المرفق (اختياري)</label>
@@ -61,6 +70,7 @@
 
 
 @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const supplierSelect = document.getElementById('supplierSelect');
@@ -148,7 +158,11 @@
                     confirmBtn.addEventListener('click', function () {
                         isConfirmed = true;
                         confirmationModal.hide();
-                        form.requestSubmit();
+                        if (typeof form.requestSubmit === 'function') {
+                            form.requestSubmit();
+                        } else {
+                            form.submit();
+                        }
                     });
                 } else {
                     form.addEventListener('submit', function (event) {

@@ -204,7 +204,11 @@
                     confirmBtn.addEventListener('click', function () {
                         isConfirmed = true;
                         confirmationModal.hide();
-                        form.requestSubmit();
+                        if (typeof form.requestSubmit === 'function') {
+                            form.requestSubmit();
+                        } else {
+                            form.submit();
+                        }
                     });
                 } else {
                     form.addEventListener('submit', function (event) {
