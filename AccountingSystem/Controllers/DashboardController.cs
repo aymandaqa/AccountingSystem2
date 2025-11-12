@@ -56,6 +56,84 @@ namespace AccountingSystem.Controllers
             // Always display customer account balances across all branches, not just the user's assigned branches.
             var customerAccountBranches = await GetCustomerAccountBranchesAsync(new List<int>(), treeData.BaseCurrency);
 
+            string BuildAggregateKey(int? branchId, int? roadBranchId, string? branchName)
+            {
+                if (branchId.HasValue)
+                {
+                    return $"branch-{branchId.Value}";
+                }
+
+                if (roadBranchId.HasValue)
+                {
+                    return $"road-{roadBranchId.Value}";
+                }
+
+                var normalizedName = string.IsNullOrWhiteSpace(branchName) ? "غير معروف" : branchName.Trim();
+                return $"name-{normalizedName}";
+            }
+
+            var branchAggregates = new Dictionary<string, BranchFinancialAggregateViewModel>();
+
+            BranchFinancialAggregateViewModel GetOrCreateAggregate(int? branchId, int? roadBranchId, string? branchName)
+            {
+                var key = BuildAggregateKey(branchId, roadBranchId, branchName);
+
+                if (!branchAggregates.TryGetValue(key, out var aggregate))
+                {
+                    aggregate = new BranchFinancialAggregateViewModel
+                    {
+                        BranchId = branchId,
+                        RoadCompanyBranchId = roadBranchId,
+                        BranchName = string.IsNullOrWhiteSpace(branchName) ? "غير محدد" : branchName!.Trim()
+                    };
+
+                    branchAggregates[key] = aggregate;
+                }
+                else
+                {
+                    if (aggregate.BranchId is null && branchId.HasValue)
+                    {
+                        aggregate.BranchId = branchId;
+                    }
+
+                    if (aggregate.RoadCompanyBranchId is null && roadBranchId.HasValue)
+                    {
+                        aggregate.RoadCompanyBranchId = roadBranchId;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(aggregate.BranchName) && !string.IsNullOrWhiteSpace(branchName))
+                    {
+                        aggregate.BranchName = branchName.Trim();
+                    }
+                }
+
+                return aggregate;
+            }
+
+            foreach (var driverBranch in driverCodSummaries)
+            {
+                var aggregate = GetOrCreateAggregate(driverBranch.BranchId, null, driverBranch.BranchName);
+                aggregate.DriverShipmentTotal += driverBranch.ShipmentTotal;
+                aggregate.DriverCodAmount += driverBranch.ShipmentCod;
+            }
+
+            foreach (var customerBranch in customerAccountBranches)
+            {
+                var aggregate = GetOrCreateAggregate(customerBranch.BranchId, null, customerBranch.BranchName);
+                aggregate.CustomerBalanceBase += customerBranch.TotalBalanceBase;
+            }
+
+            foreach (var shipmentBranch in businessShipmentBranches)
+            {
+                var aggregate = GetOrCreateAggregate(shipmentBranch.BranchId, shipmentBranch.RoadCompanyBranchId, shipmentBranch.BranchName);
+                aggregate.SupplierShipmentCount += shipmentBranch.ShipmentCount;
+                aggregate.SuppliersInTransit += shipmentBranch.TotalShipmentPrice;
+            }
+
+            var branchFinancialSummaries = branchAggregates.Values
+                .OrderBy(a => a.BranchName)
+                .ToList();
+
             var totalAccountBalancesBase = treeData.TotalsByType.TryGetValue(AccountType.Assets, out var assetTotals)
                 ? assetTotals.Base
                 : treeData.RootNodes
@@ -116,6 +194,7 @@ namespace AccountingSystem.Controllers
                 DriverCodBranchSummaries = driverCodSummaries,
                 BusinessShipmentBranchSummaries = businessShipmentBranches,
                 CustomerAccountBranches = customerAccountBranches,
+                BranchFinancialSummaries = branchFinancialSummaries,
                 TotalAccountBalancesSumBase = totalAccountBalancesBase,
                 TotalCustomerAccountBalancesSumBase = totalCustomerAccountBalancesBase,
                 NetAccountsAfterCustomersBase = totalAccountBalancesBase - totalCustomerAccountBalancesBase,

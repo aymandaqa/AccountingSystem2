@@ -492,6 +492,7 @@ namespace AccountingSystem.ViewModels
         public List<DriverCodBranchSummaryViewModel> DriverCodBranchSummaries { get; set; } = new List<DriverCodBranchSummaryViewModel>();
         public List<CustomerBranchAccountNode> CustomerAccountBranches { get; set; } = new List<CustomerBranchAccountNode>();
         public List<BusinessShipmentBranchSummaryViewModel> BusinessShipmentBranchSummaries { get; set; } = new List<BusinessShipmentBranchSummaryViewModel>();
+        public List<BranchFinancialAggregateViewModel> BranchFinancialSummaries { get; set; } = new List<BranchFinancialAggregateViewModel>();
         public decimal TotalAccountBalancesSumBase { get; set; }
         public decimal TotalCustomerAccountBalancesSumBase { get; set; }
         public decimal NetAccountsAfterCustomersBase { get; set; }
@@ -551,6 +552,18 @@ namespace AccountingSystem.ViewModels
         public decimal TotalShipmentPrice { get; set; }
         public int ShipmentCount { get; set; }
         public bool CanLoadDetails => BranchId.HasValue;
+    }
+
+    public class BranchFinancialAggregateViewModel
+    {
+        public int? BranchId { get; set; }
+        public int? RoadCompanyBranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+        public decimal DriverShipmentTotal { get; set; }
+        public decimal DriverCodAmount { get; set; }
+        public decimal CustomerBalanceBase { get; set; }
+        public int SupplierShipmentCount { get; set; }
+        public decimal SuppliersInTransit { get; set; }
     }
 
     public class DriverRevenueReportViewModel
