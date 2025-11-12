@@ -547,8 +547,8 @@ namespace AccountingSystem.Controllers
                                         sum(p.ShipmentCod) as ShipmentCod,
                                         b.NameAr as Branch,
                                         b.Id as BranchId
-                                 from  CARGOTest.dbo.DriverPayCOD p
-                                 left join AccountingSystemDbNew.dbo.Branches b on b.Code = p.ActiveBranchID
+                                 from  RoadDbProd.dbo.DriverPayCOD p
+                                 left join AccountingSystemDbProd.dbo.Branches b on b.Code = p.ActiveBranchID
                                  group by b.NameAr, b.Id";
 
             var connection = _roadContext.Database.GetDbConnection();
@@ -622,8 +622,8 @@ namespace AccountingSystem.Controllers
                                         p.CompanyBranchID,
                                         b.Id AS BranchId,
                                         b.NameAr AS BranchName
-                                   FROM CARGOTest.dbo.BusinessPayShipmentPrice p
-                                   LEFT JOIN AccountingSystemDbNew.dbo.Branches b ON b.Id = p.CompanyBranchID
+                                   FROM RoadDbProd.dbo.BusinessPayShipmentPrice p
+                                   LEFT JOIN AccountingSystemDbProd.dbo.Branches b ON b.Id = p.CompanyBranchID
                                    GROUP BY p.CompanyBranchID, b.Id, b.NameAr";
 
             var connection = _roadContext.Database.GetDbConnection();
@@ -699,8 +699,8 @@ namespace AccountingSystem.Controllers
                                         f.CompanyBranchID,
                                         b.Id AS BranchId,
                                         b.NameAr AS BranchName
-                                   FROM CARGOTest.dbo.BusinessStatementBulk f
-                                   LEFT JOIN AccountingSystemDbNew.dbo.Branches b ON b.Code = CONVERT(nvarchar(50), f.CompanyBranchID)
+                                   FROM RoadDbProd.dbo.BusinessStatementBulk f
+                                   LEFT JOIN AccountingSystemDbProd.dbo.Branches b ON b.Code = CONVERT(nvarchar(50), f.CompanyBranchID)
                                    GROUP BY f.CompanyBranchID, b.Id, b.NameAr";
 
             var connection = _roadContext.Database.GetDbConnection();
@@ -1102,8 +1102,8 @@ namespace AccountingSystem.Controllers
                                             b.Id as BranchId,
                                             p.DriverName,
                                             p.DriverID
-                                     from   CARGOTest.dbo.DriverPayCOD p
-                                     left join AccountingSystemDbNew.dbo.Branches b on b.Code = p.ActiveBranchID
+                                     from   RoadDbProd.dbo.DriverPayCOD p
+                                     left join AccountingSystemDbProd.dbo.Branches b on b.Code = p.ActiveBranchID
                                      where b.Id = @BranchId";
 
             var connection = _roadContext.Database.GetDbConnection();

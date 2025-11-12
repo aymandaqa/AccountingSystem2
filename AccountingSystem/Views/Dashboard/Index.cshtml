@@ -245,7 +245,6 @@
                                                                 <th scope="col">الفرع</th>
                                                                 <th scope="col" class="text-end">إجمالي الشحنات (السائقين)</th>
                                                                 <th scope="col" class="text-end">مبالغ الـ COD</th>
-                                                                <th scope="col" class="text-end">أرصدة حسابات العملاء</th>
                                                                 <th scope="col" class="text-center">عدد شحنات الموردين</th>
                                                                 <th scope="col" class="text-end">مستحقات الموردين في الطريق</th>
                                                                 <th scope="col" class="text-end">مستحقات الموردين القائمة</th>
@@ -265,14 +264,10 @@
                                                                         {
                                                                             <div class="text-muted small">معرّف الفرع: @branch.BranchId</div>
                                                                         }
-                                                                        if (branch.RoadCompanyBranchId.HasValue)
-                                                                        {
-                                                                            <div class="text-muted small">معرّف Road: @branch.RoadCompanyBranchId</div>
-                                                                        }
+
                                                                     </td>
                                                                     <td class="text-end">@formatCurrency(branch.DriverShipmentTotal) @Model.BaseCurrencyCode</td>
                                                                     <td class="text-end text-success">@formatCurrency(branch.DriverCodAmount) @Model.BaseCurrencyCode</td>
-                                                                    <td class="text-end">@formatCurrency(branch.CustomerBalanceBase) @Model.BaseCurrencyCode</td>
                                                                     <td class="text-center">
                                                                         <span class="badge bg-primary-subtle text-primary">@branch.SupplierShipmentCount.ToString("N0")</span>
                                                                     </td>
@@ -286,7 +281,6 @@
                                                                 <th scope="row">الإجمالي</th>
                                                                 <th class="text-end">@formatCurrency(totalDriverShipments) @Model.BaseCurrencyCode</th>
                                                                 <th class="text-end">@formatCurrency(Model.TotalDriverCodCollection) @Model.BaseCurrencyCode</th>
-                                                                <th class="text-end">@formatCurrency(Model.TotalCustomerAccountBalancesSumBase) @Model.BaseCurrencyCode</th>
                                                                 <th class="text-center">
                                                                     <span class="badge bg-primary-subtle text-primary">@totalSupplierShipmentCount.ToString("N0")</span>
                                                                 </th>
