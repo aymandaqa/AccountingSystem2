@@ -559,6 +559,7 @@ namespace AccountingSystem.ViewModels
         public int? BranchId { get; set; }
         public int? RoadCompanyBranchId { get; set; }
         public string BranchName { get; set; } = string.Empty;
+        public string? BranchCode { get; set; }
         public decimal DriverShipmentTotal { get; set; }
         public decimal DriverCodAmount { get; set; }
         public decimal CustomerBalanceBase { get; set; }

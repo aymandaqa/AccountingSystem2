@@ -45,6 +45,48 @@ namespace AccountingSystem.Controllers
                 branchId = null;
             }
 
+            var branchMetadata = await _context.Branches
+                .AsNoTracking()
+                .Select(b => new
+                {
+                    b.Id,
+                    b.Code,
+                    b.NameAr,
+                    b.NameEn,
+                    b.IsActive
+                })
+                .ToListAsync();
+
+            var branchInfoById = branchMetadata.ToDictionary(
+                b => b.Id,
+                b => new
+                {
+                    Code = string.IsNullOrWhiteSpace(b.Code) ? null : b.Code.Trim(),
+                    DisplayName = !string.IsNullOrWhiteSpace(b.NameAr)
+                        ? b.NameAr.Trim()
+                        : (!string.IsNullOrWhiteSpace(b.NameEn) ? b.NameEn!.Trim() : $"فرع {b.Id}")
+                });
+
+            string? ResolveBranchCode(int? id)
+            {
+                if (!id.HasValue)
+                {
+                    return null;
+                }
+
+                return branchInfoById.TryGetValue(id.Value, out var info) ? info.Code : null;
+            }
+
+            string? ResolveBranchDisplayName(int? id)
+            {
+                if (!id.HasValue)
+                {
+                    return null;
+                }
+
+                return branchInfoById.TryGetValue(id.Value, out var info) ? info.DisplayName : null;
+            }
+
             var treeData = await ComputeDashboardTreeAsync(userBranchIds, branchId, fromDate, toDate, currencyId);
 
             var allowedBranchIds = branchId.HasValue
@@ -74,17 +116,33 @@ namespace AccountingSystem.Controllers
 
             var branchAggregates = new Dictionary<string, BranchFinancialAggregateViewModel>();
 
-            BranchFinancialAggregateViewModel GetOrCreateAggregate(int? branchId, int? roadBranchId, string? branchName)
+            BranchFinancialAggregateViewModel GetOrCreateAggregate(int? branchId, int? roadBranchId, string? branchName, string? branchCode)
             {
-                var key = BuildAggregateKey(branchId, roadBranchId, branchName);
+                string key;
+
+                if (!string.IsNullOrWhiteSpace(branchCode))
+                {
+                    key = $"code-{branchCode.Trim()}";
+                }
+                else
+                {
+                    key = BuildAggregateKey(branchId, roadBranchId, branchName);
+                }
 
                 if (!branchAggregates.TryGetValue(key, out var aggregate))
                 {
+                    var resolvedName = !string.IsNullOrWhiteSpace(branchName)
+                        ? branchName!.Trim()
+                        : (ResolveBranchDisplayName(branchId) ?? "غير محدد");
+
                     aggregate = new BranchFinancialAggregateViewModel
                     {
                         BranchId = branchId,
                         RoadCompanyBranchId = roadBranchId,
-                        BranchName = string.IsNullOrWhiteSpace(branchName) ? "غير محدد" : branchName!.Trim()
+                        BranchName = resolvedName,
+                        BranchCode = !string.IsNullOrWhiteSpace(branchCode)
+                            ? branchCode.Trim()
+                            : ResolveBranchCode(branchId)
                     };
 
                     branchAggregates[key] = aggregate;
@@ -105,6 +163,26 @@ namespace AccountingSystem.Controllers
                     {
                         aggregate.BranchName = branchName.Trim();
                     }
+                    else if (string.IsNullOrWhiteSpace(aggregate.BranchName))
+                    {
+                        var resolvedName = ResolveBranchDisplayName(branchId);
+                        if (!string.IsNullOrWhiteSpace(resolvedName))
+                        {
+                            aggregate.BranchName = resolvedName!;
+                        }
+                    }
+
+                    if (string.IsNullOrWhiteSpace(aggregate.BranchCode))
+                    {
+                        var resolvedCode = !string.IsNullOrWhiteSpace(branchCode)
+                            ? branchCode.Trim()
+                            : ResolveBranchCode(branchId);
+
+                        if (!string.IsNullOrWhiteSpace(resolvedCode))
+                        {
+                            aggregate.BranchCode = resolvedCode;
+                        }
+                    }
                 }
 
                 return aggregate;
@@ -112,26 +190,40 @@ namespace AccountingSystem.Controllers
 
             foreach (var driverBranch in driverCodSummaries)
             {
-                var aggregate = GetOrCreateAggregate(driverBranch.BranchId, null, driverBranch.BranchName);
+                var branchName = string.IsNullOrWhiteSpace(driverBranch.BranchName)
+                    ? ResolveBranchDisplayName(driverBranch.BranchId)
+                    : driverBranch.BranchName;
+                var aggregate = GetOrCreateAggregate(driverBranch.BranchId, null, branchName, ResolveBranchCode(driverBranch.BranchId));
                 aggregate.DriverShipmentTotal += driverBranch.ShipmentTotal;
                 aggregate.DriverCodAmount += driverBranch.ShipmentCod;
             }
 
             foreach (var customerBranch in customerAccountBranches)
             {
-                var aggregate = GetOrCreateAggregate(customerBranch.BranchId, null, customerBranch.BranchName);
+                var branchName = string.IsNullOrWhiteSpace(customerBranch.BranchName)
+                    ? ResolveBranchDisplayName(customerBranch.BranchId)
+                    : customerBranch.BranchName;
+                var aggregate = GetOrCreateAggregate(customerBranch.BranchId, null, branchName, ResolveBranchCode(customerBranch.BranchId));
                 aggregate.CustomerBalanceBase += customerBranch.TotalBalanceBase;
             }
 
             foreach (var shipmentBranch in businessShipmentBranches)
             {
-                var aggregate = GetOrCreateAggregate(shipmentBranch.BranchId, shipmentBranch.RoadCompanyBranchId, shipmentBranch.BranchName);
+                var branchName = string.IsNullOrWhiteSpace(shipmentBranch.BranchName)
+                    ? ResolveBranchDisplayName(shipmentBranch.BranchId)
+                    : shipmentBranch.BranchName;
+                var aggregate = GetOrCreateAggregate(
+                    shipmentBranch.BranchId,
+                    shipmentBranch.RoadCompanyBranchId,
+                    branchName,
+                    ResolveBranchCode(shipmentBranch.BranchId));
                 aggregate.SupplierShipmentCount += shipmentBranch.ShipmentCount;
                 aggregate.SuppliersInTransit += shipmentBranch.TotalShipmentPrice;
             }
 
             var branchFinancialSummaries = branchAggregates.Values
-                .OrderBy(a => a.BranchName)
+                .OrderBy(a => string.IsNullOrWhiteSpace(a.BranchCode) ? a.BranchName : a.BranchCode)
+                .ThenBy(a => a.BranchName)
                 .ToList();
 
             var totalAccountBalancesBase = treeData.TotalsByType.TryGetValue(AccountType.Assets, out var assetTotals)
@@ -206,10 +298,16 @@ namespace AccountingSystem.Controllers
             viewModel.NetIncome = viewModel.TotalRevenues - viewModel.TotalExpenses;
             viewModel.NetIncomeBase = viewModel.TotalRevenuesBase - viewModel.TotalExpensesBase;
 
-            ViewBag.Branches = await _context.Branches
+            ViewBag.Branches = branchMetadata
                 .Where(b => b.IsActive && userBranchIds.Contains(b.Id))
-                .Select(b => new { b.Id, b.NameAr })
-                .ToListAsync();
+                .Select(b => new
+                {
+                    b.Id,
+                    b.NameAr,
+                    b.NameEn,
+                    Name = ResolveBranchDisplayName(b.Id) ?? (string.IsNullOrWhiteSpace(b.Code) ? $"فرع {b.Id}" : b.Code!.Trim())
+                })
+                .ToList();
 
             ViewBag.Currencies = await _context.Currencies
                 .Select(c => new { c.Id, c.Code })
