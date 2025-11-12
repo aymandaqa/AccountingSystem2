@@ -496,7 +496,7 @@ namespace AccountingSystem.Controllers
                 ViewBag.CurrencyCode = agent?.Account?.Currency?.Code;
                 return View(model);
             }
-
+            model.Notes = "سند صرف وكيل " + Environment.NewLine + model.Notes;
             await AttachFileIfPresentAsync(model, attachment, "payment-vouchers");
 
             return await FinalizeCreationAsync(model, user);

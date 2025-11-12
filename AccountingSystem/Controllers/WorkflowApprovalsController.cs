@@ -220,9 +220,9 @@ namespace AccountingSystem.Controllers
         {
             return instance.DocumentType switch
             {
-                WorkflowDocumentType.PaymentVoucher => $"سند دفع رقم {instance.DocumentId}",
+                WorkflowDocumentType.PaymentVoucher => $"سند صرف رقم {instance.DocumentId}",
                 WorkflowDocumentType.ReceiptVoucher => $"سند قبض رقم {instance.DocumentId}",
-                WorkflowDocumentType.DisbursementVoucher => $"سند صرف رقم {instance.DocumentId}",
+                WorkflowDocumentType.DisbursementVoucher => $"سند دفع  رقم {instance.DocumentId}",
                 WorkflowDocumentType.DynamicScreenEntry => $"حركة شاشة ديناميكية رقم {instance.DocumentId}",
                 WorkflowDocumentType.AssetExpense => $"مصروف أصل رقم {instance.DocumentId}",
                 _ => $"مستند رقم {instance.DocumentId}"
@@ -233,9 +233,9 @@ namespace AccountingSystem.Controllers
         {
             return instance.DocumentType switch
             {
-                WorkflowDocumentType.PaymentVoucher => "يرجى مراجعة بيانات سند الدفع واعتمادها",
+                WorkflowDocumentType.PaymentVoucher => "يرجى مراجعة بيانات سند الصرف واعتمادها",
                 WorkflowDocumentType.ReceiptVoucher => "يرجى مراجعة بيانات سند القبض واعتمادها",
-                WorkflowDocumentType.DisbursementVoucher => "يرجى مراجعة بيانات سند الصرف واعتمادها",
+                WorkflowDocumentType.DisbursementVoucher => "يرجى مراجعة بيانات سند دفع  واعتمادها",
                 WorkflowDocumentType.DynamicScreenEntry => "يرجى مراجعة بيانات الحركة الديناميكية واتخاذ القرار",
                 WorkflowDocumentType.AssetExpense => "يرجى مراجعة بيانات مصروف الأصل واعتمادها",
                 _ => "يرجى مراجعة المستند واعتماد القرار"
