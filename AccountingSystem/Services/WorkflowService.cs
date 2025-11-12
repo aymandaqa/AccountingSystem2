@@ -136,7 +136,16 @@ namespace AccountingSystem.Services
                 .Where(a => a.Status == WorkflowActionStatus.Pending && a.WorkflowInstance.Status == WorkflowInstanceStatus.InProgress)
                 .ToListAsync(cancellationToken);
 
-            var eligible = actions.Where(a => IsUserEligibleForStep(a.WorkflowStep, user)).ToList();
+            var branchCache = new Dictionary<int, int?>();
+            var eligible = new List<WorkflowAction>();
+
+            foreach (var action in actions)
+            {
+                if (await IsUserEligibleForStepAsync(action, user, branchCache, cancellationToken))
+                {
+                    eligible.Add(action);
+                }
+            }
 
             return eligible;
         }
@@ -168,7 +177,7 @@ namespace AccountingSystem.Services
             if (user == null)
                 throw new InvalidOperationException("المستخدم غير موجود");
 
-            if (!IsUserEligibleForStep(action.WorkflowStep, user))
+            if (!await IsUserEligibleForStepAsync(action, user, null, cancellationToken))
                 throw new InvalidOperationException("لا تملك صلاحية اعتماد هذه الخطوة");
 
             action.Status = approve ? WorkflowActionStatus.Approved : WorkflowActionStatus.Rejected;
@@ -211,8 +220,9 @@ namespace AccountingSystem.Services
             }
         }
 
-        private bool IsUserEligibleForStep(WorkflowStep step, User user)
+        private async Task<bool> IsUserEligibleForStepAsync(WorkflowAction action, User user, Dictionary<int, int?>? branchCache, CancellationToken cancellationToken)
         {
+            var step = action.WorkflowStep;
             switch (step.StepType)
             {
                 case WorkflowStepType.SpecificUser:
@@ -223,9 +233,27 @@ namespace AccountingSystem.Services
                     var permissions = GetUserPermissions(user);
                     return permissions.Contains(step.RequiredPermission);
                 case WorkflowStepType.Branch:
-                    if (!step.BranchId.HasValue)
+                    var branchId = step.BranchId;
+                    if (!branchId.HasValue)
+                    {
+                        if (branchCache != null && branchCache.TryGetValue(action.WorkflowInstanceId, out var cachedBranchId))
+                        {
+                            branchId = cachedBranchId;
+                        }
+                        else
+                        {
+                            branchId = await ResolveDocumentBranchIdAsync(action.WorkflowInstance, cancellationToken);
+                            if (branchCache != null)
+                            {
+                                branchCache[action.WorkflowInstanceId] = branchId;
+                            }
+                        }
+                    }
+
+                    if (!branchId.HasValue)
                         return false;
-                    return user.UserBranches.Any(ub => ub.BranchId == step.BranchId.Value);
+
+                    return user.UserBranches.Any(ub => ub.BranchId == branchId.Value);
                 default:
                     return false;
             }
