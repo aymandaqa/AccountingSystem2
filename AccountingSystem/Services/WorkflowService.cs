@@ -66,7 +66,14 @@ namespace AccountingSystem.Services
 
             if (!applicableSteps.Any())
             {
-                return null;
+                applicableSteps = definition.Steps
+                    .OrderBy(s => s.Order)
+                    .ToList();
+
+                if (!applicableSteps.Any())
+                {
+                    return null;
+                }
             }
 
             var instance = new WorkflowInstance
