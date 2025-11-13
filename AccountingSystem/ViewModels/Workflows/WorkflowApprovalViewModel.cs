@@ -25,6 +25,8 @@ namespace AccountingSystem.ViewModels.Workflows
         public List<WorkflowAttachmentViewModel> Attachments { get; set; } = new();
         public List<WorkflowJournalEntryLineViewModel> JournalLines { get; set; } = new();
         public string? JournalPreviewError { get; set; }
+        public string CreatedByName { get; set; } = string.Empty;
+        public string OperationTypeName { get; set; } = string.Empty;
     }
 
     public class WorkflowAttachmentViewModel

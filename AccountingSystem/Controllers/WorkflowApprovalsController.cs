@@ -140,21 +140,26 @@ namespace AccountingSystem.Controllers
                     Description = GetDescription(action.WorkflowInstance),
                     Amount = action.WorkflowInstance.DocumentAmount,
                     AmountInBase = action.WorkflowInstance.DocumentAmountInBase,
-                    CurrencyCode = action.WorkflowInstance.DocumentCurrency?.Code
+                    CurrencyCode = action.WorkflowInstance.DocumentCurrency?.Code,
+                    OperationTypeName = GetOperationTypeName(action.WorkflowInstance.DocumentType),
+                    CreatedByName = GetUserDisplayName(action.WorkflowInstance.Initiator, action.WorkflowInstance.InitiatorId)
                 };
 
                 if (action.WorkflowInstance.DocumentType == WorkflowDocumentType.PaymentVoucher && vouchers.TryGetValue(action.WorkflowInstance.DocumentId, out var voucher))
                 {
                     model.PaymentVoucher = voucher;
+                    model.CreatedByName = GetUserDisplayName(voucher.CreatedBy, voucher.CreatedById, model.CreatedByName);
                     AppendAttachment(model, voucher.AttachmentFilePath, voucher.AttachmentFileName);
                 }
                 else if (action.WorkflowInstance.DocumentType == WorkflowDocumentType.DynamicScreenEntry && dynamicEntries.TryGetValue(action.WorkflowInstance.DocumentId, out var entry))
                 {
                     model.DynamicEntry = entry;
+                    model.CreatedByName = GetUserDisplayName(entry.CreatedBy, entry.CreatedById, model.CreatedByName);
                 }
                 else if (action.WorkflowInstance.DocumentType == WorkflowDocumentType.ReceiptVoucher && receiptVouchers.TryGetValue(action.WorkflowInstance.DocumentId, out var receipt))
                 {
                     model.ReceiptVoucher = receipt;
+                    model.CreatedByName = GetUserDisplayName(receipt.CreatedBy, receipt.CreatedById, model.CreatedByName);
                     if (string.IsNullOrEmpty(model.CurrencyCode))
                     {
                         model.CurrencyCode = receipt.Currency?.Code;
@@ -164,6 +169,7 @@ namespace AccountingSystem.Controllers
                 else if (action.WorkflowInstance.DocumentType == WorkflowDocumentType.DisbursementVoucher && disbursementVouchers.TryGetValue(action.WorkflowInstance.DocumentId, out var disbursement))
                 {
                     model.DisbursementVoucher = disbursement;
+                    model.CreatedByName = GetUserDisplayName(disbursement.CreatedBy, disbursement.CreatedById, model.CreatedByName);
                     if (string.IsNullOrEmpty(model.CurrencyCode))
                     {
                         model.CurrencyCode = disbursement.Currency?.Code;
@@ -173,6 +179,7 @@ namespace AccountingSystem.Controllers
                 else if (action.WorkflowInstance.DocumentType == WorkflowDocumentType.AssetExpense && assetExpenses.TryGetValue(action.WorkflowInstance.DocumentId, out var assetExpense))
                 {
                     model.AssetExpense = assetExpense;
+                    model.CreatedByName = GetUserDisplayName(assetExpense.CreatedBy, assetExpense.CreatedById, model.CreatedByName);
                     if (string.IsNullOrEmpty(model.CurrencyCode))
                     {
                         model.CurrencyCode = assetExpense.Currency?.Code;
@@ -311,6 +318,42 @@ namespace AccountingSystem.Controllers
                 Description = line.Description,
                 CostCenter = line.CostCenter
             }).ToList();
+        }
+
+        private static string GetOperationTypeName(WorkflowDocumentType documentType)
+        {
+            return documentType switch
+            {
+                WorkflowDocumentType.PaymentVoucher => "سند صرف",
+                WorkflowDocumentType.ReceiptVoucher => "سند قبض",
+                WorkflowDocumentType.DisbursementVoucher => "سند دفع",
+                WorkflowDocumentType.DynamicScreenEntry => "شاشة ديناميكية",
+                WorkflowDocumentType.AssetExpense => "مصروف أصل",
+                _ => "مستند"
+            };
+        }
+
+        private static string GetUserDisplayName(User? user, string? fallbackId, string? currentValue = null)
+        {
+            if (user != null)
+            {
+                if (!string.IsNullOrWhiteSpace(user.FullName))
+                {
+                    return user.FullName!;
+                }
+
+                if (!string.IsNullOrWhiteSpace(user.UserName))
+                {
+                    return user.UserName!;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(currentValue))
+            {
+                return currentValue!;
+            }
+
+            return string.IsNullOrWhiteSpace(fallbackId) ? "غير معروف" : fallbackId!;
         }
 
         private string GetTitle(WorkflowInstance instance)
