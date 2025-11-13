@@ -1,91 +1,100 @@
 @using System.Globalization
+@using Microsoft.AspNetCore.Authorization
 @model AccountingSystem.ViewModels.Dashboard.CashPerformanceDashboardViewModel
+@inject IAuthorizationService AuthorizationService
 
 @{
     ViewData["Title"] = "لوحة التحكم";
+
+    var canWorkflowDefinitionsManage = (await AuthorizationService.AuthorizeAsync(User, "dashboard.companyperformance")).Succeeded;
+
 }
 
-<div class="container-fluid py-4">
-    <div class="row g-4 mb-4">
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <div class="text-muted small mb-2">مستحقات العملاء في الطريق</div>
-                    <div class="fs-4 fw-semibold"> @Model.TotalCustomerDuesOnRoad </div>
+@if (canWorkflowDefinitionsManage)
+{
+    <div class="container-fluid py-4">
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <div class="text-muted small mb-2">مستحقات العملاء في الطريق</div>
+                        <div class="fs-4 fw-semibold"> @Model.TotalCustomerDuesOnRoad </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <div class="text-muted small mb-2">النقد مع السائقين في الطريق</div>
+                        <div class="fs-4 fw-semibold">@Model.TotalCashWithDriverOnRoad</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <div class="text-muted small mb-2">مستحقات العملاء</div>
+                        <div class="fs-4 fw-semibold">@Model.TotalCustomerDues</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <div class="text-muted small mb-2">النقد في خزنة الفرع</div>
+                        <div class="fs-4 fw-semibold">@Model.TotalCashOnBranchBox</div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <div class="text-muted small mb-2">النقد مع السائقين في الطريق</div>
-                    <div class="fs-4 fw-semibold">@Model.TotalCashWithDriverOnRoad</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <div class="text-muted small mb-2">مستحقات العملاء</div>
-                    <div class="fs-4 fw-semibold">@Model.TotalCustomerDues</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <div class="text-muted small mb-2">النقد في خزنة الفرع</div>
-                    <div class="fs-4 fw-semibold">@Model.TotalCashOnBranchBox</div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <div class="card shadow-sm border-0">
-        <div class="card-body">
-            <h5 class="card-title mb-4">تقرير أداء السيولة حسب الفروع</h5>
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h5 class="card-title mb-4">تقرير أداء السيولة حسب الفروع</h5>
 
-            @if (!Model.HasRecords)
-            {
-                <div class="alert alert-info mb-0">لا توجد بيانات للعرض.</div>
-            }
-            else
-            {
-                <div class="table-responsive">
-                    <table class="table table-striped table-bordered align-middle text-center">
-                        <thead class="table-light">
-                            <tr>
-                                <th scope="col">اسم الفرع</th>
-                                <th scope="col">مستحقات العملاء في الطريق</th>
-                                <th scope="col">النقد مع السائقين في الطريق</th>
-                                <th scope="col">مستحقات العملاء</th>
-                                <th scope="col">النقد في خزنة الفرع</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var record in Model.Records)
-                            {
+                @if (!Model.HasRecords)
+                {
+                    <div class="alert alert-info mb-0">لا توجد بيانات للعرض.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered align-middle text-center">
+                            <thead class="table-light">
                                 <tr>
-                                    <td class="text-start">@record.BranchName</td>
-                                    <td>@record.CustomerDuesOnRoad</td>
-                                    <td>@record.CashWithDriverOnRoad</td>
-                                    <td>@record.CustomerDues</td>
-                                    <td>@record.CashOnBranchBox</td>
+                                    <th scope="col">اسم الفرع</th>
+                                    <th scope="col">مستحقات العملاء في الطريق</th>
+                                    <th scope="col">النقد مع السائقين في الطريق</th>
+                                    <th scope="col">مستحقات العملاء</th>
+                                    <th scope="col">النقد في خزنة الفرع</th>
                                 </tr>
-                            }
-                        </tbody>
-                        <tfoot class="table-light fw-semibold">
-                            <tr>
-                                <td colspan="1" class="text-center">الإجمالي</td>
-                                <td>@Model.TotalCustomerDuesOnRoad</td>
-                                <td>@Model.TotalCashWithDriverOnRoad</td>
-                                <td>@Model.TotalCustomerDues</td>
-                                <td>@Model.TotalCashOnBranchBox</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            }
+                            </thead>
+                            <tbody>
+                                @foreach (var record in Model.Records)
+                                {
+                                    <tr>
+                                        <td class="text-start">@record.BranchName</td>
+                                        <td>@record.CustomerDuesOnRoad</td>
+                                        <td>@record.CashWithDriverOnRoad</td>
+                                        <td>@record.CustomerDues</td>
+                                        <td>@record.CashOnBranchBox</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light fw-semibold">
+                                <tr>
+                                    <td colspan="1" class="text-center">الإجمالي</td>
+                                    <td>@Model.TotalCustomerDuesOnRoad</td>
+                                    <td>@Model.TotalCashWithDriverOnRoad</td>
+                                    <td>@Model.TotalCustomerDues</td>
+                                    <td>@Model.TotalCashOnBranchBox</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                }
+            </div>
         </div>
     </div>
-</div>
+
+}
