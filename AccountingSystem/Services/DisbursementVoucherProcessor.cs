@@ -99,14 +99,14 @@ namespace AccountingSystem.Services
             {
                 BranchId = loadedVoucher.CreatedBy.PaymentBranchId!.Value,
                 Reference = $"DSBV:{loadedVoucher.Id}",
-                Description = loadedVoucher.Notes ?? "سند صرف"
+                Description = loadedVoucher.Notes ?? "سند دفع"
             };
 
             preview.Lines.Add(new JournalEntryPreviewLine
             {
                 Account = loadedVoucher.Account,
                 Debit = loadedVoucher.Amount,
-                Description = "سند صرف"
+                Description = "سند دفع"
             });
 
             var paymentAccount = loadedVoucher.CreatedBy.PaymentAccount
@@ -116,7 +116,7 @@ namespace AccountingSystem.Services
             {
                 Account = paymentAccount,
                 Credit = loadedVoucher.Amount,
-                Description = "سند صرف"
+                Description = "سند دفع"
             });
 
             return preview;
