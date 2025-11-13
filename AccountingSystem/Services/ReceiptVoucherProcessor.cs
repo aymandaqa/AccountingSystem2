@@ -1,11 +1,11 @@
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.Models.Workflows;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace AccountingSystem.Services
 {
@@ -20,44 +20,45 @@ namespace AccountingSystem.Services
             _journalEntryService = journalEntryService;
         }
 
+        public async Task<JournalEntryPreview> BuildPreviewAsync(int voucherId, CancellationToken cancellationToken = default)
+        {
+            var loadedVoucher = await LoadVoucherAsync(voucherId, cancellationToken);
+            return BuildPreviewInternal(loadedVoucher);
+        }
+
         public async Task FinalizeAsync(ReceiptVoucher voucher, string approvedById, CancellationToken cancellationToken = default)
         {
-            var loadedVoucher = await _context.ReceiptVouchers
-                .Include(v => v.Account)
-                .Include(v => v.PaymentAccount)
-                .Include(v => v.CreatedBy)
-                .FirstOrDefaultAsync(v => v.Id == voucher.Id, cancellationToken);
-
-            if (loadedVoucher == null)
+            if (voucher == null)
             {
-                throw new InvalidOperationException($"Receipt voucher {voucher.Id} not found");
+                throw new ArgumentNullException(nameof(voucher));
             }
 
-            if (loadedVoucher.CreatedBy.PaymentBranchId == null)
-            {
-                throw new InvalidOperationException("Creator branch is required to finalize receipt voucher");
-            }
+            var loadedVoucher = await LoadVoucherAsync(voucher.Id, cancellationToken);
+            var preview = BuildPreviewInternal(loadedVoucher);
 
-            var lines = new List<JournalEntryLine>
-            {
-                new JournalEntryLine { AccountId = loadedVoucher.PaymentAccountId, DebitAmount = loadedVoucher.Amount },
-                new JournalEntryLine { AccountId = loadedVoucher.AccountId, CreditAmount = loadedVoucher.Amount }
-            };
-
-            var reference = $"RCV:{loadedVoucher.Id}";
             var existingEntry = await _context.JournalEntries
-                .FirstOrDefaultAsync(j => j.Reference == reference, cancellationToken);
+                .FirstOrDefaultAsync(j => j.Reference == preview.Reference, cancellationToken);
 
             if (existingEntry == null)
             {
+                var lines = preview.Lines
+                    .Select(l => new JournalEntryLine
+                    {
+                        AccountId = l.Account.Id,
+                        DebitAmount = l.Debit,
+                        CreditAmount = l.Credit,
+                        Description = l.Description
+                    })
+                    .ToList();
+
                 await _journalEntryService.CreateJournalEntryAsync(
                     loadedVoucher.Date,
-                    loadedVoucher.Notes ?? "سند قبض",
-                    loadedVoucher.CreatedBy.PaymentBranchId.Value,
+                    preview.Description,
+                    preview.BranchId,
                     loadedVoucher.CreatedById,
                     lines,
                     JournalEntryStatus.Posted,
-                    reference: reference,
+                    reference: preview.Reference,
                     approvedById: approvedById);
             }
 
@@ -66,6 +67,53 @@ namespace AccountingSystem.Services
             loadedVoucher.ApprovedById = approvedById;
 
             await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        private async Task<ReceiptVoucher> LoadVoucherAsync(int voucherId, CancellationToken cancellationToken)
+        {
+            var loadedVoucher = await _context.ReceiptVouchers
+                .Include(v => v.Account)
+                .Include(v => v.PaymentAccount)
+                .Include(v => v.CreatedBy)
+                .FirstOrDefaultAsync(v => v.Id == voucherId, cancellationToken);
+
+            if (loadedVoucher == null)
+            {
+                throw new InvalidOperationException($"Receipt voucher {voucherId} not found");
+            }
+
+            if (loadedVoucher.CreatedBy.PaymentBranchId == null)
+            {
+                throw new InvalidOperationException("Creator branch is required to finalize receipt voucher");
+            }
+
+            return loadedVoucher;
+        }
+
+        private JournalEntryPreview BuildPreviewInternal(ReceiptVoucher loadedVoucher)
+        {
+            var preview = new JournalEntryPreview
+            {
+                BranchId = loadedVoucher.CreatedBy.PaymentBranchId!.Value,
+                Reference = $"RCV:{loadedVoucher.Id}",
+                Description = loadedVoucher.Notes ?? "سند قبض"
+            };
+
+            preview.Lines.Add(new JournalEntryPreviewLine
+            {
+                Account = loadedVoucher.PaymentAccount,
+                Debit = loadedVoucher.Amount,
+                Description = "سند قبض"
+            });
+
+            preview.Lines.Add(new JournalEntryPreviewLine
+            {
+                Account = loadedVoucher.Account,
+                Credit = loadedVoucher.Amount,
+                Description = "سند قبض"
+            });
+
+            return preview;
         }
     }
 }

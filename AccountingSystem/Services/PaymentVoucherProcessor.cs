@@ -1,11 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.Models.Workflows;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace AccountingSystem.Services
 {
@@ -20,19 +21,73 @@ namespace AccountingSystem.Services
             _journalEntryService = journalEntryService;
         }
 
+        public async Task<JournalEntryPreview> BuildPreviewAsync(int voucherId, CancellationToken cancellationToken = default)
+        {
+            var loadedVoucher = await LoadVoucherAsync(voucherId, cancellationToken);
+            return await BuildPreviewInternalAsync(loadedVoucher, cancellationToken);
+        }
+
         public async Task FinalizeVoucherAsync(PaymentVoucher voucher, string approvedById, CancellationToken cancellationToken = default)
+        {
+            if (voucher == null)
+            {
+                throw new ArgumentNullException(nameof(voucher));
+            }
+
+            var loadedVoucher = await LoadVoucherAsync(voucher.Id, cancellationToken);
+            var preview = await BuildPreviewInternalAsync(loadedVoucher, cancellationToken);
+
+            var existingEntry = await _context.JournalEntries
+                .FirstOrDefaultAsync(j => j.Reference == preview.Reference, cancellationToken);
+
+            if (existingEntry == null)
+            {
+                var lines = preview.Lines
+                    .Select(l => new JournalEntryLine
+                    {
+                        AccountId = l.Account.Id,
+                        DebitAmount = l.Debit,
+                        CreditAmount = l.Credit,
+                        Description = l.Description
+                    })
+                    .ToList();
+
+                await _journalEntryService.CreateJournalEntryAsync(
+                    loadedVoucher.Date,
+                    preview.Description,
+                    preview.BranchId,
+                    loadedVoucher.CreatedById,
+                    lines,
+                    JournalEntryStatus.Posted,
+                    reference: preview.Reference,
+                    approvedById: approvedById);
+            }
+
+            loadedVoucher.Status = PaymentVoucherStatus.Approved;
+            loadedVoucher.ApprovedAt = DateTime.Now;
+            loadedVoucher.ApprovedById = approvedById;
+
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        private async Task<PaymentVoucher> LoadVoucherAsync(int voucherId, CancellationToken cancellationToken)
         {
             var loadedVoucher = await _context.PaymentVouchers
                 .Include(v => v.Supplier).ThenInclude(s => s.Account)
                 .Include(v => v.Agent).ThenInclude(a => a.Account)
                 .Include(v => v.CreatedBy)
-                .FirstOrDefaultAsync(v => v.Id == voucher.Id, cancellationToken);
+                .FirstOrDefaultAsync(v => v.Id == voucherId, cancellationToken);
 
             if (loadedVoucher == null)
             {
-                throw new InvalidOperationException($"Payment voucher {voucher.Id} not found");
+                throw new InvalidOperationException($"Payment voucher {voucherId} not found");
             }
 
+            return loadedVoucher;
+        }
+
+        private async Task<JournalEntryPreview> BuildPreviewInternalAsync(PaymentVoucher loadedVoucher, CancellationToken cancellationToken)
+        {
             Account? selectedAccount = null;
             if (loadedVoucher.AccountId.HasValue)
             {
@@ -46,9 +101,13 @@ namespace AccountingSystem.Services
                 throw new InvalidOperationException("Voucher account is required");
             }
 
-            List<JournalEntryLine> lines;
-            string reference;
-            string description;
+            var branchId = loadedVoucher.CreatedBy.PaymentBranchId
+                ?? throw new InvalidOperationException("Creator branch is required");
+
+            var preview = new JournalEntryPreview
+            {
+                BranchId = branchId
+            };
 
             if (loadedVoucher.SupplierId.HasValue)
             {
@@ -57,20 +116,16 @@ namespace AccountingSystem.Services
                     throw new InvalidOperationException("Supplier account is required to finalize voucher");
                 }
 
-                var supplierAccount = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == loadedVoucher.Supplier.AccountId, cancellationToken);
-                if (supplierAccount == null)
-                {
-                    throw new InvalidOperationException("Supplier account not found");
-                }
+                var supplierAccount = await _context.Accounts
+                    .FirstOrDefaultAsync(a => a.Id == loadedVoucher.Supplier.AccountId, cancellationToken)
+                    ?? throw new InvalidOperationException("Supplier account not found");
 
                 Account? cashAccount = null;
                 if (loadedVoucher.IsCash && loadedVoucher.CreatedBy.PaymentAccountId.HasValue)
                 {
-                    cashAccount = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == loadedVoucher.CreatedBy.PaymentAccountId.Value, cancellationToken);
-                    if (cashAccount == null)
-                    {
-                        throw new InvalidOperationException("Cash account not found for creator");
-                    }
+                    cashAccount = await _context.Accounts
+                        .FirstOrDefaultAsync(a => a.Id == loadedVoucher.CreatedBy.PaymentAccountId.Value, cancellationToken)
+                        ?? throw new InvalidOperationException("Cash account not found for creator");
 
                     if (cashAccount.Nature == AccountNature.Debit && loadedVoucher.Amount > cashAccount.CurrentBalance)
                     {
@@ -78,20 +133,41 @@ namespace AccountingSystem.Services
                     }
                 }
 
-                lines = new List<JournalEntryLine>
+                preview.Lines.Add(new JournalEntryPreviewLine
                 {
-                    new JournalEntryLine { AccountId = selectedAccount.Id, DebitAmount = loadedVoucher.Amount, Description = "سند مصاريف" },
-                    new JournalEntryLine { AccountId = supplierAccount.Id, CreditAmount = loadedVoucher.Amount, Description = "سند مصاريف" }
-                };
+                    Account = selectedAccount,
+                    Debit = loadedVoucher.Amount,
+                    Description = "سند مصاريف"
+                });
+
+                preview.Lines.Add(new JournalEntryPreviewLine
+                {
+                    Account = supplierAccount,
+                    Credit = loadedVoucher.Amount,
+                    Description = "سند مصاريف"
+                });
 
                 if (loadedVoucher.IsCash && cashAccount != null)
                 {
-                    lines.Add(new JournalEntryLine { AccountId = supplierAccount.Id, DebitAmount = loadedVoucher.Amount, Description = "سند دفع مصاريف" });
-                    lines.Add(new JournalEntryLine { AccountId = cashAccount.Id, CreditAmount = loadedVoucher.Amount, Description = "سند دفع مصاريف" });
+                    preview.Lines.Add(new JournalEntryPreviewLine
+                    {
+                        Account = supplierAccount,
+                        Debit = loadedVoucher.Amount,
+                        Description = "سند دفع مصاريف"
+                    });
+
+                    preview.Lines.Add(new JournalEntryPreviewLine
+                    {
+                        Account = cashAccount,
+                        Credit = loadedVoucher.Amount,
+                        Description = "سند دفع مصاريف"
+                    });
                 }
 
-                reference = $"سند مصاريف:{loadedVoucher.Id}";
-                description = loadedVoucher.Notes == null ? "سند مصاريف" : "سند مصاريف" + Environment.NewLine + loadedVoucher.Notes;
+                preview.Reference = $"سند مصاريف:{loadedVoucher.Id}";
+                preview.Description = loadedVoucher.Notes == null
+                    ? "سند مصاريف"
+                    : "سند مصاريف" + Environment.NewLine + loadedVoucher.Notes;
             }
             else if (loadedVoucher.AgentId.HasValue)
             {
@@ -100,11 +176,9 @@ namespace AccountingSystem.Services
                     throw new InvalidOperationException("Agent account is required to finalize voucher");
                 }
 
-                var agentAccount = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == loadedVoucher.Agent.AccountId.Value, cancellationToken);
-                if (agentAccount == null)
-                {
-                    throw new InvalidOperationException("Agent account not found");
-                }
+                var agentAccount = await _context.Accounts
+                    .FirstOrDefaultAsync(a => a.Id == loadedVoucher.Agent.AccountId.Value, cancellationToken)
+                    ?? throw new InvalidOperationException("Agent account not found");
 
                 if (selectedAccount.CurrencyId != agentAccount.CurrencyId)
                 {
@@ -116,39 +190,31 @@ namespace AccountingSystem.Services
                     throw new InvalidOperationException("الرصيد المتاح في حساب الدفع لا يكفي لإتمام العملية.");
                 }
 
-                lines = new List<JournalEntryLine>
+                preview.Lines.Add(new JournalEntryPreviewLine
                 {
-                    new JournalEntryLine { AccountId = agentAccount.Id, DebitAmount = loadedVoucher.Amount, Description = "سند دفع وكيل" },
-                    new JournalEntryLine { AccountId = selectedAccount.Id, CreditAmount = loadedVoucher.Amount, Description = "سند دفع وكيل" }
-                };
+                    Account = agentAccount,
+                    Debit = loadedVoucher.Amount,
+                    Description = "سند دفع وكيل"
+                });
 
-                reference = $"سند دفع وكيل:{loadedVoucher.Id}";
-                description = loadedVoucher.Notes == null ? "سند دفع وكيل" : "سند دفع وكيل" + Environment.NewLine + loadedVoucher.Notes;
+                preview.Lines.Add(new JournalEntryPreviewLine
+                {
+                    Account = selectedAccount,
+                    Credit = loadedVoucher.Amount,
+                    Description = "سند دفع وكيل"
+                });
+
+                preview.Reference = $"سند دفع وكيل:{loadedVoucher.Id}";
+                preview.Description = loadedVoucher.Notes == null
+                    ? "سند دفع وكيل"
+                    : "سند دفع وكيل" + Environment.NewLine + loadedVoucher.Notes;
             }
             else
             {
                 throw new InvalidOperationException("Voucher must target a supplier or an agent account");
             }
 
-            var existingEntry = await _context.JournalEntries.FirstOrDefaultAsync(j => j.Reference == reference, cancellationToken);
-            if (existingEntry == null)
-            {
-                await _journalEntryService.CreateJournalEntryAsync(
-                    loadedVoucher.Date,
-                    description,
-                    loadedVoucher.CreatedBy.PaymentBranchId ?? throw new InvalidOperationException("Creator branch is required"),
-                    loadedVoucher.CreatedById,
-                    lines,
-                    JournalEntryStatus.Posted,
-                    reference: reference,
-                    approvedById: approvedById);
-            }
-
-            loadedVoucher.Status = PaymentVoucherStatus.Approved;
-            loadedVoucher.ApprovedAt = DateTime.Now;
-            loadedVoucher.ApprovedById = approvedById;
-
-            await _context.SaveChangesAsync(cancellationToken);
+            return preview;
         }
     }
 }

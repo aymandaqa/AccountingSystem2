@@ -1,8 +1,8 @@
+using System;
+using System.Collections.Generic;
 using AccountingSystem.Models;
 using AccountingSystem.Models.DynamicScreens;
 using AccountingSystem.Models.Workflows;
-using System;
-using System.Collections.Generic;
 
 namespace AccountingSystem.ViewModels.Workflows
 {
@@ -23,11 +23,23 @@ namespace AccountingSystem.ViewModels.Workflows
         public decimal AmountInBase { get; set; }
         public string? CurrencyCode { get; set; }
         public List<WorkflowAttachmentViewModel> Attachments { get; set; } = new();
+        public List<WorkflowJournalEntryLineViewModel> JournalLines { get; set; } = new();
+        public string? JournalPreviewError { get; set; }
     }
 
     public class WorkflowAttachmentViewModel
     {
         public string FileName { get; set; } = string.Empty;
         public string FilePath { get; set; } = string.Empty;
+    }
+
+    public class WorkflowJournalEntryLineViewModel
+    {
+        public string AccountCode { get; set; } = string.Empty;
+        public string AccountName { get; set; } = string.Empty;
+        public decimal Debit { get; set; }
+        public decimal Credit { get; set; }
+        public string? Description { get; set; }
+        public string? CostCenter { get; set; }
     }
 }
