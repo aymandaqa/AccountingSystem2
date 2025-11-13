@@ -76,6 +76,46 @@ else
                         </ul>
                     </div>
                 }
+                @if (request.JournalLines.Any())
+                {
+                    <div class="mb-3">
+                        <div class="fw-bold">تفاصيل القيد المحاسبي</div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">الحساب</th>
+                                        <th scope="col" class="text-end">مدين</th>
+                                        <th scope="col" class="text-end">دائن</th>
+                                        <th scope="col">الوصف</th>
+                                        <th scope="col">مركز التكلفة</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var line in request.JournalLines)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div>@line.AccountName</div>
+                                                <div class="text-muted small">@line.AccountCode</div>
+                                            </td>
+                                            <td class="text-end">@(line.Debit == 0 ? "-" : line.Debit.ToString("N2"))</td>
+                                            <td class="text-end">@(line.Credit == 0 ? "-" : line.Credit.ToString("N2"))</td>
+                                            <td>@(string.IsNullOrWhiteSpace(line.Description) ? "-" : line.Description)</td>
+                                            <td>@(string.IsNullOrWhiteSpace(line.CostCenter) ? "-" : line.CostCenter)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+                else if (!string.IsNullOrWhiteSpace(request.JournalPreviewError))
+                {
+                    <div class="alert alert-warning">
+                        تعذر عرض تفاصيل القيد: @request.JournalPreviewError
+                    </div>
+                }
                 @if (request.PaymentVoucher != null)
                 {
                     <div class="row g-3">

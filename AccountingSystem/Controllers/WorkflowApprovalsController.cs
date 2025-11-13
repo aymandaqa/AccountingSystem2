@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.Models.Workflows;
@@ -8,9 +11,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace AccountingSystem.Controllers
 {
@@ -20,12 +20,27 @@ namespace AccountingSystem.Controllers
         private readonly IWorkflowService _workflowService;
         private readonly ApplicationDbContext _context;
         private readonly UserManager<User> _userManager;
+        private readonly IPaymentVoucherProcessor _paymentVoucherProcessor;
+        private readonly IReceiptVoucherProcessor _receiptVoucherProcessor;
+        private readonly IDisbursementVoucherProcessor _disbursementVoucherProcessor;
+        private readonly IAssetExpenseProcessor _assetExpenseProcessor;
 
-        public WorkflowApprovalsController(IWorkflowService workflowService, ApplicationDbContext context, UserManager<User> userManager)
+        public WorkflowApprovalsController(
+            IWorkflowService workflowService,
+            ApplicationDbContext context,
+            UserManager<User> userManager,
+            IPaymentVoucherProcessor paymentVoucherProcessor,
+            IReceiptVoucherProcessor receiptVoucherProcessor,
+            IDisbursementVoucherProcessor disbursementVoucherProcessor,
+            IAssetExpenseProcessor assetExpenseProcessor)
         {
             _workflowService = workflowService;
             _context = context;
             _userManager = userManager;
+            _paymentVoucherProcessor = paymentVoucherProcessor;
+            _receiptVoucherProcessor = receiptVoucherProcessor;
+            _disbursementVoucherProcessor = disbursementVoucherProcessor;
+            _assetExpenseProcessor = assetExpenseProcessor;
         }
 
         public async Task<IActionResult> Index()
@@ -101,12 +116,16 @@ namespace AccountingSystem.Controllers
 
             var assetExpenses = await _context.AssetExpenses
                 .Include(e => e.Asset).ThenInclude(a => a.Branch)
+                .Include(e => e.Asset).ThenInclude(a => a.CostCenter)
                 .Include(e => e.ExpenseAccount)
                 .Include(e => e.Supplier)
                 .Include(e => e.Currency)
                 .Include(e => e.CreatedBy)
                 .Where(e => assetExpenseIds.Contains(e.Id))
                 .ToDictionaryAsync(e => e.Id);
+
+            var journalPreviewCache = new Dictionary<(WorkflowDocumentType, int), List<WorkflowJournalEntryLineViewModel>>();
+            var journalPreviewErrors = new Dictionary<(WorkflowDocumentType, int), string>();
 
             foreach (var action in actions)
             {
@@ -158,6 +177,43 @@ namespace AccountingSystem.Controllers
                         model.CurrencyCode = assetExpense.Currency?.Code;
                     }
                     AppendAttachment(model, assetExpense.AttachmentFilePath, assetExpense.AttachmentFileName);
+                }
+
+                var cacheKey = (action.WorkflowInstance.DocumentType, action.WorkflowInstance.DocumentId);
+
+                if (journalPreviewCache.TryGetValue(cacheKey, out var cachedLines))
+                {
+                    model.JournalLines = CloneLines(cachedLines);
+                }
+                else if (journalPreviewErrors.TryGetValue(cacheKey, out var cachedError))
+                {
+                    model.JournalPreviewError = cachedError;
+                }
+                else
+                {
+                    try
+                    {
+                        JournalEntryPreview? preview = action.WorkflowInstance.DocumentType switch
+                        {
+                            WorkflowDocumentType.PaymentVoucher => await _paymentVoucherProcessor.BuildPreviewAsync(action.WorkflowInstance.DocumentId),
+                            WorkflowDocumentType.ReceiptVoucher => await _receiptVoucherProcessor.BuildPreviewAsync(action.WorkflowInstance.DocumentId),
+                            WorkflowDocumentType.DisbursementVoucher => await _disbursementVoucherProcessor.BuildPreviewAsync(action.WorkflowInstance.DocumentId),
+                            WorkflowDocumentType.AssetExpense => await _assetExpenseProcessor.BuildPreviewAsync(action.WorkflowInstance.DocumentId),
+                            _ => null
+                        };
+
+                        if (preview != null)
+                        {
+                            var lines = MapJournalLines(preview);
+                            model.JournalLines = CloneLines(lines);
+                            journalPreviewCache[cacheKey] = lines;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        model.JournalPreviewError = ex.Message;
+                        journalPreviewErrors[cacheKey] = ex.Message;
+                    }
                 }
 
                 viewModels.Add(model);
@@ -216,6 +272,40 @@ namespace AccountingSystem.Controllers
             });
         }
 
+        private static List<WorkflowJournalEntryLineViewModel> MapJournalLines(JournalEntryPreview preview)
+        {
+            return preview.Lines.Select(line => new WorkflowJournalEntryLineViewModel
+            {
+                AccountCode = line.Account?.Code ?? string.Empty,
+                AccountName = line.Account == null
+                    ? string.Empty
+                    : string.IsNullOrWhiteSpace(line.Account.NameAr)
+                        ? string.IsNullOrWhiteSpace(line.Account.NameEn) ? (line.Account.Code ?? string.Empty) : line.Account.NameEn!
+                        : line.Account.NameAr!,
+                Debit = line.Debit,
+                Credit = line.Credit,
+                Description = line.Description,
+                CostCenter = line.CostCenter != null
+                    ? (string.IsNullOrWhiteSpace(line.CostCenter.NameAr)
+                        ? string.IsNullOrWhiteSpace(line.CostCenter.NameEn) ? line.CostCenter.Code : line.CostCenter.NameEn
+                        : line.CostCenter.NameAr)
+                    : null
+            }).ToList();
+        }
+
+        private static List<WorkflowJournalEntryLineViewModel> CloneLines(IEnumerable<WorkflowJournalEntryLineViewModel> source)
+        {
+            return source.Select(line => new WorkflowJournalEntryLineViewModel
+            {
+                AccountCode = line.AccountCode,
+                AccountName = line.AccountName,
+                Debit = line.Debit,
+                Credit = line.Credit,
+                Description = line.Description,
+                CostCenter = line.CostCenter
+            }).ToList();
+        }
+
         private string GetTitle(WorkflowInstance instance)
         {
             return instance.DocumentType switch
@@ -238,7 +328,7 @@ namespace AccountingSystem.Controllers
                 WorkflowDocumentType.DisbursementVoucher => "يرجى مراجعة بيانات سند دفع  واعتمادها",
                 WorkflowDocumentType.DynamicScreenEntry => "يرجى مراجعة بيانات الحركة الديناميكية واتخاذ القرار",
                 WorkflowDocumentType.AssetExpense => "يرجى مراجعة بيانات مصروف الأصل واعتمادها",
-                _ => "يرجى مراجعة المستند واعتماد القرار"
+                _ => "يرجى مراجعة بيانات المستند واعتمادها"
             };
         }
     }
