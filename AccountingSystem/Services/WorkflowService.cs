@@ -464,8 +464,15 @@ namespace AccountingSystem.Services
                     }
                     break;
                 case WorkflowDocumentType.AssetExpense:
-                    // No persisted state change is required for asset expenses on rejection.
+                {
+                    var assetExpenseEntity = await _context.AssetExpenses
+                        .FirstOrDefaultAsync(e => e.Id == action.WorkflowInstance.DocumentId, cancellationToken);
+                    if (assetExpenseEntity != null)
+                    {
+                        assetExpenseEntity.WorkflowInstanceId = action.WorkflowInstance.Id;
+                    }
                     break;
+                }
             }
 
             await _context.SaveChangesAsync(cancellationToken);
@@ -513,12 +520,15 @@ namespace AccountingSystem.Services
                     }
                     break;
                 case WorkflowDocumentType.AssetExpense:
-                    var assetExpense = await _context.AssetExpenses.FirstOrDefaultAsync(e => e.Id == instance.DocumentId, cancellationToken);
-                    if (assetExpense != null)
+                {
+                    var assetExpenseEntity = await _context.AssetExpenses.FirstOrDefaultAsync(e => e.Id == instance.DocumentId, cancellationToken);
+                    if (assetExpenseEntity != null)
                     {
-                        await _assetExpenseProcessor.FinalizeAsync(assetExpense, approvedById, cancellationToken);
+                        assetExpenseEntity.WorkflowInstanceId = instance.Id;
+                        await _assetExpenseProcessor.FinalizeAsync(assetExpenseEntity, approvedById, cancellationToken);
                     }
                     break;
+                }
             }
 
             await _context.SaveChangesAsync(cancellationToken);
