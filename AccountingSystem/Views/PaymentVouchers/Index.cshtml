@@ -214,7 +214,7 @@
                         <td data-filter-value="@attachmentText">
                             @if (!string.IsNullOrWhiteSpace(voucher.AttachmentFilePath))
                             {
-                                <a href="@Url.Content(voucher.AttachmentFilePath)" target="_blank" rel="noopener">@attachmentText</a>
+                                <a href="@Url.ContentFromAttachmentPath(voucher.AttachmentFilePath)" target="_blank" rel="noopener">@attachmentText</a>
                             }
                             else
                             {

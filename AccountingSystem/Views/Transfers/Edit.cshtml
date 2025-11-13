@@ -72,7 +72,7 @@
         {
             <div class="form-text">
                 المرفق الحالي:
-                <a href="@Url.Content(Model.ExistingAttachmentPath)" target="_blank" rel="noopener">
+                <a href="@Url.ContentFromAttachmentPath(Model.ExistingAttachmentPath)" target="_blank" rel="noopener">
                     @(string.IsNullOrWhiteSpace(Model.ExistingAttachmentName) ? "عرض المرفق" : Model.ExistingAttachmentName)
                 </a>
             </div>

@@ -68,7 +68,7 @@
                 <td>
                     @if (!string.IsNullOrWhiteSpace(item.AttachmentFilePath))
                     {
-                        <a href="@Url.Content(item.AttachmentFilePath)" target="_blank" rel="noopener">
+                        <a href="@Url.ContentFromAttachmentPath(item.AttachmentFilePath)" target="_blank" rel="noopener">
                             @(string.IsNullOrWhiteSpace(item.AttachmentFileName) ? "عرض المرفق" : item.AttachmentFileName)
                         </a>
                     }

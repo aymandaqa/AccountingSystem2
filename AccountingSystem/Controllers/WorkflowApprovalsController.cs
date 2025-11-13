@@ -1,5 +1,6 @@
 using System;
 using AccountingSystem.Data;
+using AccountingSystem.Extensions;
 using AccountingSystem.Models;
 using AccountingSystem.Models.Workflows;
 using AccountingSystem.Services;
@@ -209,9 +210,15 @@ namespace AccountingSystem.Controllers
                 return;
             }
 
+            var normalizedPath = AttachmentPathHelper.NormalizeForClient(path);
+            if (string.IsNullOrEmpty(normalizedPath))
+            {
+                return;
+            }
+
             model.Attachments.Add(new WorkflowAttachmentViewModel
             {
-                FilePath = path,
+                FilePath = normalizedPath,
                 FileName = string.IsNullOrWhiteSpace(name) ? "عرض المرفق" : name
             });
         }

@@ -199,7 +199,7 @@ namespace AccountingSystem.Controllers
                     Date = e.Date,
                     Notes = e.Notes,
                     AttachmentFileName = e.AttachmentFileName,
-                    AttachmentFilePath = e.AttachmentFilePath,
+                    AttachmentFilePath = AttachmentPathHelper.NormalizeForClient(e.AttachmentFilePath),
                     JournalEntryId = journalEntryId,
                     JournalEntryNumber = journalEntryNumber,
                     WorkflowStatus = instance?.Status

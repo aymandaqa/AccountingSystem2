@@ -1,4 +1,5 @@
 using AccountingSystem.Data;
+using AccountingSystem.Extensions;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -463,7 +464,7 @@ namespace AccountingSystem.Controllers
                 Amount = transfer.Amount,
                 Notes = transfer.Notes,
                 ReturnUrl = returnUrl,
-                ExistingAttachmentPath = transfer.AttachmentFilePath,
+                ExistingAttachmentPath = AttachmentPathHelper.NormalizeForClient(transfer.AttachmentFilePath),
                 ExistingAttachmentName = transfer.AttachmentFileName
             };
 
@@ -932,7 +933,7 @@ namespace AccountingSystem.Controllers
 
             if (string.IsNullOrEmpty(model.ExistingAttachmentPath))
             {
-                model.ExistingAttachmentPath = transfer.AttachmentFilePath;
+                model.ExistingAttachmentPath = AttachmentPathHelper.NormalizeForClient(transfer.AttachmentFilePath);
             }
 
             if (string.IsNullOrEmpty(model.ExistingAttachmentName))
