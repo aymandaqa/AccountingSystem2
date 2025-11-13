@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Threading;
 using AccountingSystem.Models.Workflows;
 using AccountingSystem.Models.DynamicScreens;
+using AccountingSystem.Models.Reports;
 
 namespace AccountingSystem.Data
 {
@@ -80,6 +81,7 @@ namespace AccountingSystem.Data
         public DbSet<CompoundJournalExecutionLog> CompoundJournalExecutionLogs { get; set; }
         public DbSet<Agent> Agents { get; set; }
         public DbSet<Counter> Counters { get; set; }
+        public DbSet<CashPerformanceRecord> CashPerformanceRecords => Set<CashPerformanceRecord>();
 
         public override int SaveChanges()
         {
@@ -194,6 +196,12 @@ namespace AccountingSystem.Data
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Key).IsRequired().HasMaxLength(100);
                 entity.HasIndex(e => new { e.Key, e.Year }).IsUnique();
+            });
+
+            builder.Entity<CashPerformanceRecord>(entity =>
+            {
+                entity.HasNoKey();
+                entity.ToView("ViewCashPerformance");
             });
 
             // CostCenter configuration
