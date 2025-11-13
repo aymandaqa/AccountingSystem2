@@ -554,6 +554,8 @@ namespace AccountingSystem.Controllers
 
                 if (instance != null)
                 {
+                    assetExpense.WorkflowInstanceId = instance.Id;
+                    await _context.SaveChangesAsync();
                     TempData["InfoMessage"] = "تم إرسال مصروف الأصل لاعتمادات الموافقة";
                     return RedirectToAction(nameof(Index));
                 }

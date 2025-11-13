@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using AccountingSystem.Models.Workflows;
 
 namespace AccountingSystem.Models
 {
@@ -44,6 +45,8 @@ namespace AccountingSystem.Models
 
         public bool IsCash { get; set; }
 
+        public int? WorkflowInstanceId { get; set; }
+
         public virtual Asset Asset { get; set; } = null!;
 
         public virtual Account ExpenseAccount { get; set; } = null!;
@@ -55,5 +58,7 @@ namespace AccountingSystem.Models
         public virtual Currency Currency { get; set; } = null!;
 
         public virtual User CreatedBy { get; set; } = null!;
+
+        public virtual WorkflowInstance? WorkflowInstance { get; set; }
     }
 }
