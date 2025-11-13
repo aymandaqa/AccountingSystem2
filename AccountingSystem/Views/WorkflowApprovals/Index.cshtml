@@ -1,6 +1,12 @@
 @model IEnumerable<AccountingSystem.ViewModels.Workflows.WorkflowApprovalViewModel>
 @{
     ViewData["Title"] = "الموافقات المعلقة";
+    var pendingRequests = Model.ToList();
+    var groupedByUser = pendingRequests
+        .GroupBy(request => string.IsNullOrWhiteSpace(request.CreatedByName) ? "غير معروف" : request.CreatedByName)
+        .OrderBy(group => group.Key)
+        .ToList();
+    var userAccordionId = "workflow-approvals-users";
 }
 
 <h2 class="mb-4">الموافقات المعلقة</h2>
@@ -14,243 +20,130 @@
     <div class="alert alert-danger">@TempData["Error"]</div>
 }
 
-@if (!Model.Any())
+@if (!pendingRequests.Any())
 {
     <div class="alert alert-info">لا توجد أي طلبات موافقة حالياً.</div>
 }
 else
 {
-    foreach (var request in Model)
-    {
-        <div class="card mb-3">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <div>
-                    <strong>@request.Title</strong>
-                    <div class="text-muted small">تاريخ الإنشاء: @request.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div>
-                </div>
-                <div>
-                    <form asp-action="Approve" method="post" class="d-inline">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="actionId" value="@request.ActionId" />
-                        <button type="submit" class="btn btn-success btn-sm"><i class="fa fa-check ms-1"></i> موافقة</button>
-                    </form>
-                    <button class="btn btn-outline-danger btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#reject-@request.ActionId"><i class="fa fa-times ms-1"></i> رفض</button>
-                </div>
-            </div>
-            <div class="card-body">
-                @if (request.Amount != 0 || request.AmountInBase != 0)
-                {
-                    <div class="mb-3">
-                        <div class="fw-bold">المبلغ المطلوب</div>
-                        <div>
-                            @if (!string.IsNullOrEmpty(request.CurrencyCode))
+    <div class="accordion" id="@userAccordionId">
+        @{ var userIndex = 0; }
+        @foreach (var userGroup in groupedByUser)
+        {
+            var userCollapseId = $"{userAccordionId}-collapse-{userIndex}";
+            var userHeadingId = $"{userAccordionId}-heading-{userIndex}";
+            var typeAccordionId = $"{userAccordionId}-types-{userIndex}";
+            var typeGroups = userGroup
+                .GroupBy(request => string.IsNullOrWhiteSpace(request.OperationTypeName) ? "أخرى" : request.OperationTypeName)
+                .OrderBy(group => group.Key)
+                .ToList();
+            <div class="accordion-item mb-3">
+                <h2 class="accordion-header" id="@userHeadingId">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#@userCollapseId" aria-expanded="false" aria-controls="@userCollapseId">
+                        <span class="fw-semibold">@userGroup.Key</span>
+                        <span class="badge bg-primary rounded-pill ms-2">@userGroup.Count()</span>
+                    </button>
+                </h2>
+                <div id="@userCollapseId" class="accordion-collapse collapse" aria-labelledby="@userHeadingId" data-bs-parent="#@userAccordionId">
+                    <div class="accordion-body">
+                        <div class="accordion accordion-flush" id="@typeAccordionId">
+                            @{ var typeIndex = 0; }
+                            @foreach (var typeGroup in typeGroups)
                             {
-                                @request.Amount.ToString("N2") @request.CurrencyCode
+                                var typeCollapseId = $"{typeAccordionId}-collapse-{typeIndex}";
+                                var typeHeadingId = $"{typeAccordionId}-heading-{typeIndex}";
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="@typeHeadingId">
+                                        <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#@typeCollapseId" aria-expanded="false" aria-controls="@typeCollapseId">
+                                            <span class="fw-semibold">@typeGroup.Key</span>
+                                            <span class="badge bg-secondary rounded-pill ms-2">@typeGroup.Count()</span>
+                                        </button>
+                                    </h2>
+                                    <div id="@typeCollapseId" class="accordion-collapse collapse" aria-labelledby="@typeHeadingId" data-bs-parent="#@typeAccordionId">
+                                        <div class="accordion-body">
+                                            <div class="table-responsive">
+                                                <table class="table table-hover align-middle mb-0">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th scope="col">عنوان الطلب</th>
+                                                            <th scope="col">تاريخ الإنشاء</th>
+                                                            <th scope="col" class="text-end">المبلغ</th>
+                                                            <th scope="col">العملة</th>
+                                                            <th scope="col" class="text-end">إجراءات</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var request in typeGroup.OrderByDescending(r => r.CreatedAt))
+                                                        {
+                                                            var detailId = $"request-details-{request.ActionId}";
+                                                            <tr>
+                                                                <td>
+                                                                    <div class="fw-semibold">@request.Title</div>
+                                                                    <div class="text-muted small">@request.Description</div>
+                                                                </td>
+                                                                <td class="text-nowrap">@request.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                                                <td class="text-end">@request.Amount.ToString("N2")</td>
+                                                                <td>@(string.IsNullOrWhiteSpace(request.CurrencyCode) ? "-" : request.CurrencyCode)</td>
+                                                                <td>
+                                                                    <div class="d-flex flex-wrap gap-1 justify-content-end">
+                                                                        <form asp-action="Approve" method="post" class="d-inline">
+                                                                            @Html.AntiForgeryToken()
+                                                                            <input type="hidden" name="actionId" value="@request.ActionId" />
+                                                                            <button type="submit" class="btn btn-success btn-sm">
+                                                                                <i class="fa fa-check ms-1"></i> موافقة
+                                                                            </button>
+                                                                        </form>
+                                                                        <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#@detailId" aria-expanded="false" aria-controls="@detailId">
+                                                                            <i class="fa fa-info-circle ms-1"></i> تفاصيل الطلب
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="5" class="p-0">
+                                                                    <div class="collapse" id="@detailId" data-bs-parent="#@typeCollapseId">
+                                                                        <div class="card rounded-0 border-top">
+                                                                            <div class="card-body">
+                                                                                <partial name="_ApprovalRequestDetails" model="request" />
+                                                                            </div>
+                                                                            <div class="card-footer bg-white">
+                                                                                <button class="btn btn-outline-danger btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#reject-@request.ActionId" aria-expanded="false" aria-controls="reject-@request.ActionId">
+                                                                                    <i class="fa fa-times ms-1"></i> رفض
+                                                                                </button>
+                                                                            </div>
+                                                                            <div class="collapse border-top" id="reject-@request.ActionId" data-bs-parent="#@detailId">
+                                                                                <div class="card-body">
+                                                                                    <form asp-action="Reject" method="post">
+                                                                                        @Html.AntiForgeryToken()
+                                                                                        <input type="hidden" name="actionId" value="@request.ActionId" />
+                                                                                        <div class="mb-3">
+                                                                                            <label class="form-label">سبب الرفض</label>
+                                                                                            <textarea name="notes" class="form-control" rows="3"></textarea>
+                                                                                        </div>
+                                                                                        <button type="submit" class="btn btn-danger">
+                                                                                            <i class="fa fa-times ms-1"></i> تأكيد الرفض
+                                                                                        </button>
+                                                                                    </form>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                @{ typeIndex++; }
                             }
-                            else
-                            {
-                                @request.Amount.ToString("N2")
-                            }
-
-                            @if (request.AmountInBase != 0)
-                            {
-                                <span class="text-muted">(ما يعادل @request.AmountInBase.ToString("N2") بالعملة الأساسية)</span>
-                            }
                         </div>
                     </div>
-                }
-                <p>@request.Description</p>
-                @if (request.Attachments.Any())
-                {
-                    <div class="mb-3">
-                        <div class="fw-bold">المرفقات</div>
-                        <ul class="list-unstyled mb-0">
-                            @foreach (var attachment in request.Attachments)
-                            {
-                                <li>
-                                    <a href="@Url.ContentFromAttachmentPath(attachment.FilePath)" target="_blank" rel="noopener">
-                                        @attachment.FileName
-                                    </a>
-                                </li>
-                            }
-                        </ul>
-                    </div>
-                }
-                @if (request.JournalLines.Any())
-                {
-                    <div class="mb-3">
-                        <div class="fw-bold">تفاصيل القيد المحاسبي</div>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th scope="col">الحساب</th>
-                                        <th scope="col" class="text-end">مدين</th>
-                                        <th scope="col" class="text-end">دائن</th>
-                                        <th scope="col">الوصف</th>
-                                        <th scope="col">مركز التكلفة</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var line in request.JournalLines)
-                                    {
-                                        <tr>
-                                            <td>
-                                                <div>@line.AccountName</div>
-                                                <div class="text-muted small">@line.AccountCode</div>
-                                            </td>
-                                            <td class="text-end">@(line.Debit == 0 ? "-" : line.Debit.ToString("N2"))</td>
-                                            <td class="text-end">@(line.Credit == 0 ? "-" : line.Credit.ToString("N2"))</td>
-                                            <td>@(string.IsNullOrWhiteSpace(line.Description) ? "-" : line.Description)</td>
-                                            <td>@(string.IsNullOrWhiteSpace(line.CostCenter) ? "-" : line.CostCenter)</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                }
-                else if (!string.IsNullOrWhiteSpace(request.JournalPreviewError))
-                {
-                    <div class="alert alert-warning">
-                        تعذر عرض تفاصيل القيد: @request.JournalPreviewError
-                    </div>
-                }
-                @if (request.PaymentVoucher != null)
-                {
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <div class="fw-bold">المورد</div>
-                            <div>@(request.PaymentVoucher.Supplier?.NameAr ?? "-")</div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="fw-bold">أنشئ بواسطة</div>
-                            <div>@(request.PaymentVoucher.CreatedBy?.FullName ?? request.PaymentVoucher.CreatedById)</div>
-                        </div>
-                        <div class="col-12">
-                            <div class="fw-bold">ملاحظات</div>
-                            <div>@(string.IsNullOrWhiteSpace(request.PaymentVoucher.Notes) ? "لا يوجد" : request.PaymentVoucher.Notes)</div>
-                        </div>
-                    </div>
-                }
-                else if (request.DynamicEntry != null)
-                {
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <div class="fw-bold">الشاشة</div>
-                            <div>@request.DynamicEntry.Screen.DisplayName</div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="fw-bold">أنشئ بواسطة</div>
-                            <div>@(request.DynamicEntry.CreatedBy?.FullName ?? request.DynamicEntry.CreatedById)</div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="fw-bold">المورد</div>
-                            <div>@(request.DynamicEntry.Supplier?.NameAr ?? "-" )</div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="fw-bold">الوصف</div>
-                            <div>@(string.IsNullOrWhiteSpace(request.DynamicEntry.Description) ? "-" : request.DynamicEntry.Description)</div>
-                        </div>
-                    </div>
-                }
-                else if (request.ReceiptVoucher != null)
-                {
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <div class="fw-bold">المورد</div>
-                            <div>@(request.ReceiptVoucher.Supplier?.NameAr ?? "-")</div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="fw-bold">حساب المورد</div>
-                            <div>@request.ReceiptVoucher.Account.NameAr</div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="fw-bold">حساب الدفع</div>
-                            <div>@request.ReceiptVoucher.PaymentAccount.NameAr</div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="fw-bold">العملة</div>
-                            <div>@request.ReceiptVoucher.Currency.Code</div>
-                        </div>
-                        <div class="col-md-8">
-                            <div class="fw-bold">أنشئ بواسطة</div>
-                            <div>@(request.ReceiptVoucher.CreatedBy?.FullName ?? request.ReceiptVoucher.CreatedById)</div>
-                        </div>
-                        <div class="col-12">
-                            <div class="fw-bold">ملاحظات</div>
-                            <div>@(string.IsNullOrWhiteSpace(request.ReceiptVoucher.Notes) ? "لا يوجد" : request.ReceiptVoucher.Notes)</div>
-                        </div>
-                    </div>
-                }
-                else if (request.DisbursementVoucher != null)
-                {
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <div class="fw-bold">المورد</div>
-                            <div>@(request.DisbursementVoucher.Supplier?.NameAr ?? "-")</div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="fw-bold">العملة</div>
-                            <div>@request.DisbursementVoucher.Currency.Code</div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="fw-bold">أنشئ بواسطة</div>
-                            <div>@(request.DisbursementVoucher.CreatedBy?.FullName ?? request.DisbursementVoucher.CreatedById)</div>
-                        </div>
-                        <div class="col-12">
-                            <div class="fw-bold">ملاحظات</div>
-                            <div>@(string.IsNullOrWhiteSpace(request.DisbursementVoucher.Notes) ? "لا يوجد" : request.DisbursementVoucher.Notes)</div>
-                        </div>
-                    </div>
-                }
-                else if (request.AssetExpense != null)
-                {
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <div class="fw-bold">الأصل</div>
-                            <div>@request.AssetExpense.Asset.Name</div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="fw-bold">الفرع</div>
-                            <div>@(request.AssetExpense.Asset.Branch?.NameAr ?? "-")</div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="fw-bold">الحساب</div>
-                            <div>@request.AssetExpense.ExpenseAccount.NameAr</div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="fw-bold">المورد</div>
-                            <div>@request.AssetExpense.Supplier.NameAr</div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="fw-bold">نوع الدفع</div>
-                            <div>@(request.AssetExpense.IsCash ? "نقدي" : "غير نقدي")</div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="fw-bold">أنشئ بواسطة</div>
-                            <div>@(request.AssetExpense.CreatedBy?.FullName ?? request.AssetExpense.CreatedById)</div>
-                        </div>
-                        <div class="col-12">
-                            <div class="fw-bold">ملاحظات</div>
-                            <div>@(string.IsNullOrWhiteSpace(request.AssetExpense.Notes) ? "لا يوجد" : request.AssetExpense.Notes)</div>
-                        </div>
-                    </div>
-                }
-            </div>
-            <div class="collapse" id="reject-@request.ActionId">
-                <div class="card-body border-top">
-                    <form asp-action="Reject" method="post">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="actionId" value="@request.ActionId" />
-                        <div class="mb-3">
-                            <label class="form-label">سبب الرفض</label>
-                            <textarea name="notes" class="form-control" rows="3"></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-danger"><i class="fa fa-times ms-1"></i> تأكيد الرفض</button>
-                    </form>
                 </div>
             </div>
-        </div>
-    }
+            @{ userIndex++; }
+        }
+    </div>
 }

@@ -140,6 +140,7 @@ namespace AccountingSystem.Services
             var actions = await _context.WorkflowActions
                 .Include(a => a.WorkflowStep)
                 .Include(a => a.WorkflowInstance).ThenInclude(i => i.WorkflowDefinition)
+                .Include(a => a.WorkflowInstance).ThenInclude(i => i.Initiator)
                 .Include(a => a.WorkflowInstance).ThenInclude(i => i.DocumentCurrency)
                 .Where(a => a.Status == WorkflowActionStatus.Pending && a.WorkflowInstance.Status == WorkflowInstanceStatus.InProgress)
                 .ToListAsync(cancellationToken);

@@ -1,0 +1,202 @@
+@model AccountingSystem.ViewModels.Workflows.WorkflowApprovalViewModel
+
+@if (Model.Amount != 0 || Model.AmountInBase != 0)
+{
+    <div class="mb-3">
+        <div class="fw-bold">المبلغ المطلوب</div>
+        <div>
+            @if (!string.IsNullOrEmpty(Model.CurrencyCode))
+            {
+                @Model.Amount.ToString("N2") @Model.CurrencyCode
+            }
+            else
+            {
+                @Model.Amount.ToString("N2")
+            }
+
+            @if (Model.AmountInBase != 0)
+            {
+                <span class="text-muted">(ما يعادل @Model.AmountInBase.ToString("N2") بالعملة الأساسية)</span>
+            }
+        </div>
+    </div>
+}
+
+<p>@Model.Description</p>
+@if (Model.Attachments.Any())
+{
+    <div class="mb-3">
+        <div class="fw-bold">المرفقات</div>
+        <ul class="list-unstyled mb-0">
+            @foreach (var attachment in Model.Attachments)
+            {
+                <li>
+                    <a href="@Url.ContentFromAttachmentPath(attachment.FilePath)" target="_blank" rel="noopener">
+                        @attachment.FileName
+                    </a>
+                </li>
+            }
+        </ul>
+    </div>
+}
+@if (Model.JournalLines.Any())
+{
+    <div class="mb-3">
+        <div class="fw-bold">تفاصيل القيد المحاسبي</div>
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">الحساب</th>
+                        <th scope="col" class="text-end">مدين</th>
+                        <th scope="col" class="text-end">دائن</th>
+                        <th scope="col">الوصف</th>
+                        <th scope="col">مركز التكلفة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var line in Model.JournalLines)
+                    {
+                        <tr>
+                            <td>
+                                <div>@line.AccountName</div>
+                                <div class="text-muted small">@line.AccountCode</div>
+                            </td>
+                            <td class="text-end">@(line.Debit == 0 ? "-" : line.Debit.ToString("N2"))</td>
+                            <td class="text-end">@(line.Credit == 0 ? "-" : line.Credit.ToString("N2"))</td>
+                            <td>@(string.IsNullOrWhiteSpace(line.Description) ? "-" : line.Description)</td>
+                            <td>@(string.IsNullOrWhiteSpace(line.CostCenter) ? "-" : line.CostCenter)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(Model.JournalPreviewError))
+{
+    <div class="alert alert-warning">
+        تعذر عرض تفاصيل القيد: @Model.JournalPreviewError
+    </div>
+}
+@if (Model.PaymentVoucher != null)
+{
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="fw-bold">المورد</div>
+            <div>@(Model.PaymentVoucher.Supplier?.NameAr ?? "-")</div>
+        </div>
+        <div class="col-md-4">
+            <div class="fw-bold">أنشئ بواسطة</div>
+            <div>@(Model.PaymentVoucher.CreatedBy?.FullName ?? Model.PaymentVoucher.CreatedById)</div>
+        </div>
+        <div class="col-12">
+            <div class="fw-bold">ملاحظات</div>
+            <div>@(string.IsNullOrWhiteSpace(Model.PaymentVoucher.Notes) ? "لا يوجد" : Model.PaymentVoucher.Notes)</div>
+        </div>
+    </div>
+}
+else if (Model.DynamicEntry != null)
+{
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="fw-bold">الشاشة</div>
+            <div>@Model.DynamicEntry.Screen.DisplayName</div>
+        </div>
+        <div class="col-md-4">
+            <div class="fw-bold">أنشئ بواسطة</div>
+            <div>@(Model.DynamicEntry.CreatedBy?.FullName ?? Model.DynamicEntry.CreatedById)</div>
+        </div>
+        <div class="col-md-6">
+            <div class="fw-bold">المورد</div>
+            <div>@(Model.DynamicEntry.Supplier?.NameAr ?? "-")</div>
+        </div>
+        <div class="col-md-6">
+            <div class="fw-bold">الوصف</div>
+            <div>@(string.IsNullOrWhiteSpace(Model.DynamicEntry.Description) ? "-" : Model.DynamicEntry.Description)</div>
+        </div>
+    </div>
+}
+else if (Model.ReceiptVoucher != null)
+{
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="fw-bold">المورد</div>
+            <div>@(Model.ReceiptVoucher.Supplier?.NameAr ?? "-")</div>
+        </div>
+        <div class="col-md-4">
+            <div class="fw-bold">حساب المورد</div>
+            <div>@Model.ReceiptVoucher.Account.NameAr</div>
+        </div>
+        <div class="col-md-4">
+            <div class="fw-bold">حساب الدفع</div>
+            <div>@Model.ReceiptVoucher.PaymentAccount.NameAr</div>
+        </div>
+        <div class="col-md-4">
+            <div class="fw-bold">العملة</div>
+            <div>@Model.ReceiptVoucher.Currency.Code</div>
+        </div>
+        <div class="col-md-8">
+            <div class="fw-bold">أنشئ بواسطة</div>
+            <div>@(Model.ReceiptVoucher.CreatedBy?.FullName ?? Model.ReceiptVoucher.CreatedById)</div>
+        </div>
+        <div class="col-12">
+            <div class="fw-bold">ملاحظات</div>
+            <div>@(string.IsNullOrWhiteSpace(Model.ReceiptVoucher.Notes) ? "لا يوجد" : Model.ReceiptVoucher.Notes)</div>
+        </div>
+    </div>
+}
+else if (Model.DisbursementVoucher != null)
+{
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="fw-bold">المورد</div>
+            <div>@(Model.DisbursementVoucher.Supplier?.NameAr ?? "-")</div>
+        </div>
+        <div class="col-md-4">
+            <div class="fw-bold">العملة</div>
+            <div>@Model.DisbursementVoucher.Currency.Code</div>
+        </div>
+        <div class="col-md-4">
+            <div class="fw-bold">أنشئ بواسطة</div>
+            <div>@(Model.DisbursementVoucher.CreatedBy?.FullName ?? Model.DisbursementVoucher.CreatedById)</div>
+        </div>
+        <div class="col-12">
+            <div class="fw-bold">ملاحظات</div>
+            <div>@(string.IsNullOrWhiteSpace(Model.DisbursementVoucher.Notes) ? "لا يوجد" : Model.DisbursementVoucher.Notes)</div>
+        </div>
+    </div>
+}
+else if (Model.AssetExpense != null)
+{
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="fw-bold">الأصل</div>
+            <div>@Model.AssetExpense.Asset.Name</div>
+        </div>
+        <div class="col-md-4">
+            <div class="fw-bold">الفرع</div>
+            <div>@(Model.AssetExpense.Asset.Branch?.NameAr ?? "-")</div>
+        </div>
+        <div class="col-md-4">
+            <div class="fw-bold">الحساب</div>
+            <div>@Model.AssetExpense.ExpenseAccount.NameAr</div>
+        </div>
+        <div class="col-md-4">
+            <div class="fw-bold">المورد</div>
+            <div>@Model.AssetExpense.Supplier.NameAr</div>
+        </div>
+        <div class="col-md-4">
+            <div class="fw-bold">نوع الدفع</div>
+            <div>@(Model.AssetExpense.IsCash ? "نقدي" : "غير نقدي")</div>
+        </div>
+        <div class="col-md-4">
+            <div class="fw-bold">أنشئ بواسطة</div>
+            <div>@(Model.AssetExpense.CreatedBy?.FullName ?? Model.AssetExpense.CreatedById)</div>
+        </div>
+        <div class="col-12">
+            <div class="fw-bold">ملاحظات</div>
+            <div>@(string.IsNullOrWhiteSpace(Model.AssetExpense.Notes) ? "لا يوجد" : Model.AssetExpense.Notes)</div>
+        </div>
+    </div>
+}
