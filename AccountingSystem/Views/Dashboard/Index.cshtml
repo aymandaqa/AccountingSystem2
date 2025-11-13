@@ -3,8 +3,6 @@
 
 @{
     ViewData["Title"] = "لوحة التحكم";
-    var culture = new CultureInfo("ar-SA");
-    Func<decimal, string> format = value => string.Format(culture, "{0:N2}", value);
 }
 
 <div class="container-fluid py-4">
@@ -13,7 +11,7 @@
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
                     <div class="text-muted small mb-2">مستحقات العملاء في الطريق</div>
-                    <div class="fs-4 fw-semibold">@format(Model.TotalCustomerDuesOnRoad)</div>
+                    <div class="fs-4 fw-semibold"> @Model.TotalCustomerDuesOnRoad </div>
                 </div>
             </div>
         </div>
@@ -21,7 +19,7 @@
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
                     <div class="text-muted small mb-2">النقد مع السائقين في الطريق</div>
-                    <div class="fs-4 fw-semibold">@format(Model.TotalCashWithDriverOnRoad)</div>
+                    <div class="fs-4 fw-semibold">@Model.TotalCashWithDriverOnRoad</div>
                 </div>
             </div>
         </div>
@@ -29,7 +27,7 @@
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
                     <div class="text-muted small mb-2">مستحقات العملاء</div>
-                    <div class="fs-4 fw-semibold">@format(Model.TotalCustomerDues)</div>
+                    <div class="fs-4 fw-semibold">@Model.TotalCustomerDues</div>
                 </div>
             </div>
         </div>
@@ -37,7 +35,7 @@
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
                     <div class="text-muted small mb-2">النقد في خزنة الفرع</div>
-                    <div class="fs-4 fw-semibold">@format(Model.TotalCashOnBranchBox)</div>
+                    <div class="fs-4 fw-semibold">@Model.TotalCashOnBranchBox</div>
                 </div>
             </div>
         </div>
@@ -57,7 +55,6 @@
                     <table class="table table-striped table-bordered align-middle text-center">
                         <thead class="table-light">
                             <tr>
-                                <th scope="col">كود الفرع</th>
                                 <th scope="col">اسم الفرع</th>
                                 <th scope="col">مستحقات العملاء في الطريق</th>
                                 <th scope="col">النقد مع السائقين في الطريق</th>
@@ -69,22 +66,21 @@
                             @foreach (var record in Model.Records)
                             {
                                 <tr>
-                                    <td>@(string.IsNullOrWhiteSpace(record.BranchCode) ? "-" : record.BranchCode)</td>
                                     <td class="text-start">@record.BranchName</td>
-                                    <td>@format(record.CustomerDuesOnRoad)</td>
-                                    <td>@format(record.CashWithDriverOnRoad)</td>
-                                    <td>@format(record.CustomerDues)</td>
-                                    <td>@format(record.CashOnBranchBox)</td>
+                                    <td>@record.CustomerDuesOnRoad</td>
+                                    <td>@record.CashWithDriverOnRoad</td>
+                                    <td>@record.CustomerDues</td>
+                                    <td>@record.CashOnBranchBox</td>
                                 </tr>
                             }
                         </tbody>
                         <tfoot class="table-light fw-semibold">
                             <tr>
-                                <td colspan="2" class="text-center">الإجمالي</td>
-                                <td>@format(Model.TotalCustomerDuesOnRoad)</td>
-                                <td>@format(Model.TotalCashWithDriverOnRoad)</td>
-                                <td>@format(Model.TotalCustomerDues)</td>
-                                <td>@format(Model.TotalCashOnBranchBox)</td>
+                                <td colspan="1" class="text-center">الإجمالي</td>
+                                <td>@Model.TotalCustomerDuesOnRoad</td>
+                                <td>@Model.TotalCashWithDriverOnRoad</td>
+                                <td>@Model.TotalCustomerDues</td>
+                                <td>@Model.TotalCashOnBranchBox</td>
                             </tr>
                         </tfoot>
                     </table>

@@ -52,30 +52,11 @@ namespace AccountingSystem.Controllers
 
         private async Task<IReadOnlyList<CashPerformanceRecord>> LoadRecordsForUserAsync()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            var branchCodes = await _context.UserBranches
-                .Include(ub => ub.Branch)
-                .Where(ub => ub.UserId == userId && ub.Branch.IsActive)
-                .Select(ub => ub.Branch.Code)
-                .ToListAsync();
 
             var records = await _context.CashPerformanceRecords
                 .AsNoTracking()
                 .ToListAsync();
-
-            if (branchCodes?.Count > 0)
-            {
-                var normalizedCodes = branchCodes
-                    .Where(code => !string.IsNullOrWhiteSpace(code))
-                    .Select(code => code!.Trim())
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-                records = records
-                    .Where(record => string.IsNullOrWhiteSpace(record.BranchCode)
-                        || normalizedCodes.Contains(record.BranchCode.Trim()))
-                    .ToList();
-            }
 
             return records;
         }
