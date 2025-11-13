@@ -27,16 +27,18 @@
 else
 {
     <div class="accordion" id="@userAccordionId">
-        @{ var userIndex = 0; }
+        @{
+            var userIndex = 0;
+        }
         @foreach (var userGroup in groupedByUser)
         {
             var userCollapseId = $"{userAccordionId}-collapse-{userIndex}";
             var userHeadingId = $"{userAccordionId}-heading-{userIndex}";
             var typeAccordionId = $"{userAccordionId}-types-{userIndex}";
             var typeGroups = userGroup
-                .GroupBy(request => string.IsNullOrWhiteSpace(request.OperationTypeName) ? "أخرى" : request.OperationTypeName)
-                .OrderBy(group => group.Key)
-                .ToList();
+            .GroupBy(request => string.IsNullOrWhiteSpace(request.OperationTypeName) ? "أخرى" : request.OperationTypeName)
+            .OrderBy(group => group.Key)
+            .ToList();
             <div class="accordion-item mb-3">
                 <h2 class="accordion-header" id="@userHeadingId">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#@userCollapseId" aria-expanded="false" aria-controls="@userCollapseId">
@@ -47,7 +49,9 @@ else
                 <div id="@userCollapseId" class="accordion-collapse collapse" aria-labelledby="@userHeadingId" data-bs-parent="#@userAccordionId">
                     <div class="accordion-body">
                         <div class="accordion accordion-flush" id="@typeAccordionId">
-                            @{ var typeIndex = 0; }
+                            @{
+                                var typeIndex = 0;
+                            }
                             @foreach (var typeGroup in typeGroups)
                             {
                                 var typeCollapseId = $"{typeAccordionId}-collapse-{typeIndex}";
@@ -137,13 +141,13 @@ else
                                         </div>
                                     </div>
                                 </div>
-                                @{ typeIndex++; }
+                                typeIndex++;
                             }
                         </div>
                     </div>
                 </div>
             </div>
-            @{ userIndex++; }
+            userIndex++;
         }
     </div>
 }
