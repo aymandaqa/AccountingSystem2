@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using AccountingSystem.Extensions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -27,7 +28,8 @@ namespace AccountingSystem.Services
             var uploadsRoot = EnsureUploadsDirectory(category);
             var extension = Path.GetExtension(file.FileName);
             var generatedFileName = $"{Guid.NewGuid():N}{extension}";
-            var relativePath = Path.Combine("attachments", category, generatedFileName).Replace(Path.DirectorySeparatorChar, '/');
+            var relativePath = Path.Combine("attachments", category, generatedFileName);
+            var publicPath = AttachmentPathHelper.NormalizeForClient(relativePath);
             var absolutePath = Path.Combine(uploadsRoot, generatedFileName);
 
             Directory.CreateDirectory(Path.GetDirectoryName(absolutePath)!);
@@ -43,15 +45,19 @@ namespace AccountingSystem.Services
                 throw;
             }
 
-            if (!string.IsNullOrEmpty(existingPath) && !string.Equals(existingPath, relativePath, StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrEmpty(existingPath))
             {
-                Delete(existingPath);
+                var normalizedExistingPath = AttachmentPathHelper.NormalizeForClient(existingPath);
+                if (!string.Equals(normalizedExistingPath, publicPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    Delete(existingPath);
+                }
             }
 
             return new AttachmentSaveResult
             {
                 FileName = Path.GetFileName(file.FileName),
-                FilePath = $"/{relativePath}"
+                FilePath = publicPath ?? string.Empty
             };
         }
 
@@ -62,7 +68,11 @@ namespace AccountingSystem.Services
                 return;
             }
 
-            var trimmedPath = relativePath.TrimStart('/', '\\');
+            var trimmedPath = AttachmentPathHelper.NormalizeForFileSystem(relativePath);
+            if (string.IsNullOrEmpty(trimmedPath))
+            {
+                return;
+            }
             var root = GetWebRoot();
             var absolutePath = Path.Combine(root, trimmedPath.Replace('/', Path.DirectorySeparatorChar));
 

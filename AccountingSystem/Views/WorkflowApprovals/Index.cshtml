@@ -68,7 +68,7 @@ else
                             @foreach (var attachment in request.Attachments)
                             {
                                 <li>
-                                    <a href="@Url.Content(attachment.FilePath)" target="_blank" rel="noopener">
+                                    <a href="@Url.ContentFromAttachmentPath(attachment.FilePath)" target="_blank" rel="noopener">
                                         @attachment.FileName
                                     </a>
                                 </li>
