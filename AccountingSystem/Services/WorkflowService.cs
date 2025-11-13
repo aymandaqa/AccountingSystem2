@@ -42,7 +42,8 @@ namespace AccountingSystem.Services
                 .Include(d => d.Steps)
                 .Where(d => d.DocumentType == documentType && d.IsActive)
                 .OrderByDescending(d => d.BranchId.HasValue)
-                .ThenBy(d => d.Id)
+                .ThenByDescending(d => d.UpdatedAt ?? d.CreatedAt)
+                .ThenByDescending(d => d.Id)
                 .FirstOrDefaultAsync(d => !d.BranchId.HasValue || d.BranchId == branchId, cancellationToken);
         }
 
