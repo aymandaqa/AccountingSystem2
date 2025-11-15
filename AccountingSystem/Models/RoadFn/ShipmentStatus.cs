@@ -1,5 +1,33 @@
-﻿namespace Roadfn.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Roadfn.Models
 {
+    public partial class ShipmentFee
+    {
+        public int Id { get; set; }
+        public int? FromCityId { get; set; }
+        public int? ToCityId { get; set; }
+        public int? ToAreaId { get; set; }
+        public bool? IsBusiness { get; set; }
+        public int? UserId { get; set; }
+        public decimal? Fees { get; set; }
+        public int? UserBusinessId { get; set; }
+        public decimal? ReturnFees { get; set; }
+    }
+    public class AreaGeneralFee
+    {
+        [Key]
+        public int Id { get; set; }
+
+        public int? CityId { get; set; }
+
+        [Required]
+        public int AreaId { get; set; }
+
+        public decimal? Fees { get; set; }
+
+        public decimal? ReturnFees { get; set; }
+    }
     public partial class ShipmentStatus
     {
         public int Id { get; set; }

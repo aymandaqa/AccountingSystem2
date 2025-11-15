@@ -4,6 +4,18 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Roadfn.Models
 {
+    public partial class ShipmentsTrackingGeneratedCode
+    {
+        public long Id { get; set; }
+        public int YearId { get; set; }
+        public int MonthId { get; set; }
+        public int DayId { get; set; }
+        public int RecId { get; set; }
+        public int? UserBusId { get; set; }
+        public int? CodeNum { get; set; }
+        public string GeneratedCode { get; set; }
+    }
+
     [Table("BusinessPayShipmentPrice")]
     public class BusinessPayShipmentPrice
     {

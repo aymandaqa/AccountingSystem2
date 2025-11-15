@@ -127,10 +127,14 @@ namespace AccountingSystem.Data
 
         public virtual DbSet<BusinessRetStatementBulk> BusinessRetStatementBulk { get; set; }
         public virtual DbSet<Area> Areas { get; set; }
+        public virtual DbSet<BusinessClient> BusinessClient { get; set; }
 
         public virtual DbSet<ShipmentsType> ShipmentsTypes { get; set; }
+        public virtual DbSet<GetShipmentByClinteMobileView> GetShipmentByClinteMobileView { get; set; }
+        public virtual DbSet<ShipmentFee> ShipmentFees { get; set; }
 
         public virtual DbSet<Drife> Drives { get; set; }
+        public virtual DbSet<AreaGeneralFee> AreaGeneralFees { get; set; }
         public virtual DbSet<ShipmentStatus> ShipmentStatuses { get; set; }
 
         public virtual DbSet<ShipmentSummary> ShipmentSummary { get; set; }

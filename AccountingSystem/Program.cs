@@ -1,21 +1,22 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using AccountingSystem.Authorization;
 using AccountingSystem.Data;
+using AccountingSystem.Hubs;
 using AccountingSystem.Models;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.DependencyInjection;
-using Roadfn.Services;
+using AccountingSystem.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Roadfn.Services;
+using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using AccountingSystem.Services;
-using AccountingSystem.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +27,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddDbContext<RoadFnDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("RoadConnection")));
+builder.Services.AddAutoMapper(Assembly.GetExecutingAssembly());
 
 builder.Services.AddIdentity<User, IdentityRole>(options =>
 {
@@ -89,6 +91,7 @@ builder.Services.AddControllersWithViews().AddNewtonsoftJson(options =>
 
 });
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IShipmentService, ShipmentService>();
 
 builder.Services.AddScoped<UserResolverService>();
 builder.Services.AddScoped<ICurrencyService, CurrencyService>();
