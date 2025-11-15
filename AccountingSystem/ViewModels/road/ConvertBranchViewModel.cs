@@ -23,11 +23,7 @@ namespace Roadfn.ViewModel
         public List<ShipmentSummary> shipments { get; set; }
         public int ToBranch { get; set; }
     }
-    public class ConvertBranchRecViewModel2
-    {
-        public List<ConvertToBranchView> shipments { get; set; }
-        public int ToBranch { get; set; }
-    }
+
 
     public class ConvertBranchRecInViewModel
     {

@@ -1,3 +1,4 @@
+using AccountingSystem;
 using AccountingSystem.Authorization;
 using AccountingSystem.Data;
 using AccountingSystem.Hubs;
