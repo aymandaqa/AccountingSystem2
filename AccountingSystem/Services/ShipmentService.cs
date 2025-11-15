@@ -224,7 +224,7 @@ namespace Roadfn.Services
             //add  Return shipment
             if (createShipmentViewModel.IsReturn)
             {
-                var ex = await _context.ShipmentStatuses.Where(t => t.ExStart == true).FirstOrDefaultAsync();
+                var ex = await _context.ShipmentStatus.Where(t => t.ExStart == true).FirstOrDefaultAsync();
 
                 Shipment shipmentRet = new Shipment();
                 shipmentRet = shipment;
@@ -376,7 +376,7 @@ namespace Roadfn.Services
             //add  Return shipment
             if (createShipmentViewModel.IsReturn)
             {
-                var ex = await _context.ShipmentStatuses.Where(t => t.ExStart == true).FirstOrDefaultAsync();
+                var ex = await _context.ShipmentStatus.Where(t => t.ExStart == true).FirstOrDefaultAsync();
 
                 Shipment shipmentRet = new Shipment();
                 shipmentRet = shipment;
@@ -623,7 +623,7 @@ namespace Roadfn.Services
             await _context.SaveChangesAsync();
             if (createShipmentViewModel.IsReturn)
             {
-                var ex = await _context.ShipmentStatuses.Where(t => t.ExStart == true).FirstOrDefaultAsync();
+                var ex = await _context.ShipmentStatus.Where(t => t.ExStart == true).FirstOrDefaultAsync();
                 Shipment shipmentRet = new Shipment();
                 shipmentRet = shipment;
 
@@ -748,7 +748,7 @@ namespace Roadfn.Services
             await _context.SaveChangesAsync();
             if (createShipmentViewModel.IsReturn)
             {
-                var ex = await _context.ShipmentStatuses.Where(t => t.ExStart == true).FirstOrDefaultAsync();
+                var ex = await _context.ShipmentStatus.Where(t => t.ExStart == true).FirstOrDefaultAsync();
                 Shipment shipmentRet = new Shipment();
                 shipmentRet = shipment;
 

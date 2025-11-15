@@ -52,6 +52,12 @@
     </Style>
 </head>
 <body id="mains">
+
+    <ejs-toast id="toast_type" created="alertcreated" close="alertclose">
+        <e-toast-position X="Left" Y="Bottom"></e-toast-position>
+    </ejs-toast>
+
+
     @{
         var canBusinessStatementBulk = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.businessstatementbulk")).Succeeded;
         var canBusnissStatment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.busnissstatment")).Succeeded;
@@ -1649,7 +1655,21 @@
             });
         });
     </script>
-
+    <script>
+        var alertObj;
+        function alertcreated() {
+            alertObj = this;
+        }
+        function alertclose(e) {
+            if (e.toastContainer.childElementCount === 0) {
+            }
+        }
+        //function setZoom(zoomLevel) {
+        //    document.body.style.zoom = zoomLevel;
+        //}
+        //// Set zoom to 80%
+        //setZoom(0.9);
+    </script>
     <ejs-scripts></ejs-scripts>
 
 </body>

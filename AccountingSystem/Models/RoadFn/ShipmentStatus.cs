@@ -40,7 +40,7 @@ namespace Roadfn.Models
         public bool? IsNeedLocationOnly { get; set; }
         public bool? IsValidForUser { get; set; }
         public bool? IsValidForDriver { get; set; }
-        public bool? NeedToSellectShipmentAndEx { get; set; }
+        public bool? NeedToSellect_Shipment_And_EX { get; set; }
         public bool? IsReturn { get; set; }
         public bool? ExStart { get; set; }
         public bool? NeedAttention { get; set; }

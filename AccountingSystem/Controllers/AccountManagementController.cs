@@ -789,7 +789,7 @@ namespace Roadfn.Controllers
                                    join bus in _context.Users on sh.BusinessUserId equals bus.Id into busJoin
                                    from bus in busJoin.DefaultIfEmpty()
 
-                                   join st in _context.ShipmentStatuses on sh.Status equals st.Id into stJoin
+                                   join st in _context.ShipmentStatus on sh.Status equals st.Id into stJoin
                                    from st in stJoin.DefaultIfEmpty()
 
                                    join frmc in _context.Cities on sh.FromCityId equals frmc.Id into frmcJoin

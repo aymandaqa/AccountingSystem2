@@ -135,7 +135,7 @@ namespace AccountingSystem.Data
 
         public virtual DbSet<Drife> Drives { get; set; }
         public virtual DbSet<AreaGeneralFee> AreaGeneralFees { get; set; }
-        public virtual DbSet<ShipmentStatus> ShipmentStatuses { get; set; }
+        public virtual DbSet<ShipmentStatus> ShipmentStatus { get; set; }
 
         public virtual DbSet<ShipmentSummary> ShipmentSummary { get; set; }
         public virtual DbSet<InvoiceRetBusinessUserShipments> InvoiceRetBusinessUserShipments { get; set; }

@@ -524,4 +524,186 @@
         $('#total').text(shipTotSum - commSum - ExtraFees);
         $('#ExtraFees').text(ExtraFees);
     }
+       function UpdateShColorStatus(shId,statusid,shipmentNo) {
+
+
+           var ajax1 = new ej.base.Ajax({ url: '/Shipments/UpdateShColorStatus?Id='+shId+'&statusId='+statusid, data: '', type: 'POST', contentType: 'application/json' });
+                        ajax1.send();
+                        ajax1.onSuccess = function (data) {
+                             // alert('Shipment number copied to clipboard!');
+                                var toasts = [{ title: 'Success!', content: shipmentNo + ' تم تغير لون الشحنة الشحنه', cssClass: 'e-toast-success', icon: 'e-success toast-icons' }];
+                                alertObj.show(toasts[0]);
+                        };
+                        ajax1.onFailure = function (data) {
+                            swal('Error');
+                        };
+
+
+
+    }
+    function UpdateShExtraFees(shId) {
+        var ShipmentExtraFees=$("#ShipmentExtraFees").val();
+
+           var ajax1 = new ej.base.Ajax({ url: '/Shipments/UpdateShExtraFees?Id='+shId+'&ExtraFees='+ShipmentExtraFees, data: '', type: 'POST', contentType: 'application/json' });
+                        ajax1.send();
+                        ajax1.onSuccess = function (data) {
+                             // alert('Shipment number copied to clipboard!');
+                                var toasts = [{ title: 'Success!', content:   data, cssClass: 'e-toast-success', icon: 'e-success toast-icons' }];
+                                alertObj.show(toasts[0]);
+                        };
+                        ajax1.on = function (data) {
+                             var toasts = [
+                            { title: 'Error!', content: data, cssClass: 'e-toast-danger', icon: 'e-error toast-icons' }];
+                        alertObj.show(toasts[0]);
+                        };
+                        ajax1.onFailure = function (data) {
+
+                             var toasts = [
+                            { title: 'Error!', content: data, cssClass: 'e-toast-danger', icon: 'e-error toast-icons' }];
+                        alertObj.show(toasts[0]);
+
+                        };
+
+
+
+    }
+
+
+     function statechange() {
+        var city = document.getElementById('ClientCityID').ej2_instances[0];
+        var Area = document.getElementById('ClientAreaID').ej2_instances[0];
+        Area.enabled = true;
+        //Query the data source based on state DropDownList selected value
+        var tempQuery = new ej.data.Query().where('CityId', 'equal', city.value);
+        //set the framed query based on selected value in city DropDownList.
+        Area.query = tempQuery;
+        //clear the existing selection
+        Area.text = null;
+        //bind the property change to city DropDownList
+        Area.dataBind();
+        GetShipmentFee();
+    }
+    function GetTrkingNo() {
+        var SenderName = document.getElementById('SenderName').ej2_instances[0];
+        $.ajax({
+            type: "Get",
+            url: "/Shipments/GetShipmentsTrackingGeneratedCode?UserId=" + SenderName.value,
+            data: ''
+        }).done(function (data) {
+            var obj = JSON.parse(JSON.stringify(data));
+
+            $("#ShipmentTrackingNo").val(obj["GeneratedCode"]);
+        });
+        GetShipmentFee();
+    }
+    function GetAlert() {
+        var ShipmentTypeID = document.getElementById('ShipmentTypeID').ej2_instances[0];
+        $.ajax({
+            type: "Get",
+            url: "/Shipments/GetAlert?ShipmentTypeId=" + ShipmentTypeID.value,
+            data: ''
+        }).done(function (data) {
+            var obj = JSON.parse(JSON.stringify(data));
+            $("#Alert").val(obj["Alert"]);
+        });
+    }
+
+    function GetShipmentCount() {
+        var x = document.getElementById("ClientPhone");
+        var mobile = x.value;
+        $.ajax({
+            type: "Get",
+            url: "/Shipments/GetShipmentByClinteMobile?Mobile=" + mobile,
+            data: ''
+        }).done(function (data) {
+            var obj = JSON.parse(JSON.stringify(data));
+            $("#shipDoneCount1").text(obj.ShipmentsTypesClose);
+            $("#shipRetCount1").text(obj.ShipmentsTypesRet);
+        });
+    }
+    function GetShipmentFee() {
+        var ShipmentTotal = document.getElementById("ShipmentTotal");
+        var city = document.getElementById('ClientCityID').ej2_instances[0];
+        var SenderName = document.getElementById('SenderName').ej2_instances[0];
+        var ShipmentPrice = document.getElementById("ShipmentPrice");
+        var ShipmentFees = document.getElementById("ShipmentFees");
+        if (city.value == null) {
+            swal("الرجاء اختيار المدينة");
+            // swal("Here's a message!");
+            return;
+        }
+        if (SenderName.value == null) {
+            swal("الرجاء اختيار المرسل");
+            return;
+        }
+        $.ajax({
+            type: "Get",
+            url: "/Shipments/GetShipmentFee?UserId=" + SenderName.value + "&CityId=" + city.value,
+            data: ''
+        }).done(function (data) {
+            if (data == "NotFound") {
+                swal("لا يوجد تسعيرة شحن");
+                $("#ShipmentExtraFees").val("0");
+                $("#ShipmentFees").val("0");
+                $("#ShipmentExtraFeesq").val("1");
+                $("#rangeVal").text("1");
+                $("#ShipmentPrice").val("");
+            } else {
+                var obj = JSON.parse(JSON.stringify(data));
+                $("#ShipmentFees").val("0");
+                $("#ShipmentExtraFeesq").val("1");
+                $("#ShipmentExtraFees").val("0");
+                $("#rangeVal").text("1");
+                $("#ShipmentPrice").val("");
+
+                $("#ShipmentFees").val(obj.Fees);
+                $("#ShipmentPrice").val($("#ShipmentTotal").val() - obj.Fees);
+            }
+        });
+    }
+    function GetShipmentExtFee() {
+
+
+        var ShipmentFees = $("#ShipmentFees").val();
+        var ShipmentExtraFeesq = $("#ShipmentExtraFeesq").val();
+        var ShipmentTotal = $("#ShipmentTotal").val();
+        var total = ShipmentFees * ShipmentExtraFeesq;
+        total = total - ShipmentFees;
+        $("#ShipmentExtraFees").val(total);
+        ShipmentPrice = ShipmentTotal - ShipmentFees - parseFloat($("#ShipmentExtraFees").val());
+        $("#ShipmentPrice").val(ShipmentPrice);
+    }
+
+
+
+    function GetShipmentExtFee2() {
+        var ShipmentFees = $("#ShipmentFees").val();
+        var ShipmentTotal = $("#ShipmentTotal").val();
+        ShipmentPrice = ShipmentTotal - ShipmentFees - parseFloat($("#ShipmentExtraFees").val());
+        $("#ShipmentPrice").val(ShipmentPrice);
+        //$("#ShipmentTotal").val(parseFloat(ShipmentFees)+parseFloat(ShipmentPrice));
+    }
+    function updateshipment() {
+        GetShipmentExtFee2();
+        if ($("#updateShipmentForm").valid()) {
+            var data = $("#updateShipmentForm").serialize();
+            //console.log(data);
+            //alert(data);
+            $.ajax({
+                type: 'POST',
+                url: '/Shipments/update',
+                contentType: 'application/x-www-form-urlencoded; charset=UTF-8', // when we use .serialize() this generates the data in query string format. this needs the default contentType (default content type is: contentType: 'application/x-www-form-urlencoded; charset=UTF-8') so it is optional, you can remove it
+                data: data,
+                success: function (result) {
+                    swal(result, { icon: "success", });
+                    console.log(result);
+                },
+                error: function (data) {
+                    swal(data, { icon: "error", });
+                    console.log('Failed ');
+                }
+            })
+        }
+    }
+
 </script>

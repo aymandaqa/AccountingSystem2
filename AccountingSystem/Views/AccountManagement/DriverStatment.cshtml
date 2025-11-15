@@ -602,4 +602,50 @@
         $('#shipTotSum').text(shipTotSum);
         $('#total').text(shipTotSum - commSum);
     }
+
+
+        function UpdateShColorStatus(shId,statusid,shipmentNo) {
+
+
+           var ajax1 = new ej.base.Ajax({ url: '/Shipments/UpdateShColorStatus?Id='+shId+'&statusId='+statusid, data: '', type: 'POST', contentType: 'application/json' });
+                        ajax1.send();
+                        ajax1.onSuccess = function (data) {
+                             // alert('Shipment number copied to clipboard!');
+                                var toasts = [{ title: 'Success!', content: shipmentNo + ' تم تغير لون الشحنة الشحنه', cssClass: 'e-toast-success', icon: 'e-success toast-icons' }];
+                                alertObj.show(toasts[0]);
+                        };
+                        ajax1.onFailure = function (data) {
+                            swal('Error');
+                        };
+
+
+
+    }
+    function UpdateShExtraFees(shId) {
+        var ShipmentExtraFees=$("#ShipmentExtraFees").val();
+
+           var ajax1 = new ej.base.Ajax({ url: '/Shipments/UpdateShExtraFees?Id='+shId+'&ExtraFees='+ShipmentExtraFees, data: '', type: 'POST', contentType: 'application/json' });
+                        ajax1.send();
+                        ajax1.onSuccess = function (data) {
+                             // alert('Shipment number copied to clipboard!');
+                                var toasts = [{ title: 'Success!', content:   data, cssClass: 'e-toast-success', icon: 'e-success toast-icons' }];
+                                alertObj.show(toasts[0]);
+                        };
+                        ajax1.on = function (data) {
+                             var toasts = [
+                            { title: 'Error!', content: data, cssClass: 'e-toast-danger', icon: 'e-error toast-icons' }];
+                        alertObj.show(toasts[0]);
+                        };
+                        ajax1.onFailure = function (data) {
+
+                             var toasts = [
+                            { title: 'Error!', content: data, cssClass: 'e-toast-danger', icon: 'e-error toast-icons' }];
+                        alertObj.show(toasts[0]);
+
+                        };
+
+
+
+    }
+
 </script>
