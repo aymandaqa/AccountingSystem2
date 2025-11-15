@@ -1,4 +1,5 @@
 ﻿@using Newtonsoft.Json
+@using System.Collections.Generic
 
 @{
     var rtl = true;
@@ -97,6 +98,15 @@
         to {
             transform: rotate(360deg);
         }
+    }
+
+    #default_dialog.e-dialog .e-dlg-content {
+        padding: 0;
+        background-color: #f5f7fa;
+    }
+
+    #detailstab section.content {
+        margin: 0;
     }
 </style>
 
@@ -205,7 +215,7 @@
                                     <e-grid-column field="Id" headerText="Id" allowEditing="false" Visible="false" isPrimaryKey="true"></e-grid-column>
                                     <e-grid-column field="BusinessUserId" headerText="BusinessUserId" allowEditing="false" Visible="false"></e-grid-column>
                                     @*<e-grid-column field="CityCode" headerText="City Code" width="120"></e-grid-column>*@
-                                    <e-grid-column field="ShipmentTrackingNo" headerText="رقم التتبع" width="120"></e-grid-column>
+                                    <e-grid-column field="ShipmentTrackingNo" headerText="رقم التتبع" width="120" template="#ShipmentTrackingNo"></e-grid-column>
                                     <e-grid-column field="IUser" headerText="المدخل/المسوق" width="120"></e-grid-column>
                                     <e-grid-column field="ShipmentContains" headerText="محتويات الشحنة" width="120"></e-grid-column>
                                     <e-grid-column field="EntryDateTime" format="dd/MM/yyyy hh:mm" type="date" headerText="تاريخ الادخال" width="120"></e-grid-column>
@@ -232,7 +242,60 @@
     <div class="loading-text">جاري معالجة الدفع...</div>
 </div>
 
+@{
+    var defaultanimation = new Syncfusion.EJ2.Popups.DialogAnimationSettings { Effect = Syncfusion.EJ2.Popups.DialogEffect.Fade };
+    var resizeDirectionHandles = new List<string>() { "All" };
+}
+<ejs-dialog id="default_dialog"
+            allowDragging="false" isModal="true"
+            resizeHandles="resizeDirectionHandles"
+            enableResize="true" created="onCreated"
+            animationSettings="defaultanimation"
+            width="80%" target="#mains"
+            open="dialogOpen"
+            close="dialogClose"
+            showCloseIcon="true"
+            header="تفاصيل الشحنة">
+    <e-content-template>
+        <div>
+            <div id='detailstab'></div>
+        </div>
+    </e-content-template>
+
+</ejs-dialog>
+
+<script type="text/x-jsrender" id="ShipmentTrackingNo">
+    <div id="${ShipmentTrackingNo}" class="statustemp" style="color:#6610f2;font-weight: bold;" data-tracking="${ShipmentTrackingNo}" onclick='Shipdetails(${Id}, this)'>
+        <button class="btn btn-primary btn-sm" type="button">${ShipmentTrackingNo}</button>
+    </div>
+</script>
+
 <script>
+    function dialogClose() {
+    }
+
+    function dialogOpen() {
+    }
+
+    function onCreated() {
+        var dialogObj = document.getElementById("default_dialog").ej2_instances[0];
+        dialogObj.hide();
+    }
+
+    function Shipdetails(sss, el) {
+        dialogClose();
+        var dialogElement = document.getElementById("default_dialog");
+        var dialogObj = dialogElement.ej2_instances[0];
+        var trackingLabel = el && el.dataset ? el.dataset.tracking : (el && el.id ? el.id : el);
+        dialogObj.header = "تفاصيل الشحنة " + (trackingLabel || "");
+        dialogObj.show();
+        var ajax = new ej.base.Ajax('/Shipments/Update?Id=' + sss, 'GET', true);
+        ajax.send().then();
+        ajax.onSuccess = function (data) {
+            $("#detailstab").html(data);
+        };
+    }
+
     function onfiltering(e) {
         var query = new ej.data.Query();
         query = (e.text !== '') ? query.where('Name', 'contains', e.text, true) : query;

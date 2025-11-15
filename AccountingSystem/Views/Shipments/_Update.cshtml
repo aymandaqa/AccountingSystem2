@@ -3,6 +3,102 @@
 @using Roadfn.ViewModel
 @model UpdateShipmentViewModel
 <!-- Content Header (Page header) -->
+<style>
+    .shipment-update-wrapper .form-section {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 10px 30px rgba(15, 76, 92, 0.08);
+    }
+
+    .shipment-update-wrapper .section-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #0f4c5c;
+        margin-bottom: 1rem;
+    }
+
+        .shipment-update-wrapper .section-title i {
+            font-size: 1.25rem;
+            color: #1dbfc1;
+        }
+
+    .shipment-update-wrapper .field-col {
+        margin-bottom: 1rem;
+    }
+
+    .shipment-update-wrapper .stat-card {
+        background: #f6fbfb;
+        border: 1px solid rgba(29, 191, 193, 0.2);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+        .shipment-update-wrapper .stat-card .stat-label {
+            color: #0f4c5c;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .shipment-update-wrapper .stat-card .stat-value {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: #1d1d1d;
+        }
+
+    .shipment-update-wrapper .form-group label,
+    .shipment-update-wrapper label.form-label {
+        font-weight: 600;
+        color: #0f4c5c;
+    }
+
+    .shipment-update-wrapper .option-check {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        height: 100%;
+    }
+
+    .shipment-update-wrapper .divider {
+        border-top: 1px dashed #d1d5db;
+        margin: 1.5rem 0;
+    }
+
+    .shipment-update-footer {
+        border-top: 1px solid #e5e7eb;
+        background: transparent;
+        text-align: end;
+        padding: 1.25rem 1.5rem 1.5rem;
+    }
+
+        .shipment-update-footer #updateshipmentbtn {
+            min-width: 160px;
+            box-shadow: 0 6px 18px rgba(29, 191, 193, 0.25);
+        }
+
+    @media (max-width: 767.98px) {
+        .shipment-update-wrapper .form-section {
+            padding: 1.25rem;
+        }
+
+        .shipment-update-wrapper .section-title {
+            font-size: 1rem;
+        }
+    }
+</style>
 
 <section class="content">
     <div class="row">
@@ -12,280 +108,282 @@
                 <form class="form" method="post" id="updateShipmentForm">
                     @Html.AntiForgeryToken()
                     <input type="hidden" asp-for="ID" />
-                    <div class="box-body">
-                        <h4 class="box-title text-info mb-0"><i class="ti-location-arrow me-15"></i><i class="ti-user me-15"></i>  معلومات المرسل</h4>
-
-
-                        <hr class="my-15">
-                        <!--New Design-->
-
-                        <div class="row show-grid">
-                            <div class="col-xs-6 col-sm-4">
-                                <label>المرسل</label>
-                                <ejs-dropdownlist id="SenderName" readonly name="BusinessUserID" Query="new ej.data.Query()" filtering="onfiltering"
-                                                  allowFiltering="true" dataSource="@ViewBag.UsersBus" placeholder="المرسل" ejs-for="BusinessUserID">
-                                    <e-dropdownlist-fields text="Name" value="Id"></e-dropdownlist-fields>
-                                </ejs-dropdownlist>
+                    <div class="box-body shipment-update-wrapper">
+                        <div class="form-section">
+                            <div class="section-title">
+                                <i class="ti-location-arrow"></i>
+                                <i class="ti-user"></i>
+                                <span>معلومات المرسل</span>
                             </div>
-
-                            <div class="col-xs-6 col-sm-4" style="background:#e5d3ee">
-                                عدد مرات الاستلام : <label id="shipDoneCount1"></label>
-                            </div>
-                        </div>
-                        <br />
-
-                        <div class="row show-grid">
-                            <div class="col-xs-6 col-sm-4">
-
-                                <input type="text" asp-for="ShipmentTrackingNo" id="ShipmentTrackingNo" readonly="readonly" class="form-control">
-                                <span asp-validation-for="ShipmentTrackingNo" class="text-danger"></span>
-                            </div>
-                            <div class="col-xs-6 col-sm-4" style="background:#e5d3ee">
-                                عدد الطرود المرتجعة : <label id="shipRetCount1"></label>
-                            </div>
-                        </div>
-                        <br />
-
-                        <!--New Design-->
-
-                        <div class="row">
                             <div class="row">
-                                <h4 class="box-title text-info mb-0 mt-20"><i class="ti-face-smile me-15"></i> <i class="ti-control-skip-backward me-15"></i>  معلومات المستلم</h4>
-                                <div class="btn-group" style="
-    overflow: scroll;
-                                " role="group" aria-label="Basic example">
-
-                                    @foreach (var item in (List<ShipmentColorStatus>)ViewBag.ShipmentColorStatus)
-                                    {
-                                        <button type="button"
-                                                onclick="UpdateShColorStatus('@Model.ID','@item.Id','@Model.ShipmentTrackingNo')"
-                                                class="btn btn-secondary"
-                                                style="background-color: @item.StatusColor ; border-color:  @item.StatusColor ;">
-                                            @item.StatusName
-                                        </button>
-
-
-                                    }
-
-
-                                </div>
-
-                                <hr class="my-15">
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="form-group">
-                                            <label>اسم المستلم</label>
-                                            <input placeholder="اسم المستلم " type="text" asp-for="ClientName" class="form-control">
-                                            <span asp-validation-for="ClientName" class="text-danger"></span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="form-group">
-                                            <label>رقم المستلم 1</label>
-                                            <input placeholder="رقم المستلم 1" type="text" id="ClientPhone" asp-for="ClientPhone" class="form-control" onfocusout="GetShipmentCount()">
-                                            <span asp-validation-for="ClientPhone" class="text-danger"></span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="form-group">
-                                            <label> رقم المستلم 2</label>
-
-                                            <input placeholder="رقم المستلم 2" type="text" asp-for="ClientPhone2" class="form-control">
-                                            <span asp-validation-for="ClientPhone2" class="text-danger"></span>
-                                        </div>
+                                <div class="col-md-6 col-lg-4 field-col">
+                                    <div class="form-group">
+                                        <label>المرسل</label>
+                                        <ejs-dropdownlist id="SenderName" readonly name="BusinessUserID" Query="new ej.data.Query()" filtering="onfiltering"
+                                                          allowFiltering="true" dataSource="@ViewBag.UsersBus" placeholder="المرسل" ejs-for="BusinessUserID">
+                                            <e-dropdownlist-fields text="Name" value="Id"></e-dropdownlist-fields>
+                                        </ejs-dropdownlist>
                                     </div>
                                 </div>
-                                <hr class="my-15" />
-                                <div class="row">
-
-
-
-                                    <div class="col-md-2">
-                                        <div class="form-group">
-                                            <label>مدينة المستلم  </label>
-
-                                            <ejs-dropdownlist id="ClientCityID" name="ClientCityID" Query="new ej.data.Query()"
-                                                              allowFiltering="true" dataSource="@ViewBag.city" placeholder="مدينة المستلم" ejs-for="ClientCityID" change="statechange">
-                                                <e-dropdownlist-fields text="ArabicCityName" value="Id"></e-dropdownlist-fields>
-                                            </ejs-dropdownlist>
-                                            <span asp-validation-for="ClientCityID" class="text-danger"></span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <div class="form-group">
-                                            <label>منطقة المستلم  </label>
-
-                                            <ejs-dropdownlist id="ClientAreaID" name="ClientAreaID" Query="new ej.data.Query()"
-                                                              allowFiltering="true" dataSource="@ViewBag.area" placeholder="منطقة المستلم" ejs-for="ClientAreaID">
-                                                <e-dropdownlist-fields text="AreaName" value="Id"></e-dropdownlist-fields>
-                                            </ejs-dropdownlist>
-                                            <span asp-validation-for="ClientAreaID" class="text-danger"></span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-8">
-                                        <div class="form-group">
-                                            <label>العنوان التفصيلي - كتابةعنوان واضح للمستلم للتسجيل وتسريع العملية </label>
-
-                                            <input placeholder="العنوان التفصيلي - كتابةعنوان واضح للمستلم للتسجيل وتسريع العملية  " type="textarea" asp-for="ClientAddress" class="form-control">
-                                            <span asp-validation-for="ClientAddress" class="text-danger"></span>
-                                        </div>
+                                <div class="col-md-6 col-lg-4 field-col">
+                                    <div class="stat-card">
+                                        <span class="stat-label">عدد مرات الاستلام</span>
+                                        <span class="stat-value" id="shipDoneCount1"></span>
                                     </div>
                                 </div>
-                                <hr class="my-15" />
-
-                                <div class="row">
-                                    <div class="col-md-2">
-                                        <div class="form-group">
-                                            <label>نوع الشحنة </label>
-
-                                            <ejs-dropdownlist id="ShipmentTypeID" name="ShipmentTypeID" Query="new ej.data.Query()"
-                                                              allowFiltering="true" dataSource="@ViewBag.ShipmentType" placeholder="نوع الشحنة" ejs-for="ShipmentTypeID" change="GetAlert">
-                                                <e-dropdownlist-fields text="Description" value="Id"></e-dropdownlist-fields>
-                                            </ejs-dropdownlist>
-                                            <span asp-validation-for="ShipmentTypeID" class="text-danger"></span>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-3">
-                                        <div class="form-group">
-                                            <label>تنبيه </label>
-                                            <input placeholder="تنبيه" type="text" id="Alert" asp-for="Alert" class="form-control">
-                                            <span asp-validation-for="Alert" class="text-danger"></span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-5">
-                                        <div class="form-group">
-                                            <label>محتويات الشحنة </label>
-                                            <textarea rows="4" placeholder="محتويات الشحنة" type="text" id="Alert" asp-for="ShipmentContains" class="form-control"></textarea>
-                                            <span asp-validation-for="ShipmentContains" class="text-danger"></span>
-                                        </div>
+                                <div class="col-md-6 col-lg-4 field-col">
+                                    <div class="stat-card">
+                                        <span class="stat-label">عدد الطرود المرتجعة</span>
+                                        <span class="stat-value" id="shipRetCount1"></span>
                                     </div>
                                 </div>
-                                <div class="row">
-
-
-                                    <div class="col-md-2">
-                                        <div class="form-group">
-                                            <label>مبلغ التحصيل </label>
-                                            <input placeholder="مبلغ التحصيل" type="number" id="ShipmentTotal" asp-for="ShipmentTotal" class="form-control" onfocusout="GetShipmentFee()">
-                                            <span asp-validation-for="ShipmentTotal" class="text-danger"></span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-10">
-                                        <div class="form-group">
-                                            <input type="checkbox" asp-for="RetPay">
-                                            <label class="form-label" for="RetPay">استلام طرد من الزبون(بوليصة ارجاع)</label>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row">
-
-                                    <div class="col-md-1">
-                                        <div class="form-group">
-                                            <label>سعر المنتج</label>
-                                            <input placeholder="سعر المنتج " type="text" id="ShipmentPrice" asp-for="ShipmentPrice" readonly="readonly" class="form-control" placeholder="">
-                                            <span asp-validation-for="ShipmentPrice" class="text-danger"></span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-1">
-                                        <div class="form-group">
-                                            <label>رسوم الشحن</label>
-                                            <input placeholder="رسوم الشحن " type="text" id="ShipmentFees" asp-for="ShipmentFees" readonly="readonly" class="form-control">
-                                            <span asp-validation-for="ShipmentFees" class="text-danger"></span>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-1">
-                                        <div class="form-group">
-                                            <label>خصم من رسوم الشحن</label>
-                                            <input placeholder="خصم من رسوم الشحن" type="text" id="ShipmentFeesDiscount" asp-for="ShipmentFeesDiscount" class="form-control">
-                                            <span asp-validation-for="ShipmentFeesDiscount" class="text-danger"></span>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <div class="form-group">
-                                            <label>المبلغ المدفوع من رسوم الشحن</label>
-                                            <input placeholder="المبلغ المدفوع من رسوم الشحن " type="text" id="PaidAmountFromShipmentFees" asp-for="PaidAmountFromShipmentFees" class="form-control">
-                                            <span asp-validation-for="PaidAmountFromShipmentFees" class="text-danger"></span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="form-group">
-                                            <label>الكمية</label>
-                                            <input placeholder="الكمية" asp-for="rangeVal" type="text" class="form-control" data-val="true" id="ShipmentExtraFeesq" onchange="GetShipmentExtFee()">
-
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-2">
-                                        <div class="form-group">
-                                            <label>رسوم اضافية</label>
-                                            <input placeholder="رسوم اضافية" type="number" id="ShipmentExtraFees" onchange="GetShipmentExtFee2()" asp-for="ShipmentExtraFees" class="form-control" onfocusout="GetShipmentExtFee2()">
-                                            <span asp-validation-for="ShipmentExtraFees" class="text-danger"></span>
-                                        </div>
-                                        @if (Model.Status == 9)
-                                        {
-                                            <button type="button" id="updateshipmentbtn" onclick="UpdateShExtraFees(@Model.ID)" class="btn btn-default">
-                                                <i class="ti-save"></i>تعديل الرسوم الاضافية
-                                            </button>
-                                        }
-
-
-                                    </div>
-                                </div>
-                                <hr class="my-15">
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <div class="form-group">
-                                            <input type="checkbox" asp-for="IsReturn">
-                                            <label class="form-label" for="IsReturn">احضار بدل -الشركة غير مسؤولة عن محتوى الطرد البديل في حال كان مخالف للمواصفات المطلوبة</label>
-                                        </div>
-                                    </div>
-                                </div>
-                                <hr class="my-15">
-                                <div class="row">
-                                    <div class="col-md-3">
-                                        <div class="form-group">
-                                            <input type="checkbox" asp-for="IsForeign">
-                                            <label class="form-label" for="IsForeign">اجنبي</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="form-group">
-                                            <input type="checkbox" asp-for="DriverCanOpenShipment">
-                                            <label class="form-label" for="DriverCanOpenShipment" style="font-weight: bold; font-size: 18px;">  يسمح بفتح الشحنة من طرف السائق</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="form-group">
-                                            <label>عدد التوابع</label>
-                                            <input type="text" asp-for="ShipmentQuantity" class="form-control" placeholder="عدد الطرود">
-                                            <span asp-validation-for="ShipmentQuantity" class="text-danger"></span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <div class="form-group">
-                                            <label>ملاحظات</label>
-                                            <input type="text" asp-for="Remarks" class="form-control" placeholder="ملاحظات">
-                                            <span asp-validation-for="Remarks" class="text-danger"></span>
-                                            <label class="form-label">الشركة غير مسؤولة عن محتوى الطرد من التاحية القانونية ولا تتحمل أي مسؤولية من ناحية التلف أو الكسر </label>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!--./row-->
                             </div>
-                            <!-- /.box-body -->
-                            <div class="box-footer">
-                                <button type="button" id="updateshipmentbtn" onclick="updateshipment()" class="btn btn-default">
-                                    <i class="ti-save"></i>حفظ
-                                </button>
+                            <div class="row">
+                                <div class="col-md-6 col-lg-4 field-col">
+                                    <div class="form-group">
+                                        <label>رقم تتبع الشحنة</label>
+                                        <input type="text" asp-for="ShipmentTrackingNo" id="ShipmentTrackingNo" readonly="readonly" class="form-control">
+                                        <span asp-validation-for="ShipmentTrackingNo" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-lg-8 field-col">
+                                    <div class="form-group">
+                                        <label class="form-label">تحديث حالة الشحنة</label>
+                                        <div class="btn-group" role="group" aria-label="تغيير حالة الشحنة" style="display:flex; flex-wrap:wrap; gap:0.5rem; width:100%; overflow-x:auto;">
+                                            @foreach (var item in (List<ShipmentColorStatus>)ViewBag.ShipmentColorStatus)
+                                            {
+                                                <button type="button"
+                                                        onclick="UpdateShColorStatus('@Model.ID','@item.Id','@Model.ShipmentTrackingNo')"
+                                                        class="btn btn-secondary"
+                                                        style="background-color: @item.StatusColor; border-color: @item.StatusColor;">
+                                                    @item.StatusName
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <!-- /.box-body -->
+
+                        <div class="form-section">
+                            <div class="section-title">
+                                <i class="ti-face-smile"></i>
+                                <i class="ti-control-skip-backward"></i>
+                                <span>معلومات المستلم</span>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 field-col">
+                                    <div class="form-group">
+                                        <label>اسم المستلم</label>
+                                        <input placeholder="اسم المستلم" type="text" asp-for="ClientName" class="form-control">
+                                        <span asp-validation-for="ClientName" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 field-col">
+                                    <div class="form-group">
+                                        <label>رقم المستلم 1</label>
+                                        <input placeholder="رقم المستلم 1" type="text" id="ClientPhone" asp-for="ClientPhone" class="form-control" onfocusout="GetShipmentCount()">
+                                        <span asp-validation-for="ClientPhone" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 field-col">
+                                    <div class="form-group">
+                                        <label>رقم المستلم 2</label>
+                                        <input placeholder="رقم المستلم 2" type="text" asp-for="ClientPhone2" class="form-control">
+                                        <span asp-validation-for="ClientPhone2" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3 field-col">
+                                    <div class="form-group">
+                                        <label>مدينة المستلم</label>
+                                        <ejs-dropdownlist id="ClientCityID" name="ClientCityID" Query="new ej.data.Query()"
+                                                          allowFiltering="true" dataSource="@ViewBag.city" placeholder="مدينة المستلم" ejs-for="ClientCityID" change="statechange">
+                                            <e-dropdownlist-fields text="ArabicCityName" value="Id"></e-dropdownlist-fields>
+                                        </ejs-dropdownlist>
+                                        <span asp-validation-for="ClientCityID" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 field-col">
+                                    <div class="form-group">
+                                        <label>منطقة المستلم</label>
+                                        <ejs-dropdownlist id="ClientAreaID" name="ClientAreaID" Query="new ej.data.Query()"
+                                                          allowFiltering="true" dataSource="@ViewBag.area" placeholder="منطقة المستلم" ejs-for="ClientAreaID">
+                                            <e-dropdownlist-fields text="AreaName" value="Id"></e-dropdownlist-fields>
+                                        </ejs-dropdownlist>
+                                        <span asp-validation-for="ClientAreaID" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 field-col">
+                                    <div class="form-group">
+                                        <label>العنوان التفصيلي</label>
+                                        <textarea rows="3" placeholder="العنوان التفصيلي - كتابة عنوان واضح للمستلم للتسجيل وتسريع العملية" asp-for="ClientAddress" class="form-control"></textarea>
+                                        <span asp-validation-for="ClientAddress" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <div class="section-title">
+                                <i class="ti-clipboard"></i>
+                                <i class="ti-truck"></i>
+                                <span>تفاصيل الشحنة</span>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3 field-col">
+                                    <div class="form-group">
+                                        <label>نوع الشحنة</label>
+                                        <ejs-dropdownlist id="ShipmentTypeID" name="ShipmentTypeID" Query="new ej.data.Query()"
+                                                          allowFiltering="true" dataSource="@ViewBag.ShipmentType" placeholder="نوع الشحنة" ejs-for="ShipmentTypeID" change="GetAlert">
+                                            <e-dropdownlist-fields text="Description" value="Id"></e-dropdownlist-fields>
+                                        </ejs-dropdownlist>
+                                        <span asp-validation-for="ShipmentTypeID" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 field-col">
+                                    <div class="form-group">
+                                        <label>تنبيه</label>
+                                        <input placeholder="تنبيه" type="text" id="Alert" asp-for="Alert" class="form-control">
+                                        <span asp-validation-for="Alert" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 field-col">
+                                    <div class="form-group">
+                                        <label>محتويات الشحنة</label>
+                                        <textarea rows="4" placeholder="محتويات الشحنة" asp-for="ShipmentContains" class="form-control"></textarea>
+                                        <span asp-validation-for="ShipmentContains" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3 field-col">
+                                    <div class="form-group">
+                                        <label>مبلغ التحصيل</label>
+                                        <input placeholder="مبلغ التحصيل" type="number" id="ShipmentTotal" asp-for="ShipmentTotal" class="form-control" onfocusout="GetShipmentFee()">
+                                        <span asp-validation-for="ShipmentTotal" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-9 field-col">
+                                    <div class="option-check">
+                                        <input type="checkbox" asp-for="RetPay">
+                                        <label class="form-label" for="RetPay" style="margin:0;">استلام طرد من الزبون (بوليصة ارجاع)</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <div class="section-title">
+                                <i class="ti-money"></i>
+                                <i class="ti-bar-chart"></i>
+                                <span>الرسوم والعمولات</span>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3 field-col">
+                                    <div class="form-group">
+                                        <label>سعر المنتج</label>
+                                        <input placeholder="سعر المنتج" type="text" id="ShipmentPrice" asp-for="ShipmentPrice" readonly="readonly" class="form-control">
+                                        <span asp-validation-for="ShipmentPrice" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 field-col">
+                                    <div class="form-group">
+                                        <label>رسوم الشحن</label>
+                                        <input placeholder="رسوم الشحن" type="text" id="ShipmentFees" asp-for="ShipmentFees" readonly="readonly" class="form-control">
+                                        <span asp-validation-for="ShipmentFees" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 field-col">
+                                    <div class="form-group">
+                                        <label>خصم من رسوم الشحن</label>
+                                        <input placeholder="خصم من رسوم الشحن" type="text" id="ShipmentFeesDiscount" asp-for="ShipmentFeesDiscount" class="form-control">
+                                        <span asp-validation-for="ShipmentFeesDiscount" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 field-col">
+                                    <div class="form-group">
+                                        <label>المبلغ المدفوع من رسوم الشحن</label>
+                                        <input placeholder="المبلغ المدفوع من رسوم الشحن" type="text" id="PaidAmountFromShipmentFees" asp-for="PaidAmountFromShipmentFees" class="form-control">
+                                        <span asp-validation-for="PaidAmountFromShipmentFees" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3 field-col">
+                                    <div class="form-group">
+                                        <label>الكمية</label>
+                                        <input placeholder="الكمية" asp-for="rangeVal" type="text" class="form-control" data-val="true" id="ShipmentExtraFeesq" onchange="GetShipmentExtFee()">
+                                    </div>
+                                </div>
+                                <div class="col-md-3 field-col">
+                                    <div class="form-group">
+                                        <label>عدد التوابع</label>
+                                        <input type="text" asp-for="ShipmentQuantity" class="form-control" placeholder="عدد الطرود">
+                                        <span asp-validation-for="ShipmentQuantity" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 field-col">
+                                    <div class="form-group">
+                                        <label>رسوم إضافية</label>
+                                        <input placeholder="رسوم إضافية" type="number" id="ShipmentExtraFees" onchange="GetShipmentExtFee2()" asp-for="ShipmentExtraFees" class="form-control" onfocusout="GetShipmentExtFee2()">
+                                        <span asp-validation-for="ShipmentExtraFees" class="text-danger"></span>
+                                    </div>
+                                    @if (Model.Status == 9)
+                                    {
+                                        <button type="button" id="updateshipmentbtn" onclick="UpdateShExtraFees(@Model.ID)" class="btn btn-default" style="margin-top:0.5rem; width:100%;">
+                                            <i class="ti-save"></i>تعديل الرسوم الاضافية
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <div class="section-title">
+                                <i class="ti-settings"></i>
+                                <i class="ti-info-alt"></i>
+                                <span>خيارات إضافية</span>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 col-lg-4 field-col">
+                                    <div class="option-check">
+                                        <input type="checkbox" asp-for="IsReturn">
+                                        <label class="form-label" for="IsReturn" style="margin:0;">احضار بدل - الشركة غير مسؤولة عن محتوى الطرد البديل في حال كان مخالفاً للمواصفات المطلوبة</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-lg-4 field-col">
+                                    <div class="option-check">
+                                        <input type="checkbox" asp-for="IsForeign">
+                                        <label class="form-label" for="IsForeign" style="margin:0;">أجنبي</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-lg-4 field-col">
+                                    <div class="option-check">
+                                        <input type="checkbox" asp-for="DriverCanOpenShipment">
+                                        <label class="form-label" for="DriverCanOpenShipment" style="margin:0; font-weight:bold; font-size:18px;">يسمح بفتح الشحنة من طرف السائق</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="divider"></div>
+                            <div class="row">
+                                <div class="col-12 field-col">
+                                    <div class="form-group">
+                                        <label>ملاحظات</label>
+                                        <textarea rows="2" asp-for="Remarks" class="form-control" placeholder="ملاحظات"></textarea>
+                                        <span asp-validation-for="Remarks" class="text-danger"></span>
+                                        <label class="form-label" style="font-weight:400;">الشركة غير مسؤولة عن محتوى الطرد من الناحية القانونية ولا تتحمل أي مسؤولية من ناحية التلف أو الكسر.</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="shipment-update-footer">
+                            <button type="button" id="updateshipmentbtn" onclick="updateshipment()" class="btn btn-default">
+                                <i class="ti-save"></i>حفظ
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>

@@ -27,6 +27,15 @@
     #actionsToolbar .btn {
         min-width: 120px;
     }
+
+    #default_dialog.e-dialog .e-dlg-content {
+        padding: 0;
+        background-color: #f5f7fa;
+    }
+
+    #detailstab section.content {
+        margin: 0;
+    }
 </style>
 
 <div id="loadingOverlay" class="loading-overlay d-none" aria-live="polite" aria-busy="true">
@@ -225,9 +234,8 @@
 </ejs-dialog>
 
 <script type="text/x-jsrender" id="ShipmentTrackingNo">
-    <div id="${ShipmentTrackingNo}" class="statustemp" style="color:#6610f2;font-weight: bold;" onclick='Shipdetails(${Id},${ShipmentTrackingNo})'>
-
-          <button class="btn btn-primary btn-sm" id="reload">   ${ShipmentTrackingNo}</button>
+    <div id="${ShipmentTrackingNo}" class="statustemp" style="color:#6610f2;font-weight: bold;" data-tracking="${ShipmentTrackingNo}" onclick='Shipdetails(${Id}, this)'>
+        <button class="btn btn-primary btn-sm" type="button">${ShipmentTrackingNo}</button>
     </div>
 </script>
 
@@ -250,8 +258,8 @@
 
         dialogClose();
         var dialogObj = document.getElementById("default_dialog");
-
-        dialogObj.ej2_instances[0].header = "تفاصيل الشحنة " + tr.id;
+        var trackingLabel = tr && tr.dataset ? tr.dataset.tracking : (tr && tr.id ? tr.id : tr);
+        dialogObj.ej2_instances[0].header = "تفاصيل الشحنة " + (trackingLabel || "");
         dialogObj.ej2_instances[0].show();
         var ajax = new ej.base.Ajax('/Shipments/Update?Id=' + sss, 'GET', true);
         ajax.send().then();
