@@ -51,7 +51,7 @@
         }
     </Style>
 </head>
-<body>
+<body id="mains">
     @{
         var canBusinessStatementBulk = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.businessstatementbulk")).Succeeded;
         var canBusnissStatment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.busnissstatment")).Succeeded;
