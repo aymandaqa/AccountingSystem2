@@ -1,5 +1,6 @@
 @using System.Globalization
 @using Microsoft.AspNetCore.Authorization
+@using AccountingSystem.Models
 @model AccountingSystem.ViewModels.Dashboard.CashPerformanceDashboardViewModel
 @inject IAuthorizationService AuthorizationService
 
@@ -7,6 +8,10 @@
     ViewData["Title"] = "لوحة التحكم";
 
     var canWorkflowDefinitionsManage = (await AuthorizationService.AuthorizeAsync(User, "dashboard.companyperformance")).Succeeded;
+    var canManageTransfers = (await AuthorizationService.AuthorizeAsync(User, "transfers.manage")).Succeeded;
+    var canApproveTransfers = (await AuthorizationService.AuthorizeAsync(User, "transfers.approve")).Succeeded;
+    var canCreateTransfers = (await AuthorizationService.AuthorizeAsync(User, "transfers.create")).Succeeded;
+    var transferReturnUrl = Url.Action("Index", "Dashboard");
 }
 
 <div class="container-fluid py-4">
@@ -263,6 +268,90 @@
                                                             </form>
                                                         </div>
                                                     </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-1">
+        <div class="col-12">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <h5 class="card-title mb-1">الحوالات المعلقة</h5>
+                            <div class="text-muted small">إدارة الحوالات التي بانتظار الاستلام أو المراجعة.</div>
+                        </div>
+                        <span class="badge bg-warning text-dark rounded-pill">@Model.PendingTransfers.Count()</span>
+                    </div>
+
+                    @if (!Model.PendingTransfers.Any())
+                    {
+                        <div class="alert alert-info mb-0">لا توجد حوالات معلقة حالياً.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">المرسل</th>
+                                        <th scope="col">المستلم</th>
+                                        <th scope="col">الفروع</th>
+                                        <th scope="col" class="text-end">المبلغ</th>
+                                        <th scope="col">تاريخ الإنشاء</th>
+                                        <th scope="col" class="text-end">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var transfer in Model.PendingTransfers)
+                                    {
+                                        var canApprove = canManageTransfers || (canApproveTransfers && transfer.ReceiverId == Model.CurrentUserId);
+                                        var canEdit = canManageTransfers || (canCreateTransfers && transfer.SenderId == Model.CurrentUserId);
+                                        var approvePermission = canManageTransfers ? "transfers.manage" : "transfers.approve";
+                                        var editPermission = canManageTransfers ? "transfers.manage" : "transfers.create";
+
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold">@(transfer.Sender?.FullName ?? transfer.SenderId)</div>
+                                                <div class="text-muted small">@(transfer.FromBranch?.NameAr ?? "-")</div>
+                                            </td>
+                                            <td>
+                                                <div class="fw-semibold">@(transfer.Receiver?.FullName ?? transfer.ReceiverId)</div>
+                                                <div class="text-muted small">@(transfer.ToBranch?.NameAr ?? "-")</div>
+                                            </td>
+                                            <td>
+                                                <div class="small">@(transfer.FromBranch?.NameAr ?? "-")</div>
+                                                <div class="text-muted small"><i class="fa fa-arrow-down mx-1"></i>@(transfer.ToBranch?.NameAr ?? "-")</div>
+                                            </td>
+                                            <td class="text-end">@transfer.Amount.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                            <td class="text-nowrap">@transfer.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td class="text-end">
+                                                <div class="d-flex flex-wrap gap-2 justify-content-end">
+                                                    @if (canApprove)
+                                                    {
+                                                        <a class="btn btn-success btn-sm" asp-controller="Transfers" asp-action="Approve" asp-route-id="@transfer.Id" asp-route-accept="true" asp-route-returnUrl="@transferReturnUrl" asp-require-permission="@approvePermission">
+                                                            <i class="fa fa-check ms-1"></i> استلام
+                                                        </a>
+                                                        <a class="btn btn-outline-danger btn-sm" asp-controller="Transfers" asp-action="Approve" asp-route-id="@transfer.Id" asp-route-accept="false" asp-route-returnUrl="@transferReturnUrl" asp-require-permission="@approvePermission">
+                                                            <i class="fa fa-times ms-1"></i> رفض
+                                                        </a>
+                                                    }
+
+                                                    @if (canEdit)
+                                                    {
+                                                        <a class="btn btn-outline-primary btn-sm" asp-controller="Transfers" asp-action="Edit" asp-route-id="@transfer.Id" asp-route-returnUrl="@transferReturnUrl" asp-require-permission="@editPermission">
+                                                            <i class="fa fa-pen ms-1"></i> تعديل
+                                                        </a>
+                                                    }
                                                 </div>
                                             </td>
                                         </tr>

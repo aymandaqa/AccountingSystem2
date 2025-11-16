@@ -15,6 +15,7 @@ using AccountingSystem.Models.Workflows;
 using AccountingSystem.ViewModels.Workflows;
 using AccountingSystem.Services;
 using AccountingSystem.Models;
+using Microsoft.AspNetCore.Identity;
 
 namespace AccountingSystem.Controllers
 {
@@ -25,13 +26,15 @@ namespace AccountingSystem.Controllers
         private readonly ILogger<DashboardController> _logger;
         private readonly IWorkflowApprovalViewModelFactory _approvalViewModelFactory;
         private readonly ICurrencyService _currencyService;
+        private readonly UserManager<User> _userManager;
 
-        public DashboardController(ApplicationDbContext context, ILogger<DashboardController> logger, IWorkflowApprovalViewModelFactory approvalViewModelFactory, ICurrencyService currencyService)
+        public DashboardController(ApplicationDbContext context, ILogger<DashboardController> logger, IWorkflowApprovalViewModelFactory approvalViewModelFactory, ICurrencyService currencyService, UserManager<User> userManager)
         {
             _context = context;
             _logger = logger;
             _approvalViewModelFactory = approvalViewModelFactory;
             _currencyService = currencyService;
+            _userManager = userManager;
         }
 
         [Authorize]
@@ -47,6 +50,9 @@ namespace AccountingSystem.Controllers
                 var pendingApprovals = string.IsNullOrWhiteSpace(userId)
                     ? Array.Empty<WorkflowApprovalViewModel>()
                     : await _approvalViewModelFactory.BuildPendingApprovalsAsync(userId);
+                var pendingTransfers = string.IsNullOrWhiteSpace(userId)
+                    ? Array.Empty<PaymentTransfer>()
+                    : await LoadPendingTransfersForUserAsync(userId);
                 var dashboardAccounts = await LoadDashboardAccountTreeAsync();
 
                 var viewModel = new CashPerformanceDashboardViewModel
@@ -54,6 +60,8 @@ namespace AccountingSystem.Controllers
                     Records = records,
                     MyPendingRequests = myPendingRequests,
                     PendingApprovals = pendingApprovals,
+                    PendingTransfers = pendingTransfers,
+                    CurrentUserId = userId,
                     TotalCustomerDuesOnRoad = records.Sum(r => r.CustomerDuesOnRoad),
                     TotalCashWithDriverOnRoad = records.Sum(r => r.CashWithDriverOnRoad),
                     TotalCustomerDues = records.Sum(r => r.CustomerDues),
@@ -81,6 +89,42 @@ namespace AccountingSystem.Controllers
                 .ToListAsync();
 
             return records;
+        }
+
+        private async Task<IReadOnlyList<PaymentTransfer>> LoadPendingTransfersForUserAsync(string userId)
+        {
+            var user = await _userManager.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+            {
+                return Array.Empty<PaymentTransfer>();
+            }
+
+            var query = _context.PaymentTransfers
+                .AsNoTracking()
+                .Include(t => t.Sender)
+                .Include(t => t.Receiver)
+                .Include(t => t.FromBranch)
+                .Include(t => t.ToBranch)
+                .Where(t => t.Status == TransferStatus.Pending);
+
+            if (user.PaymentBranchId.HasValue)
+            {
+                var branchId = user.PaymentBranchId.Value;
+                query = query.Where(t =>
+                    (t.FromBranchId.HasValue && t.FromBranchId.Value == branchId) ||
+                    (t.ToBranchId.HasValue && t.ToBranchId.Value == branchId));
+            }
+            else
+            {
+                query = query.Where(t => t.SenderId == userId || t.ReceiverId == userId);
+            }
+
+            return await query
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
         }
 
         private async Task<(List<AccountTreeNodeViewModel> Nodes, string BaseCurrencyCode, string ParentAccountName)> LoadDashboardAccountTreeAsync()

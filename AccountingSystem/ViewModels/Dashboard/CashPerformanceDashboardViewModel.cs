@@ -3,6 +3,7 @@ using System.Linq;
 using AccountingSystem.Models.Reports;
 using AccountingSystem.ViewModels;
 using AccountingSystem.ViewModels.Workflows;
+using AccountingSystem.Models;
 
 namespace AccountingSystem.ViewModels.Dashboard
 {
@@ -13,6 +14,8 @@ namespace AccountingSystem.ViewModels.Dashboard
         public IReadOnlyList<PendingWorkflowRequestViewModel> MyPendingRequests { get; set; } = new List<PendingWorkflowRequestViewModel>();
 
         public IReadOnlyList<WorkflowApprovalViewModel> PendingApprovals { get; set; } = new List<WorkflowApprovalViewModel>();
+
+        public IReadOnlyList<PaymentTransfer> PendingTransfers { get; set; } = new List<PaymentTransfer>();
 
         public decimal TotalCustomerDuesOnRoad { get; set; }
 
@@ -33,5 +36,9 @@ namespace AccountingSystem.ViewModels.Dashboard
         public bool HasPendingApprovals => PendingApprovals.Any();
 
         public bool HasDashboardAccounts => DashboardAccountTree.Any();
+
+        public bool HasPendingTransfers => PendingTransfers.Any();
+
+        public string CurrentUserId { get; set; } = string.Empty;
     }
 }
