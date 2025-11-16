@@ -453,7 +453,15 @@
 
                 const typeIdValue = getProperty(item, 'deductionTypeId', 'DeductionTypeId');
                 const typeId = typeof typeIdValue === 'number' ? typeIdValue : parseInt(typeIdValue ?? '', 10);
-                if (Number.isNaN(typeId) || typeId <= 0) {
+                const loanIdValue = getProperty(item, 'employeeLoanInstallmentId', 'EmployeeLoanInstallmentId', 'loanInstallmentId');
+                const loanInstallmentId = typeof loanIdValue === 'number' ? loanIdValue : parseInt(loanIdValue ?? '', 10);
+                const accountIdValue = getProperty(item, 'accountId', 'AccountId');
+                const accountId = typeof accountIdValue === 'number' ? accountIdValue : parseInt(accountIdValue ?? '', 10);
+
+                const hasLoan = Number.isFinite(loanInstallmentId) && loanInstallmentId > 0;
+                const hasType = Number.isFinite(typeId) && typeId > 0;
+
+                if (!hasLoan && !hasType) {
                     return null;
                 }
 
@@ -464,8 +472,8 @@
                 }
 
                 const descriptionValue = getProperty(item, 'description', 'Description') ?? '';
-                const typeInfo = findDeductionType(typeId);
-                const typeName = getProperty(item, 'type', 'Type') ?? getProperty(typeInfo, 'name', 'Name') ?? '';
+                const typeInfo = hasType ? findDeductionType(typeId) : null;
+                const typeName = getProperty(item, 'type', 'Type') ?? getProperty(typeInfo, 'name', 'Name') ?? (hasLoan ? 'قسط قرض' : '');
 
                 let accountName = getProperty(item, 'accountName', 'AccountName');
                 if (!accountName && typeInfo) {
@@ -476,7 +484,9 @@
                 }
 
                 return {
-                    deductionTypeId: typeId,
+                    deductionTypeId: hasType ? typeId : null,
+                    employeeLoanInstallmentId: hasLoan ? loanInstallmentId : null,
+                    accountId: Number.isFinite(accountId) && accountId > 0 ? accountId : null,
                     type: typeName || null,
                     description: descriptionValue ? descriptionValue : null,
                     amount: Number(amount.toFixed(2)),
@@ -657,26 +667,53 @@
                 const row = document.createElement('tr');
                 const typeIdValue = getProperty(data, 'deductionTypeId', 'DeductionTypeId');
                 const typeId = typeof typeIdValue === 'number' ? typeIdValue : parseInt(typeIdValue ?? '', 10);
+                const loanIdValue = getProperty(data, 'employeeLoanInstallmentId', 'EmployeeLoanInstallmentId', 'loanInstallmentId');
+                const loanInstallmentId = typeof loanIdValue === 'number' ? loanIdValue : parseInt(loanIdValue ?? '', 10);
+                const accountIdValue = getProperty(data, 'accountId', 'AccountId');
+                const accountId = typeof accountIdValue === 'number' ? accountIdValue : parseInt(accountIdValue ?? '', 10);
                 const description = data?.description ?? '';
                 const amountValue = Number(data?.amount ?? 0);
                 const amount = Number.isFinite(amountValue) ? amountValue.toFixed(2) : '0.00';
                 const accountName = getProperty(data, 'accountName', 'AccountName') ?? '';
                 const options = buildDeductionTypeOptions(typeId);
+                const isLoan = Number.isFinite(loanInstallmentId) && loanInstallmentId > 0;
+                row.dataset.loanInstallmentId = isLoan ? String(loanInstallmentId) : '';
+                row.dataset.accountId = Number.isFinite(accountId) ? String(accountId) : '';
+                row.dataset.typeName = getProperty(data, 'type', 'Type') ?? '';
 
-                row.innerHTML = `
-                    <td>
-                        <select class="form-select form-select-sm deduction-type">
-                            ${options}
-                        </select>
-                        <div class="form-text text-muted deduction-account">${escapeHtml(accountName)}</div>
-                    </td>
-                    <td><input type="text" class="form-control form-control-sm deduction-description" maxlength="250" value="${escapeHtml(description)}" /></td>
-                    <td class="text-end"><input type="number" class="form-control form-control-sm deduction-amount" min="0" step="0.01" value="${amount}" /></td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-outline-danger btn-sm remove-deduction" title="حذف الخصم">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>`;
+                if (isLoan) {
+                    const typeLabel = row.dataset.typeName || 'قسط قرض';
+                    row.innerHTML = `
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="fw-semibold">${escapeHtml(typeLabel)}</div>
+                                <span class="badge bg-info text-dark">قرض</span>
+                            </div>
+                            <div class="form-text text-muted deduction-account">${escapeHtml(accountName)}</div>
+                        </td>
+                        <td><input type="text" class="form-control form-control-sm deduction-description" maxlength="250" value="${escapeHtml(description)}" readonly /></td>
+                        <td class="text-end"><input type="number" class="form-control form-control-sm deduction-amount" min="0" step="0.01" value="${amount}" readonly /></td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="لا يمكن حذف قسط القرض">
+                                <i class="fas fa-lock"></i>
+                            </button>
+                        </td>`;
+                } else {
+                    row.innerHTML = `
+                        <td>
+                            <select class="form-select form-select-sm deduction-type">
+                                ${options}
+                            </select>
+                            <div class="form-text text-muted deduction-account">${escapeHtml(accountName)}</div>
+                        </td>
+                        <td><input type="text" class="form-control form-control-sm deduction-description" maxlength="250" value="${escapeHtml(description)}" /></td>
+                        <td class="text-end"><input type="number" class="form-control form-control-sm deduction-amount" min="0" step="0.01" value="${amount}" /></td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-outline-danger btn-sm remove-deduction" title="حذف الخصم">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>`;
+                }
 
                 const removeBtn = row.querySelector('.remove-deduction');
                 if (removeBtn) {
@@ -769,12 +806,10 @@
                         const descriptionInput = row.querySelector('.deduction-description');
                         const amountInput = row.querySelector('.deduction-amount');
 
-                        const typeValue = typeSelect?.value ?? '';
-                        const typeId = parseInt(typeValue, 10);
-                        if (!typeSelect || Number.isNaN(typeId) || typeId <= 0) {
-                            hasMissingType = true;
-                            return null;
-                        }
+                        const loanValue = row.dataset.loanInstallmentId ?? '';
+                        const loanId = parseInt(loanValue, 10);
+                        const accountIdValue = row.dataset.accountId ?? '';
+                        const accountId = parseInt(accountIdValue, 10);
 
                         let amount = parseFloat(amountInput?.value ?? '0');
                         if (!Number.isFinite(amount) || amount < 0) {
@@ -782,6 +817,28 @@
                         }
                         amount = Number(amount.toFixed(2));
                         if (amount <= 0) {
+                            return null;
+                        }
+
+                        if (Number.isFinite(loanId) && loanId > 0) {
+                            const typeName = row.dataset.typeName ?? 'قسط قرض';
+                            const description = descriptionInput?.value?.trim() ?? '';
+                            const accountName = row.querySelector('.deduction-account')?.textContent ?? null;
+
+                            return {
+                                employeeLoanInstallmentId: loanId,
+                                accountId: Number.isFinite(accountId) ? accountId : null,
+                                type: typeName || null,
+                                description: description || null,
+                                amount,
+                                accountName: accountName?.trim() || null
+                            };
+                        }
+
+                        const typeValue = typeSelect?.value ?? '';
+                        const typeId = parseInt(typeValue, 10);
+                        if (!typeSelect || Number.isNaN(typeId) || typeId <= 0) {
+                            hasMissingType = true;
                             return null;
                         }
 
@@ -1379,6 +1436,8 @@
                         .filter(item => item)
                         .map(item => ({
                             deductionTypeId: item.deductionTypeId,
+                            employeeLoanInstallmentId: item.employeeLoanInstallmentId,
+                            accountId: item.accountId,
                             type: item.type ? item.type.toString().trim() : null,
                             description: item.description ? item.description.toString().trim() : null,
                             amount: Number(Number(item.amount ?? 0).toFixed(2))

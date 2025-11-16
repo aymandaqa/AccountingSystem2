@@ -150,6 +150,54 @@ namespace AccountingSystem.Controllers
                 })
                 .ToListAsync();
 
+            if (hasPeriod && employees.Count > 0)
+            {
+                var employeeIds = employees.Select(e => e.Id).ToList();
+
+                var dueInstallments = await _context.EmployeeLoanInstallments
+                    .AsNoTracking()
+                    .Include(i => i.Loan)
+                        .ThenInclude(l => l.Account)
+                    .Where(i => i.Status == LoanInstallmentStatus.Pending
+                        && i.DueDate.Year == targetYear
+                        && i.DueDate.Month == targetMonth
+                        && i.Loan.IsActive
+                        && employeeIds.Contains(i.Loan.EmployeeId))
+                    .ToListAsync();
+
+                var installmentLookup = dueInstallments
+                    .GroupBy(i => i.Loan.EmployeeId)
+                    .ToDictionary(g => g.Key, g => g.OrderBy(i => i.DueDate).ToList());
+
+                foreach (var employee in employees)
+                {
+                    if (!installmentLookup.TryGetValue(employee.Id, out var installments))
+                    {
+                        continue;
+                    }
+
+                    foreach (var installment in installments)
+                    {
+                        var loan = installment.Loan;
+                        employee.Deductions.Add(new PayrollEmployeeDeductionSelection
+                        {
+                            DeductionTypeId = null,
+                            Type = $"قسط قرض #{loan.Id}",
+                            Description = string.IsNullOrWhiteSpace(loan.Notes)
+                                ? $"قسط مستحق بتاريخ {installment.DueDate:dd/MM/yyyy}"
+                                : loan.Notes,
+                            Amount = installment.Amount,
+                            AccountName = loan.Account != null
+                                ? $"{loan.Account.Code} - {loan.Account.NameAr ?? loan.Account.NameEn ?? string.Empty}"
+                                : null,
+                            AccountCode = loan.Account?.Code,
+                            AccountId = loan.AccountId,
+                            EmployeeLoanInstallmentId = installment.Id
+                        });
+                    }
+                }
+            }
+
             return Json(employees);
         }
 
@@ -222,7 +270,11 @@ namespace AccountingSystem.Controllers
                                 : null,
                             Amount = SanitizeAmount(d.Amount),
                             Type = TrimAndTruncate(d.Type, 100),
-                            Description = TrimAndTruncate(d.Description, 250)
+                            Description = TrimAndTruncate(d.Description, 250),
+                            AccountId = d.AccountId.HasValue && d.AccountId.Value > 0 ? d.AccountId : null,
+                            EmployeeLoanInstallmentId = d.EmployeeLoanInstallmentId.HasValue && d.EmployeeLoanInstallmentId.Value > 0
+                                ? d.EmployeeLoanInstallmentId
+                                : null
                         })
                         .Where(d => d.Amount > 0)
                         .Take(20)
@@ -260,13 +312,20 @@ namespace AccountingSystem.Controllers
                 return BadRequest(new { message = "الرجاء اختيار موظف واحد على الأقل" });
             }
 
-            if (requestedEmployees.SelectMany(e => e.Deductions).Any(d => !d.DeductionTypeId.HasValue))
+            if (requestedEmployees.SelectMany(e => e.Deductions).Any(d => !d.DeductionTypeId.HasValue && !d.EmployeeLoanInstallmentId.HasValue))
             {
-                return BadRequest(new { message = "يجب اختيار نوع خصم صالح لكل خصم." });
+                return BadRequest(new { message = "يجب اختيار نوع خصم أو قسط قرض صالح لكل خصم." });
+            }
+
+            if (requestedEmployees.SelectMany(e => e.Deductions)
+                .Any(d => d.EmployeeLoanInstallmentId.HasValue && (!d.AccountId.HasValue || d.AccountId.Value <= 0)))
+            {
+                return BadRequest(new { message = "بعض أقساط القروض تفتقد إلى حساب مرتبط." });
             }
 
             var requestedTypeIds = requestedEmployees
                 .SelectMany(e => e.Deductions)
+                .Where(d => d.DeductionTypeId.HasValue)
                 .Select(d => d.DeductionTypeId!.Value)
                 .Distinct()
                 .ToList();
@@ -363,6 +422,34 @@ namespace AccountingSystem.Controllers
                 .Include(e => e.Account)
                 .Where(e => employeeIds.Contains(e.Id) && e.IsActive)
                 .ToListAsync();
+
+            var loanInstallments = await _context.EmployeeLoanInstallments
+                .Include(i => i.Loan)
+                    .ThenInclude(l => l.Account)
+                .Where(i => employeeIds.Contains(i.Loan.EmployeeId)
+                    && i.Status == LoanInstallmentStatus.Pending
+                    && i.Loan.IsActive
+                    && i.DueDate.Year == request.Year
+                    && i.DueDate.Month == request.Month)
+                .ToListAsync();
+
+            var loanInstallmentMap = loanInstallments.ToDictionary(i => i.Id);
+
+            var requestedLoanIds = requestedEmployees
+                .SelectMany(e => e.Deductions)
+                .Where(d => d.EmployeeLoanInstallmentId.HasValue)
+                .Select(d => d.EmployeeLoanInstallmentId!.Value)
+                .Distinct()
+                .ToList();
+
+            if (requestedLoanIds.Any(id => !loanInstallmentMap.ContainsKey(id)))
+            {
+                return BadRequest(new { message = "بعض أقساط القروض المحددة غير متاحة لهذه الفترة." });
+            }
+
+            var loanInstallmentLookup = loanInstallments
+                .GroupBy(i => i.Loan.EmployeeId)
+                .ToDictionary(g => g.Key, g => g.OrderBy(i => i.DueDate).ToList());
 
             if (employees.Count == 0)
             {
@@ -543,10 +630,49 @@ namespace AccountingSystem.Controllers
                 var allowanceTotal = allowanceEntries.Sum(a => a.Amount);
                 gross = Math.Round(baseSalary + allowanceTotal, 2, MidpointRounding.AwayFromZero);
 
+                var addedLoanInstallments = new HashSet<int>();
                 if (selectionMap.TryGetValue(employee.Id, out employeeSelection))
                 {
                     foreach (var deductionItem in employeeSelection.Deductions)
                     {
+                        if (deductionItem.EmployeeLoanInstallmentId.HasValue)
+                        {
+                            if (!loanInstallmentMap.TryGetValue(deductionItem.EmployeeLoanInstallmentId.Value, out var installment)
+                                || installment.Loan.EmployeeId != employee.Id)
+                            {
+                                return BadRequest(new { message = "أحد أقساط القروض المحددة غير مرتبط بالموظف." });
+                            }
+
+                            if (installment.Loan.Account == null)
+                            {
+                                return BadRequest(new { message = "حساب القرض غير محدد بشكل صحيح." });
+                            }
+
+                            if (installment.Loan.Account.CurrencyId != employee.Account.CurrencyId)
+                            {
+                                return BadRequest(new { message = $"عملة حساب القرض لا تطابق عملة حساب الموظف {employee.Name}." });
+                            }
+
+                            var loanAmount = Math.Round(installment.Amount, 2, MidpointRounding.AwayFromZero);
+                            if (loanAmount <= 0)
+                            {
+                                continue;
+                            }
+
+                            addedLoanInstallments.Add(installment.Id);
+
+                            deductionEntries.Add(new PayrollBatchLineDeduction
+                            {
+                                Amount = loanAmount,
+                                AccountId = installment.Loan.AccountId,
+                                EmployeeLoanInstallmentId = installment.Id,
+                                Type = string.IsNullOrWhiteSpace(deductionItem.Type) ? $"قسط قرض #{installment.EmployeeLoanId}" : deductionItem.Type,
+                                Description = string.IsNullOrWhiteSpace(deductionItem.Description) ? installment.Loan.Notes : deductionItem.Description
+                            });
+
+                            continue;
+                        }
+
                         if (!deductionItem.DeductionTypeId.HasValue ||
                             !deductionTypeMap.TryGetValue(deductionItem.DeductionTypeId.Value, out var deductionType))
                         {
@@ -586,26 +712,74 @@ namespace AccountingSystem.Controllers
                     }
                 }
 
+                if (loanInstallmentLookup.TryGetValue(employee.Id, out var employeeInstallments))
+                {
+                    foreach (var installment in employeeInstallments)
+                    {
+                        if (addedLoanInstallments.Contains(installment.Id))
+                        {
+                            continue;
+                        }
+
+                        if (installment.Loan.Account == null)
+                        {
+                            return BadRequest(new { message = "حساب القرض غير محدد بشكل صحيح." });
+                        }
+
+                        if (installment.Loan.Account.CurrencyId != employee.Account.CurrencyId)
+                        {
+                            return BadRequest(new { message = $"عملة حساب القرض لا تطابق عملة حساب الموظف {employee.Name}." });
+                        }
+
+                        var loanAmount = Math.Round(installment.Amount, 2, MidpointRounding.AwayFromZero);
+                        if (loanAmount <= 0)
+                        {
+                            continue;
+                        }
+
+                        deductionEntries.Add(new PayrollBatchLineDeduction
+                        {
+                            Amount = loanAmount,
+                            AccountId = installment.Loan.AccountId,
+                            EmployeeLoanInstallmentId = installment.Id,
+                            Type = $"قسط قرض #{installment.EmployeeLoanId}",
+                            Description = installment.Loan.Notes
+                        });
+                    }
+                }
+
                 var deduction = deductionEntries.Sum(d => d.Amount);
                 if (deduction > gross)
                 {
                     var excess = deduction - gross;
-                    for (var i = deductionEntries.Count - 1; i >= 0 && excess > 0; i--)
-                    {
-                        var entry = deductionEntries[i];
-                        if (excess >= entry.Amount)
-                        {
-                            excess -= entry.Amount;
-                            deductionEntries.RemoveAt(i);
-                            continue;
-                        }
+                    var adjustableEntries = deductionEntries.Where(d => !d.EmployeeLoanInstallmentId.HasValue).ToList();
+                    var loanEntries = deductionEntries.Where(d => d.EmployeeLoanInstallmentId.HasValue).ToList();
 
-                        entry.Amount = Math.Round(entry.Amount - excess, 2, MidpointRounding.AwayFromZero);
-                        excess = 0;
-                        if (entry.Amount <= 0)
+                    void ReduceEntries(List<PayrollBatchLineDeduction> entries)
+                    {
+                        for (var i = entries.Count - 1; i >= 0 && excess > 0; i--)
                         {
-                            deductionEntries.RemoveAt(i);
+                            var entry = entries[i];
+                            if (excess >= entry.Amount)
+                            {
+                                excess -= entry.Amount;
+                                deductionEntries.Remove(entry);
+                                continue;
+                            }
+
+                            entry.Amount = Math.Round(entry.Amount - excess, 2, MidpointRounding.AwayFromZero);
+                            excess = 0;
+                            if (entry.Amount <= 0)
+                            {
+                                deductionEntries.Remove(entry);
+                            }
                         }
+                    }
+
+                    ReduceEntries(adjustableEntries);
+                    if (excess > 0)
+                    {
+                        ReduceEntries(loanEntries);
                     }
 
                     deduction = deductionEntries.Sum(d => d.Amount);
@@ -876,6 +1050,28 @@ namespace AccountingSystem.Controllers
                     reference: $"PR-{batch.Id}");
 
                 journalNumbers.Add(entry.Number);
+            }
+
+            var paidInstallmentIds = batch.Lines
+                .SelectMany(l => l.Deductions)
+                .Where(d => d.EmployeeLoanInstallmentId.HasValue)
+                .Select(d => d.EmployeeLoanInstallmentId!.Value)
+                .Distinct()
+                .ToList();
+
+            if (paidInstallmentIds.Count > 0)
+            {
+                var paidInstallments = await _context.EmployeeLoanInstallments
+                    .Where(i => paidInstallmentIds.Contains(i.Id))
+                    .ToListAsync();
+
+                foreach (var installment in paidInstallments)
+                {
+                    installment.Status = LoanInstallmentStatus.Paid;
+                    installment.PaidAt = DateTime.Now;
+                    installment.PayrollBatchLineId = batch.Lines
+                        .FirstOrDefault(l => l.Deductions.Any(d => d.EmployeeLoanInstallmentId == installment.Id))?.Id;
+                }
             }
 
             batch.Status = PayrollBatchStatus.Confirmed;

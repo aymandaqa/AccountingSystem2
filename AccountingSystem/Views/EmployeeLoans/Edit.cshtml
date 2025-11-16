@@ -1,0 +1,94 @@
+@model AccountingSystem.ViewModels.EmployeeLoanFormViewModel
+@{
+    ViewData["Title"] = "تعديل قرض موظف";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">تعديل قرض موظف</h2>
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> العودة</a>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>@(ViewBag.EmployeeName ?? "الموظف")</strong>
+        <span class="ms-2">لا يمكن تعديل تفاصيل الجدول من هنا، استخدم خيار إعادة الجدولة لتعديل الأقساط.</span>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form asp-action="Edit" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="EmployeeId" />
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="EmployeeId" class="form-label"></label>
+                        <select asp-for="EmployeeId" asp-items="Model.Employees" class="form-select" disabled></select>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="AccountId" class="form-label"></label>
+                        <select asp-for="AccountId" asp-items="Model.Accounts" class="form-select">
+                            <option value="">اختر حساب القرض</option>
+                        </select>
+                        <span asp-validation-for="AccountId" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="row g-3 mt-1">
+                    <div class="col-md-4">
+                        <label asp-for="PrincipalAmount" class="form-label"></label>
+                        <input asp-for="PrincipalAmount" class="form-control" readonly />
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="InstallmentAmount" class="form-label"></label>
+                        <input asp-for="InstallmentAmount" class="form-control" readonly />
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="InstallmentCount" class="form-label"></label>
+                        <input asp-for="InstallmentCount" class="form-control" readonly />
+                    </div>
+                </div>
+
+                <div class="row g-3 mt-1">
+                    <div class="col-md-4">
+                        <label asp-for="StartDate" class="form-label"></label>
+                        <input asp-for="StartDate" class="form-control" readonly />
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="Frequency" class="form-label"></label>
+                        <input value="@Model.Frequency" class="form-control" readonly />
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="EndDate" class="form-label"></label>
+                        <input asp-for="EndDate" class="form-control" readonly />
+                    </div>
+                </div>
+
+                <div class="row g-3 mt-1">
+                    <div class="col-md-8">
+                        <label asp-for="Notes" class="form-label"></label>
+                        <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+                        <span asp-validation-for="Notes" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-center">
+                        <div class="form-check mt-4">
+                            <input asp-for="IsActive" class="form-check-input" />
+                            <label asp-for="IsActive" class="form-check-label"></label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ التغييرات</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary ms-2">إلغاء</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

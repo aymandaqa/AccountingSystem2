@@ -73,6 +73,8 @@ namespace AccountingSystem.ViewModels
         public decimal Amount { get; set; }
         public string? AccountName { get; set; }
         public string? AccountCode { get; set; }
+        public int? AccountId { get; set; }
+        public int? EmployeeLoanInstallmentId { get; set; }
     }
 
     public class PayrollEmployeeAllowanceSelection

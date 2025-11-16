@@ -154,7 +154,7 @@
         var journalActive = currentController == "journalentries";
         var reportsActive = currentController == "reports";
         var settingsActive = currentController == "branches" || currentController == "costcenters" || currentController == "currencies" || currentController == "users" || currentController == "permissiongroups";
-        var hrActive = currentController == "employees" || currentController == "payrolls" || currentController == "deductiontypes" || currentController == "employeedeductions";
+        var hrActive = currentController == "employees" || currentController == "payrolls" || currentController == "deductiontypes" || currentController == "employeedeductions" || currentController == "employeeloans";
         var assetsActive = currentController == "assets" || currentController == "assetexpenses" || currentController == "assettypes" || currentController == "assetdepreciations";
     }
     <div id="wrapper" class="d-flex">
@@ -785,6 +785,14 @@
                                            asp-action="Index"
                                            asp-require-permission="employees.edit">
                                             <i class="fas fa-plus-circle"></i> بدلات الموظفين
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="EmployeeLoans"
+                                           asp-action="Index"
+                                           asp-require-permission="employees.edit">
+                                            <i class="fas fa-landmark"></i> قروض الموظفين
                                         </a>
                                     </li>
                                 }
