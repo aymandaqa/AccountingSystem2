@@ -109,6 +109,11 @@ namespace AccountingSystem.Controllers
                     {
                         Id = s.Id,
                         Order = s.Order,
+                        Connector = s.Connector,
+                        ParentOrder = s.ParentStepId.HasValue
+                            ? definition.Steps.FirstOrDefault(p => p.Id == s.ParentStepId)?.Order
+                            : null,
+                        ParentStepId = s.ParentStepId,
                         StepType = s.StepType,
                         ApproverUserId = s.ApproverUserId,
                         BranchId = s.BranchId,
@@ -216,6 +221,14 @@ namespace AccountingSystem.Controllers
             try
             {
                 var steps = JsonSerializer.Deserialize<List<WorkflowStepInputModel>>(stepsJson) ?? new List<WorkflowStepInputModel>();
+                foreach (var step in steps)
+                {
+                    if (step.Connector == 0)
+                    {
+                        step.Connector = WorkflowStepConnector.And;
+                    }
+                }
+
                 model.Steps = steps.Where(s => s.StepType != 0).OrderBy(s => s.Order).ToList();
                 return model.Steps.Count > 0;
             }
@@ -232,6 +245,7 @@ namespace AccountingSystem.Controllers
             {
                 WorkflowDefinitionId = definition.Id,
                 Order = index + 1,
+                Connector = step.Connector,
                 StepType = step.StepType,
                 ApproverUserId = step.StepType == WorkflowStepType.SpecificUser ? step.ApproverUserId : null,
                 BranchId = step.StepType == WorkflowStepType.Branch ? step.BranchId : null,
@@ -241,6 +255,23 @@ namespace AccountingSystem.Controllers
             }).ToList();
 
             await _context.WorkflowSteps.AddRangeAsync(workflowSteps);
+            await _context.SaveChangesAsync();
+
+            var orderToId = workflowSteps.ToDictionary(s => s.Order, s => s.Id);
+            foreach (var step in ordered)
+            {
+                if (!step.ParentOrder.HasValue || !orderToId.TryGetValue(step.ParentOrder.Value, out var parentId))
+                {
+                    continue;
+                }
+
+                var workflowStep = workflowSteps.FirstOrDefault(s => s.Order == step.Order);
+                if (workflowStep != null)
+                {
+                    workflowStep.ParentStepId = parentId;
+                }
+            }
+
             await _context.SaveChangesAsync();
         }
     }

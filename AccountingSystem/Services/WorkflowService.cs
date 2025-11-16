@@ -65,6 +65,26 @@ namespace AccountingSystem.Services
                 .OrderBy(s => s.Order)
                 .ToList();
 
+            var stepLookup = definition.Steps.ToDictionary(s => s.Id);
+            var ensuredSteps = new Dictionary<int, WorkflowStep>();
+            foreach (var step in applicableSteps)
+            {
+                ensuredSteps[step.Id] = step;
+            }
+
+            var queue = new Queue<WorkflowStep>(applicableSteps);
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                if (current.ParentStepId.HasValue && !ensuredSteps.ContainsKey(current.ParentStepId.Value) && stepLookup.TryGetValue(current.ParentStepId.Value, out var parentStep))
+                {
+                    ensuredSteps[parentStep.Id] = parentStep;
+                    queue.Enqueue(parentStep);
+                }
+            }
+
+            applicableSteps = ensuredSteps.Values.OrderBy(s => s.Order).ToList();
+
             if (!applicableSteps.Any())
             {
                 applicableSteps = definition.Steps
@@ -107,11 +127,22 @@ namespace AccountingSystem.Services
             await _context.WorkflowActions.AddRangeAsync(actions, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
 
-            var firstStep = applicableSteps.First();
-            var firstAction = actions.FirstOrDefault(a => a.WorkflowStepId == firstStep.Id);
-            if (firstAction != null)
+            instance.Actions = actions;
+            foreach (var action in actions)
             {
-                await NotifyApproversAsync(instance, firstStep, firstAction, branchId, cancellationToken);
+                action.WorkflowStep = applicableSteps.First(s => s.Id == action.WorkflowStepId);
+            }
+
+            var readyActions = GetReadyActions(instance);
+            if (readyActions.Any())
+            {
+                instance.CurrentStepOrder = readyActions.Min(a => a.WorkflowStep.Order);
+                foreach (var action in readyActions)
+                {
+                    await NotifyApproversAsync(instance, action.WorkflowStep, action, branchId, cancellationToken);
+                }
+
+                await _context.SaveChangesAsync(cancellationToken);
             }
 
             return instance;
@@ -137,13 +168,18 @@ namespace AccountingSystem.Services
             if (user == null)
                 return Array.Empty<WorkflowAction>();
 
-            var actions = await _context.WorkflowActions
-                .Include(a => a.WorkflowStep)
-                .Include(a => a.WorkflowInstance).ThenInclude(i => i.WorkflowDefinition)
-                .Include(a => a.WorkflowInstance).ThenInclude(i => i.Initiator)
-                .Include(a => a.WorkflowInstance).ThenInclude(i => i.DocumentCurrency)
-                .Where(a => a.Status == WorkflowActionStatus.Pending && a.WorkflowInstance.Status == WorkflowInstanceStatus.InProgress)
+            var instances = await _context.WorkflowInstances
+                .Where(i => i.Status == WorkflowInstanceStatus.InProgress)
+                .Include(i => i.Actions).ThenInclude(a => a.WorkflowStep)
+                .Include(i => i.WorkflowDefinition)
+                .Include(i => i.Initiator)
+                .Include(i => i.DocumentCurrency)
                 .ToListAsync(cancellationToken);
+
+            var actions = instances
+                .SelectMany(GetReadyActions)
+                .Where(a => a.Status == WorkflowActionStatus.Pending)
+                .ToList();
 
             var branchCache = new Dictionary<int, int?>();
             var eligible = new List<WorkflowAction>();
@@ -189,6 +225,7 @@ namespace AccountingSystem.Services
             if (!await IsUserEligibleForStepAsync(action, user, null, cancellationToken))
                 throw new InvalidOperationException("لا تملك صلاحية اعتماد هذه الخطوة");
 
+            var readyBefore = GetReadyActionIds(action.WorkflowInstance);
             action.Status = approve ? WorkflowActionStatus.Approved : WorkflowActionStatus.Rejected;
             action.UserId = userId;
             action.ActionedAt = DateTime.Now;
@@ -202,31 +239,50 @@ namespace AccountingSystem.Services
                 return;
             }
 
-            var orderedActions = action.WorkflowInstance.Actions
-                .OrderBy(a => a.WorkflowStep.Order)
+            var groupActions = action.WorkflowInstance.Actions
+                .Where(a => a.WorkflowStep.ParentStepId == action.WorkflowStep.ParentStepId
+                            && a.WorkflowStep.Order == action.WorkflowStep.Order)
                 .ToList();
-            var currentIndex = orderedActions.FindIndex(a => a.Id == action.Id);
-            WorkflowAction? nextAction = null;
-            for (var i = currentIndex + 1; i < orderedActions.Count; i++)
+            var isOrGroup = groupActions.Any(a => a.WorkflowStep.Connector == WorkflowStepConnector.Or);
+            if (isOrGroup)
             {
-                if (orderedActions[i].Status == WorkflowActionStatus.Pending)
+                foreach (var sibling in groupActions.Where(a => a.Id != action.Id && a.Status == WorkflowActionStatus.Pending))
                 {
-                    nextAction = orderedActions[i];
-                    break;
+                    sibling.Status = WorkflowActionStatus.Skipped;
+                    sibling.ActionedAt = DateTime.Now;
                 }
             }
 
-            if (nextAction == null)
+            var pendingActions = action.WorkflowInstance.Actions
+                .Where(a => a.Status == WorkflowActionStatus.Pending)
+                .ToList();
+
+            if (!pendingActions.Any())
             {
                 await CompleteWorkflowAsync(action.WorkflowInstance, userId, cancellationToken);
+                return;
             }
-            else
+
+            var readyAfter = GetReadyActions(action.WorkflowInstance);
+            var newReadyActions = readyAfter
+                .Where(a => !readyBefore.Contains(a.Id) && a.Status == WorkflowActionStatus.Pending)
+                .ToList();
+
+            if (readyAfter.Any())
             {
-                action.WorkflowInstance.CurrentStepOrder = nextAction.WorkflowStep.Order;
-                var branchContext = await ResolveDocumentBranchIdAsync(action.WorkflowInstance, cancellationToken);
-                await NotifyApproversAsync(action.WorkflowInstance, nextAction.WorkflowStep, nextAction, branchContext, cancellationToken);
-                await _context.SaveChangesAsync(cancellationToken);
+                action.WorkflowInstance.CurrentStepOrder = readyAfter.Min(a => a.WorkflowStep.Order);
             }
+
+            if (newReadyActions.Any())
+            {
+                var branchContext = await ResolveDocumentBranchIdAsync(action.WorkflowInstance, cancellationToken);
+                foreach (var nextAction in newReadyActions)
+                {
+                    await NotifyApproversAsync(action.WorkflowInstance, nextAction.WorkflowStep, nextAction, branchContext, cancellationToken);
+                }
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
         }
 
         private async Task<bool> IsUserEligibleForStepAsync(WorkflowAction action, User user, Dictionary<int, int?>? branchCache, CancellationToken cancellationToken)
@@ -289,6 +345,36 @@ namespace AccountingSystem.Services
             }
 
             return permissions;
+        }
+
+        private IReadOnlyList<WorkflowAction> GetReadyActions(WorkflowInstance instance)
+        {
+            var pendingActions = instance.Actions
+                .Where(a => a.Status == WorkflowActionStatus.Pending)
+                .ToList();
+
+            var completedSteps = instance.Actions
+                .Where(a => a.Status == WorkflowActionStatus.Approved || a.Status == WorkflowActionStatus.Skipped)
+                .Select(a => a.WorkflowStepId)
+                .ToHashSet();
+
+            var eligible = pendingActions
+                .Where(a => !a.WorkflowStep.ParentStepId.HasValue || completedSteps.Contains(a.WorkflowStep.ParentStepId.Value))
+                .ToList();
+
+            var ready = new List<WorkflowAction>();
+            foreach (var group in eligible.GroupBy(a => a.WorkflowStep.ParentStepId))
+            {
+                var minOrder = group.Min(a => a.WorkflowStep.Order);
+                ready.AddRange(group.Where(a => a.WorkflowStep.Order == minOrder));
+            }
+
+            return ready;
+        }
+
+        private HashSet<int> GetReadyActionIds(WorkflowInstance instance)
+        {
+            return GetReadyActions(instance).Select(a => a.Id).ToHashSet();
         }
 
         private async Task NotifyApproversAsync(WorkflowInstance instance, WorkflowStep step, WorkflowAction action, int? documentBranchId, CancellationToken cancellationToken)
