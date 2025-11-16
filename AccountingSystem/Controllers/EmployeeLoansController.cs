@@ -203,8 +203,8 @@ namespace AccountingSystem.Controllers
 
             var lines = new List<JournalEntryLine>
             {
-                new JournalEntryLine { AccountId = employee.AccountId, DebitAmount = model.PrincipalAmount },
-                new JournalEntryLine { AccountId = account.Id, CreditAmount = model.PrincipalAmount }
+                new JournalEntryLine { AccountId = account.Id, DebitAmount = model.PrincipalAmount },
+                new JournalEntryLine { AccountId = employee.AccountId, CreditAmount = model.PrincipalAmount }
             };
 
             await _journalEntryService.CreateJournalEntryAsync(
