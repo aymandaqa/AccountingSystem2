@@ -94,6 +94,44 @@
                 }
             </div>
         </div>
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h5 class="card-title mb-1">أرصدة الحسابات</h5>
+                        <div class="text-muted small">الحساب الرئيسي: @(string.IsNullOrWhiteSpace(Model.DashboardParentAccountName) ? "غير معرف" : Model.DashboardParentAccountName)</div>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Model.DashboardBaseCurrencyCode))
+                    {
+                        <span class="badge bg-light text-dark">@Model.DashboardBaseCurrencyCode</span>
+                    }
+                </div>
+
+                @if (!Model.HasDashboardAccounts)
+                {
+                    <div class="alert alert-info mb-0">لا توجد حسابات لعرضها.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle dashboard-account-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">الحساب</th>
+                                    <th scope="col" class="text-end">الرصيد (@Model.DashboardBaseCurrencyCode)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @await Html.PartialAsync("_DashboardAccountSubTable", Model.DashboardAccountTree, new ViewDataDictionary(ViewData)
+                                {
+                                    ["DashboardBaseCurrencyCode"] = Model.DashboardBaseCurrencyCode
+                                })
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
     }
 
     <div class="row g-4">
@@ -238,3 +276,27 @@
         </div>
     </div>
 </div>
+
+@section Styles {
+    <style>
+        .dashboard-account-table .dashboard-toggle {
+            width: 32px;
+            height: 32px;
+        }
+
+        .dashboard-account-table .dashboard-toggle-placeholder {
+            width: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dashboard-account-subtable {
+            background-color: #f8f9fa;
+        }
+
+        .dashboard-account-subtable td {
+            border-top: none;
+        }
+    </style>
+}

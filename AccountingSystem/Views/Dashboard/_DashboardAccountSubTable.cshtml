@@ -1,0 +1,60 @@
+@model IEnumerable<AccountingSystem.ViewModels.AccountTreeNodeViewModel>
+@{
+    var baseCurrencyCode = ViewData["DashboardBaseCurrencyCode"] as string ?? string.Empty;
+}
+
+@foreach (var node in Model)
+{
+    var hasChildren = node.Children.Any();
+    var collapseId = $"dashboard-account-{node.Id}";
+    <tr class="align-middle">
+        <td>
+            <div class="d-flex align-items-start gap-2">
+                @if (hasChildren)
+                {
+                    <button type="button"
+                            class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center dashboard-toggle"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#@collapseId"
+                            aria-expanded="false"
+                            aria-controls="@collapseId">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                }
+                else
+                {
+                    <span class="dashboard-toggle-placeholder text-muted">
+                        <i class="fas fa-circle"></i>
+                    </span>
+                }
+                <div>
+                    <div class="fw-semibold text-nowrap">@(!string.IsNullOrWhiteSpace(node.Code) ? $"{node.Code} - " : string.Empty)@node.NameAr</div>
+                    <div class="text-muted small">@node.CurrencyCode</div>
+                </div>
+            </div>
+        </td>
+        <td class="text-end text-nowrap">
+            <span class="fw-semibold">@node.BalanceBase.ToString("N2")</span>
+            @if (!string.IsNullOrWhiteSpace(baseCurrencyCode))
+            {
+                <span class="text-muted">@baseCurrencyCode</span>
+            }
+        </td>
+    </tr>
+
+    if (hasChildren)
+    {
+        <tr class="collapse" id="@collapseId">
+            <td colspan="2" class="p-0 border-0">
+                <table class="table table-sm mb-0 dashboard-account-subtable">
+                    <tbody>
+                        @await Html.PartialAsync("_DashboardAccountSubTable", node.Children, new ViewDataDictionary(ViewData)
+                        {
+                            ["DashboardBaseCurrencyCode"] = baseCurrencyCode
+                        })
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+    }
+}

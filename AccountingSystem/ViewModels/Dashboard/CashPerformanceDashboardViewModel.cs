@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using AccountingSystem.Models.Reports;
+using AccountingSystem.ViewModels;
 using AccountingSystem.ViewModels.Workflows;
 
 namespace AccountingSystem.ViewModels.Dashboard
@@ -21,8 +22,16 @@ namespace AccountingSystem.ViewModels.Dashboard
 
         public decimal TotalCashOnBranchBox { get; set; }
 
+        public IReadOnlyList<AccountTreeNodeViewModel> DashboardAccountTree { get; set; } = new List<AccountTreeNodeViewModel>();
+
+        public string DashboardBaseCurrencyCode { get; set; } = string.Empty;
+
+        public string DashboardParentAccountName { get; set; } = string.Empty;
+
         public bool HasRecords => Records.Any();
 
         public bool HasPendingApprovals => PendingApprovals.Any();
+
+        public bool HasDashboardAccounts => DashboardAccountTree.Any();
     }
 }

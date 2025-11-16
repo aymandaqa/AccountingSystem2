@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AccountingSystem.Data;
 using AccountingSystem.Models.Reports;
 using AccountingSystem.ViewModels.Dashboard;
+using AccountingSystem.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -23,12 +24,14 @@ namespace AccountingSystem.Controllers
         private readonly ApplicationDbContext _context;
         private readonly ILogger<DashboardController> _logger;
         private readonly IWorkflowApprovalViewModelFactory _approvalViewModelFactory;
+        private readonly ICurrencyService _currencyService;
 
-        public DashboardController(ApplicationDbContext context, ILogger<DashboardController> logger, IWorkflowApprovalViewModelFactory approvalViewModelFactory)
+        public DashboardController(ApplicationDbContext context, ILogger<DashboardController> logger, IWorkflowApprovalViewModelFactory approvalViewModelFactory, ICurrencyService currencyService)
         {
             _context = context;
             _logger = logger;
             _approvalViewModelFactory = approvalViewModelFactory;
+            _currencyService = currencyService;
         }
 
         [Authorize]
@@ -44,6 +47,7 @@ namespace AccountingSystem.Controllers
                 var pendingApprovals = string.IsNullOrWhiteSpace(userId)
                     ? Array.Empty<WorkflowApprovalViewModel>()
                     : await _approvalViewModelFactory.BuildPendingApprovalsAsync(userId);
+                var dashboardAccounts = await LoadDashboardAccountTreeAsync();
 
                 var viewModel = new CashPerformanceDashboardViewModel
                 {
@@ -53,7 +57,10 @@ namespace AccountingSystem.Controllers
                     TotalCustomerDuesOnRoad = records.Sum(r => r.CustomerDuesOnRoad),
                     TotalCashWithDriverOnRoad = records.Sum(r => r.CashWithDriverOnRoad),
                     TotalCustomerDues = records.Sum(r => r.CustomerDues),
-                    TotalCashOnBranchBox = records.Sum(r => r.CashOnBranchBox)
+                    TotalCashOnBranchBox = records.Sum(r => r.CashOnBranchBox),
+                    DashboardAccountTree = dashboardAccounts.Nodes,
+                    DashboardBaseCurrencyCode = dashboardAccounts.BaseCurrencyCode,
+                    DashboardParentAccountName = dashboardAccounts.ParentAccountName
                 };
 
                 return View(viewModel);
@@ -74,6 +81,92 @@ namespace AccountingSystem.Controllers
                 .ToListAsync();
 
             return records;
+        }
+
+        private async Task<(List<AccountTreeNodeViewModel> Nodes, string BaseCurrencyCode, string ParentAccountName)> LoadDashboardAccountTreeAsync()
+        {
+            var systemSetting = await _context.SystemSettings
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Key == "DashboardParentAccountId");
+
+            if (systemSetting == null || string.IsNullOrWhiteSpace(systemSetting.Value) || !int.TryParse(systemSetting.Value, out var parentAccountId))
+            {
+                return (new List<AccountTreeNodeViewModel>(), string.Empty, string.Empty);
+            }
+
+            var accounts = await _context.Accounts
+                .AsNoTracking()
+                .Include(a => a.Currency)
+                .ToListAsync();
+
+            var baseCurrency = await _context.Currencies.AsNoTracking().FirstOrDefaultAsync(c => c.IsBase);
+            if (baseCurrency == null)
+            {
+                return (new List<AccountTreeNodeViewModel>(), string.Empty, string.Empty);
+            }
+
+            if (!accounts.Any(a => a.Id == parentAccountId))
+            {
+                return (new List<AccountTreeNodeViewModel>(), baseCurrency.Code, string.Empty);
+            }
+
+            var childrenLookup = accounts
+                .GroupBy(a => a.ParentId)
+                .ToDictionary(g => g.Key, g => g.OrderBy(c => c.Code).ToList());
+
+            AccountTreeNodeViewModel BuildNode(Account account, int level)
+            {
+                var balanceSelected = _currencyService.Convert(account.CurrentBalance, account.Currency, baseCurrency);
+                var node = new AccountTreeNodeViewModel
+                {
+                    Id = account.Id,
+                    Code = account.Code,
+                    NameAr = account.NameAr,
+                    ParentAccountName = account.Parent != null ? account.Parent.NameAr : string.Empty,
+                    AccountType = account.AccountType,
+                    Nature = account.Nature,
+                    CurrencyCode = account.Currency.Code,
+                    OpeningBalance = account.OpeningBalance,
+                    CurrentBalance = account.CurrentBalance,
+                    CurrentBalanceSelected = balanceSelected,
+                    CurrentBalanceBase = balanceSelected,
+                    Balance = account.CurrentBalance,
+                    BalanceSelected = balanceSelected,
+                    BalanceBase = balanceSelected,
+                    CanPostTransactions = account.CanPostTransactions,
+                    ParentId = account.ParentId,
+                    Level = level,
+                    HasChildren = false
+                };
+
+                if (childrenLookup.TryGetValue(account.Id, out var children) && children.Any())
+                {
+                    foreach (var child in children)
+                    {
+                        node.Children.Add(BuildNode(child, level + 1));
+                    }
+
+                    node.HasChildren = node.Children.Any();
+                    var childrenBalance = node.Children.Sum(c => c.Balance);
+                    var childrenBalanceSelected = node.Children.Sum(c => c.BalanceSelected);
+                    var childrenBalanceBase = node.Children.Sum(c => c.BalanceBase);
+
+                    node.Balance = node.CurrentBalance + childrenBalance;
+                    node.BalanceSelected = node.CurrentBalanceSelected + childrenBalanceSelected;
+                    node.BalanceBase = node.CurrentBalanceBase + childrenBalanceBase;
+                    node.CurrentBalanceSelected = node.BalanceSelected;
+                    node.CurrentBalanceBase = node.BalanceBase;
+                }
+
+                return node;
+            }
+
+            var parentAccountName = accounts.First(a => a.Id == parentAccountId).NameAr;
+            var nodes = childrenLookup.TryGetValue(parentAccountId, out var rootChildren)
+                ? rootChildren.Select(child => BuildNode(child, 1)).ToList()
+                : new List<AccountTreeNodeViewModel>();
+
+            return (nodes, baseCurrency.Code, parentAccountName);
         }
 
         private async Task<IReadOnlyList<PendingWorkflowRequestViewModel>> LoadPendingInitiatedRequestsAsync(string userId)
