@@ -111,7 +111,8 @@ namespace AccountingSystem.Controllers
             }
 
             var childrenLookup = accounts
-                .GroupBy(a => a.ParentId)
+                .Where(a => a.ParentId.HasValue)
+                .GroupBy(a => a.ParentId!.Value)
                 .ToDictionary(g => g.Key, g => g.OrderBy(c => c.Code).ToList());
 
             AccountTreeNodeViewModel BuildNode(Account account, int level)
