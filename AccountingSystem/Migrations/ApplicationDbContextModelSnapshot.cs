@@ -3341,6 +3341,9 @@ namespace AccountingSystem.Migrations
                     b.Property<int>("Mode")
                         .HasColumnType("int");
 
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
                     b.Property<string>("NameAr")
                         .IsRequired()
                         .HasMaxLength(200)
