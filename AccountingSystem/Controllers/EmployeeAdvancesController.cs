@@ -318,11 +318,6 @@ namespace AccountingSystem.Controllers
         {
             var balance = account.CurrentBalance;
 
-            if (balance <= 0)
-            {
-                return 0m;
-            }
-
             return balance;
         }
 
