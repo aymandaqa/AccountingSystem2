@@ -68,15 +68,8 @@
 
             @if (Model.Items.Any())
             {
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                    <span class="text-muted small">يمكنك تصفية البيانات حسب كل عمود باستخدام المرشحات التالية.</span>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" id="asset-expenses-reset">
-                        <i class="fas fa-eraser ms-1"></i> مسح مرشحات الجدول
-                    </button>
-                </div>
-
                 <div class="table-responsive">
-                    <table class="table table-striped table-hover align-middle" data-table-filter data-table-filter-reset="#asset-expenses-reset">
+                    <table class="table table-striped table-hover align-middle">
                         <thead class="table-light">
                             <tr>
                                 <th scope="col">الأصل</th>
@@ -93,46 +86,6 @@
                                 <th scope="col">الحالة</th>
                                 <th scope="col" class="text-center">القيد المحاسبي</th>
                                 <th scope="col" class="text-center">الإجراءات</th>
-                            </tr>
-                            <tr class="table-secondary filters-row">
-                                <th><input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="0" /></th>
-                                <th><input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="1" /></th>
-                                <th><input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="2" /></th>
-                                <th><input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="3" /></th>
-                                <th><input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="4" /></th>
-                                <th><input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="5" /></th>
-                                <th>
-                                    <div class="d-flex gap-2">
-                                        <input type="number" step="0.01" class="form-control form-control-sm" placeholder="من" data-filter-column="6" data-filter-type="number-min" />
-                                        <input type="number" step="0.01" class="form-control form-control-sm" placeholder="إلى" data-filter-column="6" data-filter-type="number-max" />
-                                    </div>
-                                </th>
-                                <th>
-                                    <select class="form-select form-select-sm" data-filter-column="7" data-filter-type="select">
-                                        <option value="">الكل</option>
-                                        <option value="نقدي">نقدي</option>
-                                        <option value="غير نقدي">غير نقدي</option>
-                                    </select>
-                                </th>
-                                <th>
-                                    <div class="d-flex gap-2">
-                                        <input type="date" class="form-control form-control-sm" data-filter-column="8" data-filter-type="date-min" />
-                                        <input type="date" class="form-control form-control-sm" data-filter-column="8" data-filter-type="date-max" />
-                                    </div>
-                                </th>
-                                <th><input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="9" /></th>
-                                <th><input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="10" /></th>
-                                <th>
-                                    <select class="form-select form-select-sm" data-filter-column="11" data-filter-type="select">
-                                        <option value="">الكل</option>
-                                        <option value="قيد الاعتماد">قيد الاعتماد</option>
-                                        <option value="مرفوض">مرفوض</option>
-                                        <option value="ملغي">ملغي</option>
-                                        <option value="معتمد">معتمد</option>
-                                    </select>
-                                </th>
-                                <th></th>
-                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -273,5 +226,4 @@
             });
         });
     </script>
-    <script src="~/js/table-filters.js" asp-append-version="true"></script>
 }
