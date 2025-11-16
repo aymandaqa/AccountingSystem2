@@ -1,12 +1,17 @@
 using System.Collections.Generic;
 using System.Linq;
 using AccountingSystem.Models.Reports;
+using AccountingSystem.ViewModels.Workflows;
 
 namespace AccountingSystem.ViewModels.Dashboard
 {
     public class CashPerformanceDashboardViewModel
     {
         public IReadOnlyList<CashPerformanceRecord> Records { get; set; } = new List<CashPerformanceRecord>();
+
+        public IReadOnlyList<PendingWorkflowRequestViewModel> MyPendingRequests { get; set; } = new List<PendingWorkflowRequestViewModel>();
+
+        public IReadOnlyList<WorkflowApprovalViewModel> PendingApprovals { get; set; } = new List<WorkflowApprovalViewModel>();
 
         public decimal TotalCustomerDuesOnRoad { get; set; }
 
@@ -17,5 +22,7 @@ namespace AccountingSystem.ViewModels.Dashboard
         public decimal TotalCashOnBranchBox { get; set; }
 
         public bool HasRecords => Records.Any();
+
+        public bool HasPendingApprovals => PendingApprovals.Any();
     }
 }

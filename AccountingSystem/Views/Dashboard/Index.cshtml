@@ -7,12 +7,11 @@
     ViewData["Title"] = "لوحة التحكم";
 
     var canWorkflowDefinitionsManage = (await AuthorizationService.AuthorizeAsync(User, "dashboard.companyperformance")).Succeeded;
-
 }
 
-@if (canWorkflowDefinitionsManage)
-{
-    <div class="container-fluid py-4">
+<div class="container-fluid py-4">
+    @if (canWorkflowDefinitionsManage)
+    {
         <div class="row g-4 mb-4">
             <div class="col-12 col-md-6 col-xl-3">
                 <div class="card shadow-sm border-0 h-100">
@@ -48,7 +47,7 @@
             </div>
         </div>
 
-        <div class="card shadow-sm border-0">
+        <div class="card shadow-sm border-0 mb-4">
             <div class="card-body">
                 <h5 class="card-title mb-4">تقرير أداء السيولة حسب الفروع</h5>
 
@@ -95,6 +94,147 @@
                 }
             </div>
         </div>
-    </div>
+    }
 
-}
+    <div class="row g-4">
+        <div class="col-12 col-xl-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h5 class="card-title mb-0">طلباتي المعلقة للموافقة</h5>
+                        <span class="badge bg-primary rounded-pill">@Model.MyPendingRequests.Count()</span>
+                    </div>
+
+                    @if (!Model.MyPendingRequests.Any())
+                    {
+                        <div class="alert alert-info mb-0">لا توجد طلبات قيد انتظار الموافقات.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">عنوان الطلب</th>
+                                        <th scope="col">تاريخ الإنشاء</th>
+                                        <th scope="col" class="text-end">المبلغ</th>
+                                        <th scope="col">العملة</th>
+                                        <th scope="col">بانتظار</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var request in Model.MyPendingRequests)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold">@request.Title</div>
+                                                <div class="text-muted small">@request.Description</div>
+                                            </td>
+                                            <td class="text-nowrap">@request.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td class="text-end">@request.Amount.ToString("N2")</td>
+                                            <td>@(string.IsNullOrWhiteSpace(request.CurrencyCode) ? "-" : request.CurrencyCode)</td>
+                                            <td>@request.PendingWith</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h5 class="card-title mb-0">الطلبات المحتاجة لاعتمادك</h5>
+                        <span class="badge bg-danger rounded-pill">@Model.PendingApprovals.Count()</span>
+                    </div>
+
+                    @if (!Model.PendingApprovals.Any())
+                    {
+                        <div class="alert alert-success mb-0">لا توجد طلبات بانتظار اعتمادك حالياً.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">عنوان الطلب</th>
+                                        <th scope="col">مقدم الطلب</th>
+                                        <th scope="col">تاريخ الإنشاء</th>
+                                        <th scope="col" class="text-end">المبلغ</th>
+                                        <th scope="col">العملة</th>
+                                        <th scope="col" class="text-end">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var approval in Model.PendingApprovals.OrderByDescending(a => a.CreatedAt))
+                                    {
+                                        var detailId = $"approval-details-{approval.ActionId}";
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold">@approval.Title</div>
+                                                <div class="text-muted small">@approval.Description</div>
+                                            </td>
+                                            <td>@(string.IsNullOrWhiteSpace(approval.CreatedByName) ? "غير معروف" : approval.CreatedByName)</td>
+                                            <td class="text-nowrap">@approval.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td class="text-end">@approval.Amount.ToString("N2")</td>
+                                            <td>@(string.IsNullOrWhiteSpace(approval.CurrencyCode) ? "-" : approval.CurrencyCode)</td>
+                                            <td class="text-end">
+                                                <div class="d-flex flex-wrap gap-1 justify-content-end">
+                                                    <form asp-controller="WorkflowApprovals" asp-action="Approve" method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="actionId" value="@approval.ActionId" />
+                                                        <button type="submit" class="btn btn-success btn-sm">
+                                                            <i class="fa fa-check ms-1"></i> موافقة
+                                                        </button>
+                                                    </form>
+                                                    <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#@detailId" aria-expanded="false" aria-controls="@detailId">
+                                                        <i class="fa fa-info-circle ms-1"></i> تفاصيل
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr class="collapse" id="@detailId">
+                                            <td colspan="6" class="p-0">
+                                                <div class="card rounded-0 border-top">
+                                                    <div class="card-body">
+                                                        <partial name="_ApprovalRequestDetails" model="approval" />
+                                                    </div>
+                                                    <div class="card-footer bg-white">
+                                                        <div class="d-flex flex-wrap gap-2">
+                                                            <button class="btn btn-outline-danger btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#reject-@approval.ActionId" aria-expanded="false" aria-controls="reject-@approval.ActionId">
+                                                                <i class="fa fa-times ms-1"></i> رفض
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="collapse border-top" id="reject-@approval.ActionId" data-bs-parent="#@detailId">
+                                                        <div class="card-body">
+                                                            <form asp-controller="WorkflowApprovals" asp-action="Reject" method="post">
+                                                                @Html.AntiForgeryToken()
+                                                                <input type="hidden" name="actionId" value="@approval.ActionId" />
+                                                                <div class="mb-3">
+                                                                    <label class="form-label">سبب الرفض</label>
+                                                                    <textarea name="notes" class="form-control" rows="3"></textarea>
+                                                                </div>
+                                                                <button type="submit" class="btn btn-danger">
+                                                                    <i class="fa fa-times ms-1"></i> تأكيد الرفض
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
