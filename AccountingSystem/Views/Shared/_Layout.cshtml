@@ -111,7 +111,8 @@
         var canPayrollView = (await AuthorizationService.AuthorizeAsync(User, "payroll.view")).Succeeded;
         var canSalaryPaymentsView = (await AuthorizationService.AuthorizeAsync(User, "salarypayments.view")).Succeeded;
         var canEmployeeAdvancesView = (await AuthorizationService.AuthorizeAsync(User, "employeeadvances.view")).Succeeded;
-        var showHr = canEmployeesView || canPayrollView || canSalaryPaymentsView || canEmployeeAdvancesView;
+        var canEmployeeLoans = (await AuthorizationService.AuthorizeAsync(User, "employees.edit")).Succeeded;
+        var showHr = canEmployeesView || canPayrollView || canSalaryPaymentsView || canEmployeeAdvancesView || canEmployeeLoans;
 
         var currentController = ViewContext.RouteData.Values["controller"]?.ToString()?.ToLower();
         var currentAction = ViewContext.RouteData.Values["action"]?.ToString()?.ToLower();
@@ -122,7 +123,7 @@
         var journalActive = currentController == "journalentries";
         var reportsActive = currentController == "reports";
         var settingsActive = currentController == "branches" || currentController == "costcenters" || currentController == "currencies" || currentController == "users" || currentController == "permissiongroups";
-        var hrActive = currentController == "employees" || currentController == "payrolls";
+        var hrActive = currentController == "employees" || currentController == "payrolls" || currentController == "employeeloans";
         var assetsActive = currentController == "assets" || currentController == "assetexpenses" || currentController == "assettypes" || currentController == "assetdepreciations";
     }
     <div id="layout-wrapper" class="d-flex">
@@ -670,6 +671,17 @@
                                            asp-action="Index"
                                            asp-require-permission="employeeadvances.view">
                                             <i class="fa-solid fa-hand-holding-dollar"></i><span>سندات صرف السلف</span>
+                                        </a>
+                                    </li>
+                                }
+                                @if (canEmployeeLoans)
+                                {
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="EmployeeLoans"
+                                           asp-action="Index"
+                                           asp-require-permission="employees.edit">
+                                            <i class="fa-solid fa-landmark"></i><span>قروض الموظفين</span>
                                         </a>
                                     </li>
                                 }

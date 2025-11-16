@@ -1,0 +1,98 @@
+@model IEnumerable<AccountingSystem.ViewModels.EmployeeLoanListItemViewModel>
+@{
+    ViewData["Title"] = "قروض الموظفين";
+    var statusMessage = ViewBag.StatusMessage as string;
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-0">قروض الموظفين</h2>
+            <p class="text-muted mb-0">إدارة قروض الموظفين وجدولة الأقساط</p>
+        </div>
+        <div class="btn-group">
+            <a asp-action="Create" class="btn btn-primary"><i class="fas fa-plus"></i> إضافة قرض</a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert alert-success">@statusMessage</div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            @if (Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>الموظف</th>
+                                <th>الفرع</th>
+                                <th>الحساب</th>
+                                <th>قيمة القرض</th>
+                                <th>قيمة القسط</th>
+                                <th>المتبقي</th>
+                                <th>الأقساط المتبقية</th>
+                                <th>الاستحقاق القادم</th>
+                                <th>التكرار</th>
+                                <th>الحالة</th>
+                                <th class="text-end">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var loan in Model)
+                            {
+                                <tr>
+                                    <td>@loan.EmployeeName</td>
+                                    <td>@loan.BranchName</td>
+                                    <td>@loan.AccountDisplay</td>
+                                    <td>@loan.PrincipalAmount.ToString("N2")</td>
+                                    <td>@loan.InstallmentAmount.ToString("N2")</td>
+                                    <td>@loan.OutstandingAmount.ToString("N2")</td>
+                                    <td>@loan.PendingInstallments</td>
+                                    <td>@(loan.NextDueDate.HasValue ? loan.NextDueDate.Value.ToString("dd/MM/yyyy") : "-")</td>
+                                    <td>
+                                        @switch (loan.Frequency)
+                                        {
+                                            case AccountingSystem.Models.LoanInstallmentFrequency.Monthly:
+                                                <span class="badge bg-secondary">شهري</span>
+                                                break;
+                                            case AccountingSystem.Models.LoanInstallmentFrequency.Weekly:
+                                                <span class="badge bg-info text-dark">أسبوعي</span>
+                                                break;
+                                            default:
+                                                <span class="badge bg-light text-dark">غير محدد</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (loan.IsActive)
+                                        {
+                                            <span class="badge bg-success">نشط</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">متوقف</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group">
+                                            <a asp-action="Edit" asp-route-id="@loan.Id" class="btn btn-outline-primary btn-sm"><i class="fas fa-edit"></i></a>
+                                            <a asp-action="Reschedule" asp-route-id="@loan.Id" class="btn btn-outline-info btn-sm"><i class="fas fa-sync"></i></a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info mb-0">لا توجد قروض مسجلة حالياً.</div>
+            }
+        </div>
+    </div>
+</div>

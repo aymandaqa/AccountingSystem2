@@ -69,6 +69,8 @@ namespace AccountingSystem.Data
         public DbSet<PayrollBatchLineAllowance> PayrollBatchLineAllowances { get; set; }
         public DbSet<SalaryPayment> SalaryPayments { get; set; }
         public DbSet<EmployeeAdvance> EmployeeAdvances { get; set; }
+        public DbSet<EmployeeLoan> EmployeeLoans { get; set; }
+        public DbSet<EmployeeLoanInstallment> EmployeeLoanInstallments { get; set; }
         public DbSet<WorkflowDefinition> WorkflowDefinitions { get; set; }
         public DbSet<WorkflowStep> WorkflowSteps { get; set; }
         public DbSet<WorkflowInstance> WorkflowInstances { get; set; }
@@ -197,6 +199,42 @@ namespace AccountingSystem.Data
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Key).IsRequired().HasMaxLength(100);
                 entity.HasIndex(e => new { e.Key, e.Year }).IsUnique();
+            });
+
+            builder.Entity<EmployeeLoan>(entity =>
+            {
+                entity.HasOne(l => l.Employee)
+                    .WithMany()
+                    .HasForeignKey(l => l.EmployeeId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(l => l.Account)
+                    .WithMany()
+                    .HasForeignKey(l => l.AccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(l => l.CreatedBy)
+                    .WithMany()
+                    .HasForeignKey(l => l.CreatedById)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(l => l.PrincipalAmount).HasPrecision(18, 2);
+                entity.Property(l => l.InstallmentAmount).HasPrecision(18, 2);
+            });
+
+            builder.Entity<EmployeeLoanInstallment>(entity =>
+            {
+                entity.HasOne(i => i.Loan)
+                    .WithMany(l => l.Installments)
+                    .HasForeignKey(i => i.EmployeeLoanId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(i => i.PayrollBatchLine)
+                    .WithMany()
+                    .HasForeignKey(i => i.PayrollBatchLineId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.Property(i => i.Amount).HasPrecision(18, 2);
             });
 
             builder.Entity<CashPerformanceRecord>(entity =>

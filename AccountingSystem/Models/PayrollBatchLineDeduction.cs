@@ -24,11 +24,15 @@ namespace AccountingSystem.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal Amount { get; set; }
 
+        public int? EmployeeLoanInstallmentId { get; set; }
+
         [InverseProperty(nameof(PayrollBatchLine.Deductions))]
         public PayrollBatchLine PayrollLine { get; set; } = null!;
 
         public DeductionType? DeductionType { get; set; }
 
         public Account? Account { get; set; }
+
+        public EmployeeLoanInstallment? EmployeeLoanInstallment { get; set; }
     }
 }
