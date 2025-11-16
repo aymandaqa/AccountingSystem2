@@ -26,7 +26,10 @@ namespace AccountingSystem.Models
         public int? AccountId { get; set; }
         public virtual Account? Account { get; set; }
 
-        public SupplierType Type { get; set; } = SupplierType.Company;
+        [Display(Name = "نوع المورد")]
+        public int SupplierTypeId { get; set; } = 2;
+
+        public virtual SupplierType? SupplierType { get; set; }
 
         public SupplierMode Mode { get; set; } = SupplierMode.Cash;
 

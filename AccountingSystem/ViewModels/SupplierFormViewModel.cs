@@ -32,7 +32,7 @@ namespace AccountingSystem.ViewModels
 
         [Display(Name = "نوع المورد")]
         [Required]
-        public SupplierType Type { get; set; } = SupplierType.Company;
+        public int SupplierTypeId { get; set; }
 
         [Display(Name = "الصلاحيات المسموح بها")]
         public List<SupplierAuthorization> SelectedAuthorizations { get; set; } = new();
@@ -43,6 +43,8 @@ namespace AccountingSystem.ViewModels
         public IEnumerable<SelectListItem> AuthorizationOptions { get; set; } = new List<SelectListItem>();
 
         public IEnumerable<SelectListItem> BranchOptions { get; set; } = new List<SelectListItem>();
+
+        public IEnumerable<SelectListItem> SupplierTypeOptions { get; set; } = new List<SelectListItem>();
 
     }
 }

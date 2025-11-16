@@ -1,11 +1,10 @@
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
-namespace AccountingSystem.Models
+namespace AccountingSystem.ViewModels
 {
-    public class SupplierType
+    public class SupplierTypeFormViewModel
     {
-        public int Id { get; set; }
+        public int? Id { get; set; }
 
         [Required]
         [StringLength(200)]
@@ -14,7 +13,5 @@ namespace AccountingSystem.Models
 
         [Display(Name = "نشط")]
         public bool IsActive { get; set; } = true;
-
-        public virtual ICollection<Supplier> Suppliers { get; set; } = new List<Supplier>();
     }
 }
