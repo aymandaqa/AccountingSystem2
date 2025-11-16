@@ -246,10 +246,9 @@ namespace AccountingSystem.Services
             var isOrGroup = groupActions.Any(a => a.WorkflowStep.Connector == WorkflowStepConnector.Or);
             if (isOrGroup)
             {
-                foreach (var sibling in groupActions.Where(a => a.Id != action.Id && a.Status == WorkflowActionStatus.Pending))
+                foreach (var sibling in groupActions.Where(a => a.Id != action.Id))
                 {
-                    sibling.Status = WorkflowActionStatus.Skipped;
-                    sibling.ActionedAt = DateTime.Now;
+                    SkipActionWithDescendants(sibling, action.WorkflowInstance.Actions);
                 }
             }
 
@@ -375,6 +374,24 @@ namespace AccountingSystem.Services
         private HashSet<int> GetReadyActionIds(WorkflowInstance instance)
         {
             return GetReadyActions(instance).Select(a => a.Id).ToHashSet();
+        }
+
+        private void SkipActionWithDescendants(WorkflowAction action, IEnumerable<WorkflowAction> allActions)
+        {
+            if (action.Status == WorkflowActionStatus.Pending)
+            {
+                action.Status = WorkflowActionStatus.Skipped;
+                action.ActionedAt = DateTime.Now;
+            }
+
+            var childActions = allActions
+                .Where(a => a.WorkflowStep.ParentStepId == action.WorkflowStepId)
+                .ToList();
+
+            foreach (var child in childActions)
+            {
+                SkipActionWithDescendants(child, allActions);
+            }
         }
 
         private async Task NotifyApproversAsync(WorkflowInstance instance, WorkflowStep step, WorkflowAction action, int? documentBranchId, CancellationToken cancellationToken)
