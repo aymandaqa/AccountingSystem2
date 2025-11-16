@@ -357,14 +357,15 @@ namespace AccountingSystem.Controllers
                             ? v.Account.NameAr
                             : string.Empty,
                 Notes = v.Notes,
-                Status = v.Status switch
-                {
-                    PaymentVoucherStatus.PendingApproval => "بانتظار الموافقة",
-                    PaymentVoucherStatus.Approved => "معتمد",
-                    PaymentVoucherStatus.Rejected => "مرفوض",
-                    PaymentVoucherStatus.Draft => "مسودة",
-                    _ => v.Status.ToString()
-                },
+                Status = v.Status == PaymentVoucherStatus.PendingApproval
+                    ? "بانتظار الموافقة"
+                    : v.Status == PaymentVoucherStatus.Approved
+                        ? "معتمد"
+                        : v.Status == PaymentVoucherStatus.Rejected
+                            ? "مرفوض"
+                            : v.Status == PaymentVoucherStatus.Draft
+                                ? "مسودة"
+                                : v.Status.ToString(),
                 DetailsController = "PaymentVouchers"
             }).ToListAsync();
         }
@@ -389,13 +390,13 @@ namespace AccountingSystem.Controllers
                 Amount = v.Amount,
                 Counterparty = v.Supplier != null ? v.Supplier.NameAr : v.Account.NameAr,
                 Notes = v.Notes,
-                Status = v.Status switch
-                {
-                    ReceiptVoucherStatus.PendingApproval => "بانتظار الموافقة",
-                    ReceiptVoucherStatus.Approved => "معتمد",
-                    ReceiptVoucherStatus.Rejected => "مرفوض",
-                    _ => v.Status.ToString()
-                },
+                Status = v.Status == ReceiptVoucherStatus.PendingApproval
+                    ? "بانتظار الموافقة"
+                    : v.Status == ReceiptVoucherStatus.Approved
+                        ? "معتمد"
+                        : v.Status == ReceiptVoucherStatus.Rejected
+                            ? "مرفوض"
+                            : v.Status.ToString(),
                 DetailsController = "ReceiptVouchers"
             }).ToListAsync();
         }
@@ -420,13 +421,13 @@ namespace AccountingSystem.Controllers
                 Amount = v.Amount,
                 Counterparty = v.Supplier.NameAr,
                 Notes = v.Notes,
-                Status = v.Status switch
-                {
-                    DisbursementVoucherStatus.PendingApproval => "بانتظار الموافقة",
-                    DisbursementVoucherStatus.Approved => "معتمد",
-                    DisbursementVoucherStatus.Rejected => "مرفوض",
-                    _ => v.Status.ToString()
-                },
+                Status = v.Status == DisbursementVoucherStatus.PendingApproval
+                    ? "بانتظار الموافقة"
+                    : v.Status == DisbursementVoucherStatus.Approved
+                        ? "معتمد"
+                        : v.Status == DisbursementVoucherStatus.Rejected
+                            ? "مرفوض"
+                            : v.Status.ToString(),
                 DetailsController = "DisbursementVouchers"
             }).ToListAsync();
         }
@@ -451,14 +452,17 @@ namespace AccountingSystem.Controllers
                 Amount = e.Amount,
                 Counterparty = e.Asset.Name,
                 Notes = e.Notes,
-                Status = (e.WorkflowInstance?.Status ?? WorkflowInstanceStatus.Approved) switch
-                {
-                    WorkflowInstanceStatus.InProgress => "قيد الاعتماد",
-                    WorkflowInstanceStatus.Rejected => "مرفوض",
-                    WorkflowInstanceStatus.Cancelled => "ملغي",
-                    WorkflowInstanceStatus.Approved => "معتمد",
-                    _ => "معتمد"
-                },
+                Status = e.WorkflowInstance == null
+                    ? "معتمد"
+                    : e.WorkflowInstance.Status == WorkflowInstanceStatus.InProgress
+                        ? "قيد الاعتماد"
+                        : e.WorkflowInstance.Status == WorkflowInstanceStatus.Rejected
+                            ? "مرفوض"
+                            : e.WorkflowInstance.Status == WorkflowInstanceStatus.Cancelled
+                                ? "ملغي"
+                                : e.WorkflowInstance.Status == WorkflowInstanceStatus.Approved
+                                    ? "معتمد"
+                                    : "معتمد",
                 DetailsController = "AssetExpenses"
             }).ToListAsync();
         }
