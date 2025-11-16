@@ -71,6 +71,7 @@ namespace AccountingSystem.Data
         public DbSet<EmployeeAdvance> EmployeeAdvances { get; set; }
         public DbSet<EmployeeLoan> EmployeeLoans { get; set; }
         public DbSet<EmployeeLoanInstallment> EmployeeLoanInstallments { get; set; }
+        public DbSet<EmployeeLoanPayment> EmployeeLoanPayments { get; set; }
         public DbSet<WorkflowDefinition> WorkflowDefinitions { get; set; }
         public DbSet<WorkflowStep> WorkflowSteps { get; set; }
         public DbSet<WorkflowInstance> WorkflowInstances { get; set; }

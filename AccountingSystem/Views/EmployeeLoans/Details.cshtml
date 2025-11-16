@@ -1,0 +1,204 @@
+@model AccountingSystem.ViewModels.EmployeeLoanDetailsViewModel
+@{
+    ViewData["Title"] = "بيانات القرض";
+    var statusMessage = ViewBag.StatusMessage as string;
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-0">القرض رقم @Model.Id</h2>
+            <p class="text-muted mb-0">@Model.EmployeeName - @Model.BranchName</p>
+        </div>
+        <div class="btn-group">
+            <a asp-action="Print" asp-route-id="@Model.Id" class="btn btn-outline-secondary" target="_blank"><i class="fas fa-print"></i> طباعة</a>
+            <a asp-action="Index" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> العودة</a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert alert-success">@statusMessage</div>
+    }
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-3 col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">القيمة الأصلية</div>
+                    <div class="h4 mb-0">@Model.PrincipalAmount.ToString("N2")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">المتبقي</div>
+                    <div class="h4 mb-0">@Model.OutstandingAmount.ToString("N2")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">الحساب</div>
+                    <div class="mb-0">@Model.AccountDisplay</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">التكرار</div>
+                    <div class="mb-0">
+                        @switch (Model.Frequency)
+                        {
+                            case AccountingSystem.Models.LoanInstallmentFrequency.Monthly:
+                                <span class="badge bg-secondary">شهري</span>
+                                break;
+                            case AccountingSystem.Models.LoanInstallmentFrequency.Weekly:
+                                <span class="badge bg-info text-dark">أسبوعي</span>
+                                break;
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>جدول الأقساط</span>
+                    <span class="text-muted">أقساط متبقية: @Model.PendingInstallments</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>رقم</th>
+                                    <th>التاريخ</th>
+                                    <th>القيمة</th>
+                                    <th>المسدد</th>
+                                    <th>المتبقي</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var installment in Model.Installments)
+                                {
+                                    var remaining = installment.RemainingAmount;
+                                    <tr>
+                                        <td>@installment.Id</td>
+                                        <td>@installment.DueDate.ToString("dd/MM/yyyy")</td>
+                                        <td>@installment.Amount.ToString("N2")</td>
+                                        <td>@installment.PaidAmount.ToString("N2")</td>
+                                        <td>@remaining.ToString("N2")</td>
+                                        <td>
+                                            @switch (installment.Status)
+                                            {
+                                                case AccountingSystem.Models.LoanInstallmentStatus.Paid:
+                                                    <span class="badge bg-success">مسدد</span>
+                                                    break;
+                                                case AccountingSystem.Models.LoanInstallmentStatus.Rescheduled:
+                                                    <span class="badge bg-warning text-dark">معاد الجدولة</span>
+                                                    break;
+                                                default:
+                                                    <span class="badge bg-secondary">مستحق</span>
+                                                    break;
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header">سجل السداد</div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>التاريخ</th>
+                                    <th>المبلغ</th>
+                                    <th>ملاحظات</th>
+                                    <th>قيد اليومية</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.Payments.Any())
+                                {
+                                    foreach (var payment in Model.Payments)
+                                    {
+                                        <tr>
+                                            <td>@payment.PaymentDate.ToString("dd/MM/yyyy")</td>
+                                            <td>@payment.Amount.ToString("N2")</td>
+                                            <td>@payment.Notes</td>
+                                            <td>
+                                                @if (payment.JournalEntryId.HasValue)
+                                                {
+                                                    <span class="badge bg-light text-dark">@payment.JournalEntryId</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted">لا يوجد سجلات سداد حتى الآن.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header">تسجيل سداد</div>
+                <div class="card-body">
+                    <form asp-action="Pay" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <div class="mb-3">
+                            <label asp-for="PaymentForm.Amount" class="form-label"></label>
+                            <input asp-for="PaymentForm.Amount" class="form-control" type="number" min="0" step="0.01" />
+                            <span asp-validation-for="PaymentForm.Amount" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="PaymentForm.PaymentDate" class="form-label"></label>
+                            <input asp-for="PaymentForm.PaymentDate" class="form-control" type="date" />
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input asp-for="PaymentForm.PayFullOutstanding" class="form-check-input" />
+                            <label class="form-check-label" asp-for="PaymentForm.PayFullOutstanding"></label>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="PaymentForm.Notes" class="form-label"></label>
+                            <textarea asp-for="PaymentForm.Notes" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="PaymentForm.Notes" class="text-danger"></span>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-money-bill"></i> تسجيل سداد</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

@@ -1,0 +1,77 @@
+@model AccountingSystem.ViewModels.EmployeeLoanDetailsViewModel
+@{
+    Layout = "_PrintLayout";
+    ViewData["Title"] = "طباعة القرض";
+}
+
+<div class="container mt-4">
+    <div class="text-center mb-4">
+        <h3>بيانات قرض الموظف</h3>
+        <p class="mb-0">القرض رقم @Model.Id</p>
+        <p class="mb-0">@Model.EmployeeName - @Model.BranchName</p>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-3"><strong>القيمة الأصلية:</strong> @Model.PrincipalAmount.ToString("N2")</div>
+        <div class="col-md-3"><strong>المتبقي:</strong> @Model.OutstandingAmount.ToString("N2")</div>
+        <div class="col-md-3"><strong>الحساب:</strong> @Model.AccountDisplay</div>
+        <div class="col-md-3"><strong>ملاحظات:</strong> @Model.Notes</div>
+    </div>
+
+    <h5 class="mt-4">جدول الأقساط</h5>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>التاريخ</th>
+                <th>القيمة</th>
+                <th>المسدد</th>
+                <th>المتبقي</th>
+                <th>الحالة</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var installment in Model.Installments)
+            {
+                <tr>
+                    <td>@installment.DueDate.ToString("dd/MM/yyyy")</td>
+                    <td>@installment.Amount.ToString("N2")</td>
+                    <td>@installment.PaidAmount.ToString("N2")</td>
+                    <td>@installment.RemainingAmount.ToString("N2")</td>
+                    <td>@installment.Status</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <h5 class="mt-4">سجلات السداد</h5>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>التاريخ</th>
+                <th>المبلغ</th>
+                <th>ملاحظات</th>
+                <th>قيد اليومية</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Payments.Any())
+            {
+                foreach (var payment in Model.Payments)
+                {
+                    <tr>
+                        <td>@payment.PaymentDate.ToString("dd/MM/yyyy")</td>
+                        <td>@payment.Amount.ToString("N2")</td>
+                        <td>@payment.Notes</td>
+                        <td>@(payment.JournalEntryId?.ToString() ?? "-")</td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="4" class="text-center text-muted">لا يوجد سجلات سداد.</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

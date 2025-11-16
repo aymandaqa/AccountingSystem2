@@ -52,6 +52,8 @@ namespace AccountingSystem.Models
         public virtual User? CreatedBy { get; set; }
 
         public virtual ICollection<EmployeeLoanInstallment> Installments { get; set; } = new List<EmployeeLoanInstallment>();
+
+        public virtual ICollection<EmployeeLoanPayment> Payments { get; set; } = new List<EmployeeLoanPayment>();
     }
 
     public enum LoanInstallmentFrequency

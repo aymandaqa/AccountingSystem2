@@ -159,6 +159,7 @@ namespace AccountingSystem.Controllers
                     .Include(i => i.Loan)
                         .ThenInclude(l => l.Account)
                     .Where(i => i.Status == LoanInstallmentStatus.Pending
+                        && Math.Round(i.Amount - i.PaidAmount, 2, MidpointRounding.AwayFromZero) > 0
                         && i.DueDate.Year == targetYear
                         && i.DueDate.Month == targetMonth
                         && i.Loan.IsActive
@@ -186,7 +187,7 @@ namespace AccountingSystem.Controllers
                             Description = string.IsNullOrWhiteSpace(loan.Notes)
                                 ? $"قسط مستحق بتاريخ {installment.DueDate:dd/MM/yyyy}"
                                 : loan.Notes,
-                            Amount = installment.Amount,
+                            Amount = Math.Round(installment.Amount - installment.PaidAmount, 2, MidpointRounding.AwayFromZero),
                             AccountName = loan.Account != null
                                 ? $"{loan.Account.Code} - {loan.Account.NameAr ?? loan.Account.NameEn ?? string.Empty}"
                                 : null,
@@ -1067,6 +1068,7 @@ namespace AccountingSystem.Controllers
 
                 foreach (var installment in paidInstallments)
                 {
+                    installment.PaidAmount = installment.Amount;
                     installment.Status = LoanInstallmentStatus.Paid;
                     installment.PaidAt = DateTime.Now;
                     installment.PayrollBatchLineId = batch.Lines

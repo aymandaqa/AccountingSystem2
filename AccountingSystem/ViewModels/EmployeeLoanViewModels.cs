@@ -67,6 +67,11 @@ namespace AccountingSystem.ViewModels
 
         public List<SelectListItem> Employees { get; set; } = new();
         public List<SelectListItem> Accounts { get; set; } = new();
+
+        [Display(Name = "بناء جدول أقساط مخصص")]
+        public bool UseCustomSchedule { get; set; }
+
+        public List<EmployeeLoanInstallmentViewModel> Installments { get; set; } = new();
     }
 
     public class EmployeeLoanRescheduleViewModel
@@ -95,6 +100,11 @@ namespace AccountingSystem.ViewModels
         [Display(Name = "ملاحظات")]
         [StringLength(500)]
         public string? Notes { get; set; }
+
+        [Display(Name = "بناء جدول أقساط مخصص")]
+        public bool UseCustomSchedule { get; set; }
+
+        public List<EmployeeLoanInstallmentViewModel> Installments { get; set; } = new();
     }
 
     public class EmployeeLoanInstallmentViewModel
@@ -102,6 +112,54 @@ namespace AccountingSystem.ViewModels
         public int Id { get; set; }
         public DateTime DueDate { get; set; }
         public decimal Amount { get; set; }
+        public decimal PaidAmount { get; set; }
         public LoanInstallmentStatus Status { get; set; }
+        public DateTime? PaidAt { get; set; }
+        public decimal RemainingAmount => Math.Max(0, Math.Round(Amount - PaidAmount, 2, MidpointRounding.AwayFromZero));
+    }
+
+    public class EmployeeLoanDetailsViewModel
+    {
+        public int Id { get; set; }
+        public string EmployeeName { get; set; } = string.Empty;
+        public string BranchName { get; set; } = string.Empty;
+        public string AccountDisplay { get; set; } = string.Empty;
+        public decimal PrincipalAmount { get; set; }
+        public decimal OutstandingAmount { get; set; }
+        public decimal InstallmentAmount { get; set; }
+        public int PendingInstallments { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public string? Notes { get; set; }
+        public LoanInstallmentFrequency Frequency { get; set; }
+        public IEnumerable<EmployeeLoanInstallmentViewModel> Installments { get; set; } = Enumerable.Empty<EmployeeLoanInstallmentViewModel>();
+        public EmployeeLoanPaymentFormViewModel PaymentForm { get; set; } = new();
+        public IEnumerable<EmployeeLoanPaymentHistoryViewModel> Payments { get; set; } = Enumerable.Empty<EmployeeLoanPaymentHistoryViewModel>();
+    }
+
+    public class EmployeeLoanPaymentFormViewModel
+    {
+        [Display(Name = "المبلغ")]
+        [Range(0.01, double.MaxValue, ErrorMessage = "المبلغ يجب أن يكون أكبر من صفر")]
+        public decimal Amount { get; set; }
+
+        [Display(Name = "تاريخ السداد")]
+        [DataType(DataType.Date)]
+        public DateTime PaymentDate { get; set; } = DateTime.Today;
+
+        [Display(Name = "سداد كامل المتبقي")]
+        public bool PayFullOutstanding { get; set; }
+
+        [Display(Name = "ملاحظات")]
+        [StringLength(500)]
+        public string? Notes { get; set; }
+    }
+
+    public class EmployeeLoanPaymentHistoryViewModel
+    {
+        public DateTime PaymentDate { get; set; }
+        public decimal Amount { get; set; }
+        public string? Notes { get; set; }
+        public int? JournalEntryId { get; set; }
     }
 }
