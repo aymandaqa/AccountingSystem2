@@ -50,7 +50,7 @@
         </div>
         <div class="d-flex flex-wrap gap-2">
             <a class="btn btn-primary" href="@Url.Action("Create")" asp-require-permission="suppliers.create">
-               <i class="fas fa-plus-circle ms-1"></i> مورد جديد
+                <i class="fas fa-plus-circle ms-1"></i> مورد جديد
             </a>
             <a class="btn btn-success"
                asp-action="ExportExcel"
@@ -183,62 +183,62 @@
                     @foreach (var item in Model.Items)
                     {
                         var permissions = Enum.GetValues(typeof(SupplierAuthorization))
-                            .Cast<SupplierAuthorization>()
-                            .Where(a => a != SupplierAuthorization.None && item.AuthorizedOperations.HasFlag(a))
-                            .Select(a => a.GetDisplayName())
-                            .ToList();
+                        .Cast<SupplierAuthorization>()
+                        .Where(a => a != SupplierAuthorization.None && item.AuthorizedOperations.HasFlag(a))
+                        .Select(a => a.GetDisplayName())
+                        .ToList();
                         var permissionsText = permissions.Count == 0 ? "-" : string.Join("، ", permissions);
                         var typeText = item.Type.GetDisplayName();
                         var branchNames = item.SupplierBranches != null && item.SupplierBranches.Any()
-                            ? item.SupplierBranches
-                                .Where(sb => sb.Branch != null)
-                                .Select(sb => !string.IsNullOrWhiteSpace(sb.Branch!.NameAr)
-                                    ? sb.Branch!.NameAr
-                                    : (sb.Branch!.NameEn ?? sb.Branch!.Code))
-                                .ToList()
-                            : new List<string>();
+                        ? item.SupplierBranches
+                        .Where(sb => sb.Branch != null)
+                        .Select(sb => !string.IsNullOrWhiteSpace(sb.Branch!.NameAr)
+                        ? sb.Branch!.NameAr
+                        : (sb.Branch!.NameEn ?? sb.Branch!.Code))
+                        .ToList()
+                        : new List<string>();
                         var branchesText = branchNames.Count == 0 ? "-" : string.Join("، ", branchNames);
                         var createdByName = item.CreatedBy?.FullName ?? "-";
                         var createdDateValue = item.CreatedAt.ToString("yyyy-MM-dd");
                         var createdDateDisplay = item.CreatedAt.ToString("g");
-                        var balanceValue = item.Account?.CurrentBalance ?? 0m;
+                        var balanceValue = item.Account?.CurrentBalance * -1 ?? 0m;
                         var balanceDisplay = item.Account != null
-                            ? string.Format(CultureInfo.CurrentCulture, "{0:N2}{1}", balanceValue, string.IsNullOrWhiteSpace(item.Account.Currency?.Code) ? string.Empty : $" {item.Account.Currency!.Code}")
-                            : "-";
+                        ? string.Format(CultureInfo.CurrentCulture, "{0:N2}{1}", balanceValue, string.IsNullOrWhiteSpace(item.Account.Currency?.Code) ? string.Empty : $" {item.Account.Currency!.Code}")
+                        : "-";
                         var balanceNumeric = balanceValue.ToString("G17", CultureInfo.InvariantCulture);
                         var phoneValue = string.IsNullOrWhiteSpace(item.Phone) ? "-" : item.Phone;
                         var emailValue = string.IsNullOrWhiteSpace(item.Email) ? "-" : item.Email;
-                    <tr>
-                        <td data-filter-value="@item.NameAr">@item.NameAr</td>
-                        <td data-filter-value="@phoneValue">@phoneValue</td>
-                        <td data-filter-value="@emailValue">@emailValue</td>
-                        <td data-filter-value="@typeText">@typeText</td>
-                        <td data-filter-value="@permissionsText">@permissionsText</td>
-                        <td data-filter-value="@branchesText">@branchesText</td>
-                        <td data-filter-value="@createdByName">@createdByName</td>
-                        <td data-filter-value="@createdDateDisplay" data-filter-date="@createdDateValue">@createdDateDisplay</td>
-                        <td class="text-end" data-filter-value="@balanceDisplay" data-filter-numeric="@balanceNumeric">@balanceDisplay</td>
-                        <td class="text-end">
-                            <div class="btn-group btn-group-sm" role="group">
-                                @if (item.AccountId.HasValue)
-                                {
-                                    <a class="btn btn-outline-success"
-                                       href="@Url.Action("AccountStatement", "Reports", new { accountId = item.AccountId })"
-                                       target="_blank"
-                                       asp-require-permission="reports.accountstatement"
-                                       title="كشف الحساب">
-                                        <i class="fas fa-file-alt"></i>
+                        <tr>
+                            <td data-filter-value="@item.NameAr">@item.NameAr</td>
+                            <td data-filter-value="@phoneValue">@phoneValue</td>
+                            <td data-filter-value="@emailValue">@emailValue</td>
+                            <td data-filter-value="@typeText">@typeText</td>
+                            <td data-filter-value="@permissionsText">@permissionsText</td>
+                            <td data-filter-value="@branchesText">@branchesText</td>
+                            <td data-filter-value="@createdByName">@createdByName</td>
+                            <td data-filter-value="@createdDateDisplay" data-filter-date="@createdDateValue">@createdDateDisplay</td>
+                            <td class="text-end" data-filter-value="@balanceDisplay" data-filter-numeric="@balanceNumeric">@balanceDisplay</td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    @if (item.AccountId.HasValue)
+                                    {
+                                        <a class="btn btn-outline-success"
+                                           href="@Url.Action("AccountStatement", "Reports", new { accountId = item.AccountId })"
+                                           target="_blank"
+                                           asp-require-permission="reports.accountstatement"
+                                           title="كشف الحساب">
+                                            <i class="fas fa-file-alt"></i>
+                                        </a>
+                                    }
+                                    <a class="btn btn-outline-warning" href="@Url.Action("Edit", new { id = item.Id })" asp-require-permission="suppliers.edit" title="تعديل">
+                                        <i class="fas fa-edit"></i>
                                     </a>
-                                }
-                                <a class="btn btn-outline-warning" href="@Url.Action("Edit", new { id = item.Id })" asp-require-permission="suppliers.edit" title="تعديل">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <button type="button" class="btn btn-outline-danger" onclick="deleteSupplier(@item.Id)" asp-require-permission="suppliers.delete" title="حذف">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
+                                    <button type="button" class="btn btn-outline-danger" onclick="deleteSupplier(@item.Id)" asp-require-permission="suppliers.delete" title="حذف">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
                     }
                     <tr class="no-results @(Model.Items.Any() ? "d-none" : string.Empty)">
                         <td colspan="10" class="text-center text-muted">لا توجد نتائج مطابقة للمرشحات الحالية.</td>
