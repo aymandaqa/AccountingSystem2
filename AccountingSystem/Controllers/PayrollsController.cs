@@ -159,7 +159,7 @@ namespace AccountingSystem.Controllers
                     .Include(i => i.Loan)
                         .ThenInclude(l => l.Account)
                     .Where(i => i.Status == LoanInstallmentStatus.Pending
-                        && Math.Round(i.Amount - i.PaidAmount, 2, MidpointRounding.AwayFromZero) > 0
+                        && i.Amount - i.PaidAmount > 0
                         && i.DueDate.Year == targetYear
                         && i.DueDate.Month == targetMonth
                         && i.Loan.IsActive
