@@ -78,12 +78,13 @@
         var canDisbursementVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "disbursementvouchers.create")).Succeeded;
         var canPaymentVouchersCreate = (await AuthorizationService.AuthorizeAsync(User, "paymentvouchers.create")).Succeeded;
         var canDynamicScreensManage = (await AuthorizationService.AuthorizeAsync(User, "dynamicscreens.manage")).Succeeded;
-        var showVouchers = canReceiptVouchers || canDisbursementVouchers || canPaymentVouchers || canWorkflowApprovalsView || canWorkflowDefinitionsManage || canReceiptVouchersCreate || canDisbursementVouchersCreate || canPaymentVouchersCreate;
         var showAccountManagement = canBusinessStatementBulk || canBusnissStatment || canDriverPayment || canDriverStatment || canUserPayment;
         var canAssets = (await AuthorizationService.AuthorizeAsync(User, "assets.view")).Succeeded;
         var canAssetTypes = (await AuthorizationService.AuthorizeAsync(User, "assettypes.view")).Succeeded;
         var canAssetExpenses = (await AuthorizationService.AuthorizeAsync(User, "assetexpenses.view")).Succeeded;
+        var showVouchers = canReceiptVouchers || canDisbursementVouchers || canPaymentVouchers || canWorkflowApprovalsView || canWorkflowDefinitionsManage || canReceiptVouchersCreate || canDisbursementVouchersCreate || canPaymentVouchersCreate || canAssetExpenses;
         var showAssets = canAssets || canAssetExpenses || canAssetTypes;
+        var canTransactionsOverview = canReceiptVouchers || canDisbursementVouchers || canPaymentVouchers || canAssetExpenses;
 
         var canDashboardView = (await AuthorizationService.AuthorizeAsync(User, "dashboard.view")).Succeeded;
 
@@ -147,7 +148,7 @@
         var currentAction = ViewContext.RouteData.Values["action"]?.ToString()?.ToLower();
         var accountsActive = currentController == "accounts";
         var operationsActive = currentController == "cashboxclosures" || currentController == "expenses" || currentController == "transfers";
-        var vouchersActive = currentController == "receiptvouchers" || currentController == "disbursementvouchers" || currentController == "paymentvouchers" || currentController == "workflowapprovals" || currentController == "workflowdefinitions";
+        var vouchersActive = currentController == "receiptvouchers" || currentController == "disbursementvouchers" || currentController == "paymentvouchers" || currentController == "workflowapprovals" || currentController == "workflowdefinitions" || currentController == "transactions";
         var accountMgmtActive = currentController == "accountmanagement";
         var journalActive = currentController == "journalentries";
         var reportsActive = currentController == "reports";
@@ -402,6 +403,16 @@
                                 <i class="fas fa-angle-down toggle-icon"></i>
                             </a>
                             <ul class="submenu collapse nav flex-column @(vouchersActive ? "show" : "")" id="vouchersMenu">
+                                @if (canTransactionsOverview)
+                                {
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Transactions"
+                                           asp-action="Index">
+                                            <i class="fas fa-table-list"></i> كل الحركات
+                                        </a>
+                                    </li>
+                                }
                                 @if (canReceiptVouchers)
                                 {
                                     <li class="nav-item">
