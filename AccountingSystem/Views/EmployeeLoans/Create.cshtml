@@ -68,6 +68,51 @@
                     </div>
                 </div>
 
+                <div class="form-check form-switch mt-3">
+                    <input asp-for="UseCustomSchedule" class="form-check-input" id="useCustomScheduleToggle" />
+                    <label class="form-check-label" asp-for="UseCustomSchedule"></label>
+                </div>
+
+                <div id="customScheduleContainer" class="card mt-3" style="display:@(Model.UseCustomSchedule ? "block" : "none")">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">جدول الأقساط اليدوي</h6>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="addInstallmentRow"><i class="fas fa-plus"></i> إضافة قسط</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-2" id="installmentTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40%">تاريخ الاستحقاق</th>
+                                        <th style="width: 40%">القيمة</th>
+                                        <th style="width: 20%"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="installmentRows">
+                                    @for (var i = 0; i < Model.Installments.Count; i++)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <input name="Installments[@i].DueDate" type="date" class="form-control" value="@Model.Installments[i].DueDate.ToString("yyyy-MM-dd")" />
+                                                <input name="Installments[@i].Status" type="hidden" value="@((int)Model.Installments[i].Status)" />
+                                                <input name="Installments[@i].PaidAmount" type="hidden" value="0" />
+                                            </td>
+                                            <td>
+                                                <input name="Installments[@i].Amount" type="number" min="0" step="0.01" class="form-control installment-amount" value="@Model.Installments[i].Amount" />
+                                            </td>
+                                            <td class="text-end">
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-installment"><i class="fas fa-trash"></i></button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-muted">إجمالي الأقساط اليدوية: <span id="customScheduleTotal">0</span></div>
+                        <span asp-validation-for="Installments" class="text-danger"></span>
+                    </div>
+                </div>
+
                 <div class="row g-3 mt-1">
                     <div class="col-md-8">
                         <label asp-for="Notes" class="form-label"></label>
@@ -93,4 +138,69 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        (function () {
+            const container = document.getElementById('customScheduleContainer');
+            const toggle = document.getElementById('useCustomScheduleToggle');
+            const rowsContainer = document.getElementById('installmentRows');
+            const totalLabel = document.getElementById('customScheduleTotal');
+
+            function recalcTotal() {
+                let total = 0;
+                rowsContainer.querySelectorAll('.installment-amount').forEach(input => {
+                    const value = parseFloat(input.value);
+                    if (!isNaN(value)) {
+                        total += value;
+                    }
+                });
+                totalLabel.textContent = total.toFixed(2);
+            }
+
+            function bindRemoveButtons() {
+                rowsContainer.querySelectorAll('.remove-installment').forEach(btn => {
+                    btn.onclick = function () {
+                        const row = btn.closest('tr');
+                        row.remove();
+                        recalcTotal();
+                        renumberRows();
+                    };
+                });
+                rowsContainer.querySelectorAll('.installment-amount').forEach(input => input.addEventListener('input', recalcTotal));
+            }
+
+            function renumberRows() {
+                rowsContainer.querySelectorAll('tr').forEach((row, idx) => {
+                    row.querySelectorAll('input').forEach(input => {
+                        const name = input.getAttribute('name');
+                        if (name) {
+                            input.setAttribute('name', name.replace(/Installments\[\d+\]/, `Installments[${idx}]`));
+                        }
+                    });
+                });
+            }
+
+            document.getElementById('addInstallmentRow')?.addEventListener('click', function () {
+                const idx = rowsContainer.querySelectorAll('tr').length;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <input name="Installments[${idx}].DueDate" type="date" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                        <input name="Installments[${idx}].Status" type="hidden" value="1" />
+                        <input name="Installments[${idx}].PaidAmount" type="hidden" value="0" />
+                    </td>
+                    <td><input name="Installments[${idx}].Amount" type="number" min="0" step="0.01" class="form-control installment-amount" value="0" /></td>
+                    <td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm remove-installment"><i class="fas fa-trash"></i></button></td>`;
+                rowsContainer.appendChild(row);
+                bindRemoveButtons();
+                recalcTotal();
+            });
+
+            toggle?.addEventListener('change', function () {
+                container.style.display = this.checked ? 'block' : 'none';
+            });
+
+            bindRemoveButtons();
+            recalcTotal();
+        })();
+    </script>
 }

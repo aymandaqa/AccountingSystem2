@@ -14,6 +14,10 @@ namespace AccountingSystem.Models
         [Range(0, double.MaxValue)]
         public decimal Amount { get; set; }
 
+        [Column(TypeName = "decimal(18,2)")]
+        [Range(0, double.MaxValue)]
+        public decimal PaidAmount { get; set; }
+
         [DataType(DataType.Date)]
         public DateTime DueDate { get; set; }
 
