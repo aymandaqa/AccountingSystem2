@@ -66,6 +66,7 @@
         var canUserPayment = (await AuthorizationService.AuthorizeAsync(User, "accountmanagement.userpayment")).Succeeded;
         var canCurrencies = (await AuthorizationService.AuthorizeAsync(User, "currencies.view")).Succeeded;
         var canSuppliers = (await AuthorizationService.AuthorizeAsync(User, "suppliers.view")).Succeeded;
+        var canSupplierTypes = (await AuthorizationService.AuthorizeAsync(User, "suppliertypes.view")).Succeeded;
         var canAgents = (await AuthorizationService.AuthorizeAsync(User, "agents.view")).Succeeded;
         var canSystemSettings = (await AuthorizationService.AuthorizeAsync(User, "systemsettings.view")).Succeeded;
         var canPermissionGroups = (await AuthorizationService.AuthorizeAsync(User, "permissiongroups.view")).Succeeded;
@@ -246,6 +247,17 @@
                                asp-action="Index"
                                asp-require-permission="suppliers.view">
                                 <i class="fas fa-truck"></i> الموردين
+                            </a>
+                        </li>
+                    }
+                    @if (canSupplierTypes)
+                    {
+                        <li class="nav-item" data-menu-key="suppliertypes">
+                            <a class="nav-link @(currentController == "suppliertypes" ? "active" : "")"
+                               asp-controller="SupplierTypes"
+                               asp-action="Index"
+                               asp-require-permission="suppliertypes.view">
+                                <i class="fa-solid fa-tags"></i> أنواع الموردين
                             </a>
                         </li>
                     }

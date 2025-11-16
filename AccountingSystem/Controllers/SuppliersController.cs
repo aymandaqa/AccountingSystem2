@@ -32,7 +32,7 @@ namespace AccountingSystem.Controllers
             int? branchId,
             SupplierBalanceFilter balanceFilter,
             IReadOnlyCollection<int> userBranchIds,
-            SupplierType? type)
+            int? supplierTypeId)
         {
             var suppliersQuery = _context.Suppliers
                 .AsNoTracking()
@@ -41,6 +41,7 @@ namespace AccountingSystem.Controllers
                 .Include(s => s.CreatedBy)
                 .Include(s => s.SupplierBranches)
                     .ThenInclude(sb => sb.Branch)
+                .Include(s => s.SupplierType)
                 .AsQueryable();
 
             if (userBranchIds.Count > 0)
@@ -64,9 +65,9 @@ namespace AccountingSystem.Controllers
                     s.SupplierBranches.Any(sb => sb.BranchId == branchId.Value));
             }
 
-            if (type.HasValue)
+            if (supplierTypeId.HasValue)
             {
-                suppliersQuery = suppliersQuery.Where(s => s.Type == type.Value);
+                suppliersQuery = suppliersQuery.Where(s => s.SupplierTypeId == supplierTypeId.Value);
             }
 
             suppliersQuery = balanceFilter switch
@@ -84,7 +85,7 @@ namespace AccountingSystem.Controllers
         public async Task<IActionResult> Index(
             string? search,
             int? branchId,
-            SupplierType? type,
+            int? supplierTypeId,
             SupplierBalanceFilter balanceFilter = SupplierBalanceFilter.All,
             int page = 1,
             int pageSize = 10)
@@ -108,7 +109,7 @@ namespace AccountingSystem.Controllers
 
             page = Math.Max(1, page);
 
-            var suppliersQuery = BuildSuppliersQuery(search, branchId, balanceFilter, userBranchIds, type);
+            var suppliersQuery = BuildSuppliersQuery(search, branchId, balanceFilter, userBranchIds, supplierTypeId);
 
             var totalCount = await suppliersQuery.CountAsync();
             var totalPages = pageSize > 0 ? (int)Math.Ceiling(totalCount / (double)pageSize) : 0;
@@ -151,11 +152,17 @@ namespace AccountingSystem.Controllers
 
             ViewBag.Branches = branches;
             ViewBag.SelectedBranchId = branchId;
-            ViewBag.SelectedType = type;
+            ViewBag.SelectedType = supplierTypeId;
             ViewBag.SelectedBalanceFilter = balanceFilter;
             ViewBag.PageSize = pageSize;
             ViewBag.PageSizeOptions = allowedPageSizes;
             ViewBag.UserBranchIds = userBranchIds;
+
+            ViewBag.SupplierTypes = await _context.SupplierTypes
+                .AsNoTracking()
+                .Where(t => t.IsActive)
+                .OrderBy(t => t.Name)
+                .ToListAsync();
 
             var model = new PaginatedListViewModel<Supplier>
             {
@@ -173,7 +180,7 @@ namespace AccountingSystem.Controllers
         public async Task<IActionResult> ExportExcel(
             string? search,
             int? branchId,
-            SupplierType? type,
+            int? supplierTypeId,
             SupplierBalanceFilter balanceFilter = SupplierBalanceFilter.All)
         {
             var user = await _userManager.GetUserAsync(User);
@@ -187,7 +194,7 @@ namespace AccountingSystem.Controllers
                 .Select(ub => ub.BranchId)
                 .ToListAsync();
 
-            var suppliers = await BuildSuppliersQuery(search, branchId, balanceFilter, userBranchIds, type)
+            var suppliers = await BuildSuppliersQuery(search, branchId, balanceFilter, userBranchIds, supplierTypeId)
                 .OrderBy(s => s.NameAr)
                 .ThenBy(s => s.Id)
                 .ToListAsync();
@@ -248,7 +255,7 @@ namespace AccountingSystem.Controllers
                     worksheet.Cell(row, 9).Value = string.Empty;
                 }
 
-                worksheet.Cell(row, 10).Value = supplier.Type.GetDisplayName();
+                worksheet.Cell(row, 10).Value = supplier.SupplierType?.Name ?? string.Empty;
 
                 row++;
             }
@@ -315,6 +322,11 @@ namespace AccountingSystem.Controllers
             else if (!validBranchIds.Any() && branchesExist)
             {
                 ModelState.AddModelError(nameof(model.SelectedBranchIds), "يرجى اختيار فرع واحد على الأقل.");
+            }
+
+            if (!await _context.SupplierTypes.AnyAsync(t => t.Id == model.SupplierTypeId && t.IsActive))
+            {
+                ModelState.AddModelError(nameof(model.SupplierTypeId), "نوع المورد المحدد غير صالح.");
             }
 
             if (ModelState.IsValid)
@@ -391,7 +403,7 @@ namespace AccountingSystem.Controllers
                     Phone = model.Phone,
                     Email = model.Email,
                     IsActive = model.IsActive,
-                    Type = model.Type,
+                    SupplierTypeId = model.SupplierTypeId,
                     AuthorizedOperations = CombineAuthorizations(model.SelectedAuthorizations),
                     AccountId = account.Id,
                     CreatedById = user.Id,
@@ -437,7 +449,7 @@ namespace AccountingSystem.Controllers
                 Phone = supplier.Phone,
                 Email = supplier.Email,
                 IsActive = supplier.IsActive,
-                Type = supplier.Type,
+                SupplierTypeId = supplier.SupplierTypeId,
                 SelectedAuthorizations = SplitAuthorizations(supplier.AuthorizedOperations),
                 SelectedBranchIds = supplier.SupplierBranches.Select(sb => sb.BranchId).ToList()
             };
@@ -492,12 +504,20 @@ namespace AccountingSystem.Controllers
                     return NotFound();
                 }
 
+                var supplierTypeExists = await _context.SupplierTypes
+                    .AnyAsync(t => t.Id == model.SupplierTypeId && t.IsActive);
+                if (!supplierTypeExists)
+                {
+                    ModelState.AddModelError(nameof(model.SupplierTypeId), "نوع المورد المحدد غير صالح.");
+                    return View(BuildFormViewModel(model));
+                }
+
                 supplier.NameAr = model.NameAr;
                 supplier.NameEn = model.NameEn;
                 supplier.Phone = model.Phone;
                 supplier.Email = model.Email;
                 supplier.IsActive = model.IsActive;
-                supplier.Type = model.Type;
+                supplier.SupplierTypeId = model.SupplierTypeId;
                 supplier.AuthorizedOperations = CombineAuthorizations(model.SelectedAuthorizations);
 
                 var distinctBranchIds = validBranchIds.Distinct().ToList();
@@ -616,6 +636,23 @@ namespace AccountingSystem.Controllers
                     Selected = model.SelectedBranchIds.Contains(b.Id)
                 })
                 .ToList();
+
+            model.SupplierTypeOptions = _context.SupplierTypes
+                .Where(t => t.IsActive || t.Id == model.SupplierTypeId)
+                .OrderBy(t => t.Name)
+                .Select(t => new SelectListItem
+                {
+                    Value = t.Id.ToString(),
+                    Text = t.Name,
+                    Selected = t.Id == model.SupplierTypeId
+                })
+                .ToList();
+
+            if (model.SupplierTypeId == 0 && model.SupplierTypeOptions.Any())
+            {
+                model.SupplierTypeId = int.Parse(model.SupplierTypeOptions.First().Value);
+                model.SupplierTypeOptions.First().Selected = true;
+            }
 
             return model;
         }

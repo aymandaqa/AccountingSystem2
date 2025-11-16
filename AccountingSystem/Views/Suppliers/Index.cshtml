@@ -13,14 +13,12 @@
     var selectedBalanceFilter = ViewBag.SelectedBalanceFilter != null
         ? (SupplierBalanceFilter)ViewBag.SelectedBalanceFilter
         : SupplierBalanceFilter.All;
-    SupplierType? selectedType = ViewBag.SelectedType != null
-        ? (SupplierType)ViewBag.SelectedType
-        : (SupplierType?)null;
+    int? selectedType = ViewBag.SelectedType as int?;
     var pageSize = ViewBag.PageSize != null ? (int)ViewBag.PageSize : Model.PageSize;
     var pageSizeOptions = ViewBag.PageSizeOptions as int[] ?? new[] { 10, 25, 50, 100 };
     var branches = ViewBag.Branches as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
     var balanceFilterOptions = Enum.GetValues(typeof(SupplierBalanceFilter)).Cast<SupplierBalanceFilter>();
-    var typeOptions = Enum.GetValues(typeof(SupplierType)).Cast<SupplierType>();
+    var typeOptions = ViewBag.SupplierTypes as IEnumerable<SupplierType> ?? Enumerable.Empty<SupplierType>();
 }
 
 <div id="suppliersAntiForgery" class="d-none">
@@ -52,13 +50,13 @@
             <a class="btn btn-primary" href="@Url.Action("Create")" asp-require-permission="suppliers.create">
                 <i class="fas fa-plus-circle ms-1"></i> مورد جديد
             </a>
-            <a class="btn btn-success"
-               asp-action="ExportExcel"
-               asp-route-search="@searchValue"
-               asp-route-branchId="@selectedBranchId"
-               asp-route-type="@(selectedType.HasValue ? ((int)selectedType.Value).ToString() : null)"
-               asp-route-balanceFilter="@selectedBalanceFilter"
-               asp-require-permission="suppliers.view">
+               <a class="btn btn-success"
+                  asp-action="ExportExcel"
+                  asp-route-search="@searchValue"
+                  asp-route-branchId="@selectedBranchId"
+                   asp-route-supplierTypeId="@(selectedType.HasValue ? selectedType.Value.ToString() : null)"
+                   asp-route-balanceFilter="@selectedBalanceFilter"
+                   asp-require-permission="suppliers.view">
                 <i class="fas fa-file-excel ms-1"></i> تصدير Excel
             </a>
         </div>
@@ -80,12 +78,12 @@
                 </select>
             </div>
             <div class="col-12 col-md-3">
-                <label for="type" class="form-label">نوع المورد</label>
-                <select id="type" name="type" class="form-select">
+                <label for="supplierTypeId" class="form-label">نوع المورد</label>
+                <select id="supplierTypeId" name="supplierTypeId" class="form-select">
                     <option value="">كل الأنواع</option>
                     @foreach (var option in typeOptions)
                     {
-                        <option value="@((int)option)" selected="@(selectedType.HasValue && selectedType.Value == option ? "selected" : null)">@option.GetDisplayName()</option>
+                        <option value="@option.Id" selected="@(selectedType.HasValue && selectedType.Value == option.Id ? "selected" : null)">@option.Name</option>
                     }
                 </select>
             </div>
@@ -151,7 +149,7 @@
                                 <option value="">الكل</option>
                                 @foreach (var option in typeOptions)
                                 {
-                                    <option value="@option.GetDisplayName()">@option.GetDisplayName()</option>
+                                    <option value="@option.Name">@option.Name</option>
                                 }
                             </select>
                         </th>
@@ -188,7 +186,7 @@
                         .Select(a => a.GetDisplayName())
                         .ToList();
                         var permissionsText = permissions.Count == 0 ? "-" : string.Join("، ", permissions);
-                        var typeText = item.Type.GetDisplayName();
+                        var typeText = item.SupplierType?.Name ?? "-";
                         var branchNames = item.SupplierBranches != null && item.SupplierBranches.Any()
                         ? item.SupplierBranches
                         .Where(sb => sb.Branch != null)
@@ -254,16 +252,16 @@
             <nav aria-label="صفحات الموردين" class="mt-3">
                 <ul class="pagination justify-content-center flex-wrap mb-0">
                     <li class="page-item @(Model.PageIndex == 1 ? "disabled" : null)">
-                        <a class="page-link" href="@Url.Action("Index", new { page = Model.PageIndex - 1, pageSize = Model.PageSize, search = searchValue, branchId = selectedBranchId, type = selectedType, balanceFilter = selectedBalanceFilter })">السابق</a>
+                        <a class="page-link" href="@Url.Action("Index", new { page = Model.PageIndex - 1, pageSize = Model.PageSize, search = searchValue, branchId = selectedBranchId, supplierTypeId = selectedType, balanceFilter = selectedBalanceFilter })">السابق</a>
                     </li>
                     @for (var pageNumber = startPage; pageNumber <= endPage; pageNumber++)
                     {
                         <li class="page-item @(pageNumber == Model.PageIndex ? "active" : null)">
-                            <a class="page-link" href="@Url.Action("Index", new { page = pageNumber, pageSize = Model.PageSize, search = searchValue, branchId = selectedBranchId, type = selectedType, balanceFilter = selectedBalanceFilter })">@pageNumber</a>
+                            <a class="page-link" href="@Url.Action("Index", new { page = pageNumber, pageSize = Model.PageSize, search = searchValue, branchId = selectedBranchId, supplierTypeId = selectedType, balanceFilter = selectedBalanceFilter })">@pageNumber</a>
                         </li>
                     }
                     <li class="page-item @(Model.PageIndex == Model.TotalPages ? "disabled" : null)">
-                        <a class="page-link" href="@Url.Action("Index", new { page = Model.PageIndex + 1, pageSize = Model.PageSize, search = searchValue, branchId = selectedBranchId, type = selectedType, balanceFilter = selectedBalanceFilter })">التالي</a>
+                        <a class="page-link" href="@Url.Action("Index", new { page = Model.PageIndex + 1, pageSize = Model.PageSize, search = searchValue, branchId = selectedBranchId, supplierTypeId = selectedType, balanceFilter = selectedBalanceFilter })">التالي</a>
                     </li>
                 </ul>
             </nav>

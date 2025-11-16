@@ -48,6 +48,7 @@ namespace AccountingSystem.Data
         public DbSet<DisbursementVoucher> DisbursementVouchers { get; set; }
         public DbSet<PaymentVoucher> PaymentVouchers { get; set; }
         public DbSet<Supplier> Suppliers { get; set; }
+        public DbSet<SupplierType> SupplierTypes { get; set; }
         public DbSet<SupplierBranch> SupplierBranches { get; set; }
         public DbSet<SystemSetting> SystemSettings { get; set; }
         public DbSet<UserPaymentAccount> UserPaymentAccounts { get; set; }
@@ -1368,6 +1369,9 @@ namespace AccountingSystem.Data
                 new Permission { Id = 41, Name = "suppliers.create", DisplayName = "إنشاء الموردين", Category = "الموردين", CreatedAt = createdAt },
                 new Permission { Id = 42, Name = "suppliers.edit", DisplayName = "تعديل الموردين", Category = "الموردين", CreatedAt = createdAt },
                 new Permission { Id = 43, Name = "suppliers.delete", DisplayName = "حذف الموردين", Category = "الموردين", CreatedAt = createdAt },
+                new Permission { Id = 115, Name = "suppliertypes.view", DisplayName = "عرض أنواع الموردين", Category = "الموردين", CreatedAt = createdAt },
+                new Permission { Id = 116, Name = "suppliertypes.create", DisplayName = "إنشاء نوع مورد", Category = "الموردين", CreatedAt = createdAt },
+                new Permission { Id = 117, Name = "suppliertypes.edit", DisplayName = "تعديل نوع مورد", Category = "الموردين", CreatedAt = createdAt },
                 new Permission { Id = 44, Name = "systemsettings.view", DisplayName = "عرض إعدادات النظام", Category = "إعدادات النظام", CreatedAt = createdAt },
                 new Permission { Id = 45, Name = "systemsettings.create", DisplayName = "إنشاء إعدادات النظام", Category = "إعدادات النظام", CreatedAt = createdAt },
                 new Permission { Id = 46, Name = "systemsettings.edit", DisplayName = "تعديل إعدادات النظام", Category = "إعدادات النظام", CreatedAt = createdAt },

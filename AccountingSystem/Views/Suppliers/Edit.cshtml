@@ -29,9 +29,9 @@
             <span asp-validation-for="Email" class="text-danger"></span>
         </div>
         <div class="col-md-6">
-            <label asp-for="Type" class="form-label"></label>
-            <select asp-for="Type" asp-items="Html.GetEnumSelectList<SupplierType>()" class="form-select"></select>
-            <span asp-validation-for="Type" class="text-danger"></span>
+            <label asp-for="SupplierTypeId" class="form-label"></label>
+            <select asp-for="SupplierTypeId" asp-items="Model.SupplierTypeOptions" class="form-select"></select>
+            <span asp-validation-for="SupplierTypeId" class="text-danger"></span>
         </div>
         <div class="col-md-6">
             <label asp-for="SelectedAuthorizations" class="form-label"></label>
