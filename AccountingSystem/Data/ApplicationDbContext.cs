@@ -1093,6 +1093,9 @@ namespace AccountingSystem.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.RequiredPermission).HasMaxLength(200);
+                entity.Property(e => e.Connector)
+                    .HasConversion<int>()
+                    .HasDefaultValue(WorkflowStepConnector.And);
                 entity.HasOne(e => e.ApproverUser)
                     .WithMany()
                     .HasForeignKey(e => e.ApproverUserId)
@@ -1101,6 +1104,11 @@ namespace AccountingSystem.Data
                 entity.HasOne(e => e.Branch)
                     .WithMany()
                     .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.ParentStep)
+                    .WithMany(e => e.ChildSteps)
+                    .HasForeignKey(e => e.ParentStepId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 

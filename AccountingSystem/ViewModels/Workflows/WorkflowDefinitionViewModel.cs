@@ -24,6 +24,9 @@ namespace AccountingSystem.ViewModels.Workflows
     {
         public int? Id { get; set; }
         public int Order { get; set; }
+        public WorkflowStepConnector Connector { get; set; } = WorkflowStepConnector.And;
+        public int? ParentOrder { get; set; }
+        public int? ParentStepId { get; set; }
         public WorkflowStepType StepType { get; set; }
         public string? ApproverUserId { get; set; }
         public int? BranchId { get; set; }

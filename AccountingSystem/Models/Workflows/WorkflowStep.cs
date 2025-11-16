@@ -12,6 +12,10 @@ namespace AccountingSystem.Models.Workflows
 
         public int Order { get; set; }
 
+        public WorkflowStepConnector Connector { get; set; } = WorkflowStepConnector.And;
+
+        public int? ParentStepId { get; set; }
+
         public WorkflowStepType StepType { get; set; }
 
         [StringLength(450)]
@@ -29,6 +33,10 @@ namespace AccountingSystem.Models.Workflows
         public decimal? MaxAmount { get; set; }
 
         public virtual WorkflowDefinition WorkflowDefinition { get; set; } = null!;
+
+        public virtual WorkflowStep? ParentStep { get; set; }
+
+        public virtual ICollection<WorkflowStep> ChildSteps { get; set; } = new List<WorkflowStep>();
 
         public virtual User? ApproverUser { get; set; }
 
