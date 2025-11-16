@@ -103,6 +103,7 @@ builder.Services.AddScoped<IJournalEntryService, JournalEntryService>();
 builder.Services.AddScoped<ICompoundJournalService, CompoundJournalService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IWorkflowService, WorkflowService>();
+builder.Services.AddScoped<IWorkflowApprovalViewModelFactory, WorkflowApprovalViewModelFactory>();
 builder.Services.AddScoped<IPaymentVoucherProcessor, PaymentVoucherProcessor>();
 builder.Services.AddScoped<IReceiptVoucherProcessor, ReceiptVoucherProcessor>();
 builder.Services.AddScoped<IDisbursementVoucherProcessor, DisbursementVoucherProcessor>();
