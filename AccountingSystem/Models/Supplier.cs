@@ -26,6 +26,8 @@ namespace AccountingSystem.Models
         public int? AccountId { get; set; }
         public virtual Account? Account { get; set; }
 
+        public SupplierType Type { get; set; } = SupplierType.Company;
+
         public SupplierMode Mode { get; set; } = SupplierMode.Cash;
 
         public SupplierAuthorization AuthorizedOperations { get; set; } = SupplierAuthorization.PaymentVoucher | SupplierAuthorization.ReceiptVoucher;

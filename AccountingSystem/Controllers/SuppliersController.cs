@@ -31,7 +31,8 @@ namespace AccountingSystem.Controllers
             string? search,
             int? branchId,
             SupplierBalanceFilter balanceFilter,
-            IReadOnlyCollection<int> userBranchIds)
+            IReadOnlyCollection<int> userBranchIds,
+            SupplierType? type)
         {
             var suppliersQuery = _context.Suppliers
                 .AsNoTracking()
@@ -63,6 +64,11 @@ namespace AccountingSystem.Controllers
                     s.SupplierBranches.Any(sb => sb.BranchId == branchId.Value));
             }
 
+            if (type.HasValue)
+            {
+                suppliersQuery = suppliersQuery.Where(s => s.Type == type.Value);
+            }
+
             suppliersQuery = balanceFilter switch
             {
                 SupplierBalanceFilter.Positive => suppliersQuery.Where(s => s.Account != null && s.Account.CurrentBalance > 0),
@@ -78,6 +84,7 @@ namespace AccountingSystem.Controllers
         public async Task<IActionResult> Index(
             string? search,
             int? branchId,
+            SupplierType? type,
             SupplierBalanceFilter balanceFilter = SupplierBalanceFilter.All,
             int page = 1,
             int pageSize = 10)
@@ -101,7 +108,7 @@ namespace AccountingSystem.Controllers
 
             page = Math.Max(1, page);
 
-            var suppliersQuery = BuildSuppliersQuery(search, branchId, balanceFilter, userBranchIds);
+            var suppliersQuery = BuildSuppliersQuery(search, branchId, balanceFilter, userBranchIds, type);
 
             var totalCount = await suppliersQuery.CountAsync();
             var totalPages = pageSize > 0 ? (int)Math.Ceiling(totalCount / (double)pageSize) : 0;
@@ -144,6 +151,7 @@ namespace AccountingSystem.Controllers
 
             ViewBag.Branches = branches;
             ViewBag.SelectedBranchId = branchId;
+            ViewBag.SelectedType = type;
             ViewBag.SelectedBalanceFilter = balanceFilter;
             ViewBag.PageSize = pageSize;
             ViewBag.PageSizeOptions = allowedPageSizes;
@@ -165,6 +173,7 @@ namespace AccountingSystem.Controllers
         public async Task<IActionResult> ExportExcel(
             string? search,
             int? branchId,
+            SupplierType? type,
             SupplierBalanceFilter balanceFilter = SupplierBalanceFilter.All)
         {
             var user = await _userManager.GetUserAsync(User);
@@ -178,7 +187,7 @@ namespace AccountingSystem.Controllers
                 .Select(ub => ub.BranchId)
                 .ToListAsync();
 
-            var suppliers = await BuildSuppliersQuery(search, branchId, balanceFilter, userBranchIds)
+            var suppliers = await BuildSuppliersQuery(search, branchId, balanceFilter, userBranchIds, type)
                 .OrderBy(s => s.NameAr)
                 .ThenBy(s => s.Id)
                 .ToListAsync();
@@ -195,6 +204,7 @@ namespace AccountingSystem.Controllers
             worksheet.Cell(1, 7).Value = "تاريخ الإنشاء";
             worksheet.Cell(1, 8).Value = "رصيد المورد";
             worksheet.Cell(1, 9).Value = "العملة";
+            worksheet.Cell(1, 10).Value = "نوع المورد";
 
             worksheet.Row(1).Style.Font.Bold = true;
 
@@ -237,6 +247,8 @@ namespace AccountingSystem.Controllers
                     worksheet.Cell(row, 8).Value = "-";
                     worksheet.Cell(row, 9).Value = string.Empty;
                 }
+
+                worksheet.Cell(row, 10).Value = supplier.Type.GetDisplayName();
 
                 row++;
             }
@@ -379,6 +391,7 @@ namespace AccountingSystem.Controllers
                     Phone = model.Phone,
                     Email = model.Email,
                     IsActive = model.IsActive,
+                    Type = model.Type,
                     AuthorizedOperations = CombineAuthorizations(model.SelectedAuthorizations),
                     AccountId = account.Id,
                     CreatedById = user.Id,
@@ -424,6 +437,7 @@ namespace AccountingSystem.Controllers
                 Phone = supplier.Phone,
                 Email = supplier.Email,
                 IsActive = supplier.IsActive,
+                Type = supplier.Type,
                 SelectedAuthorizations = SplitAuthorizations(supplier.AuthorizedOperations),
                 SelectedBranchIds = supplier.SupplierBranches.Select(sb => sb.BranchId).ToList()
             };
@@ -483,6 +497,7 @@ namespace AccountingSystem.Controllers
                 supplier.Phone = model.Phone;
                 supplier.Email = model.Email;
                 supplier.IsActive = model.IsActive;
+                supplier.Type = model.Type;
                 supplier.AuthorizedOperations = CombineAuthorizations(model.SelectedAuthorizations);
 
                 var distinctBranchIds = validBranchIds.Distinct().ToList();
