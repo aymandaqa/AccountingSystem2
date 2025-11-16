@@ -1,4 +1,5 @@
 @model AccountingSystem.ViewModels.SupplierFormViewModel
+@using AccountingSystem.Models
 @{
     ViewData["Title"] = "إضافة مورد";
 }
@@ -25,6 +26,11 @@
             <label asp-for="Email" class="form-label"></label>
             <input asp-for="Email" class="form-control" />
             <span asp-validation-for="Email" class="text-danger"></span>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="Type" class="form-label"></label>
+            <select asp-for="Type" asp-items="Html.GetEnumSelectList<SupplierType>()" class="form-select"></select>
+            <span asp-validation-for="Type" class="text-danger"></span>
         </div>
         <div class="col-md-6">
             <label asp-for="SelectedAuthorizations" class="form-label"></label>

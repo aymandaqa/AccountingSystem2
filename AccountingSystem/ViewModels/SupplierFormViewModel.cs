@@ -30,6 +30,10 @@ namespace AccountingSystem.ViewModels
         [Display(Name = "نشط")]
         public bool IsActive { get; set; } = true;
 
+        [Display(Name = "نوع المورد")]
+        [Required]
+        public SupplierType Type { get; set; } = SupplierType.Company;
+
         [Display(Name = "الصلاحيات المسموح بها")]
         public List<SupplierAuthorization> SelectedAuthorizations { get; set; } = new();
 
