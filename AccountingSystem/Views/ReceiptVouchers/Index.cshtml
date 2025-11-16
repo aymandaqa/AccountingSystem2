@@ -82,15 +82,8 @@
             </div>
         </form>
 
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-            <span class="text-muted small">استخدم المرشحات أسفل العناوين لفلترة البيانات المعروضة في الصفحة الحالية.</span>
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="receipt-vouchers-reset">
-                <i class="fas fa-eraser ms-1"></i> مسح مرشحات الجدول
-            </button>
-        </div>
-
         <div class="table-responsive">
-            <table class="table table-striped table-hover align-middle" data-table-filter data-table-filter-reset="#receipt-vouchers-reset">
+            <table class="table table-striped table-hover align-middle">
                 <thead class="table-light align-middle">
                     <tr>
                         <th scope="col">التاريخ والوقت</th>
@@ -107,58 +100,6 @@
                         <th scope="col">مرجع القيد</th>
                         <th scope="col">الفرع</th>
                         <th scope="col" class="text-end">إجراءات</th>
-                    </tr>
-                    <tr class="table-secondary filters-row">
-                        <th>
-                            <div class="d-flex gap-2">
-                                <input type="date" class="form-control form-control-sm" data-filter-column="0" data-filter-type="date-min" />
-                                <input type="date" class="form-control form-control-sm" data-filter-column="0" data-filter-type="date-max" />
-                            </div>
-                        </th>
-                        <th><input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="1" /></th>
-                        <th><input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="2" /></th>
-                        <th><input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="3" /></th>
-                        <th><input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="4" /></th>
-                        <th>
-                            <div class="d-flex gap-2">
-                                <input type="number" step="0.000001" class="form-control form-control-sm" placeholder="من" data-filter-column="5" data-filter-type="number-min" />
-                                <input type="number" step="0.000001" class="form-control form-control-sm" placeholder="إلى" data-filter-column="5" data-filter-type="number-max" />
-                            </div>
-                        </th>
-                        <th>
-                            <div class="d-flex gap-2">
-                                <input type="number" step="0.01" class="form-control form-control-sm" placeholder="من" data-filter-column="6" data-filter-type="number-min" />
-                                <input type="number" step="0.01" class="form-control form-control-sm" placeholder="إلى" data-filter-column="6" data-filter-type="number-max" />
-                            </div>
-                        </th>
-                        <th>
-                            <div class="d-flex gap-2">
-                                <input type="number" step="0.01" class="form-control form-control-sm" placeholder="من" data-filter-column="7" data-filter-type="number-min" />
-                                <input type="number" step="0.01" class="form-control form-control-sm" placeholder="إلى" data-filter-column="7" data-filter-type="number-max" />
-                            </div>
-                        </th>
-                        <th><input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="8" /></th>
-                        <th>
-                            <select class="form-select form-select-sm" data-filter-column="9" data-filter-type="select">
-                                <option value="">الكل</option>
-                                @foreach (var status in statusFilters)
-                                {
-                                    <option value="@status.Text">@status.Text</option>
-                                }
-                            </select>
-                        </th>
-                        <th><input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="10" /></th>
-                        <th><input type="text" class="form-control form-control-sm" placeholder="بحث" data-filter-column="11" /></th>
-                        <th>
-                            <select class="form-select form-select-sm" data-filter-column="12" data-filter-type="select">
-                                <option value="">الكل</option>
-                                @foreach (var branch in branchSelectList)
-                                {
-                                    <option value="@branch.Text">@branch.Text</option>
-                                }
-                            </select>
-                        </th>
-                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -308,6 +249,3 @@
     </div>
 </div>
 
-@section Scripts {
-    <script src="~/js/table-filters.js" asp-append-version="true"></script>
-}
