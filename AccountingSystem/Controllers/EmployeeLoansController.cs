@@ -544,8 +544,8 @@ namespace AccountingSystem.Controllers
 
             var lines = new List<JournalEntryLine>
             {
-                new JournalEntryLine { AccountId = loan.AccountId, DebitAmount = payment.Amount },
-                new JournalEntryLine { AccountId = loan.Employee.AccountId, CreditAmount = payment.Amount }
+                new JournalEntryLine { AccountId = loan.Employee.AccountId, DebitAmount = payment.Amount },
+                new JournalEntryLine { AccountId =  loan.AccountId, CreditAmount = payment.Amount }
             };
 
             var entry = await _journalEntryService.CreateJournalEntryAsync(
