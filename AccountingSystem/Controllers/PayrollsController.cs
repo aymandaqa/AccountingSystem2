@@ -1065,6 +1065,20 @@ namespace AccountingSystem.Controllers
                     .Where(i => paidInstallmentIds.Contains(i.Id))
                     .ToListAsync();
 
+                var invalidInstallments = paidInstallments
+                    .Where(i => i.Status != LoanInstallmentStatus.Pending)
+                    .Select(i => i.Id)
+                    .ToList();
+
+                if (invalidInstallments.Count > 0)
+                {
+                    var invalidIdsText = string.Join(", ", invalidInstallments);
+                    return BadRequest(new
+                    {
+                        message = $"تعذر تأكيد الدفعة لأن بعض أقساط القروض لم تعد بانتظار الدفع (معرفات: {invalidIdsText}). يرجى تحديث الدفعة."
+                    });
+                }
+
                 foreach (var installment in paidInstallments)
                 {
                     installment.Status = LoanInstallmentStatus.Paid;
