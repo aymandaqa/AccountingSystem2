@@ -1014,6 +1014,27 @@ namespace AccountingSystem.Controllers
                         var salaryMonthText = periodDate.ToString("MM/yyyy");
                         var description = $"{deductionName} للموظف {line.Employee.Name} (رقم {employeeNumber}) عن راتب شهر {salaryMonthText}";
 
+                        if (deduction.EmployeeLoanInstallmentId.HasValue)
+                        {
+                            lines.Add(new JournalEntryLine
+                            {
+                                AccountId = accountId.Value,
+                                DebitAmount = creditAmount,
+                                CreditAmount = 0,
+                                Description = description
+                            });
+
+                            lines.Add(new JournalEntryLine
+                            {
+                                AccountId = line.Employee.AccountId,
+                                DebitAmount = 0,
+                                CreditAmount = creditAmount,
+                                Description = $"خصم {deductionName} من راتب {line.Employee.Name}"
+                            });
+
+                            continue;
+                        }
+
                         lines.Add(new JournalEntryLine
                         {
                             AccountId = line.Employee.AccountId,
