@@ -1018,18 +1018,18 @@ namespace AccountingSystem.Controllers
                         {
                             lines.Add(new JournalEntryLine
                             {
-                                AccountId = accountId.Value,
+                                AccountId = line.Employee.AccountId,
                                 DebitAmount = creditAmount,
                                 CreditAmount = 0,
-                                Description = description
+                                Description = $"خصم {deductionName} من راتب {line.Employee.Name}"
                             });
 
                             lines.Add(new JournalEntryLine
                             {
-                                AccountId = line.Employee.AccountId,
+                                AccountId = accountId.Value,
                                 DebitAmount = 0,
                                 CreditAmount = creditAmount,
-                                Description = $"خصم {deductionName} من راتب {line.Employee.Name}"
+                                Description = description
                             });
 
                             continue;
