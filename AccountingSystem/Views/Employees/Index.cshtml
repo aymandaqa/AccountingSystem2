@@ -133,29 +133,32 @@
                                     </td>
                                     <td class="text-center">
                                         <div class="btn-group btn-group-sm" role="group">
-                                            @if (employee.AccountId.HasValue)
-                                            {
-                                                <a asp-controller="Reports"
-                                                   asp-action="AccountStatement"
-                                                   asp-route-accountId="@employee.AccountId"
-                                                   class="btn btn-success"
-                                                   target="_blank"
-                                                   asp-require-permission="reports.accountstatement"
-                                                   title="كشف الحساب">
-                                                    <i class="fas fa-file-alt"></i>
-                                                </a>
-                                            }
-                                            <a href="@Url.Action("Edit", new { id = employee.Id })" class="btn btn-warning" asp-require-permission="employees.edit">
-                                                <i class="fas fa-edit"></i>
+                                        @if (employee.AccountId.HasValue)
+                                        {
+                                            <a asp-controller="Reports"
+                                               asp-action="AccountStatement"
+                                               asp-route-accountId="@employee.AccountId"
+                                               class="btn btn-success"
+                                               target="_blank"
+                                               asp-require-permission="reports.accountstatement"
+                                               title="كشف الحساب">
+                                                <i class="fas fa-file-alt"></i>
                                             </a>
-                                            <button type="button" class="btn btn-outline-secondary toggle-status" data-id="@employee.Id" asp-require-permission="employees.delete">
-                                                <i class="fas fa-power-off"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
+                                        }
+                                        <a href="@Url.Action("Edit", new { id = employee.Id })" class="btn btn-warning" asp-require-permission="employees.edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-outline-secondary toggle-status" data-id="@employee.Id" asp-require-permission="employees.delete">
+                                            <i class="fas fa-power-off"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-danger delete-employee" data-id="@employee.Id" asp-require-permission="employees.delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
                     </table>
                 </div>
             }
@@ -224,6 +227,35 @@
                                 location.reload();
                             } else {
                                 alert(data.message || 'تعذر تحديث حالة الموظف');
+                            }
+                        });
+                });
+            });
+
+            document.querySelectorAll('.delete-employee').forEach(button => {
+                button.addEventListener('click', function () {
+                    const id = this.getAttribute('data-id');
+                    const row = this.closest('tr');
+
+                    if (!confirm('هل ترغب في حذف هذا الموظف نهائياً؟ سيتم حذف الحساب المرتبط إذا لم تكن هناك حركات.')) {
+                        return;
+                    }
+
+                    fetch('@Url.Action("Delete")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                        },
+                        body: JSON.stringify({ id: id })
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                row.remove();
+                                applyFilters();
+                            } else {
+                                alert(data.message || 'تعذر حذف الموظف');
                             }
                         });
                 });

@@ -329,6 +329,44 @@ namespace AccountingSystem.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "employees.delete")]
+        public async Task<IActionResult> Delete([FromBody] DeleteEmployeeRequest request)
+        {
+            if (request == null)
+            {
+                return Json(new { success = false, message = "طلب غير صالح" });
+            }
+
+            var employee = await _context.Employees
+                .FirstOrDefaultAsync(e => e.Id == request.Id);
+
+            if (employee == null)
+            {
+                return Json(new { success = false, message = "الموظف غير موجود" });
+            }
+
+            var hasTransactions = await EmployeeHasTransactionsAsync(employee);
+            if (hasTransactions)
+            {
+                return Json(new { success = false, message = "لا يمكن حذف الموظف لوجود حركات مرتبطة به" });
+            }
+
+            var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == employee.AccountId);
+
+            _context.Employees.Remove(employee);
+
+            if (account != null)
+            {
+                _context.Accounts.Remove(account);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         [Authorize(Policy = "employees.create")]
         public async Task<IActionResult> ImportExcel(IFormFile? file)
         {
@@ -553,6 +591,30 @@ namespace AccountingSystem.Controllers
         public class ToggleEmployeeStatusRequest
         {
             public int Id { get; set; }
+        }
+
+        public class DeleteEmployeeRequest
+        {
+            public int Id { get; set; }
+        }
+
+        private async Task<bool> EmployeeHasTransactionsAsync(Employee employee)
+        {
+            var hasPayrollLines = await _context.PayrollBatchLines.AnyAsync(l => l.EmployeeId == employee.Id);
+            var hasAllowances = await _context.EmployeeAllowances.AnyAsync(a => a.EmployeeId == employee.Id);
+            var hasDeductions = await _context.EmployeeDeductions.AnyAsync(d => d.EmployeeId == employee.Id);
+            var hasLoans = await _context.EmployeeLoans.AnyAsync(l => l.EmployeeId == employee.Id);
+            var hasAdvances = await _context.EmployeeAdvances.AnyAsync(a => a.EmployeeId == employee.Id);
+            var hasSalaryPayments = await _context.SalaryPayments.AnyAsync(p => p.EmployeeId == employee.Id);
+            var hasJournalEntries = await _context.JournalEntryLines.AnyAsync(l => l.AccountId == employee.AccountId);
+
+            return hasPayrollLines
+                || hasAllowances
+                || hasDeductions
+                || hasLoans
+                || hasAdvances
+                || hasSalaryPayments
+                || hasJournalEntries;
         }
 
         private async Task<IEnumerable<SelectListItem>> GetBranchSelectListAsync()
