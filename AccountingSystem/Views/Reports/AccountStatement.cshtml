@@ -374,12 +374,12 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label for="fromDate" class="form-label">من تاريخ</label>
-                        <input type="date" name="fromDate" id="fromDate" class="form-control" value="@(Model != null ? Model.FromDate.ToString("yyyy-MM-dd") : DateTime.Now.AddMonths(-1).ToString("yyyy-MM-dd"))" />
+                        <label for="fromDate" class="form-label">من تاريخ ووقت</label>
+                        <input type="datetime-local" name="fromDate" id="fromDate" class="form-control" value="@(Model != null ? Model.FromDate.ToString("yyyy-MM-ddTHH:mm") : DateTime.Now.AddMonths(-1).ToString("yyyy-MM-ddTHH:mm"))" />
                     </div>
                     <div class="col-md-2">
-                        <label for="toDate" class="form-label">إلى تاريخ</label>
-                        <input type="date" name="toDate" id="toDate" class="form-control" value="@(Model != null ? Model.ToDate.ToString("yyyy-MM-dd") : DateTime.Now.ToString("yyyy-MM-dd"))" />
+                        <label for="toDate" class="form-label">إلى تاريخ ووقت</label>
+                        <input type="datetime-local" name="toDate" id="toDate" class="form-control" value="@(Model != null ? Model.ToDate.ToString("yyyy-MM-ddTHH:mm") : DateTime.Now.ToString("yyyy-MM-ddTHH:mm"))" />
                     </div>
                     <div class="col-md-3">
                         <button type="submit" class="btn btn-info text-white">
@@ -425,7 +425,7 @@
                     <div class="col-xl-4 col-lg-6">
                         <div class="account-info-card">
                             <div class="label">الفترة الزمنية</div>
-                            <div class="value">@Model.FromDate.ToString("dd/MM/yyyy") - @Model.ToDate.ToString("dd/MM/yyyy")</div>
+                            <div class="value">@Model.FromDate.ToString("dd/MM/yyyy HH:mm") - @Model.ToDate.ToString("dd/MM/yyyy HH:mm")</div>
                             <div class="meta mt-2">
                                 <i class="fas fa-coins ms-1"></i>
                                 العملة: @Model.CurrencyCode
@@ -447,11 +447,11 @@
                                 <div class="meta">يمكنك طباعة كشف الحساب أو فتح نسخة للطباعة في نافذة جديدة.</div>
                             </div>
                             <div class="d-flex flex-wrap gap-2 mt-3">
-                                <a class="btn btn-outline-primary" target="_blank" href="@Url.Action("PrintAccountStatement", "Reports", new { accountId = Model.AccountId, branchId = Model.BranchId, fromDate = Model.FromDate.ToString("yyyy-MM-dd"), toDate = Model.ToDate.ToString("yyyy-MM-dd") })">
+                                <a class="btn btn-outline-primary" target="_blank" href="@Url.Action("PrintAccountStatement", "Reports", new { accountId = Model.AccountId, branchId = Model.BranchId, fromDate = Model.FromDate.ToString("yyyy-MM-ddTHH:mm"), toDate = Model.ToDate.ToString("yyyy-MM-ddTHH:mm") })">
                                     <i class="fas fa-print me-1"></i>
                                     طباعة A4
                                 </a>
-                                <a class="btn btn-outline-success" href="@Url.Action("AccountStatementExcel", "Reports", new { accountId = Model.AccountId, branchId = Model.BranchId, fromDate = Model.FromDate.ToString("yyyy-MM-dd"), toDate = Model.ToDate.ToString("yyyy-MM-dd") })">
+                                <a class="btn btn-outline-success" href="@Url.Action("AccountStatementExcel", "Reports", new { accountId = Model.AccountId, branchId = Model.BranchId, fromDate = Model.FromDate.ToString("yyyy-MM-ddTHH:mm"), toDate = Model.ToDate.ToString("yyyy-MM-ddTHH:mm") })">
                                     <i class="fas fa-file-excel me-1"></i>
                                     تصدير Excel
                                 </a>
@@ -574,7 +574,7 @@
                 <div class="opening-balance-card">
                     <div class="d-flex align-items-center gap-2">
                         <i class="fas fa-calendar-day text-primary fs-5 ms-1"></i>
-                        <span class="title">الرصيد الافتتاحي اعتباراً من @Model.FromDate.ToString("yyyy/MM/dd")</span>
+                        <span class="title">الرصيد الافتتاحي اعتباراً من @Model.FromDate.ToString("yyyy/MM/dd HH:mm")</span>
                     </div>
                     <div class="d-flex flex-column text-end">
                         <span class="amount">@Model.OpeningBalance.ToString("N2") @Model.CurrencyCode</span>
@@ -606,7 +606,7 @@
                                 </thead>
                                 <tbody>
                                     <tr class="table-light">
-                                        <td>@Model.FromDate.ToString("yyyy/MM/dd")</td>
+                                        <td>@Model.FromDate.ToString("yyyy/MM/dd HH:mm")</td>
                                         <td colspan="6" class="fw-bold text-center">الرصيد الافتتاحي</td>
                                         <td class="text-end">-</td>
                                         <td class="text-end">-</td>
