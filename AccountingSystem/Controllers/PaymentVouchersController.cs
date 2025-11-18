@@ -43,7 +43,7 @@ namespace AccountingSystem.Controllers
             if (setting != null && int.TryParse(setting.Value, out var parentAccountId))
             {
                 ViewBag.Accounts = await _context.Accounts
-                    .Where(a => a.ParentId == parentAccountId)
+                    .Where(a => a.ParentId == parentAccountId && a.IsActive)
                     .Include(a => a.Currency)
                     .Select(a => new { a.Id, a.Code, a.NameAr, a.CurrencyId, CurrencyCode = a.Currency.Code })
                     .ToListAsync();
@@ -67,7 +67,7 @@ namespace AccountingSystem.Controllers
             ViewBag.Suppliers = await _context.Suppliers
                 .AsNoTracking()
                 .FilterByAuthorizationAndBranches(SupplierAuthorization.PaymentVoucher, userBranchIds)
-                .Where(s => s.AccountId != null && s.Account != null)
+                .Where(s => s.IsActive && s.AccountId != null && s.Account != null && s.Account.IsActive)
                 .OrderBy(s => s.NameAr)
                 .Select(s => new
                 {
@@ -313,7 +313,7 @@ namespace AccountingSystem.Controllers
                     .Include(s => s.Account)
                     .Include(s => s.SupplierBranches)
                     .FirstOrDefaultAsync(s => s.Id == model.SupplierId.Value);
-                if (supplier?.Account == null)
+                if (supplier?.Account == null || !supplier.IsActive || !supplier.Account.IsActive)
                 {
                     ModelState.AddModelError(nameof(PaymentVoucher.SupplierId), "المورد غير موجود");
                 }
@@ -326,7 +326,7 @@ namespace AccountingSystem.Controllers
 
             Account? selectedAccount = await _context.Accounts.FindAsync(model.AccountId);
             var settingAccount = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "SupplierPaymentsParentAccountId");
-            if (selectedAccount == null || settingAccount == null || !int.TryParse(settingAccount.Value, out var parentId) || selectedAccount.ParentId != parentId)
+            if (selectedAccount == null || !selectedAccount.IsActive || settingAccount == null || !int.TryParse(settingAccount.Value, out var parentId) || selectedAccount.ParentId != parentId)
                 ModelState.AddModelError("AccountId", "الحساب غير صالح");
 
             Account? cashAccount = null;

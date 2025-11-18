@@ -226,7 +226,7 @@ namespace AccountingSystem.Controllers
 
             var paymentAccounts = await _context.UserPaymentAccounts
                 .AsNoTracking()
-                .Where(u => u.UserId == user.Id)
+                .Where(u => u.UserId == user.Id && u.Account.IsActive)
                 .Include(u => u.Account).ThenInclude(a => a.Currency)
                 .Select(u => new { u.Account.Id, u.Account.Code, u.Account.NameAr, u.Account.CurrencyId, CurrencyCode = u.Account.Currency.Code })
                 .ToListAsync();
@@ -242,7 +242,7 @@ namespace AccountingSystem.Controllers
             var suppliers = await _context.Suppliers
                 .AsNoTracking()
                 .FilterByAuthorizationAndBranches(SupplierAuthorization.ReceiptVoucher, userBranchIds)
-                .Where(s => s.AccountId != null && s.Account != null)
+                .Where(s => s.IsActive && s.AccountId != null && s.Account != null && s.Account.IsActive)
                 .OrderBy(s => s.NameAr)
                 .Select(s => new
                 {
@@ -308,7 +308,7 @@ namespace AccountingSystem.Controllers
                     .Include(s => s.SupplierBranches)
                     .FirstOrDefaultAsync(s => s.Id == model.SupplierId.Value);
 
-                if (supplier?.Account == null)
+                if (supplier?.Account == null || !supplier.IsActive || !supplier.Account.IsActive)
                 {
                     ModelState.AddModelError(nameof(ReceiptVoucher.SupplierId), "المورد غير موجود أو لا يملك حساباً");
                 }
@@ -343,6 +343,10 @@ namespace AccountingSystem.Controllers
                     if (paymentAccount == null)
                     {
                         ModelState.AddModelError(nameof(ReceiptVoucher.PaymentAccountId), "حساب الدفع غير موجود");
+                    }
+                    else if (!paymentAccount.IsActive)
+                    {
+                        ModelState.AddModelError(nameof(ReceiptVoucher.PaymentAccountId), "حساب الدفع غير نشط");
                     }
                 }
             }
