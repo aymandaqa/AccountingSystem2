@@ -17,6 +17,7 @@ using Roadfn.Services;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AccountingSystem.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -113,6 +114,7 @@ builder.Services.AddScoped<IAssetDepreciationService, AssetDepreciationService>(
 builder.Services.AddScoped<IUserSessionService, UserSessionService>();
 builder.Services.AddScoped<IAttachmentStorageService, AttachmentStorageService>();
 builder.Services.AddSignalR();
+builder.Services.Configure<JournalEntryApiOptions>(builder.Configuration.GetSection("JournalEntryApi"));
 
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
