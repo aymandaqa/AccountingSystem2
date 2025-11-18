@@ -419,11 +419,16 @@ namespace AccountingSystem.Controllers
             var expenseSetting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "AssetExpensesParentAccountId");
             if (!string.IsNullOrEmpty(expenseSetting?.Value) && int.TryParse(expenseSetting.Value, out var expenseParentId))
             {
-                expenseAccount = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == model.ExpenseAccountId && a.ParentId == expenseParentId);
+                expenseAccount = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == model.ExpenseAccountId && a.ParentId == expenseParentId && a.IsActive && a.CanPostTransactions);
             }
             else
             {
                 ModelState.AddModelError(string.Empty, "لم يتم ضبط حسابات مصاريف الأصول في الإعدادات");
+            }
+
+            if (expenseAccount == null)
+            {
+                ModelState.AddModelError(nameof(model.ExpenseAccountId), "حساب المصروف غير صالح");
             }
 
             Supplier? supplier = null;
@@ -439,7 +444,7 @@ namespace AccountingSystem.Controllers
                     .Include(s => s.SupplierBranches)
                     .FirstOrDefaultAsync(s => s.Id == model.SupplierId.Value);
 
-                if (supplier?.Account == null)
+                if (supplier?.Account == null || !supplier.IsActive || !supplier.Account.IsActive)
                 {
                     ModelState.AddModelError(nameof(model.SupplierId), "المورد غير موجود أو لا يملك حساباً");
                 }
@@ -466,6 +471,10 @@ namespace AccountingSystem.Controllers
                     if (paymentAccount == null)
                     {
                         ModelState.AddModelError(string.Empty, "حساب الدفع غير موجود");
+                    }
+                    else if (!paymentAccount.IsActive)
+                    {
+                        ModelState.AddModelError(string.Empty, "حساب الدفع غير نشط");
                     }
                     else
                     {
@@ -636,7 +645,7 @@ namespace AccountingSystem.Controllers
             return await _context.Suppliers
                 .AsNoTracking()
                 .FilterByAuthorizationAndBranches(SupplierAuthorization.AssetExpense, userBranchIds)
-                .Where(s => s.AccountId != null && s.Account != null)
+                .Where(s => s.IsActive && s.AccountId != null && s.Account != null && s.Account.IsActive)
                 .OrderBy(s => s.NameAr)
                 .Select(s => new AssetExpenseSupplierOption
                 {
@@ -700,7 +709,7 @@ namespace AccountingSystem.Controllers
 
                 var acc = await _context.Accounts.FirstOrDefaultAsync(t => t.Code == setting.Value);
                 return await _context.Accounts
-                    .Where(a => a.ParentId == acc.Id)
+                    .Where(a => a.ParentId == acc.Id && a.IsActive && a.CanPostTransactions)
                     .Include(a => a.Currency)
                     .OrderBy(a => a.Code)
                     .Select(a => new AssetExpenseAccountOption

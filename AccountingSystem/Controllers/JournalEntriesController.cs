@@ -1589,7 +1589,7 @@ namespace AccountingSystem.Controllers
             });
 
             model.Accounts = await _context.Accounts
-                .Where(a => a.CanPostTransactions)
+                .Where(a => a.CanPostTransactions && a.IsActive)
                 .Select(a => new SelectListItem
                 {
                     Value = a.Id.ToString(),

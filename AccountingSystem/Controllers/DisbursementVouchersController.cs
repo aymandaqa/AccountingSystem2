@@ -201,7 +201,7 @@ namespace AccountingSystem.Controllers
             ViewBag.Suppliers = await _context.Suppliers
                 .AsNoTracking()
                 .FilterByAuthorizationAndBranches(SupplierAuthorization.DisbursementVoucher, userBranchIds)
-                .Where(s => s.AccountId != null && s.Account != null)
+                .Where(s => s.IsActive && s.AccountId != null && s.Account != null && s.Account.IsActive)
                 .OrderBy(s => s.NameAr)
                 .Select(s => new { s.Id, s.NameAr, CurrencyId = s.Account!.CurrencyId, CurrencyCode = s.Account.Currency.Code })
                 .ToListAsync();
@@ -223,7 +223,7 @@ namespace AccountingSystem.Controllers
                 .Include(s => s.Account)
                 .Include(s => s.SupplierBranches)
                 .FirstOrDefaultAsync(s => s.Id == model.SupplierId);
-            if (supplier?.Account == null)
+            if (supplier?.Account == null || !supplier.IsActive || !supplier.Account.IsActive)
                 ModelState.AddModelError("SupplierId", "المورد غير موجود");
             else if (!supplier.AuthorizedOperations.HasFlag(SupplierAuthorization.DisbursementVoucher)
                 || !supplier.SupplierBranches.Any(sb => userBranchIds.Contains(sb.BranchId)))
@@ -237,8 +237,14 @@ namespace AccountingSystem.Controllers
             var paymentAccount = await _context.Accounts.FindAsync(user.PaymentAccountId);
             if (supplier?.Account != null && paymentAccount != null)
             {
-                if (paymentAccount.CurrencyId != supplier.Account.CurrencyId)
+                if (!paymentAccount.IsActive)
+                {
+                    ModelState.AddModelError(string.Empty, "حساب الدفع غير نشط");
+                }
+                else if (paymentAccount.CurrencyId != supplier.Account.CurrencyId)
+                {
                     ModelState.AddModelError("SupplierId", "يجب أن تكون الحسابات بنفس العملة");
+                }
 
                 if (paymentAccount.Nature == AccountNature.Debit && model.Amount > paymentAccount.CurrentBalance)
                     ModelState.AddModelError(nameof(model.Amount), "الرصيد المتاح في حساب الدفع لا يكفي لإتمام العملية.");
