@@ -5954,8 +5954,13 @@ namespace AccountingSystem.Controllers
                 }
             }
 
-            var normalizedFromDate = (fromDate ?? DateTime.Now.AddMonths(-1)).Date;
-            var normalizedToDate = (toDate ?? DateTime.Now).Date.AddDays(1).AddTicks(-1);
+            var normalizedFromDate = fromDate ?? DateTime.Now.AddMonths(-1).Date;
+            var normalizedToDate = toDate ?? DateTime.Now;
+
+            if (toDate.HasValue && toDate.Value.TimeOfDay == TimeSpan.Zero)
+            {
+                normalizedToDate = toDate.Value.Date.AddDays(1).AddTicks(-1);
+            }
 
             var viewModel = new AccountStatementViewModel
             {
