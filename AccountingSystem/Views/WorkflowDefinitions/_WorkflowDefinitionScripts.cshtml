@@ -40,12 +40,15 @@
         function getStepLabel(stepElement, index) {
             const type = parseInt(stepElement.querySelector('.step-type').value);
             const connector = parseInt(stepElement.querySelector('.step-connector').value);
+            const hasParent = stepElement.querySelector('.step-has-parent')?.checked;
             const connectorLabel = connector === 2 ? 'أو' : 'و';
             let typeLabel = 'مستخدم محدد';
             if (type === 2) typeLabel = 'حسب الصلاحية';
             else if (type === 3) typeLabel = 'مسؤولو الفرع';
 
-            return `${index + 1} - (${connectorLabel}) ${typeLabel}`;
+            return hasParent
+                ? `${index + 1} - (${connectorLabel}) ${typeLabel}`
+                : `${index + 1} - ${typeLabel}`;
         }
 
         function refreshParentOptions() {
@@ -78,7 +81,7 @@
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
                         <div class="row g-2 align-items-end">
-                            <div class="col-md-2">
+                            <div class="col-md-2 step-connector-container">
                                 <label class="form-label">نوع الربط</label>
                                 <select class="form-select step-connector">
                                     <option value="1">و (AND)</option>
@@ -98,6 +101,12 @@
                                 <select class="form-select step-parent">
                                     <option value="">بدون أب</option>
                                 </select>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-check mt-4 pt-2">
+                                    <input type="checkbox" class="form-check-input step-has-parent" />
+                                    <label class="form-check-label">تتطلب خطوة سابقة</label>
+                                </div>
                             </div>
                             <div class="col-md-3 step-user-container">
                                 <label class="form-label">المستخدم</label>
@@ -140,6 +149,9 @@
             const branchSelect = container.querySelector('.step-branch');
             const minAmountInput = container.querySelector('.step-min-amount');
             const maxAmountInput = container.querySelector('.step-max-amount');
+            const hasParentCheckbox = container.querySelector('.step-has-parent');
+            const connectorContainer = container.querySelector('.step-connector-container');
+            const parentContainer = container.querySelector('.step-parent-container');
 
             let stepId = step.internalId || step.InternalId || step.id || step.Id;
             if (!stepId) {
@@ -150,6 +162,11 @@
             }
 
             container.dataset.stepId = stepId;
+
+            const requiresParent = Boolean(step.parentStepId || step.ParentStepId || step.parentOrder || step.ParentOrder);
+            if (hasParentCheckbox) {
+                hasParentCheckbox.checked = requiresParent;
+            }
 
             users.forEach(user => userSelect.appendChild(createOption(user.id ?? user.Id, user.name ?? user.Name)));
             permissions.forEach(permission => permissionSelect.appendChild(createOption(permission.name ?? permission.Name, permission.displayName ?? permission.DisplayName)));
@@ -185,8 +202,38 @@
                 container.querySelector('.step-branch-container').style.display = type === 3 ? 'block' : 'none';
             }
 
+            function updateParentState() {
+                const enabled = hasParentCheckbox?.checked;
+                const displayStyle = enabled ? 'block' : 'none';
+                if (parentSelect) {
+                    parentSelect.disabled = !enabled;
+                    if (!enabled) {
+                        parentSelect.value = '';
+                        container.dataset.parentStepId = '';
+                        container.dataset.parentOrder = '';
+                    }
+                }
+                if (connectorSelect) {
+                    connectorSelect.disabled = !enabled;
+                    if (!enabled) {
+                        connectorSelect.value = '1';
+                    }
+                }
+                if (parentContainer) parentContainer.style.display = displayStyle;
+                if (connectorContainer) connectorContainer.style.display = displayStyle;
+            }
+
             typeSelect.addEventListener('change', updateVisibility);
             updateVisibility();
+
+            if (hasParentCheckbox) {
+                hasParentCheckbox.addEventListener('change', function () {
+                    updateParentState();
+                    refreshParentOptions();
+                    serializeSteps();
+                });
+            }
+            updateParentState();
 
             container.querySelector('.remove-step').addEventListener('click', function () {
                 container.remove();
@@ -227,15 +274,19 @@
 
             stepElements.forEach((element, index) => {
                 const type = parseInt(element.querySelector('.step-type').value);
+                const requiresParent = element.querySelector('.step-has-parent')?.checked;
+                const parentValue = requiresParent ? element.querySelector('.step-parent').value : '';
+                const connectorValue = requiresParent ? parseInt(element.querySelector('.step-connector').value) || 1 : 1;
                 const step = {
                     Order: index + 1,
-                    Connector: parseInt(element.querySelector('.step-connector').value) || 1,
+                    Connector: connectorValue,
                     StepType: type
                 };
 
-                const parentValue = element.querySelector('.step-parent').value;
-                step.ParentOrder = parentValue && orderMap.has(parentValue) ? orderMap.get(parentValue) : null;
-                step.ParentStepId = parentValue || null;
+                step.ParentOrder = requiresParent && parentValue && orderMap.has(parentValue)
+                    ? orderMap.get(parentValue)
+                    : null;
+                step.ParentStepId = requiresParent && parentValue ? parentValue : null;
                 step.InternalId = element.dataset.stepId;
 
                 if (type === 1) {
@@ -275,6 +326,13 @@
             if (target && target.classList.contains('step-parent')) {
                 const stepElement = target.closest('.workflow-step');
                 stepElement.dataset.parentStepId = target.value;
+                serializeSteps();
+            }
+        });
+
+        stepsList.addEventListener('input', function (event) {
+            const target = event.target;
+            if (target && (target.classList.contains('step-min-amount') || target.classList.contains('step-max-amount'))) {
                 serializeSteps();
             }
         });
