@@ -18,6 +18,9 @@ namespace Roadfn.Models
         public decimal ShipmentTotal { get; set; }
         [Column(TypeName = "decimal(18, 2)")]
         public decimal ShipmentExtraFees { get; set; }
+
+        [Column(TypeName = "decimal(18, 2)")]
+        public decimal PaidAmountFromShipmentFees { get; set; }
         public int ShipmentsNumber { get; set; }
         public int CompanyBranchID { get; set; }
 

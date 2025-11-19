@@ -177,6 +177,10 @@ namespace Roadfn.Controllers
             DataColumn dataColumn9 = new DataColumn($"رسوم إضافية");
             table.Columns.Add(dataColumn9);
 
+
+            DataColumn dataColumn10 = new DataColumn($"المبلغ المدفوع");
+            table.Columns.Add(dataColumn10);
+
             foreach (var item in details)
             {
                 DataRow dataRow = table.NewRow();
@@ -203,6 +207,7 @@ namespace Roadfn.Controllers
                 dataRow[3] = item?.ShipmentPrice;
                 dataRow[4] = item?.ShipmentFees;
                 dataRow[8] = item?.ShipmentExtraFees;
+                dataRow[9] = item?.PaidAmountFromShipmentFees;
                 //  dataRow[7] = item?.ReturnFees;
                 dataRow[2] = item?.ShipmentTotal;
                 table.Rows.Add(dataRow);

@@ -114,7 +114,6 @@ builder.Services.AddScoped<IAssetDepreciationService, AssetDepreciationService>(
 builder.Services.AddScoped<IUserSessionService, UserSessionService>();
 builder.Services.AddScoped<IAttachmentStorageService, AttachmentStorageService>();
 builder.Services.AddSignalR();
-builder.Services.Configure<JournalEntryApiOptions>(builder.Configuration.GetSection("JournalEntryApi"));
 
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();

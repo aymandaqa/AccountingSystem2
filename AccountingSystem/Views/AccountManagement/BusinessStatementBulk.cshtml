@@ -87,6 +87,7 @@
                                             مجموع العمولة : <label id="commSum"></label> &nbsp;&nbsp;
                                             مجموع العمولات الاضافية : <label id="ExtraFees"></label> &nbsp;&nbsp;
                                             مجموع مبالغ الطرود : <label id="shipTotSum"></label> &nbsp;&nbsp;
+                                            المبلغ المدفوع : <label id="PaidAmountFromShipmentFees"></label> &nbsp;&nbsp;
                                             الصافي : <label id="total"></label> &nbsp;&nbsp;
 
                                         </th>
@@ -156,6 +157,7 @@
                                     <e-grid-column field="SenderName" headerText="اسم المرسل" width="120"></e-grid-column>
                                     <e-grid-column field="StatusId" Visible="false" headerText="StatusId" width="120"></e-grid-column>
                                     <e-grid-column field="StatusDesc" headerText="الوصف" width="120"></e-grid-column>
+                                    <e-grid-column field="PaidAmountFromShipmentFees" headerText="المبلغ المدفوع" width="120"></e-grid-column>
                                     <e-grid-column field="ShipmentFees" headerText="العمولة" width="120"></e-grid-column>
                                     <e-grid-column field="ShipmentPrice" headerText="السعر" width="120"></e-grid-column>
                                     <e-grid-column field="ShipmentTotal" headerText="المجموع" width="120"></e-grid-column>
@@ -417,6 +419,8 @@
         var shipTotSum = 0;
         var total = 0;
         var ExtraFees = 0;
+        var PaidAmountFromShipmentFees = 0;
+
         $('#shipRetCount').text(shipRetCount);
         $('#commSum').text(commSum);
         $('#shipTotSum').text(shipTotSum);
@@ -430,11 +434,21 @@
             shipTotSum += selectedRecords[k].ShipmentTotal;
             shipRetCount += selectedRecords[k].ShipmentsNumber;
             ExtraFees += selectedRecords[k].ShipmentExtraFees;
+            PaidAmountFromShipmentFees += selectedRecords[k].PaidAmountFromShipmentFees;
         }
         $('#commSum').text(commSum);
         $('#shipRetCount').text(shipRetCount);
         $('#shipTotSum').text(shipTotSum);
-        $('#total').text(shipTotSum - commSum - ExtraFees);
+        var cc=shipTotSum - commSum - ExtraFees;
+        if  (cc>0){
+              $('#total').text(cc-PaidAmountFromShipmentFees);
+        }    else{
+                          $('#total').text(cc+PaidAmountFromShipmentFees);
+
+        }
+                        $('#PaidAmountFromShipmentFees').text(PaidAmountFromShipmentFees);
+
+        // $('#total').text(shipTotSum - commSum - ExtraFees);
         $('#ExtraFees').text(ExtraFees);
     }
 
@@ -462,6 +476,8 @@
         var shipTotSum = 0;
         var total = 0;
         var ExtraFees = 0;
+                var PaidAmountFromShipmentFees = 0;
+
         $('#shipRetCount').text(shipRetCount);
         $('#commSum').text(commSum);
         $('#shipTotSum').text(shipTotSum);
@@ -475,12 +491,25 @@
             shipTotSum += selectedRecords[k].ShipmentTotal;
             shipRetCount += selectedRecords[k].ShipmentsNumber;
             ExtraFees += selectedRecords[k].ShipmentExtraFees;
+                        PaidAmountFromShipmentFees += selectedRecords[k].PaidAmountFromShipmentFees;
+
         }
         $('#commSum').text(commSum);
         $('#shipRetCount').text(shipRetCount);
         $('#shipTotSum').text(shipTotSum);
         $('#ExtraFees').text(ExtraFees);
-        $('#total').text(shipTotSum - commSum - ExtraFees);
+
+                var cc=shipTotSum - commSum - ExtraFees;
+                        if  (cc>0){
+              $('#total').text(cc-PaidAmountFromShipmentFees);
+        }    else{
+                          $('#total').text(cc+PaidAmountFromShipmentFees);
+
+        }
+                        $('#PaidAmountFromShipmentFees').text(PaidAmountFromShipmentFees);
+
+        // $('#total').text(shipTotSum - commSum - ExtraFees);
+
 
     }
 </script>

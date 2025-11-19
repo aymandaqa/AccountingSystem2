@@ -25,6 +25,7 @@
         public long? AreaId { get; set; }
         public string? AreaDescription { get; set; }
         public decimal ShipmentTotal { get; set; }
+        public decimal? PaidAmountFromShipmentFees { get; set; }
         public decimal? ShipmentPrice { get; set; }
         public decimal? OldShipmentPrice { get; set; }
         public decimal? ShipmentExtraFees { get; set; }

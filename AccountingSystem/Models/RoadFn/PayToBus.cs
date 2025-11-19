@@ -20,5 +20,6 @@
         public decimal ShipmentPrice { get; set; }
         public decimal ShipmentExtraFees { get; set; }
         public decimal ShipmentFees { get; set; }
+        public decimal PaidAmountFromShipmentFees { get; set; }
     }
 }

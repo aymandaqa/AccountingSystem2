@@ -649,6 +649,7 @@ namespace Roadfn.Controllers
                                        ShipmentExtraFees = sh.ShipmentExtraFees,
                                        ShipmentFees = sh.ShipmentFees,
                                        ShipmentContains = sh.ShipmentContains,
+                                       PaidAmountFromShipmentFees = sh.PaidAmountFromShipmentFees,
                                        Alert = sh.Alert,
                                        sh.IUser
                                    })
@@ -672,6 +673,7 @@ namespace Roadfn.Controllers
                             ShipmentPrice = Convert.ToDecimal(item.ShipmentPrice),
                             ShipmentExtraFees = Convert.ToDecimal(item.ShipmentExtraFees),
                             ShipmentFees = Convert.ToDecimal(item.ShipmentFees),
+                            PaidAmountFromShipmentFees = Convert.ToDecimal(item.PaidAmountFromShipmentFees),
                             item.ShipmentContains,
                             item.Alert,
                             item.IUser,
@@ -1636,17 +1638,39 @@ namespace Roadfn.Controllers
 
             var shipmentTotals = listpay.Sum(t => t.ShipmentTotal);
             var shipmentFees = listpay.Sum(t => t.ShipmentFees);
-            if (shipmentTotals - shipmentFees < 0)
+
+            var tot = shipmentTotals - shipmentFees - listpay.Sum(t => t.ShipmentExtraFees);
+            if (tot > 0)
+            {
+                tot = tot - listpay.Sum(t => t.PaidAmountFromShipmentFees);
+            }
+            else
+            {
+                tot = tot + listpay.Sum(t => t.PaidAmountFromShipmentFees);
+
+            }
+
+            //if (shipmentTotals - shipmentFees < 0)
+            //{
+            //    _context.BisnessUserPaymentHeader.Remove(bisnessUserPaymentHeader);
+            //    await _context.SaveChangesAsync();
+            //    return (Ok($"لايمكن دفع الفاتورة المجموع {shipmentTotals - shipmentFees}"), null);
+            //}
+
+            if (tot < 0)
             {
                 _context.BisnessUserPaymentHeader.Remove(bisnessUserPaymentHeader);
                 await _context.SaveChangesAsync();
                 return (Ok($"لايمكن دفع الفاتورة المجموع {shipmentTotals - shipmentFees}"), null);
             }
 
+
+
             await _context.BisnessUserPaymentDetails.AddRangeAsync(bisnessUserPaymentDetail);
             await _context.SaveChangesAsync();
 
-            bisnessUserPaymentHeader.PaymentValue = shipmentTotals - shipmentFees - listpay.Sum(t => t.ShipmentExtraFees);
+            //bisnessUserPaymentHeader.PaymentValue = shipmentTotals - shipmentFees - listpay.Sum(t => t.ShipmentExtraFees);
+            bisnessUserPaymentHeader.PaymentValue = tot;
             bisnessUserPaymentHeader.LoginUserId = loginUserId;
             bisnessUserPaymentHeader.UserId = listpay.DistinctBy(t => t.BusinessUserId).FirstOrDefault().BusinessUserId;
             bisnessUserPaymentHeader.PaymentDate = DateTime.Now;
@@ -1696,19 +1720,31 @@ namespace Roadfn.Controllers
                 }
                 var lines = new List<JournalEntryLine>();
 
+                var tot1 = sh.ShipmentTotal - sh.ShipmentFees - sh.ShipmentExtraFees;
+                if (tot1 > 0)
+                {
+                    tot1 = tot1 - sh.PaidAmountFromShipmentFees;
+                }
+                else
+                {
+                    tot1 = tot1 + sh.PaidAmountFromShipmentFees;
+
+                }
+
                 #region CashAccounts txn
                 var tottxn = new JournalEntryLine();
                 tottxn.AccountId = cashAccount.AccountId;
                 tottxn.DebitAmount = 0;
                 tottxn.CreditAmount = 0;
-                if (Convert.ToDecimal(sh.ShipmentPrice) <= 0)
+                if (Convert.ToDecimal(tot1) <= 0)
                 {
-                    tottxn.DebitAmount = Convert.ToDecimal(sh.ShipmentPrice) * -1;
+                    tottxn.DebitAmount = Convert.ToDecimal(tot1) * -1;
                 }
                 else
                 {
-                    tottxn.CreditAmount = Convert.ToDecimal(sh.ShipmentPrice);
+                    tottxn.CreditAmount = Convert.ToDecimal(tot1);
                 }
+
                 tottxn.Reference = bisnessUserPaymentHeader.Id.ToString();
                 tottxn.Description = sh.ShipmentTrackingNo + "دفع ذمة مورد ";
                 lines.Add(tottxn);
@@ -1720,18 +1756,20 @@ namespace Roadfn.Controllers
                 CustomerAccounttxn.AccountId = customerAccount.Id;
                 CustomerAccounttxn.DebitAmount = 0;
                 CustomerAccounttxn.CreditAmount = 0;
-                if (Convert.ToDecimal(sh.ShipmentPrice) <= 0)
+                if (Convert.ToDecimal(tot1) <= 0)
                 {
-                    CustomerAccounttxn.CreditAmount = Convert.ToDecimal(sh.ShipmentPrice) * -1;
+                    CustomerAccounttxn.CreditAmount = Convert.ToDecimal(tot1) * -1;
                 }
                 else
                 {
-                    CustomerAccounttxn.DebitAmount = Convert.ToDecimal(sh.ShipmentPrice);
+                    CustomerAccounttxn.DebitAmount = Convert.ToDecimal(tot1);
                 }
                 CustomerAccounttxn.Reference = bisnessUserPaymentHeader.Id.ToString();
                 CustomerAccounttxn.Description = sh.ShipmentTrackingNo + "دفع ذمة مورد "; ;
                 lines.Add(CustomerAccounttxn);
                 #endregion
+
+
                 await _journalEntryService.CreateJournalEntryAsync(
                     DateTime.Now,
                     "Business_" + bisnessUserPaymentHeader.Id,

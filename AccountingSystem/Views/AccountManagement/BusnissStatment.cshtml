@@ -148,6 +148,10 @@
                                     <span class="summary-value" id="shipTotSum"></span>
                                 </div>
                                 <div class="summary-item">
+                                    <span class="summary-label">المبلغ المدفوع:</span>
+                                    <span class="summary-value" id="PaidAmountFromShipmentFees"></span>
+                                </div>
+                                <div class="summary-item">
                                     <span class="summary-label">الصافي:</span>
                                     <span class="summary-value" id="total"></span>
                                 </div>
@@ -223,6 +227,8 @@
                                     <e-grid-column field="AreaName" headerText="المنطقة" width="120"></e-grid-column>
                                     <e-grid-column field="ShipmentTotal" headerText="المجموع الكلي" width="120"></e-grid-column>
                                     <e-grid-column field="ShipmentPrice" headerText="سعر الشحنة" width="120"></e-grid-column>
+                                    <e-grid-column field="PaidAmountFromShipmentFees" headerText="المبلغ المدفوع" width="120"></e-grid-column>
+
                                     <e-grid-column field="ShipmentFees" headerText="عمولة الشحنة" width="120"></e-grid-column>
                                     <e-grid-column field="ShipmentExtraFees" headerText="عمولات الشحنة الاضافية" width="120"></e-grid-column>
                                 </e-grid-columns>
@@ -457,6 +463,7 @@
         var commSum = 0;
         var shipTotSum = 0;
         var total = 0;
+        var PaidAmountFromShipmentFees = 0;
         var ExtraFees = 0;
         $('#shipRetCount').text(shipRetCount);
         $('#commSum').text(commSum);
@@ -470,12 +477,23 @@
             commSum += selectedRecords[k].ShipmentFees;
             shipTotSum += selectedRecords[k].ShipmentTotal;
             ExtraFees += selectedRecords[k].ShipmentExtraFees;
+            PaidAmountFromShipmentFees += selectedRecords[k].PaidAmountFromShipmentFees;
 
         }
         $('#commSum').text(commSum);
         $('#shipRetCount').text(selectedRecords.length);
         $('#shipTotSum').text(shipTotSum);
-        $('#total').text(shipTotSum - commSum - ExtraFees);
+        var cc=shipTotSum - commSum - ExtraFees;
+        if(cc>0){
+                    $('#total').text(cc-PaidAmountFromShipmentFees);
+
+        }else{
+                                $('#total').text(cc+PaidAmountFromShipmentFees);
+
+        }
+                $('#PaidAmountFromShipmentFees').text(PaidAmountFromShipmentFees);
+
+        // $('#total').text(shipTotSum - commSum - ExtraFees);
         $('#ExtraFees').text(ExtraFees);
     }
 
@@ -505,6 +523,8 @@
         var shipTotSum = 0;
         var total = 0;
         var ExtraFees = 0;
+                var PaidAmountFromShipmentFees = 0;
+
         $('#shipRetCount').text(shipRetCount);
         $('#commSum').text(commSum);
         $('#shipTotSum').text(shipTotSum);
@@ -517,12 +537,24 @@
             commSum += selectedRecords[k].ShipmentFees;
             shipTotSum += selectedRecords[k].ShipmentTotal;
             ExtraFees += selectedRecords[k].ShipmentExtraFees;
+                        PaidAmountFromShipmentFees += selectedRecords[k].PaidAmountFromShipmentFees;
+
         }
         $('#commSum').text(commSum);
         $('#shipRetCount').text(selectedRecords.length);
         $('#shipTotSum').text(shipTotSum);
-        $('#total').text(shipTotSum - commSum - ExtraFees);
-        $('#ExtraFees').text(ExtraFees);
+    var cc=shipTotSum - commSum - ExtraFees;
+           if(cc>0){
+                       $('#total').text(cc-PaidAmountFromShipmentFees);
+
+           }else{
+                                   $('#total').text(cc+PaidAmountFromShipmentFees);
+
+           }
+                   $('#PaidAmountFromShipmentFees').text(PaidAmountFromShipmentFees);
+
+           // $('#total').text(shipTotSum - commSum - ExtraFees);
+                $('#ExtraFees').text(ExtraFees);
     }
        function UpdateShColorStatus(shId,statusid,shipmentNo) {
 
