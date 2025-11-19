@@ -215,6 +215,11 @@ namespace AccountingSystem.Controllers
         {
             if (string.IsNullOrWhiteSpace(stepsJson))
             {
+                stepsJson = Request?.Form["stepsJson"];
+            }
+
+            if (string.IsNullOrWhiteSpace(stepsJson))
+            {
                 return false;
             }
 
@@ -235,8 +240,9 @@ namespace AccountingSystem.Controllers
                 model.Steps = steps.Where(s => s.StepType != 0).OrderBy(s => s.Order).ToList();
                 return model.Steps.Count > 0;
             }
-            catch
+            catch (JsonException)
             {
+                ModelState.AddModelError(string.Empty, "تعذر قراءة بيانات خطوات الاعتماد، يرجى إعادة المحاولة");
                 return false;
             }
         }
