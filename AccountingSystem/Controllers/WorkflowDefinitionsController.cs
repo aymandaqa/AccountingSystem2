@@ -167,6 +167,13 @@ namespace AccountingSystem.Controllers
                     _context.WorkflowActions.RemoveRange(relatedActions);
                 }
 
+                foreach (var step in definition.Steps)
+                {
+                    step.ParentStepId = null;
+                }
+
+                await _context.SaveChangesAsync();
+
                 _context.WorkflowSteps.RemoveRange(definition.Steps);
                 await _context.SaveChangesAsync();
             }
