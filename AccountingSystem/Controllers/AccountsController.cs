@@ -497,6 +497,21 @@ namespace AccountingSystem.Controllers
                 return NotFound();
             }
 
+            var isDeactivating = account.IsActive && !model.IsActive;
+            if (isDeactivating && account.CurrentBalance != 0)
+            {
+                ModelState.AddModelError(nameof(model.IsActive), "لا يمكن إلغاء تفعيل الحساب إلا إذا كان رصيده الحالي صفرًا.");
+                await PopulateDropdowns(model);
+
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    ViewData["IsModal"] = true;
+                    return PartialView(model);
+                }
+
+                return View(model);
+            }
+
             account.Code = model.Code;
             account.NameAr = model.NameAr;
             account.NameEn = model.NameEn;
