@@ -220,7 +220,10 @@ namespace AccountingSystem.Controllers
 
             try
             {
-                var steps = JsonSerializer.Deserialize<List<WorkflowStepInputModel>>(stepsJson) ?? new List<WorkflowStepInputModel>();
+                var steps = JsonSerializer.Deserialize<List<WorkflowStepInputModel>>(stepsJson, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                }) ?? new List<WorkflowStepInputModel>();
                 foreach (var step in steps)
                 {
                     if (step.Connector == 0)
