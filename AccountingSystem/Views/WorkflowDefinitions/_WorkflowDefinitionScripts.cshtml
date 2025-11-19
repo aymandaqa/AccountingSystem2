@@ -257,14 +257,18 @@
             addStep({ stepType: 1 });
         });
 
-        Sortable.create(stepsList, {
-            animation: 150,
-            handle: '.workflow-step',
-            onUpdate: () => {
-                refreshParentOptions();
-                serializeSteps();
-            }
-        });
+        if (window.Sortable) {
+            Sortable.create(stepsList, {
+                animation: 150,
+                handle: '.workflow-step',
+                onUpdate: () => {
+                    refreshParentOptions();
+                    serializeSteps();
+                }
+            });
+        } else {
+            console.warn('Sortable library not loaded; drag-and-drop ordering disabled.');
+        }
 
         function serializeSteps() {
             const steps = [];
