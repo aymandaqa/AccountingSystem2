@@ -280,6 +280,7 @@
                 const type = parseInt(element.querySelector('.step-type').value);
                 const requiresParent = element.querySelector('.step-has-parent')?.checked;
                 const parentValue = requiresParent ? element.querySelector('.step-parent').value : '';
+                const parentStepId = parentValue ? parseInt(parentValue) : null;
                 const connectorValue = requiresParent ? parseInt(element.querySelector('.step-connector').value) || 1 : 1;
                 const step = {
                     Order: index + 1,
@@ -290,7 +291,7 @@
                 step.ParentOrder = requiresParent && parentValue && orderMap.has(parentValue)
                     ? orderMap.get(parentValue)
                     : null;
-                step.ParentStepId = requiresParent && parentValue ? parentValue : null;
+                step.ParentStepId = requiresParent ? parentStepId : null;
                 step.InternalId = element.dataset.stepId;
 
                 if (type === 1) {
