@@ -351,29 +351,13 @@ namespace AccountingSystem.Controllers
                 int currencyId;
                 if (parentAccount != null)
                 {
-                    var lastChildCode = parentAccount.Children
-                        .OrderByDescending(c => c.Code)
-                        .Select(c => c.Code)
-                        .FirstOrDefault();
-                    code = GenerateChildCode(parentAccount.Code, lastChildCode);
+                    code = await GenerateUniqueChildCodeAsync(parentAccount);
                     level = parentAccount.Level + 1;
                     currencyId = parentAccount.CurrencyId;
                 }
                 else
                 {
-                    var baseCode = ((int)AccountType.Liabilities).ToString();
-                    var lastRootCode = await _context.Accounts
-                        .Where(a => a.ParentId == null && a.AccountType == AccountType.Liabilities)
-                        .OrderByDescending(a => a.Code)
-                        .Select(a => a.Code)
-                        .FirstOrDefaultAsync();
-
-                    if (string.IsNullOrEmpty(lastRootCode))
-                        code = baseCode;
-                    else if (int.TryParse(lastRootCode, out var rootNumber))
-                        code = (rootNumber + 1).ToString();
-                    else
-                        code = baseCode + "1";
+                    code = await GenerateUniqueRootCodeAsync(AccountType.Liabilities);
                     level = 1;
                     currencyId = await _context.Currencies.Select(c => c.Id).FirstAsync();
                 }
@@ -595,6 +579,54 @@ namespace AccountingSystem.Controllers
 
             TempData["Success"] = "تم حذف المورد بنجاح";
             return RedirectToAction(nameof(Index));
+        }
+
+        private async Task<string> GenerateUniqueRootCodeAsync(AccountType accountType)
+        {
+            var lastRootCode = await _context.Accounts
+                .Where(a => a.ParentId == null && a.AccountType == accountType)
+                .OrderByDescending(a => a.Code)
+                .Select(a => a.Code)
+                .FirstOrDefaultAsync();
+
+            var newCode = GenerateRootCode(accountType, lastRootCode);
+            while (await _context.Accounts.AnyAsync(a => a.Code == newCode))
+            {
+                lastRootCode = newCode;
+                newCode = GenerateRootCode(accountType, lastRootCode);
+            }
+
+            return newCode;
+        }
+
+        private async Task<string> GenerateUniqueChildCodeAsync(Account parentAccount)
+        {
+            var lastChildCode = await _context.Accounts
+                .Where(a => a.ParentId == parentAccount.Id)
+                .OrderByDescending(a => a.Code)
+                .Select(a => a.Code)
+                .FirstOrDefaultAsync();
+
+            var newCode = GenerateChildCode(parentAccount.Code, lastChildCode);
+            while (await _context.Accounts.AnyAsync(a => a.Code == newCode))
+            {
+                lastChildCode = newCode;
+                newCode = GenerateChildCode(parentAccount.Code, lastChildCode);
+            }
+
+            return newCode;
+        }
+
+        private static string GenerateRootCode(AccountType accountType, string? lastRootCode)
+        {
+            var baseCode = ((int)accountType).ToString();
+            if (string.IsNullOrEmpty(lastRootCode))
+                return baseCode;
+
+            if (int.TryParse(lastRootCode, out var rootNumber))
+                return (rootNumber + 1).ToString();
+
+            return baseCode + "1";
         }
 
         private static string GenerateChildCode(string parentCode, string? lastChildCode)

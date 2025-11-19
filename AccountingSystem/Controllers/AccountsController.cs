@@ -325,42 +325,64 @@ namespace AccountingSystem.Controllers
             if (parentId.HasValue)
             {
                 var parent = await _context.Accounts
-                    .Include(a => a.Children)
                     .FirstOrDefaultAsync(a => a.Id == parentId.Value);
                 if (parent == null)
                     return Json(new { success = false, message = "الحساب الأب غير موجود" });
 
-                var lastChildCode = parent.Children
-                    .OrderByDescending(c => c.Code)
-                    .Select(c => c.Code)
-                    .FirstOrDefault();
-
-                var newCode = GenerateChildCode(parent.Code, lastChildCode);
+                var newCode = await GenerateUniqueChildCodeAsync(parent);
                 return Json(new { success = true, code = newCode });
             }
 
-            var baseCode = ((int)accountType).ToString();
+            var generatedCode = await GenerateUniqueRootCodeAsync(accountType);
+            return Json(new { success = true, code = generatedCode });
+        }
+
+        private async Task<string> GenerateUniqueRootCodeAsync(AccountType accountType)
+        {
             var lastRootCode = await _context.Accounts
                 .Where(a => a.ParentId == null && a.AccountType == accountType)
                 .OrderByDescending(a => a.Code)
                 .Select(a => a.Code)
                 .FirstOrDefaultAsync();
 
-            string generatedCode;
-            if (string.IsNullOrEmpty(lastRootCode))
+            var newCode = GenerateRootCode(accountType, lastRootCode);
+            while (await _context.Accounts.AnyAsync(a => a.Code == newCode))
             {
-                generatedCode = baseCode;
-            }
-            else if (int.TryParse(lastRootCode, out var rootNumber))
-            {
-                generatedCode = (rootNumber + 1).ToString();
-            }
-            else
-            {
-                generatedCode = baseCode + "1";
+                lastRootCode = newCode;
+                newCode = GenerateRootCode(accountType, lastRootCode);
             }
 
-            return Json(new { success = true, code = generatedCode });
+            return newCode;
+        }
+
+        private async Task<string> GenerateUniqueChildCodeAsync(Account parentAccount)
+        {
+            var lastChildCode = await _context.Accounts
+                .Where(a => a.ParentId == parentAccount.Id)
+                .OrderByDescending(a => a.Code)
+                .Select(a => a.Code)
+                .FirstOrDefaultAsync();
+
+            var newCode = GenerateChildCode(parentAccount.Code, lastChildCode);
+            while (await _context.Accounts.AnyAsync(a => a.Code == newCode))
+            {
+                lastChildCode = newCode;
+                newCode = GenerateChildCode(parentAccount.Code, lastChildCode);
+            }
+
+            return newCode;
+        }
+
+        private static string GenerateRootCode(AccountType accountType, string? lastRootCode)
+        {
+            var baseCode = ((int)accountType).ToString();
+            if (string.IsNullOrEmpty(lastRootCode))
+                return baseCode;
+
+            if (int.TryParse(lastRootCode, out var rootNumber))
+                return (rootNumber + 1).ToString();
+
+            return baseCode + "1";
         }
 
         private static string GenerateChildCode(string parentCode, string? lastChildCode)
