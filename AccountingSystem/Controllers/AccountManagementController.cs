@@ -1115,18 +1115,25 @@ namespace Roadfn.Controllers
                     lines.Add(DriverAttxn);
                     #endregion
 
+
+                    var tot = sh.ShipmentPrice;
+                    if (sh.PaidAmountFromShipmentFees > 0)
+                    {
+                        tot = sh.PaidAmountFromShipmentFees * -1;
+                    }
+
                     #region CustomerAccounttxn txn
                     var CustomerAccounttxn = new JournalEntryLine();
                     CustomerAccounttxn.AccountId = customerAccount.Id;
                     CustomerAccounttxn.DebitAmount = 0;
                     CustomerAccounttxn.CreditAmount = 0;
-                    if (Convert.ToDecimal(Paytxn.ShipmentPrice) <= 0)
+                    if (Convert.ToDecimal(tot) <= 0)
                     {
-                        CustomerAccounttxn.DebitAmount = Convert.ToDecimal(Paytxn.ShipmentPrice) * -1;
+                        CustomerAccounttxn.DebitAmount = Convert.ToDecimal(tot) * -1;
                     }
                     else
                     {
-                        CustomerAccounttxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentPrice);
+                        CustomerAccounttxn.CreditAmount = Convert.ToDecimal(tot);
                     }
                     CustomerAccounttxn.Reference = driverPaymentHeader.Id.ToString();
                     CustomerAccounttxn.Description = $"ذمة مورد مبلغ تحصيل {sh.ShipmentTrackingNo}";
@@ -1137,7 +1144,7 @@ namespace Roadfn.Controllers
 
                     if (area?.CommissionBranch > 0)
                     {
-                        var rev = Convert.ToDecimal((Paytxn.ShipmentTotal - Paytxn.ShipmentPrice) - area.CommissionBranch);
+                        var rev = Convert.ToDecimal((Paytxn.ShipmentTotal - tot) - area.CommissionBranch);
 
                         var AgenAmt = Convert.ToDecimal(area.CommissionBranch) - Convert.ToDecimal(Paytxn.CommissionPerItem);
 
@@ -1194,13 +1201,13 @@ namespace Roadfn.Controllers
                         RevenueAccounttxn.AccountId = revenueAccount.Id;
                         RevenueAccounttxn.DebitAmount = 0;
                         RevenueAccounttxn.CreditAmount = 0;
-                        if (Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice) <= 0)
+                        if (Convert.ToDecimal(Paytxn.ShipmentCod - tot) <= 0)
                         {
-                            RevenueAccounttxn.DebitAmount = Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice) * -1;
+                            RevenueAccounttxn.DebitAmount = Convert.ToDecimal(Paytxn.ShipmentCod - tot) * -1;
                         }
                         else
                         {
-                            RevenueAccounttxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentCod - Paytxn.ShipmentPrice);
+                            RevenueAccounttxn.CreditAmount = Convert.ToDecimal(Paytxn.ShipmentCod - tot);
                         }
                         RevenueAccounttxn.Reference = driverPaymentHeader.Id.ToString();
                         RevenueAccounttxn.Description = $"ايراد خدمة  {sh.ShipmentTrackingNo}";
