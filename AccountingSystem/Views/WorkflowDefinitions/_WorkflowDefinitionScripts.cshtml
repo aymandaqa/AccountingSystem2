@@ -64,22 +64,52 @@
                 labelMap.set(el.dataset.stepId, `${idx + 1} - ${typeLabel}`);
             });
 
-            const parts = stepElements.map((el) => {
+            const childrenMap = new Map();
+
+            stepElements.forEach((el) => {
                 const requiresParent = el.querySelector('.step-has-parent')?.checked;
-                const connector = parseInt(el.querySelector('.step-connector').value) || 1;
-                const connectorLabel = connector === 2 ? 'OR' : 'AND';
-                const parentValue = requiresParent ? el.querySelector('.step-parent').value : '';
-                const currentLabel = labelMap.get(el.dataset.stepId) || 'خطوة';
+                const parentId = requiresParent ? el.querySelector('.step-parent').value : '';
 
-                if (!requiresParent || !parentValue) {
-                    return currentLabel;
+                if (parentId) {
+                    const list = childrenMap.get(parentId) || [];
+                    list.push(el);
+                    childrenMap.set(parentId, list);
                 }
-
-                const parentLabel = labelMap.get(parentValue) || 'خطوة سابقة';
-                return `(${parentLabel} ${connectorLabel} ${currentLabel})`;
             });
 
-            expressionOutput.textContent = parts.join('  ،  ');
+            const buildExpression = (element, visited = new Set()) => {
+                const currentId = element.dataset.stepId;
+                if (visited.has(currentId)) {
+                    return labelMap.get(currentId) || 'خطوة';
+                }
+
+                visited.add(currentId);
+                let expression = labelMap.get(currentId) || 'خطوة';
+                const children = childrenMap.get(currentId) || [];
+
+                children.forEach(child => {
+                    const connectorValue = parseInt(child.querySelector('.step-connector').value) || 1;
+                    const connectorLabel = connectorValue === 2 ? 'OR' : 'AND';
+                    const childExpression = buildExpression(child, new Set(visited));
+                    expression = `(${expression} ${connectorLabel} ${childExpression})`;
+                });
+
+                return expression;
+            };
+
+            const roots = stepElements.filter(el => {
+                const requiresParent = el.querySelector('.step-has-parent')?.checked;
+                const parentId = requiresParent ? el.querySelector('.step-parent').value : '';
+                return !parentId || !labelMap.has(parentId);
+            });
+
+            const expressions = roots.map(root => buildExpression(root));
+            if (expressions.length === 0) {
+                expressionOutput.textContent = 'التعبير غير مكتمل بسبب غياب الخطوات الجذرية';
+                return;
+            }
+
+            expressionOutput.textContent = expressions.join('  ،  ');
         }
 
         function getStepLabel(stepElement, index) {
