@@ -25,6 +25,8 @@ namespace AccountingSystem.ViewModels.Dashboard
 
         public decimal TotalCashOnBranchBox { get; set; }
 
+        public decimal TransfersBalance { get; set; }
+
         public IReadOnlyList<AccountTreeNodeViewModel> DashboardAccountTree { get; set; } = new List<AccountTreeNodeViewModel>();
 
         public string DashboardBaseCurrencyCode { get; set; } = string.Empty;

@@ -56,7 +56,7 @@
             <div class="card-body">
                 <h5 class="card-title mb-4">تقرير أداء السيولة حسب الفروع</h5>
 
-                @if (!Model.HasRecords)
+                @if (!Model.HasRecords && Model.TransfersBalance == 0)
                 {
                     <div class="alert alert-info mb-0">لا توجد بيانات للعرض.</div>
                 }
@@ -84,6 +84,14 @@
                                         <td>@record.CashOnBranchBox</td>
                                     </tr>
                                 }
+
+                                <tr class="table-secondary">
+                                    <td class="text-start fw-semibold">الحوالات</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>@Model.TransfersBalance</td>
+                                </tr>
                             </tbody>
                             <tfoot class="table-light fw-semibold">
                                 <tr>
