@@ -277,23 +277,17 @@
 
             function updateParentState() {
                 const enabled = hasParentCheckbox?.checked;
-                const displayStyle = enabled ? 'block' : 'none';
+
                 if (parentSelect) {
                     parentSelect.disabled = !enabled;
-                    if (!enabled) {
-                        parentSelect.value = '';
-                        container.dataset.parentStepId = '';
-                        container.dataset.parentOrder = '';
-                    }
                 }
+
                 if (connectorSelect) {
                     connectorSelect.disabled = !enabled;
-                    if (!enabled) {
-                        connectorSelect.value = '1';
-                    }
                 }
-                if (parentContainer) parentContainer.style.display = displayStyle;
-                if (connectorContainer) connectorContainer.style.display = displayStyle;
+
+                if (parentContainer) parentContainer.classList.toggle('opacity-50', !enabled);
+                if (connectorContainer) connectorContainer.classList.toggle('opacity-50', !enabled);
             }
 
             typeSelect.addEventListener('change', updateVisibility);
