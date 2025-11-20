@@ -41,9 +41,21 @@
 <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span>خطوات الموافقة</span>
-        <button type="button" id="addStepBtn" class="btn btn-sm btn-outline-primary"><i class="fa fa-plus ms-1"></i> إضافة خطوة</button>
+        <div class="btn-group" role="group">
+            <button type="button" id="addStepBtn" class="btn btn-sm btn-outline-primary"><i class="fa fa-plus ms-1"></i> إضافة خطوة</button>
+            <button type="button" id="clearStepsBtn" class="btn btn-sm btn-outline-danger" title="إزالة جميع الخطوات">
+                <i class="fa fa-trash ms-1"></i> إزالة الكل
+            </button>
+        </div>
     </div>
     <div class="card-body">
+        <div class="border rounded p-3 mb-3 bg-light">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong>التعبير المنطقي للخطوات</strong>
+                <span class="text-muted small">عرض لكيفية ربط الخطوات (و/أو) بشكل شبيه بالشاشة المرفقة</span>
+            </div>
+            <div id="expressionOutput" class="alert alert-secondary mb-0 py-2">لا يوجد تعبير بعد</div>
+        </div>
         <div id="stepsList" class="list-group list-group-flush"></div>
         <div class="text-muted mt-2" id="noStepsMessage">لم يتم إضافة أي خطوة بعد</div>
     </div>

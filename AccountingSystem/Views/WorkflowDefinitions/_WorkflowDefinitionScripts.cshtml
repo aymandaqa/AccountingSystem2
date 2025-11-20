@@ -19,6 +19,8 @@
         const stepsJsonInput = document.getElementById('stepsJson');
         const noStepsMessage = document.getElementById('noStepsMessage');
         const addStepBtn = document.getElementById('addStepBtn');
+        const clearStepsBtn = document.getElementById('clearStepsBtn');
+        const expressionOutput = document.getElementById('expressionOutput');
         let stepCounter = 0;
 
         if (!stepsList || !stepsJsonInput || !noStepsMessage || !addStepBtn) {
@@ -35,6 +37,49 @@
         function toggleEmptyMessage() {
             const hasSteps = stepsList.children.length > 0;
             noStepsMessage.style.display = hasSteps ? 'none' : 'block';
+            if (!hasSteps && expressionOutput) {
+                expressionOutput.textContent = 'لا يوجد تعبير بعد';
+            }
+        }
+
+        function getTypeLabel(type) {
+            if (type === 2) return 'حسب الصلاحية';
+            if (type === 3) return 'مسؤولو الفرع';
+            return 'مستخدم محدد';
+        }
+
+        function updateExpressionOutput() {
+            if (!expressionOutput) return;
+
+            const stepElements = Array.from(stepsList.querySelectorAll('.workflow-step'));
+            if (stepElements.length === 0) {
+                expressionOutput.textContent = 'لا يوجد تعبير بعد';
+                return;
+            }
+
+            const labelMap = new Map();
+            stepElements.forEach((el, idx) => {
+                const type = parseInt(el.querySelector('.step-type').value);
+                const typeLabel = getTypeLabel(type);
+                labelMap.set(el.dataset.stepId, `${idx + 1} - ${typeLabel}`);
+            });
+
+            const parts = stepElements.map((el) => {
+                const requiresParent = el.querySelector('.step-has-parent')?.checked;
+                const connector = parseInt(el.querySelector('.step-connector').value) || 1;
+                const connectorLabel = connector === 2 ? 'OR' : 'AND';
+                const parentValue = requiresParent ? el.querySelector('.step-parent').value : '';
+                const currentLabel = labelMap.get(el.dataset.stepId) || 'خطوة';
+
+                if (!requiresParent || !parentValue) {
+                    return currentLabel;
+                }
+
+                const parentLabel = labelMap.get(parentValue) || 'خطوة سابقة';
+                return `(${parentLabel} ${connectorLabel} ${currentLabel})`;
+            });
+
+            expressionOutput.textContent = parts.join('  ،  ');
         }
 
         function getStepLabel(stepElement, index) {
@@ -42,9 +87,7 @@
             const connector = parseInt(stepElement.querySelector('.step-connector').value);
             const hasParent = stepElement.querySelector('.step-has-parent')?.checked;
             const connectorLabel = connector === 2 ? 'أو' : 'و';
-            let typeLabel = 'مستخدم محدد';
-            if (type === 2) typeLabel = 'حسب الصلاحية';
-            else if (type === 3) typeLabel = 'مسؤولو الفرع';
+            const typeLabel = getTypeLabel(type);
 
             return hasParent
                 ? `${index + 1} - (${connectorLabel}) ${typeLabel}`
@@ -251,10 +294,18 @@
             toggleEmptyMessage();
             refreshParentOptions();
             serializeSteps();
+            updateExpressionOutput();
         }
 
         addStepBtn.addEventListener('click', function () {
             addStep({ stepType: 1 });
+        });
+
+        clearStepsBtn?.addEventListener('click', function () {
+            stepsList.innerHTML = '';
+            toggleEmptyMessage();
+            serializeSteps();
+            updateExpressionOutput();
         });
 
         if (window.Sortable) {
@@ -314,6 +365,7 @@
             });
 
             stepsJsonInput.value = JSON.stringify(steps);
+            updateExpressionOutput();
         }
 
         stepsList.addEventListener('change', function (event) {
