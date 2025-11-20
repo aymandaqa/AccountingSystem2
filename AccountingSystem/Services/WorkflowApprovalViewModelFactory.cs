@@ -42,6 +42,30 @@ namespace AccountingSystem.Services
             var actions = await _workflowService.GetPendingActionsForUserAsync(userId, cancellationToken);
             var viewModels = new List<WorkflowApprovalViewModel>();
 
+            var actionUserIds = actions
+                .Select(a => a.UserId)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Select(id => id!)
+                .Distinct()
+                .ToList();
+
+            var workflowStepBranches = actions
+                .Select(a => a.WorkflowStep.BranchId)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .Distinct()
+                .ToList();
+
+            var userNames = await _context.Users
+                .Where(u => actionUserIds.Contains(u.Id))
+                .Select(u => new { u.Id, Name = (u.FirstName + " " + u.LastName).Trim() })
+                .ToDictionaryAsync(u => u.Id, u => string.IsNullOrWhiteSpace(u.Name) ? u.Id : u.Name, cancellationToken);
+
+            var branchNames = await _context.Branches
+                .Where(b => workflowStepBranches.Contains(b.Id))
+                .Select(b => new { b.Id, Name = b.NameAr })
+                .ToDictionaryAsync(b => b.Id, b => b.Name, cancellationToken);
+
             var paymentVoucherIds = actions
                 .Where(a => a.WorkflowInstance.DocumentType == WorkflowDocumentType.PaymentVoucher)
                 .Select(a => a.WorkflowInstance.DocumentId)
@@ -131,6 +155,8 @@ namespace AccountingSystem.Services
                     OperationTypeName = GetOperationTypeName(action.WorkflowInstance.DocumentType),
                     CreatedByName = GetUserDisplayName(action.WorkflowInstance.Initiator, action.WorkflowInstance.InitiatorId)
                 };
+
+                model.WorkflowSteps = BuildWorkflowSteps(action, userNames, branchNames);
 
                 if (action.WorkflowInstance.DocumentType == WorkflowDocumentType.PaymentVoucher && vouchers.TryGetValue(action.WorkflowInstance.DocumentId, out var voucher))
                 {
@@ -305,6 +331,52 @@ namespace AccountingSystem.Services
             }
 
             return string.IsNullOrWhiteSpace(fallbackId) ? "غير معروف" : fallbackId!;
+        }
+
+        private List<WorkflowStepStatusViewModel> BuildWorkflowSteps(
+            WorkflowAction action,
+            IReadOnlyDictionary<string, string> userNames,
+            IReadOnlyDictionary<int, string> branchNames)
+        {
+            var instanceActions = action.WorkflowInstance.Actions
+                .OrderBy(a => a.WorkflowStep.Order)
+                .ToList();
+
+            return instanceActions.Select(a => new WorkflowStepStatusViewModel
+            {
+                WorkflowStepId = a.WorkflowStepId,
+                Order = a.WorkflowStep.Order,
+                Connector = a.WorkflowStep.Connector,
+                ParentStepId = a.WorkflowStep.ParentStepId,
+                Status = a.Status,
+                ActionedAt = a.ActionedAt,
+                ActorName = string.IsNullOrWhiteSpace(a.UserId)
+                    ? null
+                    : userNames.TryGetValue(a.UserId, out var actor)
+                        ? actor
+                        : a.UserId,
+                Label = GetStepLabel(a.WorkflowStep, userNames, branchNames)
+            }).ToList();
+        }
+
+        private static string GetStepLabel(WorkflowStep step, IReadOnlyDictionary<string, string> userNames, IReadOnlyDictionary<int, string> branchNames)
+        {
+            return step.StepType switch
+            {
+                WorkflowStepType.SpecificUser =>
+                    userNames.TryGetValue(step.ApproverUserId ?? string.Empty, out var userLabel)
+                        ? $"مستخدم: {userLabel}"
+                        : $"مستخدم: {step.ApproverUserId ?? "غير محدد"}",
+                WorkflowStepType.Permission =>
+                    string.IsNullOrWhiteSpace(step.RequiredPermission)
+                        ? "صلاحية غير محددة"
+                        : $"صلاحية: {step.RequiredPermission}",
+                WorkflowStepType.Branch =>
+                    step.BranchId.HasValue && branchNames.TryGetValue(step.BranchId.Value, out var branch)
+                        ? $"مسؤولو فرع {branch}"
+                        : "مسؤولو الفرع",
+                _ => "خطوة موافقة"
+            };
         }
 
         private static string GetTitle(WorkflowInstance instance)
