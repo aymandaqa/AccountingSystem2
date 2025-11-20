@@ -240,8 +240,7 @@ namespace AccountingSystem.Services
             }
 
             var groupActions = action.WorkflowInstance.Actions
-                .Where(a => a.WorkflowStep.ParentStepId == action.WorkflowStep.ParentStepId
-                            && a.WorkflowStep.Order == action.WorkflowStep.Order)
+                .Where(a => a.WorkflowStep.ParentStepId == action.WorkflowStep.ParentStepId)
                 .ToList();
             var isOrGroup = groupActions.Any(a => a.WorkflowStep.Connector == WorkflowStepConnector.Or);
             if (isOrGroup)
@@ -358,18 +357,9 @@ namespace AccountingSystem.Services
                 .Select(a => a.WorkflowStepId)
                 .ToHashSet();
 
-            var eligible = pendingActions
+            return pendingActions
                 .Where(a => !a.WorkflowStep.ParentStepId.HasValue || completedSteps.Contains(a.WorkflowStep.ParentStepId.Value))
                 .ToList();
-
-            var ready = new List<WorkflowAction>();
-            foreach (var group in eligible.GroupBy(a => a.WorkflowStep.ParentStepId))
-            {
-                var minOrder = group.Min(a => a.WorkflowStep.Order);
-                ready.AddRange(group.Where(a => a.WorkflowStep.Order == minOrder));
-            }
-
-            return ready;
         }
 
         private HashSet<int> GetReadyActionIds(WorkflowInstance instance)
