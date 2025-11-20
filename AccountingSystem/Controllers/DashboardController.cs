@@ -43,6 +43,7 @@ namespace AccountingSystem.Controllers
             try
             {
                 var records = await LoadRecordsForUserAsync();
+                var transfersBalance = await LoadTransfersBalanceAsync();
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
                 var myPendingRequests = string.IsNullOrWhiteSpace(userId)
                     ? Array.Empty<PendingWorkflowRequestViewModel>()
@@ -65,7 +66,8 @@ namespace AccountingSystem.Controllers
                     TotalCustomerDuesOnRoad = records.Sum(r => r.CustomerDuesOnRoad),
                     TotalCashWithDriverOnRoad = records.Sum(r => r.CashWithDriverOnRoad),
                     TotalCustomerDues = records.Sum(r => r.CustomerDues),
-                    TotalCashOnBranchBox = records.Sum(r => r.CashOnBranchBox),
+                    TransfersBalance = transfersBalance,
+                    TotalCashOnBranchBox = records.Sum(r => r.CashOnBranchBox) + transfersBalance,
                     DashboardAccountTree = dashboardAccounts.Nodes,
                     DashboardBaseCurrencyCode = dashboardAccounts.BaseCurrencyCode,
                     DashboardParentAccountName = dashboardAccounts.ParentAccountName
@@ -89,6 +91,14 @@ namespace AccountingSystem.Controllers
                 .ToListAsync();
 
             return records;
+        }
+
+        private async Task<decimal> LoadTransfersBalanceAsync()
+        {
+            return await _context.PaymentTransfers
+                .AsNoTracking()
+                .Where(t => t.Status == TransferStatus.Pending)
+                .SumAsync(t => t.Amount);
         }
 
         private async Task<IReadOnlyList<PaymentTransfer>> LoadPendingTransfersForUserAsync(string userId)

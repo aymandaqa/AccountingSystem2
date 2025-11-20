@@ -27,6 +27,7 @@ namespace AccountingSystem.ViewModels.Workflows
         public string? JournalPreviewError { get; set; }
         public string CreatedByName { get; set; } = string.Empty;
         public string OperationTypeName { get; set; } = string.Empty;
+        public List<WorkflowStepStatusViewModel> WorkflowSteps { get; set; } = new();
     }
 
     public class WorkflowAttachmentViewModel
@@ -43,5 +44,17 @@ namespace AccountingSystem.ViewModels.Workflows
         public decimal Credit { get; set; }
         public string? Description { get; set; }
         public string? CostCenter { get; set; }
+    }
+
+    public class WorkflowStepStatusViewModel
+    {
+        public int WorkflowStepId { get; set; }
+        public int Order { get; set; }
+        public WorkflowStepConnector Connector { get; set; }
+        public int? ParentStepId { get; set; }
+        public WorkflowActionStatus Status { get; set; }
+        public string Label { get; set; } = string.Empty;
+        public string? ActorName { get; set; }
+        public DateTime? ActionedAt { get; set; }
     }
 }

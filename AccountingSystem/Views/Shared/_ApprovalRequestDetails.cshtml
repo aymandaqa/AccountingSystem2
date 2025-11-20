@@ -1,3 +1,4 @@
+@using AccountingSystem.Models.Workflows
 @model AccountingSystem.ViewModels.Workflows.WorkflowApprovalViewModel
 
 @if (Model.Amount != 0 || Model.AmountInBase != 0)
@@ -23,6 +24,53 @@
 }
 
 <p>@Model.Description</p>
+@if (Model.WorkflowSteps.Any())
+{
+    <div class="mb-3">
+        <div class="fw-bold mb-2">هيكلة الموافقة</div>
+        <div class="list-group">
+            @foreach (var step in Model.WorkflowSteps.OrderBy(s => s.Order))
+            {
+                var statusClass = step.Status switch
+                {
+                    WorkflowActionStatus.Approved => "bg-success-subtle text-success",
+                    WorkflowActionStatus.Rejected => "bg-danger-subtle text-danger",
+                    WorkflowActionStatus.Skipped => "bg-secondary-subtle text-secondary",
+                    _ => "bg-warning-subtle text-dark"
+                };
+                var statusLabel = step.Status switch
+                {
+                    WorkflowActionStatus.Approved => "معتمد",
+                    WorkflowActionStatus.Rejected => "مرفوض",
+                    WorkflowActionStatus.Skipped => "متجاوز",
+                    _ => "قيد الانتظار"
+                };
+
+                <div class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="me-2">
+                        <div class="fw-semibold">@step.Label</div>
+                        <div class="small text-muted">
+                            @if (step.ParentStepId.HasValue)
+                            {
+                                <span class="me-2">يرتبط بالخطوة السابقة</span>
+                            }
+                            <span>الربط: @(step.Connector == WorkflowStepConnector.Or ? "أو" : "و")</span>
+                            @if (!string.IsNullOrWhiteSpace(step.ActorName))
+                            {
+                                <span class="ms-2">آخر إجراء بواسطة @step.ActorName</span>
+                            }
+                            @if (step.ActionedAt.HasValue)
+                            {
+                                <span class="ms-2">(@step.ActionedAt.Value.ToString("dd/MM/yyyy HH:mm"))</span>
+                            }
+                        </div>
+                    </div>
+                    <span class="badge @statusClass">@statusLabel</span>
+                </div>
+            }
+        </div>
+    </div>
+}
 @if (Model.Attachments.Any())
 {
     <div class="mb-3">
