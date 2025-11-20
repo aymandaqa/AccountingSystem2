@@ -2022,7 +2022,7 @@ namespace AccountingSystem.Controllers
 
                 if (!string.IsNullOrEmpty(predicate))
                 {
-                    queryable = queryable.Where(predicate, parameters.ToArray());
+                    queryable = DynamicQueryableExtensions.Where(queryable, predicate, parameters.ToArray());
                 }
             }
 
