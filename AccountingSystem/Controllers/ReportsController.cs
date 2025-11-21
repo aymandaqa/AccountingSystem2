@@ -5378,18 +5378,18 @@ namespace AccountingSystem.Controllers
             var processedAccounts = new HashSet<int>();
 
             var driverAssetExpenses = await (from expense in _context.AssetExpenses.AsNoTracking()
-                                              join asset in _context.Assets.AsNoTracking() on expense.AssetId equals asset.Id
-                                              where asset.DriverId.HasValue
-                                                  && asset.AllowAssetExpenses
-                                                  && !asset.IsDisposed
-                                                  && expense.Date >= normalizedFrom
-                                                  && expense.Date <= normalizedTo
-                                              group new { expense, asset } by asset.DriverId into g
-                                              select new
-                                              {
-                                                  DriverId = g.Key!.Value,
-                                                  TotalExpenses = g.Sum(x => x.expense.Amount * x.expense.ExchangeRate)
-                                              })
+                                             join asset in _context.Assets.AsNoTracking() on expense.AssetId equals asset.Id
+                                             where asset.DriverId.HasValue
+                                                 && asset.AllowAssetExpenses
+                                                 && !asset.IsDisposed
+                                                 && expense.Date >= normalizedFrom
+                                                 && expense.Date <= normalizedTo
+                                             group new { expense, asset } by asset.DriverId into g
+                                             select new
+                                             {
+                                                 DriverId = g.Key!.Value,
+                                                 TotalExpenses = g.Sum(x => x.expense.Amount * x.expense.ExchangeRate)
+                                             })
                 .ToDictionaryAsync(x => x.DriverId, x => x.TotalExpenses);
 
             foreach (var info in driverAccounts)
@@ -5435,7 +5435,7 @@ namespace AccountingSystem.Controllers
                     AccountName = info.AccountName,
                     TotalRevenue = total,
                     AssetExpenses = assetExpenses,
-                    NetAmount = assetExpenses - total
+                    NetAmount = total - assetExpenses
                 });
             }
 
