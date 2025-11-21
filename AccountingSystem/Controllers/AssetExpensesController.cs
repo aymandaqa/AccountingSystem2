@@ -416,6 +416,10 @@ namespace AccountingSystem.Controllers
             {
                 ModelState.AddModelError(nameof(model.AssetId), "الأصل غير موجود");
             }
+            else if (!asset.AllowAssetExpenses || asset.IsDisposed)
+            {
+                ModelState.AddModelError(nameof(model.AssetId), "مصروف الأصل غير متاح لهذا الأصل");
+            }
 
             Account? expenseAccount = null;
             var expenseSetting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "AssetExpensesParentAccountId");
@@ -686,15 +690,24 @@ namespace AccountingSystem.Controllers
 
         private async Task PopulateCreateAssetExpenseModelAsync(CreateAssetExpenseViewModel model, IReadOnlyCollection<int> userBranchIds)
         {
-            model.Assets = await GetAssetsAsync();
+            model.Assets = await GetAssetsAsync(userBranchIds);
             model.ExpenseAccounts = await GetExpenseAccountsAsync();
             model.Suppliers = await GetSuppliersAsync(userBranchIds);
         }
 
-        private async Task<IEnumerable<SelectListItem>> GetAssetsAsync()
+        private async Task<IEnumerable<SelectListItem>> GetAssetsAsync(IReadOnlyCollection<int> userBranchIds)
         {
-            return await _context.Assets
+            var query = _context.Assets
                 .Include(a => a.Branch)
+                .Where(a => a.AllowAssetExpenses && !a.IsDisposed)
+                .AsQueryable();
+
+            if (userBranchIds.Any())
+            {
+                query = query.Where(a => userBranchIds.Contains(a.BranchId));
+            }
+
+            return await query
                 .OrderBy(a => a.Name)
                 .Select(a => new SelectListItem
                 {

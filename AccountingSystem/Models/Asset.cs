@@ -52,6 +52,10 @@ namespace AccountingSystem.Models
 
         public decimal BookValue { get; set; }
 
+        public bool AllowAssetExpenses { get; set; } = true;
+
+        public int? DriverId { get; set; }
+
         public bool IsDisposed { get; set; }
 
         public DateTime? DisposedAt { get; set; }

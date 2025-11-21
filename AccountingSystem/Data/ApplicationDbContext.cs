@@ -242,6 +242,10 @@ namespace AccountingSystem.Data
             {
                 entity.HasNoKey();
                 entity.ToView("ViewCashPerformance");
+                entity.Property(e => e.CustomerDuesOnRoad).HasPrecision(18, 2);
+                entity.Property(e => e.CashWithDriverOnRoad).HasPrecision(18, 2);
+                entity.Property(e => e.CustomerDues).HasPrecision(18, 2);
+                entity.Property(e => e.CashOnBranchBox).HasPrecision(18, 2);
             });
 
             // CostCenter configuration
@@ -664,6 +668,10 @@ namespace AccountingSystem.Data
                 entity.Property(e => e.AccumulatedDepreciation).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.BookValue).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.PurchaseAmount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.AllowAssetExpenses).HasDefaultValue(true);
+                entity.Property(e => e.DisposalProceeds).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.DisposalProfitLoss).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.BookValueAtDisposal).HasColumnType("decimal(18,2)");
 
                 entity.HasOne(e => e.Branch)
                     .WithMany(b => b.Assets)
