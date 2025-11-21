@@ -416,6 +416,14 @@ namespace AccountingSystem.Controllers
             {
                 ModelState.AddModelError(nameof(model.AssetId), "الأصل غير موجود");
             }
+            else if (userBranchIds.Any() && !userBranchIds.Contains(asset.BranchId))
+            {
+                ModelState.AddModelError(nameof(model.AssetId), "الأصل المحدد غير مرتبط بفرعك");
+            }
+            else if (!userBranchIds.Any() && user.PaymentBranchId.HasValue && asset.BranchId != user.PaymentBranchId.Value)
+            {
+                ModelState.AddModelError(nameof(model.AssetId), "الأصل المحدد غير مرتبط بفرعك");
+            }
             else if (!asset.AllowAssetExpenses || asset.IsDisposed)
             {
                 ModelState.AddModelError(nameof(model.AssetId), "مصروف الأصل غير متاح لهذا الأصل");
