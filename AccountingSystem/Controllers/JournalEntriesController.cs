@@ -1654,6 +1654,9 @@ namespace AccountingSystem.Controllers
             if (entry == null)
                 return NotFound();
 
+            if (entry.Status != JournalEntryStatus.Draft)
+                return BadRequest("لا يمكن تعديل هذا القيد في حالته الحالية.");
+
             var model = new CreateJournalEntryViewModel
             {
                 Id = entry.Id,
@@ -1716,6 +1719,9 @@ namespace AccountingSystem.Controllers
                 .FirstOrDefaultAsync(j => j.Id == id);
             if (entry == null)
                 return NotFound();
+
+            if (entry.Status != JournalEntryStatus.Draft)
+                return BadRequest("لا يمكن تعديل هذا القيد في حالته الحالية.");
 
             entry.Date = model.Date;
             entry.Description = model.Description;

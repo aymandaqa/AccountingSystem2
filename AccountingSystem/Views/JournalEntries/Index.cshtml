@@ -98,6 +98,7 @@
                   toolbarClick="onToolbarClick"
                   actionBegin="onActionBegin"
                   created="onGridCreated"
+                  rowDataBound="onRowDataBound"
                   toolbar="@toolbarItems"
                   allowSelection="true" allowExcelExport="true">
             <e-grid-selectionsettings type="Single"></e-grid-selectionsettings>
@@ -265,6 +266,11 @@
                 return;
             }
 
+            if (selected.Status !== 'Draft') {
+                ej.popups.DialogUtility.alert({ title: 'تعديل', content: 'لا يمكن تعديل قيد مرحل أو غير مسودة.' });
+                return;
+            }
+
             const url = endpoints.edit.replace('__id__', selected.Id);
             window.location.href = url;
         }
@@ -395,6 +401,18 @@
             }
         }
 
+        function onRowDataBound(args) {
+            const status = args?.data?.Status;
+            if (!status || !args.row) {
+                return;
+            }
+
+            const editButton = args.row.querySelector('[data-action="edit"]');
+            if (editButton) {
+                editButton.hidden = status !== 'Draft';
+            }
+        }
+
         function onGridCreated() {
             const grid = getGridInstance();
             if (!grid) {
@@ -402,6 +420,7 @@
             }
 
             grid.element.addEventListener('click', onActionButtonClick);
+            grid.rowDataBound = onRowDataBound;
             grid.query = buildQuery();
         }
 
