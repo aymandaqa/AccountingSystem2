@@ -97,6 +97,7 @@
                   height="650"
                   toolbarClick="onToolbarClick"
                   actionBegin="onActionBegin"
+                  created="onGridCreated"
                   toolbar="@toolbarItems"
                   allowSelection="true" allowExcelExport="true">
             <e-grid-selectionsettings type="Single"></e-grid-selectionsettings>
@@ -394,6 +395,16 @@
             }
         }
 
+        function onGridCreated() {
+            const grid = getGridInstance();
+            if (!grid) {
+                return;
+            }
+
+            grid.element.addEventListener('click', onActionButtonClick);
+            grid.query = buildQuery();
+        }
+
         document.getElementById('applyFilters').addEventListener('click', applyFilters);
         document.getElementById('resetFilters').addEventListener('click', resetFilters);
         filterControls.search.addEventListener('keypress', function (event) {
@@ -402,11 +413,5 @@
                 applyFilters();
             }
         });
-
-        const grid = getGridInstance();
-        if (grid) {
-            grid.element.addEventListener('click', onActionButtonClick);
-            grid.query = buildQuery();
-        }
     </script>
 }
