@@ -6232,7 +6232,7 @@ namespace AccountingSystem.Controllers
         {
             var info = new UserDailyTransactionDocumentInfo
             {
-                Title = $"سند صرف رقم {voucher.Id}",
+                Title = $"سند دفع رقم {voucher.Id}",
                 Fields = new List<UserDailyTransactionDocumentField>
                 {
                     new("التاريخ", voucher.Date.ToString("dd/MM/yyyy")),
