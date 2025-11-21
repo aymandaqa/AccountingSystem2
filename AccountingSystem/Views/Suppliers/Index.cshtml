@@ -75,9 +75,9 @@
 @section Scripts {
     <script>
         const supplierPermissions = {
-            canEdit: @User.HasClaim(c => c.Type == "Permission" && c.Value == "suppliers.edit").ToString().ToLower() == "true",
-            canDelete: @User.HasClaim(c => c.Type == "Permission" && c.Value == "suppliers.delete").ToString().ToLower() == "true",
-            canViewStatement: @User.HasClaim(c => c.Type == "Permission" && c.Value == "reports.accountstatement").ToString().ToLower() == "true"
+            canEdit: @User.HasClaim(c => c.Type == "Permission" && c.Value == "suppliers.edit").ToString().ToLowerInvariant(),
+            canDelete: @User.HasClaim(c => c.Type == "Permission" && c.Value == "suppliers.delete").ToString().ToLowerInvariant(),
+            canViewStatement: @User.HasClaim(c => c.Type == "Permission" && c.Value == "reports.accountstatement").ToString().ToLowerInvariant()
         };
 
         function onSuppliersDataBound() {
