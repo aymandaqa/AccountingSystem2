@@ -578,6 +578,8 @@ namespace AccountingSystem.ViewModels
         public string? SearchTerm { get; set; }
         public List<DriverRevenueReportRowViewModel> Rows { get; set; } = new List<DriverRevenueReportRowViewModel>();
         public decimal GrandTotal { get; set; }
+        public decimal GrandAssetExpenses { get; set; }
+        public decimal GrandNetAmount { get; set; }
         public bool HasResults => Rows.Count > 0;
     }
 
@@ -589,6 +591,8 @@ namespace AccountingSystem.ViewModels
         public string AccountCode { get; set; } = string.Empty;
         public string AccountName { get; set; } = string.Empty;
         public decimal TotalRevenue { get; set; }
+        public decimal AssetExpenses { get; set; }
+        public decimal NetAmount { get; set; }
         public List<string> AssetNames { get; set; } = new List<string>();
         public string AssetsDisplay => AssetNames.Count == 0 ? string.Empty : string.Join(", ", AssetNames);
     }
