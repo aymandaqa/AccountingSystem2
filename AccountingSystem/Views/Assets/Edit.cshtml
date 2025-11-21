@@ -43,6 +43,20 @@
                     <span asp-validation-for="SupplierId" class="text-danger"></span>
                 </div>
                 <div class="col-md-6">
+                    <label asp-for="DriverId" class="form-label"></label>
+                    <select asp-for="DriverId" asp-items="Model.Drivers" class="form-select">
+                        <option value="">اختر السائق (اختياري)</option>
+                    </select>
+                    <span asp-validation-for="DriverId" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check form-switch mt-4">
+                        <input asp-for="AllowAssetExpenses" class="form-check-input" />
+                        <label asp-for="AllowAssetExpenses" class="form-check-label"></label>
+                    </div>
+                    <span asp-validation-for="AllowAssetExpenses" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
                     <label asp-for="PurchaseAmount" class="form-label"></label>
                     <input asp-for="PurchaseAmount" class="form-control" />
                     <span asp-validation-for="PurchaseAmount" class="text-danger"></span>

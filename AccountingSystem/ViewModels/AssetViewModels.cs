@@ -19,6 +19,8 @@ namespace AccountingSystem.ViewModels
         public string? Notes { get; set; }
         public decimal OpeningBalance { get; set; }
         public int? AccountId { get; set; }
+        public bool AllowAssetExpenses { get; set; }
+        public string? DriverName { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public bool IsDepreciable { get; set; }
@@ -73,6 +75,12 @@ namespace AccountingSystem.ViewModels
 
         public int? AccountId { get; set; }
 
+        [Display(Name = "السماح بصرف مصاريف على الأصل")]
+        public bool AllowAssetExpenses { get; set; } = true;
+
+        [Display(Name = "السائق المرتبط")]
+        public int? DriverId { get; set; }
+
         [Display(Name = "حساب الأصل")]
         public string? AccountCode { get; set; }
 
@@ -101,6 +109,7 @@ namespace AccountingSystem.ViewModels
         public IEnumerable<SelectListItem> DepreciationFrequencies { get; set; } = Enumerable.Empty<SelectListItem>();
         public IEnumerable<AssetTypeSelectOption> AssetTypeOptions { get; set; } = Enumerable.Empty<AssetTypeSelectOption>();
         public IEnumerable<SelectListItem> Suppliers { get; set; } = Enumerable.Empty<SelectListItem>();
+        public IEnumerable<SelectListItem> Drivers { get; set; } = Enumerable.Empty<SelectListItem>();
     }
 
     public class AssetExpenseListViewModel

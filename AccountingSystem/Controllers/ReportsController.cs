@@ -288,7 +288,8 @@ namespace AccountingSystem.Controllers
                 worksheet.Cell(5, 1).Value = "اسم السائق";
                 worksheet.Cell(5, 2).Value = "الفرع";
                 worksheet.Cell(5, 3).Value = "الحساب";
-                worksheet.Cell(5, 4).Value = $"إجمالي العائد ({model.BaseCurrencyCode})";
+                worksheet.Cell(5, 4).Value = "الأصول المرتبطة";
+                worksheet.Cell(5, 5).Value = $"إجمالي العائد ({model.BaseCurrencyCode})";
 
                 var currentRow = 6;
                 foreach (var row in model.Rows)
@@ -300,16 +301,19 @@ namespace AccountingSystem.Controllers
                     worksheet.Cell(currentRow, 3).Value = string.IsNullOrWhiteSpace(row.AccountCode)
                         ? row.AccountName
                         : $"{row.AccountCode} - {row.AccountName}";
-                    worksheet.Cell(currentRow, 4).Value = Math.Round(row.TotalRevenue, 2, MidpointRounding.AwayFromZero);
+                    worksheet.Cell(currentRow, 4).Value = string.IsNullOrWhiteSpace(row.AssetsDisplay)
+                        ? "-"
+                        : row.AssetsDisplay;
+                    worksheet.Cell(currentRow, 5).Value = Math.Round(row.TotalRevenue, 2, MidpointRounding.AwayFromZero);
                     currentRow++;
                 }
 
                 worksheet.Cell(currentRow, 1).Value = "الإجمالي";
                 worksheet.Cell(currentRow, 1).Style.Font.Bold = true;
-                worksheet.Cell(currentRow, 4).Value = Math.Round(model.GrandTotal, 2, MidpointRounding.AwayFromZero);
-                worksheet.Cell(currentRow, 4).Style.Font.Bold = true;
+                worksheet.Cell(currentRow, 5).Value = Math.Round(model.GrandTotal, 2, MidpointRounding.AwayFromZero);
+                worksheet.Cell(currentRow, 5).Style.Font.Bold = true;
 
-                worksheet.Range(5, 1, 5, 4).Style.Font.Bold = true;
+                worksheet.Range(5, 1, 5, 5).Style.Font.Bold = true;
                 worksheet.Columns().AdjustToContents();
             }
 
@@ -5404,6 +5408,34 @@ namespace AccountingSystem.Controllers
                 });
             }
 
+            var driverAssets = await _context.Assets
+                .AsNoTracking()
+                .Where(a => a.DriverId.HasValue && !a.IsDisposed)
+                .Select(a => new
+                {
+                    DriverId = a.DriverId!.Value,
+                    a.Name,
+                    a.AllowAssetExpenses
+                })
+                .ToListAsync();
+
+            if (driverAssets.Any())
+            {
+                var assetsByDriver = driverAssets
+                    .GroupBy(a => a.DriverId)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.Select(a => a.AllowAssetExpenses ? $"{a.Name} (مصاريف مفعلة)" : a.Name).ToList());
+
+                foreach (var row in rows)
+                {
+                    if (row.DriverId.HasValue && assetsByDriver.TryGetValue(row.DriverId.Value, out var assets))
+                    {
+                        row.AssetNames = assets;
+                    }
+                }
+            }
+
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 rows = rows
@@ -5411,7 +5443,8 @@ namespace AccountingSystem.Controllers
                         (!string.IsNullOrWhiteSpace(r.DriverName) && r.DriverName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
                         || (!string.IsNullOrWhiteSpace(r.AccountCode) && r.AccountCode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
                         || (!string.IsNullOrWhiteSpace(r.AccountName) && r.AccountName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
-                        || (!string.IsNullOrWhiteSpace(r.BranchName) && r.BranchName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)))
+                        || (!string.IsNullOrWhiteSpace(r.BranchName) && r.BranchName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                        || r.AssetNames.Any(a => a.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)))
                     .ToList();
             }
 

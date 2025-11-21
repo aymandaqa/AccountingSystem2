@@ -589,6 +589,8 @@ namespace AccountingSystem.ViewModels
         public string AccountCode { get; set; } = string.Empty;
         public string AccountName { get; set; } = string.Empty;
         public decimal TotalRevenue { get; set; }
+        public List<string> AssetNames { get; set; } = new List<string>();
+        public string AssetsDisplay => AssetNames.Count == 0 ? string.Empty : string.Join(", ", AssetNames);
     }
 
     // Additional ViewModels
