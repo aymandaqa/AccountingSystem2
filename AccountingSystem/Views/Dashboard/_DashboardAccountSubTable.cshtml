@@ -13,12 +13,12 @@
                 @if (hasChildren)
                 {
                     <button type="button"
-                            class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center dashboard-toggle"
+                            class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center dashboard-toggle collapsed"
                             data-bs-toggle="collapse"
                             data-bs-target="#@collapseId"
                             aria-expanded="false"
                             aria-controls="@collapseId">
-                        <i class="fas fa-chevron-down"></i>
+                        <i class="fas fa-chevron-right"></i>
                     </button>
                 }
                 else
@@ -40,12 +40,29 @@
                 <span class="text-muted">@baseCurrencyCode</span>
             }
         </td>
+        <td class="text-center">
+            @if (node.Id > 0)
+            {
+                <a class="btn btn-outline-primary btn-sm"
+                   asp-controller="Reports"
+                   asp-action="AccountStatement"
+                   asp-route-accountId="@node.Id"
+                   target="_blank"
+                   asp-require-permission="reports.accountstatement">
+                    <i class="fas fa-file-alt ms-1"></i> كشف حساب
+                </a>
+            }
+            else
+            {
+                <span class="text-muted">-</span>
+            }
+        </td>
     </tr>
 
     if (hasChildren)
     {
         <tr class="collapse" id="@collapseId">
-            <td colspan="2" class="p-0 border-0">
+            <td colspan="3" class="p-0 border-0">
                 <table class="table table-sm mb-0 dashboard-account-subtable">
                     <tbody>
                         @await Html.PartialAsync("_DashboardAccountSubTable", node.Children, new ViewDataDictionary(ViewData)
