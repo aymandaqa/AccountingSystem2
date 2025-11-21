@@ -1,1488 +1,317 @@
-@using System.Text.Json
 @using Microsoft.AspNetCore.Authorization
 @model AccountingSystem.ViewModels.JournalEntryManagementViewModel
-@inject Microsoft.AspNetCore.Authorization.IAuthorizationService AuthorizationService
+@inject IAuthorizationService AuthorizationService
 
 @{
     ViewData["Title"] = "إدارة القيود المالية";
+    var rtl = System.Globalization.CultureInfo.CurrentUICulture.TextInfo.IsRightToLeft;
     var canEdit = (await AuthorizationService.AuthorizeAsync(User, "journal.edit")).Succeeded;
-    var canApprove = (await AuthorizationService.AuthorizeAsync(User, "journal.approve")).Succeeded;
     var canDelete = (await AuthorizationService.AuthorizeAsync(User, "journal.delete")).Succeeded;
-    var endpoints = new
-    {
-        data = Url.Action("ManagementData", "JournalEntries"),
-        post = Url.Action("Post", "JournalEntries"),
-        delete = Url.Action("Delete", "JournalEntries"),
-        details = Url.Action("Details", "JournalEntries", new { id = "__id__" }),
-        edit = Url.Action("Edit", "JournalEntries", new { id = "__id__" }),
-        print = Url.Action("Print", "JournalEntries", new { id = "__id__" }),
-        export = Url.Action("ExportManagementExcel", "JournalEntries"),
-        summary = Url.Action("Summary", "JournalEntries")
-    };
-    var endpointsJson = JsonSerializer.Serialize(endpoints);
-    var permissionsJson = JsonSerializer.Serialize(new
-    {
-        canEdit,
-        canApprove,
-        canDelete
-    });
+
+    var dataUrl = Url.Action("UrlDatasourceJournalEntries", "JournalEntries");
+    var createUrl = Url.Action("Create", "JournalEntries");
+    var editUrl = Url.Action("Edit", "JournalEntries", new { id = "__id__" });
+    var detailsUrl = Url.Action("Details", "JournalEntries", new { id = "__id__" });
+    var printUrl = Url.Action("Print", "JournalEntries", new { id = "__id__" });
+    var deleteUrl = Url.Action("Delete", "JournalEntries");
 }
 
-@section Styles {
-    <style>
-        :root {
-            color-scheme: light;
-        }
-
-        .journal-management {
-            padding-block: 1.5rem 2.5rem;
-            min-height: 100vh;
-            display: grid;
-            gap: 1.25rem;
-        }
-
-        .management-header {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-            .management-header h2 {
-                font-size: clamp(1.4rem, 2.5vw, 1.75rem);
-                color: #0b4d94;
-                margin: 0;
-                display: flex;
-                align-items: center;
-                gap: 0.6rem;
-            }
-
-            .management-header p {
-                margin: 0;
-                color: #4f5d75;
-                max-width: 70ch;
-            }
-
-        .filters-card {
-            background: #ffffff;
-            border-radius: 1rem;
-            border: 1px solid rgba(13, 110, 253, 0.12);
-            padding: 1.25rem;
-            display: grid;
-            gap: 1rem;
-        }
-
-            .filters-card h3 {
-                font-size: 1.05rem;
-                color: #0b4d94;
-                margin: 0;
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-            }
-
-        .filters-grid {
-            display: grid;
-            gap: 0.75rem 1rem;
-            grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
-        }
-
-        @@media (min-width: 1200px) {
-            .filters-grid {
-                grid-template-columns: repeat(4, minmax(0, 1fr));
-            }
-        }
-
-        .filter-field {
-            display: flex;
-            flex-direction: column;
-            gap: 0.35rem;
-        }
-
-        .filter-field--wide {
-            grid-column: 1 / -1;
-        }
-
-        .filter-field--switch {
-            flex-direction: row;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-            .filter-field--switch .form-check {
-                margin: 0;
-                display: inline-flex;
-                align-items: center;
-                gap: 0.5rem;
-            }
-
-            .filter-field--switch .form-check-label {
-                padding-top: 0;
-                font-weight: 600;
-                color: #1f3b5b;
-            }
-
-        .filters-toolbar {
-            display: flex;
-            justify-content: flex-end;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-
-        .filters-card .form-label {
-            font-weight: 600;
-            color: #1f3b5b;
-        }
-
-        .filters-card .form-control,
-        .filters-card .form-select {
-            box-shadow: none;
-        }
-
-        .filters-actions {
-            display: flex;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-
-        .results-card {
-            background: #ffffff;
-            border-radius: 1rem;
-            border: 1px solid rgba(13, 110, 253, 0.12);
-            padding: 1.25rem;
-            display: grid;
-            gap: 1.25rem;
-        }
-
-        .results-toolbar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-            .results-toolbar .toolbar-group {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 0.75rem;
-                align-items: center;
-            }
-
-        .toolbar-group .input-group.group-by select {
-            min-width: 12rem;
-        }
-
-        .summary-metrics {
-            display: grid;
-            gap: 0.75rem;
-            grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-        }
-
-        .summary-tile {
-            background: linear-gradient(135deg, rgba(13, 110, 253, 0.1), rgba(13, 110, 253, 0.02));
-            border-radius: 0.9rem;
-            border: 1px solid rgba(13, 110, 253, 0.18);
-            padding: 0.9rem 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.35rem;
-            min-height: 5.5rem;
-        }
-
-            .summary-tile span.label {
-                font-size: 0.8rem;
-                font-weight: 600;
-                color: #1f3b5b;
-            }
-
-            .summary-tile span.value {
-                font-size: clamp(1.15rem, 2vw, 1.55rem);
-                font-weight: 700;
-                color: #0b4d94;
-            }
-
-        .table-shell {
-            border: 1px solid rgba(13, 110, 253, 0.12);
-            border-radius: 0.75rem;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .table-responsive {
-            margin: 0;
-        }
-
-        table.management-table {
-            margin: 0;
-            font-size: 0.9rem;
-        }
-
-            table.management-table thead th {
-                background-color: #f8f9ff;
-                vertical-align: middle;
-                font-weight: 700;
-                border-bottom: 1px solid rgba(13, 110, 253, 0.2);
-                cursor: pointer;
-                user-select: none;
-                white-space: nowrap;
-            }
-
-            table.management-table tbody tr.unbalanced td,
-            .e-grid .e-row.unbalanced .e-rowcell {
-                background-color: #fdeaea;
-                color: #b71c1c;
-            }
-
-            table.management-table tbody td {
-                vertical-align: middle;
-                white-space: nowrap;
-            }
-
-        .management-table .group-row td {
-            background-color: #f1f5ff;
-            font-weight: 600;
-            color: #0b4d94;
-        }
-
-        .group-row .group-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-        }
-
-        .group-row .group-title {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .group-row .group-metrics {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-            font-size: 0.85rem;
-        }
-
-        .sortable-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            font-size: 0.75rem;
-            color: #6c757d;
-        }
-
-        .table-actions {
-            min-width: 11rem;
-        }
-
-            .table-actions .btn {
-                min-width: 2.25rem;
-            }
-
-        .loading-overlay {
-            position: absolute;
-            inset: 0;
-            background-color: rgba(255, 255, 255, 0.9);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            gap: 0.5rem;
-            font-weight: 600;
-            color: #0b4d94;
-            z-index: 2;
-        }
-
-        .empty-state {
-            padding: 2rem 1rem;
-            text-align: center;
-            color: #4f5d75;
-        }
-
-        @@media (max-width: 767.98px) {
-            .journal-management {
-                padding-block: 1rem 2rem;
-            }
-
-            .results-toolbar {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-                .results-toolbar .toolbar-group {
-                    justify-content: space-between;
-                }
-
-            .toolbar-group .input-group.group-by select {
-                min-width: 0;
-            }
-        }
-    </style>
-}
-
-<div class="journal-management container-fluid">
-    <div class="management-header">
-        <h2><i class="fas fa-database"></i> إدارة القيود المالية</h2>
-        <p>واجهة متقدمة لإدارة القيود مع عرض مكثف للبيانات، بحث متقدم، وعمليات سريعة لكل قيد.</p>
+<section class="container py-4">
+    <div class="mb-4">
+        <h2 class="mb-1 text-primary">إدارة القيود المالية</h2>
+        <p class="text-muted mb-0">استخدم عوامل التصفية والجدول أدناه لاستعراض القيود وفرزها والبحث داخلها.</p>
     </div>
-    <div class="collapse show" id="advancedFilters">
-        <div class="filters-card" id="filtersPanel">
-            <h3><i class="fas fa-filter"></i> البحث المتقدم</h3>
-            <form id="filterForm" autocomplete="off">
-                @Html.AntiForgeryToken()
-                <div class="filters-grid">
-                    <div class="filter-field filter-field--wide">
-                        <label for="searchTerm" class="form-label">بحث عام</label>
-                        <input type="search" class="form-control" id="searchTerm" placeholder="رقم، وصف، مرجع، فرع، مستخدم" />
-                    </div>
-                    <div class="filter-field">
-                        <label for="numberFilter" class="form-label">رقم القيد</label>
-                        <input type="text" class="form-control" id="numberFilter" />
-                    </div>
-                    <div class="filter-field">
-                        <label for="referenceFilter" class="form-label">المرجع</label>
-                        <input type="text" class="form-control" id="referenceFilter" />
-                    </div>
-                    <div class="filter-field">
-                        <label for="descriptionFilter" class="form-label">الوصف</label>
-                        <input type="text" class="form-control" id="descriptionFilter" />
-                    </div>
-                    <div class="filter-field">
-                        <label for="createdByFilter" class="form-label">أنشئ بواسطة</label>
-                        <input type="text" class="form-control" id="createdByFilter" placeholder="اسم أو اسم مستخدم" />
-                    </div>
-                    <div class="filter-field">
-                        <label for="branchFilter" class="form-label">الفرع</label>
-                        <select id="branchFilter" class="form-select">
-                            <option value="">كل الفروع</option>
-                            @foreach (var branch in Model.Branches)
-                            {
-                                <option value="@branch.Value">@branch.Text</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="filter-field">
-                        <label for="statusFilter" class="form-label">الحالة</label>
-                        <select id="statusFilter" class="form-select">
-                            <option value="">كل الحالات</option>
-                            @foreach (var status in Model.Statuses)
-                            {
-                                <option value="@status.Value">@status.Text</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="filter-field">
-                        <label for="fromDate" class="form-label">من تاريخ</label>
-                        <input type="date" class="form-control" id="fromDate" />
-                    </div>
-                    <div class="filter-field">
-                        <label for="toDate" class="form-label">إلى تاريخ</label>
-                        <input type="date" class="form-control" id="toDate" />
-                    </div>
-                    <div class="filter-field">
-                        <label for="minAmount" class="form-label">الحد الأدنى للمبلغ</label>
-                        <input type="number" class="form-control" id="minAmount" step="0.01" min="0" />
-                    </div>
-                    <div class="filter-field">
-                        <label for="maxAmount" class="form-label">الحد الأقصى للمبلغ</label>
-                        <input type="number" class="form-control" id="maxAmount" step="0.01" min="0" />
-                    </div>
-                    <div class="filter-field filter-field--switch filter-field--wide">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch" id="unbalancedOnly" />
-                            <label class="form-check-label" for="unbalancedOnly">عرض القيود غير المتوازنة فقط</label>
-                        </div>
-                    </div>
+
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-sm-6 col-lg-3">
+                    <label for="fromDate" class="form-label">من تاريخ</label>
+                    <input type="date" id="fromDate" class="form-control" />
                 </div>
-                <div class="filters-actions">
-                    <button type="button" id="resetFilters" class="btn btn-outline-secondary"><i class="fas fa-undo"></i> إعادة تعيين</button>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> تطبيق الفلاتر</button>
+                <div class="col-sm-6 col-lg-3">
+                    <label for="toDate" class="form-label">إلى تاريخ</label>
+                    <input type="date" id="toDate" class="form-control" />
                 </div>
-            </form>
-        </div>
-    </div>
-    <div class="results-card">
-        <div class="results-toolbar">
-            <div class="toolbar-group">
-                <div>
-                    <label for="pageSize" class="form-label mb-0">عدد السجلات في الصفحة</label>
-                    <select id="pageSize" class="form-select form-select-sm" style="width: auto; display: inline-block;">
-                        @foreach (var size in Model.PageSizes)
+                <div class="col-sm-6 col-lg-3">
+                    <label for="branchFilter" class="form-label">الفرع</label>
+                    <select id="branchFilter" class="form-select">
+                        <option value="">كل الفروع</option>
+                        @foreach (var branch in Model.Branches)
                         {
-                            if (size == Model.DefaultPageSize)
-                            {
-                                <option value="@size" selected>@size</option>
-                            }
-                            else
-                            {
-                                <option value="@size">@size</option>
-                            }
+                            <option value="@branch.Value">@branch.Text</option>
                         }
                     </select>
                 </div>
-                <div class="input-group input-group-sm" role="search">
-                    <span class="input-group-text"><i class="fas fa-search"></i></span>
-                    <input type="search" id="quickSearch" class="form-control" placeholder="بحث فوري في الجدول" />
-                    <button class="btn btn-outline-secondary" type="button" id="clearQuickSearch" title="مسح"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="input-group input-group-sm group-by">
-                    <span class="input-group-text"><i class="fas fa-layer-group"></i></span>
-                    <select id="groupBy" class="form-select">
-                        <option value="">بدون تجميع</option>
-                        <option value="branch">تجميع حسب الفرع</option>
-                        <option value="status">تجميع حسب الحالة</option>
-                        <option value="month">تجميع حسب الشهر</option>
+                <div class="col-sm-6 col-lg-3">
+                    <label for="statusFilter" class="form-label">الحالة</label>
+                    <select id="statusFilter" class="form-select">
+                        <option value="">كل الحالات</option>
+                        @foreach (var status in Model.Statuses)
+                        {
+                            <option value="@status.Value">@status.Text</option>
+                        }
                     </select>
                 </div>
+                <div class="col-sm-8 col-lg-4">
+                    <label for="searchTerm" class="form-label">بحث سريع</label>
+                    <input type="search" id="searchTerm" class="form-control" placeholder="ابحث عن رقم القيد أو الوصف أو المرجع" />
+                </div>
+                <div class="col-sm-4 col-lg-2 d-grid">
+                    <button type="button" id="applyFilters" class="btn btn-primary">تطبيق</button>
+                </div>
+                <div class="col-sm-4 col-lg-2 d-grid">
+                    <button type="button" id="resetFilters" class="btn btn-light border">إعادة التعيين</button>
+                </div>
             </div>
-            <div class="toolbar-group">
-                <button type="button" class="btn btn-outline-secondary" id="filtersToggleButton" data-bs-toggle="collapse" data-bs-target="#advancedFilters" aria-expanded="true" aria-controls="advancedFilters">
-                    <i class="fas fa-angle-up"></i>
-                    <span class="toggle-text">إخفاء البحث المتقدم</span>
-                </button>
-                <button type="button" class="btn btn-outline-success" id="exportExcel"><i class="fas fa-file-excel"></i> تصدير إكسل</button>
-                <a asp-action="Create" class="btn btn-primary" asp-require-permission="journal.create"><i class="fas fa-plus"></i> قيد جديد</a>
-                <button type="button" class="btn btn-outline-primary" id="refreshButton"><i class="fas fa-sync"></i> تحديث</button>
-            </div>
-        </div>
-        <div class="summary-metrics" aria-live="polite">
-            <div class="summary-tile">
-                <span class="label">إجمالي القيود</span>
-                <span class="value" id="summaryTotal">0</span>
-                <small class="text-muted">العدد الكلي وفق الفلاتر الحالية</small>
-            </div>
-            <div class="summary-tile">
-                <span class="label">القيود المتوازنة</span>
-                <span class="value text-success" id="summaryBalanced">0</span>
-            </div>
-            <div class="summary-tile">
-                <span class="label">القيود غير المتوازنة</span>
-                <span class="value text-danger" id="summaryUnbalanced">0</span>
-            </div>
-            <div class="summary-tile">
-                <span class="label">إجمالي المدين</span>
-                <span class="value" id="summaryDebit">0</span>
-            </div>
-            <div class="summary-tile">
-                <span class="label">إجمالي الدائن</span>
-                <span class="value" id="summaryCredit">0</span>
-            </div>
-        </div>
-        <div class="table-shell">
-            <div class="loading-overlay" id="tableLoading" hidden>
-                <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
-                <span>جاري تحميل البيانات...</span>
-            </div>
-            <div class="table-responsive">
-                <div id="journalGrid"></div>
-            </div>
-        </div>
-        <div class="pagination-shell" aria-live="polite">
-            <div>
-                <span>عرض <span id="rangeInfo">0-0</span> من <span id="totalRecords">0</span> سجل</span>
-            </div>
-            <nav>
-                <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
-            </nav>
         </div>
     </div>
-</div>
-@section Scripts {
-    <script type="text/x-template" id="journalGroupCaption">
-        <div class="group-header">
-            <div class="group-title">
-                <i class="fas fa-layer-group"></i>
-                <span>{{:key}}</span>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-primary-subtle text-primary">جدول القيود</span>
+                </div>
+                <div class="text-muted small">يتم تحميل البيانات آليًا عبر مصدر بيانات بعيد.</div>
             </div>
-            <div class="group-metrics">
-                <span class="badge bg-primary">{{:count}} قيود</span>
-            </div>
+
+            <ejs-grid id="JournalEntriesGrid" gridLines="Both" enableRtl="@rtl"
+                      allowPaging="true" allowSorting="true" allowFiltering="true"
+                      height="650" toolbarClick="onToolbarClick" actionBegin="onActionBegin"
+                      allowSelection="true">
+                <e-grid-selectionsettings type="Single"></e-grid-selectionsettings>
+                <e-grid-pagesettings pageCount="5" pageSizes="true"></e-grid-pagesettings>
+                <e-grid-filterSettings type="Menu" immediateModeDelay="100"></e-grid-filterSettings>
+                <e-grid-editSettings allowAdding="false" allowDeleting="false" allowEditing="false"></e-grid-editSettings>
+                <e-data-manager url="@dataUrl" adaptor="UrlAdaptor"></e-data-manager>
+                <e-grid-columns>
+                    <e-grid-column field="Id" isPrimaryKey="true" visible="false" allowEditing="false" width="50"></e-grid-column>
+                    <e-grid-column field="Number" headerText="رقم القيد" width="140"></e-grid-column>
+                    <e-grid-column field="Date" headerText="التاريخ" type="date" format="dd/MM/yyyy" width="140"></e-grid-column>
+                    <e-grid-column field="Description" headerText="الوصف" width="200"></e-grid-column>
+                    <e-grid-column field="Reference" headerText="المرجع" width="140"></e-grid-column>
+                    <e-grid-column field="BranchName" headerText="الفرع" width="150"></e-grid-column>
+                    <e-grid-column field="CreatedByName" headerText="مدخل القيد" width="160"></e-grid-column>
+                    <e-grid-column field="TotalDebit" headerText="إجمالي المدين" textAlign="Right" format="N2" width="140"></e-grid-column>
+                    <e-grid-column field="TotalCredit" headerText="إجمالي الدائن" textAlign="Right" format="N2" width="140"></e-grid-column>
+                    <e-grid-column field="LinesCount" headerText="عدد البنود" textAlign="Center" width="120"></e-grid-column>
+                    <e-grid-column field="StatusDisplay" headerText="الحالة" width="140"></e-grid-column>
+                </e-grid-columns>
+                <e-grid-toolbar>
+                    <e-grid-toolbarItems>
+                        <e-grid-toolbarItem id="JournalEntries_Add" text="إضافة" prefixIcon="e-add"></e-grid-toolbarItem>
+                        <e-grid-toolbarItem id="JournalEntries_Edit" text="تعديل" prefixIcon="e-edit"></e-grid-toolbarItem>
+                        <e-grid-toolbarItem id="JournalEntries_Delete" text="حذف" prefixIcon="e-delete"></e-grid-toolbarItem>
+                        <e-grid-toolbarItem id="JournalEntries_Details" text="عرض" prefixIcon="e-file"></e-grid-toolbarItem>
+                        <e-grid-toolbarItem id="JournalEntries_Print" text="طباعة" prefixIcon="e-print"></e-grid-toolbarItem>
+                        <e-grid-toolbarItem prefixIcon="e-refresh" id="JournalEntries_Refresh" text="تحديث"></e-grid-toolbarItem>
+                        <e-grid-toolbarItem name="Search"></e-grid-toolbarItem>
+                    </e-grid-toolbarItems>
+                </e-grid-toolbar>
+            </ejs-grid>
         </div>
-    </script>
+    </div>
+</section>
+
+<form id="antiForgeryForm" asp-antiforgery="true"></form>
+
+@section Scripts {
     <script>
-        (function () {
-            if (window.ej?.grids?.Grid) {
-                const requiredModules = [
-                    window.ej.grids.Sort,
-                    window.ej.grids.Filter,
-                    window.ej.grids.Group,
-                    window.ej.grids.ExcelFilter
-                ].filter(Boolean);
+        const endpoints = {
+            data: '@dataUrl',
+            create: '@createUrl',
+            edit: '@editUrl',
+            details: '@detailsUrl',
+            print: '@printUrl',
+            delete: '@deleteUrl'
+        };
 
-                if (requiredModules.length > 0) {
-                    window.ej.grids.Grid.Inject(...requiredModules);
-                }
-            }
+        const permissions = {
+            canEdit: @canEdit.ToString().ToLower(),
+            canDelete: @canDelete.ToString().ToLower()
+        };
 
-            const endpoints = @Html.Raw(endpointsJson);
-            const permissions = @Html.Raw(permissionsJson);
-            const defaultPageSize = @Model.DefaultPageSize;
+        const filterControls = {
+            fromDate: document.getElementById('fromDate'),
+            toDate: document.getElementById('toDate'),
+            branch: document.getElementById('branchFilter'),
+            status: document.getElementById('statusFilter'),
+            search: document.getElementById('searchTerm')
+        };
 
-            const filterForm = document.getElementById('filterForm');
-            const quickSearchInput = document.getElementById('quickSearch');
-            const searchTermInput = document.getElementById('searchTerm');
-            const clearQuickSearchBtn = document.getElementById('clearQuickSearch');
-            const loadingOverlay = document.getElementById('tableLoading');
-            const pagination = document.getElementById('pagination');
-            const rangeInfo = document.getElementById('rangeInfo');
-            const totalRecordsLabel = document.getElementById('totalRecords');
-            const refreshButton = document.getElementById('refreshButton');
-            const pageSizeSelect = document.getElementById('pageSize');
-            const groupBySelect = document.getElementById('groupBy');
-            const exportButton = document.getElementById('exportExcel');
-            const filtersToggleButton = document.getElementById('filtersToggleButton');
-            const filtersCollapseElement = document.getElementById('advancedFilters');
-            const resetFiltersButton = document.getElementById('resetFilters');
-            const filtersToggleText = filtersToggleButton ? filtersToggleButton.querySelector('.toggle-text') : null;
-            const filtersToggleIcon = filtersToggleButton ? filtersToggleButton.querySelector('i') : null;
-            const gridElement = document.getElementById('journalGrid');
+        const grid = document.getElementById('JournalEntriesGrid').ej2_instances[0];
 
-            const summaryTotal = document.getElementById('summaryTotal');
-            const summaryBalanced = document.getElementById('summaryBalanced');
-            const summaryUnbalanced = document.getElementById('summaryUnbalanced');
-            const summaryDebit = document.getElementById('summaryDebit');
-            const summaryCredit = document.getElementById('summaryCredit');
-
-            const tokenInput = filterForm ? filterForm.querySelector('input[name="__RequestVerificationToken"]') : null;
-            const antiForgeryToken = tokenInput ? tokenInput.value : '';
-
-            let grid = null;
-            let quickSearchDebounce = null;
-            const columnFilters = new Map();
-            let suppressFilterHandling = false;
-
-            const state = {
-                filters: {},
-                page: 1,
-                pageSize: Number(defaultPageSize) || 50,
-                sortColumn: 'date',
-                sortDirection: 'desc',
-                groupBy: groupBySelect ? groupBySelect.value : ''
+        function getParamsObject() {
+            return {
+                fromDate: filterControls.fromDate.value,
+                toDate: filterControls.toDate.value,
+                branchId: filterControls.branch.value,
+                status: filterControls.status.value,
+                searchTerm: filterControls.search.value
             };
+        }
 
-            const sortColumnMap = {
-                Number: 'number',
-                DateFormatted: 'date',
-                BranchName: 'branch',
-                Description: 'description',
-                Reference: 'reference',
-                CreatedByName: 'createdBy',
-                TotalDebit: 'totalDebit',
-                TotalCredit: 'totalCredit',
-                LinesCount: 'linesCount',
-                StatusDisplay: 'status',
-                UpdatedAtFormatted: 'updatedAt'
-            };
+        function buildQuery() {
+            const query = new ej.data.Query();
+            const parameters = getParamsObject();
 
-            function normalizeEntry(entry) {
-                if (!entry || typeof entry !== 'object') {
-                    return entry;
+            Object.entries(parameters).forEach(([key, value]) => {
+                if (value) {
+                    query.addParams(key, value);
                 }
+            });
 
-                const normalized = { ...entry };
+            return query;
+        }
 
-                normalized.Id = entry.Id ?? entry.id ?? null;
-                normalized.Number = entry.Number ?? entry.number ?? '';
-                normalized.Date = entry.Date ?? entry.date ?? null;
-                normalized.DateFormatted = entry.DateFormatted ?? entry.dateFormatted ?? '';
-                normalized.MonthGroup = entry.MonthGroup ?? entry.monthGroup ?? '';
-                normalized.MonthGroupLabel = entry.MonthGroupLabel ?? entry.monthGroupLabel ?? '';
-                normalized.Description = entry.Description ?? entry.description ?? '';
-                normalized.Reference = entry.Reference ?? entry.reference ?? '';
-                normalized.Status = entry.Status ?? entry.status ?? '';
-                normalized.StatusDisplay = entry.StatusDisplay ?? entry.statusDisplay ?? '';
-                normalized.StatusClass = entry.StatusClass ?? entry.statusClass ?? '';
-                normalized.BranchName = entry.BranchName ?? entry.branchName ?? '';
-                normalized.CreatedByName = entry.CreatedByName ?? entry.createdByName ?? '';
-                normalized.TotalDebit = entry.TotalDebit ?? entry.totalDebit ?? 0;
-                normalized.TotalDebitFormatted = entry.TotalDebitFormatted ?? entry.totalDebitFormatted ?? '';
-                normalized.TotalCredit = entry.TotalCredit ?? entry.totalCredit ?? 0;
-                normalized.TotalCreditFormatted = entry.TotalCreditFormatted ?? entry.totalCreditFormatted ?? '';
-                normalized.LinesCount = entry.LinesCount ?? entry.linesCount ?? 0;
-                normalized.IsDraft = entry.IsDraft ?? entry.isDraft ?? false;
-                normalized.CanDelete = entry.CanDelete ?? entry.canDelete ?? false;
-                normalized.IsBalanced = entry.IsBalanced ?? entry.isBalanced ?? false;
-                normalized.CreatedAt = entry.CreatedAt ?? entry.createdAt ?? null;
-                normalized.CreatedAtFormatted = entry.CreatedAtFormatted ?? entry.createdAtFormatted ?? '';
-                normalized.UpdatedAt = entry.UpdatedAt ?? entry.updatedAt ?? null;
-                normalized.UpdatedAtFormatted = entry.UpdatedAtFormatted ?? entry.updatedAtFormatted ?? '';
+        function applyFilters() {
+            grid.query = buildQuery();
+            grid.refresh();
+        }
 
-                return normalized;
+        function resetFilters() {
+            Object.values(filterControls).forEach(control => control.value = '');
+            applyFilters();
+        }
+
+        function onActionBegin(args) {
+            if (!args.data) {
+                args.data = {};
             }
 
-            initializeGrid();
-            registerEventHandlers();
-            updateFiltersToggleState();
-            loadData();
+            Object.assign(args.data, getParamsObject());
+        }
 
-            function formatNumber(value) {
-                if (value === null || value === undefined || value === '') {
-                    return '0.00';
-                }
-                const numeric = Number(value);
-                if (Number.isNaN(numeric)) {
-                    return '0.00';
-                }
-                return numeric.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        function getSelectedEntry() {
+            const records = grid.getSelectedRecords();
+            return records && records.length > 0 ? records[0] : null;
+        }
+
+        function handleEdit() {
+            if (!permissions.canEdit) {
+                ej.popups.DialogUtility.alert({ title: 'صلاحيات', content: 'ليست لديك صلاحية التعديل.' });
+                return;
             }
 
-            function escapeHtml(value) {
-                if (value === null || value === undefined) {
-                    return '';
-                }
-                return String(value)
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/"/g, '&quot;')
-                    .replace(/'/g, '&#39;');
+            const selected = getSelectedEntry();
+            if (!selected) {
+                ej.popups.DialogUtility.alert({ title: 'تعديل', content: 'يرجى اختيار قيد أولاً.' });
+                return;
             }
 
-            function descriptionTemplate(args) {
-                const text = escapeHtml(args.Description || '');
-                return '<span class="text-truncate d-inline-block" style="max-width: 22ch;" title="' + text + '">' + text + '</span>';
+            const url = endpoints.edit.replace('__id__', selected.Id);
+            window.location.href = url;
+        }
+
+        function handleDetails() {
+            const selected = getSelectedEntry();
+            if (!selected) {
+                ej.popups.DialogUtility.alert({ title: 'عرض', content: 'يرجى اختيار قيد أولاً.' });
+                return;
             }
 
-            function statusTemplate(args) {
-                const cssClass = escapeHtml(args.StatusClass || 'bg-secondary');
-                const text = escapeHtml(args.StatusDisplay || '');
-                return '<span class="badge ' + cssClass + '">' + text + '</span>';
+            const url = endpoints.details.replace('__id__', selected.Id);
+            window.open(url, '_blank');
+        }
+
+        function handlePrint() {
+            const selected = getSelectedEntry();
+            if (!selected) {
+                ej.popups.DialogUtility.alert({ title: 'طباعة', content: 'يرجى اختيار قيد أولاً.' });
+                return;
             }
 
-            function amountTemplate(field, formattedField) {
-                return function (args) {
-                    const formatted = args[formattedField];
-                    const value = formatted ? escapeHtml(formatted) : formatNumber(args[field] || 0);
-                    return '<span class="d-block text-end">' + value + '</span>';
-                };
+            const url = endpoints.print.replace('__id__', selected.Id);
+            window.open(url, '_blank');
+        }
+
+        async function handleDelete() {
+            if (!permissions.canDelete) {
+                ej.popups.DialogUtility.alert({ title: 'صلاحيات', content: 'ليست لديك صلاحية الحذف.' });
+                return;
             }
 
-            function buildActions(entry) {
-                const id = encodeURIComponent(entry.Id);
-                const numberAttr = escapeHtml(entry.Number || '');
-                const detailsUrl = (endpoints.details || '').replace('__id__', entry.Id);
-                const editUrl = (endpoints.edit || '').replace('__id__', entry.Id);
-                const printUrl = (endpoints.print || '').replace('__id__', entry.Id);
-
-                let html = '<div class="d-flex justify-content-center flex-wrap gap-2 table-actions">';
-                html += '<a href="' + escapeHtml(detailsUrl) + '" class="btn btn-sm btn-outline-info" title="تفاصيل"><i class="fas fa-eye"></i></a>';
-                if (entry.IsDraft && permissions.canApprove) {
-                    html += '<button type="button" class="btn btn-sm btn-outline-success btn-post" data-id="' + id + '" data-number="' + numberAttr + '" title="ترحيل"><i class="fas fa-share-square"></i></button>';
-                }
-                if (entry.IsDraft && permissions.canEdit) {
-                    html += '<a href="' + escapeHtml(editUrl) + '" class="btn btn-sm btn-outline-primary" title="تعديل"><i class="fas fa-edit"></i></a>';
-                }
-                html += '<a href="' + escapeHtml(printUrl) + '" target="_blank" class="btn btn-sm btn-outline-secondary" title="طباعة"><i class="fas fa-print"></i></a>';
-                if (entry.CanDelete && permissions.canDelete) {
-                    html += '<button type="button" class="btn btn-sm btn-outline-danger btn-delete" data-id="' + id + '" data-number="' + numberAttr + '" title="إلغاء"><i class="fas fa-trash"></i></button>';
-                }
-                html += '</div>';
-                return html;
+            const selected = getSelectedEntry();
+            if (!selected) {
+                ej.popups.DialogUtility.alert({ title: 'حذف', content: 'يرجى اختيار قيد أولاً.' });
+                return;
             }
 
-            function actionsTemplate(args) {
-                return buildActions(args);
+            const confirm = await ej.popups.DialogUtility.confirm({
+                title: 'تأكيد الحذف',
+                content: 'سيتم إلغاء القيد الحالي. هل تريد المتابعة؟',
+                okButton: { text: 'نعم' },
+                cancelButton: { text: 'لا' }
+            }).then(value => value === 'ok');
+
+            if (!confirm) {
+                return;
             }
 
-            function detectFilterType(value, explicitType, field) {
-                if (explicitType) {
-                    return explicitType;
-                }
+            const tokenInput = document.querySelector('#antiForgeryForm input[name="__RequestVerificationToken"]');
+            const token = tokenInput ? tokenInput.value : null;
 
-                if (field === 'TotalDebit' || field === 'TotalCredit' || field === 'LinesCount') {
-                    return 'number';
-                }
-
-                if (field === 'DateFormatted' || field === 'UpdatedAtFormatted') {
-                    return 'date';
-                }
-
-                if (value instanceof Date) {
-                    return 'date';
-                }
-
-                if (typeof value === 'number') {
-                    return 'number';
-                }
-
-                return 'string';
-            }
-
-            function normalizeFilterValue(value, type, field) {
-                if (value === null || value === undefined) {
-                    return '';
-                }
-
-                if (type === 'date') {
-                    const date = value instanceof Date ? value : new Date(value);
-                    if (Number.isNaN(date.getTime())) {
-                        return '';
-                    }
-
-                    if (field === 'DateFormatted') {
-                        return date.toISOString().split('T')[0];
-                    }
-
-                    return date.toISOString();
-                }
-
-                if (type === 'number') {
-                    if (typeof value === 'number' && Number.isFinite(value)) {
-                        return value.toString();
-                    }
-
-                    const numeric = Number(value);
-                    if (Number.isFinite(numeric)) {
-                        return numeric.toString();
-                    }
-
-                    return String(value);
-                }
-
-                return String(value);
-            }
-
-            function serializeColumnFilters() {
-                return Array.from(columnFilters.values()).map(filter => ({
-                    field: filter.field,
-                    operator: filter.operator,
-                    value: filter.value,
-                    type: filter.type
-                }));
-            }
-
-            function applyGridFilterState() {
-                if (!grid) {
-                    return;
-                }
-
-                const filters = Array.from(columnFilters.values()).map(filter => ({
-                    field: filter.field,
-                    operator: filter.operator,
-                    value: filter.rawValue,
-                    predicate: 'and',
-                    matchCase: false,
-                    ignoreAccent: true,
-                    type: filter.type
-                }));
-
-                suppressFilterHandling = true;
-                grid.setProperties({ filterSettings: { columns: filters } }, true);
-                suppressFilterHandling = false;
-            }
-
-            function clearColumnFilters() {
-                columnFilters.clear();
-                applyGridFilterState();
-            }
-
-            function handleFilterAction(args) {
-                const action = args?.action;
-                const filterObject = args?.currentFilterObject;
-                const columnName = (args?.columnName || filterObject?.field || '').trim();
-
-                if (action === 'clearFiltering') {
-                    if (columnFilters.size > 0) {
-                        columnFilters.clear();
-                        applyGridFilterState();
-                        state.page = 1;
-                        loadData();
-                    }
-                    return;
-                }
-
-                if (!columnName) {
-                    return;
-                }
-
-                if (action === 'remove' || action === 'clearFilter') {
-                    if (columnFilters.has(columnName)) {
-                        columnFilters.delete(columnName);
-                        applyGridFilterState();
-                        state.page = 1;
-                        loadData();
-                    }
-                    return;
-                }
-
-                if (action !== 'filter' || !filterObject) {
-                    return;
-                }
-
-                const operator = (filterObject.operator || 'contains').toLowerCase();
-                let rawValue = filterObject.value;
-                const type = detectFilterType(rawValue, filterObject.type, columnName);
-                const normalizedValue = normalizeFilterValue(rawValue, type, columnName);
-
-                if (type === 'date' && rawValue && !(rawValue instanceof Date)) {
-                    const parsed = new Date(rawValue);
-                    rawValue = Number.isNaN(parsed.getTime()) ? rawValue : parsed;
-                }
-
-                if (type === 'number' && rawValue !== null && rawValue !== undefined && typeof rawValue !== 'number') {
-                    const numeric = Number(rawValue);
-                    if (!Number.isNaN(numeric)) {
-                        rawValue = numeric;
-                    }
-                }
-
-                if ((normalizedValue === '' || normalizedValue === null || normalizedValue === undefined) &&
-                    operator !== 'isnull' && operator !== 'isnotnull' && operator !== 'isempty' && operator !== 'isnotempty') {
-                    if (columnFilters.has(columnName)) {
-                        columnFilters.delete(columnName);
-                        applyGridFilterState();
-                        state.page = 1;
-                        loadData();
-                    }
-                    return;
-                }
-
-                columnFilters.set(columnName, {
-                    field: columnName,
-                    operator,
-                    value: normalizedValue,
-                    rawValue,
-                    type
-                });
-
-                applyGridFilterState();
-                state.page = 1;
-                loadData();
-            }
-
-            function initializeGrid() {
-                if (!gridElement || grid) {
-                    return;
-                }
-
-                const renderDebitCell = amountTemplate('TotalDebit', 'TotalDebitFormatted');
-                const renderCreditCell = amountTemplate('TotalCredit', 'TotalCreditFormatted');
-
-                grid = new ej.grids.Grid({
-                    dataSource: [],
-                    enableRtl: true,
-                    allowSorting: true,
-                    allowGrouping: true,
-                    allowPaging: false,
-                    allowTextWrap: true,
-                    allowFiltering: true,
-                    filterSettings: {
-                        type: 'Excel',
-                        showFilterBarStatus: false
+            try {
+                const response = await fetch(endpoints.delete, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': token
                     },
-                    gridLines: 'Both',
-                    locale: 'ar',
-                    height: 'auto',
-                    sortSettings: {
-                        columns: [{ field: 'DateFormatted', direction: 'Descending' }]
-                    },
-                    noRecordsTemplate: '<div class="empty-state text-center py-4"><i class="fas fa-inbox fa-2x mb-3"></i><p class="mb-0">لا توجد بيانات مطابقة للبحث الحالي.</p></div>',
-                    groupSettings: {
-                        showDropArea: false,
-                        showGroupedColumn: false,
-                        captionTemplate: '#journalGroupCaption'
-                    },
-                    columns: [
-                        { field: 'Number', headerText: 'رقم القيد', width: 110, textAlign: 'Center' },
-                        { field: 'DateFormatted', headerText: 'التاريخ', width: 120, textAlign: 'Center', type: 'string' },
-                        { field: 'BranchName', headerText: 'الفرع', width: 150 },
-                        { field: 'Description', headerText: 'الوصف', width: 220 },
-                        { field: 'Reference', headerText: 'المرجع', width: 140 },
-                        { field: 'CreatedByName', headerText: 'أنشئ بواسطة', width: 150 },
-                        { field: 'TotalDebit', headerText: 'إجمالي المدين', width: 140, textAlign: 'Right', type: 'number' },
-                        { field: 'TotalCredit', headerText: 'إجمالي الدائن', width: 140, textAlign: 'Right', type: 'number' },
-                        { field: 'LinesCount', headerText: 'عدد البنود', width: 110, textAlign: 'Center', type: 'number' },
-                        { field: 'StatusDisplay', headerText: 'الحالة', width: 130, textAlign: 'Center' },
-                        { field: 'UpdatedAtFormatted', headerText: 'آخر تحديث', width: 160, type: 'string' },
-                        { headerText: 'العمليات', width: 220, textAlign: 'Center', allowFiltering: false, customAttributes: { columnType: 'actions' } },
-                        { field: 'MonthGroupLabel', visible: false, allowFiltering: false }
-                    ]
+                    body: new URLSearchParams({ id: selected.Id })
                 });
 
-                grid.rowDataBound = function (args) {
-                    if (args.data && args.data.IsBalanced === false) {
-                        args.row.classList.add('unbalanced');
-                    }
-                };
-
-                grid.queryCellInfo = function (args) {
-                    if (!args || !args.data) {
-                        return;
-                    }
-
-                    if (args.column.field === 'Description') {
-                        args.cell.innerHTML = descriptionTemplate(args.data);
-                    }
-                    else if (args.column.field === 'TotalDebit') {
-                        args.cell.innerHTML = renderDebitCell(args.data);
-                    }
-                    else if (args.column.field === 'TotalCredit') {
-                        args.cell.innerHTML = renderCreditCell(args.data);
-                    }
-                    else if (args.column.field === 'StatusDisplay') {
-                        args.cell.innerHTML = statusTemplate(args.data);
-                    }
-                    else if (args.column.customAttributes && args.column.customAttributes.columnType === 'actions') {
-                        args.cell.innerHTML = actionsTemplate(args.data);
-                    }
-                };
-
-                grid.actionBegin = function (args) {
-                    if (!args) {
-                        return;
-                    }
-
-                    if (args.requestType === 'filtering') {
-                        if (suppressFilterHandling) {
-                            return;
-                        }
-
-                        args.cancel = true;
-                        handleFilterAction(args);
-                        return;
-                    }
-
-                    if (args.requestType === 'sorting') {
-                        args.cancel = true;
-                        const columnName = args.columnName;
-                        const mapped = sortColumnMap[columnName];
-                        if (mapped) {
-                            state.sortColumn = mapped;
-                            state.sortDirection = args.direction === 'Descending' ? 'desc' : 'asc';
-                            grid.sortSettings.columns = [{ field: columnName, direction: args.direction }];
-                            state.page = 1;
-                            loadData();
-                        }
-                    }
-                };
-
-                grid.appendTo(gridElement);
-                applyGridFilterState();
-
-                grid.element.addEventListener('click', async function (event) {
-                    const postBtn = event.target.closest('.btn-post');
-                    const deleteBtn = event.target.closest('.btn-delete');
-
-                    if (postBtn) {
-                        const id = postBtn.dataset.id;
-                        const number = postBtn.dataset.number;
-                        if (!confirm('هل تريد ترحيل القيد رقم ' + number + '؟')) {
-                            return;
-                        }
-
-                        try {
-                            const response = await fetch(endpoints.post + '/' + id, {
-                                method: 'POST',
-                                headers: {
-                                    'RequestVerificationToken': antiForgeryToken
-                                },
-                                credentials: 'same-origin'
-                            });
-
-                            if (!response.ok) {
-                                throw new Error('تعذر ترحيل القيد');
-                            }
-
-                            loadData(false);
-                        }
-                        catch (error) {
-                            alert(error.message);
-                        }
-                    }
-
-                    if (deleteBtn) {
-                        const id = deleteBtn.dataset.id;
-                        const number = deleteBtn.dataset.number;
-                        if (!confirm('هل تريد إلغاء القيد رقم ' + number + '؟')) {
-                            return;
-                        }
-
-                        try {
-                            const response = await fetch(endpoints.delete + '/' + id, {
-                                method: 'POST',
-                                headers: {
-                                    'RequestVerificationToken': antiForgeryToken
-                                },
-                                credentials: 'same-origin'
-                            });
-
-                            if (!response.ok) {
-                                const message = await response.text();
-                                throw new Error(message || 'تعذر إلغاء القيد');
-                            }
-
-                            loadData(false);
-                        }
-                        catch (error) {
-                            alert(error.message);
-                        }
-                    }
-                });
+                if (response.ok) {
+                    grid.refresh();
+                } else {
+                    const errorText = await response.text();
+                    ej.popups.DialogUtility.alert({ title: 'خطأ', content: errorText || 'تعذر حذف القيد.' });
+                }
+            } catch (error) {
+                ej.popups.DialogUtility.alert({ title: 'خطأ', content: 'حدث خطأ أثناء تنفيذ الطلب.' });
             }
+        }
 
-            function applyGrouping() {
-                if (!grid) {
-                    return;
-                }
-
-                if (typeof grid.clearGrouping === 'function') {
-                    grid.clearGrouping();
-                }
-                else if (grid.groupModule && typeof grid.groupModule.clearGrouping === 'function') {
-                    grid.groupModule.clearGrouping();
-                }
-
-                switch (state.groupBy) {
-                    case 'branch':
-                        grid.groupColumn('BranchName');
-                        break;
-                    case 'status':
-                        grid.groupColumn('StatusDisplay');
-                        break;
-                    case 'month':
-                        grid.groupColumn('MonthGroupLabel');
-                        break;
-                    default:
-                        break;
-                }
+        function onToolbarClick(args) {
+            switch (args.item.id) {
+                case 'JournalEntries_Add':
+                    window.location.href = endpoints.create;
+                    break;
+                case 'JournalEntries_Edit':
+                    args.cancel = true;
+                    handleEdit();
+                    break;
+                case 'JournalEntries_Delete':
+                    args.cancel = true;
+                    handleDelete();
+                    break;
+                case 'JournalEntries_Details':
+                    args.cancel = true;
+                    handleDetails();
+                    break;
+                case 'JournalEntries_Print':
+                    args.cancel = true;
+                    handlePrint();
+                    break;
+                case 'JournalEntries_Refresh':
+                    args.cancel = true;
+                    applyFilters();
+                    break;
+                default:
+                    break;
             }
+        }
 
-            function buildQueryString() {
-                const params = new URLSearchParams();
-
-                Object.entries(state.filters).forEach(([key, value]) => {
-                    if (value === undefined || value === null || value === '') {
-                        return;
-                    }
-                    params.append(`filters.${key}`, value);
-                });
-
-                if (state.sortColumn) {
-                    params.append('sortColumn', state.sortColumn);
-                }
-                if (state.sortDirection) {
-                    params.append('sortDirection', state.sortDirection);
-                }
-
-                serializeColumnFilters().forEach((filter, index) => {
-                    if (!filter.field) {
-                        return;
-                    }
-                    params.append(`columnFilters[${index}].Field`, filter.field);
-                    if (filter.operator) {
-                        params.append(`columnFilters[${index}].Operator`, filter.operator);
-                    }
-                    if (filter.value !== undefined && filter.value !== null) {
-                        params.append(`columnFilters[${index}].Value`, filter.value);
-                    }
-                    if (filter.type) {
-                        params.append(`columnFilters[${index}].Type`, filter.type);
-                    }
-                });
-
-                return params.toString();
+        document.getElementById('applyFilters').addEventListener('click', applyFilters);
+        document.getElementById('resetFilters').addEventListener('click', resetFilters);
+        filterControls.search.addEventListener('keypress', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                applyFilters();
             }
+        });
 
-            function registerEventHandlers() {
-                if (groupBySelect) {
-                    groupBySelect.addEventListener('change', function () {
-                        state.groupBy = groupBySelect.value;
-                        applyGrouping();
-                    });
-                }
-
-                if (exportButton) {
-                    exportButton.addEventListener('click', function () {
-                        const query = buildQueryString();
-                        const url = query ? endpoints.export + '?' + query : endpoints.export;
-                        window.location.href = url;
-                    });
-                }
-
-                if (refreshButton) {
-                    refreshButton.addEventListener('click', function () {
-                        loadData();
-                    });
-                }
-
-                if (pageSizeSelect) {
-                    pageSizeSelect.addEventListener('change', function () {
-                        const parsed = parseInt(pageSizeSelect.value, 10);
-                        if (Number.isNaN(parsed) || parsed <= 0) {
-                            return;
-                        }
-                        state.pageSize = parsed;
-                        state.page = 1;
-                        loadData();
-                    });
-                }
-
-                if (pagination) {
-                    pagination.addEventListener('click', function (event) {
-                        const button = event.target.closest('button.page-link');
-                        if (!button || button.disabled) {
-                            return;
-                        }
-
-                        const li = button.parentElement;
-                        if (li && li.classList.contains('disabled')) {
-                            return;
-                        }
-
-                        const requestedPage = parseInt(button.dataset.page, 10);
-                        if (Number.isNaN(requestedPage) || requestedPage === state.page || requestedPage < 1) {
-                            return;
-                        }
-
-                        state.page = requestedPage;
-                        loadData();
-                    });
-                }
-
-                if (filterForm) {
-                    filterForm.addEventListener('submit', function (event) {
-                        event.preventDefault();
-                        state.filters = collectFiltersFromForm();
-                        state.page = 1;
-                        loadData();
-                    });
-                }
-
-                if (resetFiltersButton) {
-                    resetFiltersButton.addEventListener('click', function () {
-                        if (filterForm) {
-                            filterForm.reset();
-                        }
-                        if (quickSearchInput) {
-                            quickSearchInput.value = '';
-                        }
-                        if (searchTermInput) {
-                            searchTermInput.value = '';
-                        }
-                        if (columnFilters.size > 0) {
-                            clearColumnFilters();
-                        }
-                        state.filters = {};
-                        state.page = 1;
-                        loadData();
-                    });
-                }
-
-                if (quickSearchInput) {
-                    quickSearchInput.addEventListener('input', function () {
-                        if (quickSearchDebounce) {
-                            clearTimeout(quickSearchDebounce);
-                        }
-
-                        quickSearchDebounce = setTimeout(function () {
-                            const value = quickSearchInput.value.trim();
-                            if (searchTermInput) {
-                                searchTermInput.value = value;
-                            }
-
-                            if (value) {
-                                state.filters = {
-                                    ...state.filters,
-                                    SearchTerm: value
-                                };
-                            }
-                            else {
-                                const { SearchTerm, ...rest } = state.filters;
-                                state.filters = rest;
-                            }
-
-                            state.page = 1;
-                            loadData();
-                        }, 300);
-                    });
-                }
-
-                if (clearQuickSearchBtn) {
-                    clearQuickSearchBtn.addEventListener('click', function () {
-                        if (quickSearchInput) {
-                            quickSearchInput.value = '';
-                        }
-                        if (searchTermInput) {
-                            searchTermInput.value = '';
-                        }
-                        const { SearchTerm, ...rest } = state.filters;
-                        state.filters = rest;
-                        state.page = 1;
-                        loadData();
-                    });
-                }
-
-                if (filtersCollapseElement) {
-                    filtersCollapseElement.addEventListener('shown.bs.collapse', function () {
-                        updateFiltersToggleState(true);
-                    });
-
-                    filtersCollapseElement.addEventListener('hidden.bs.collapse', function () {
-                        updateFiltersToggleState(false);
-                    });
-                }
-            }
-
-            function updateFiltersToggleState(expanded) {
-                if (!filtersToggleButton) {
-                    return;
-                }
-
-                const isExpanded = typeof expanded === 'boolean'
-                    ? expanded
-                    : filtersCollapseElement && filtersCollapseElement.classList.contains('show');
-
-                filtersToggleButton.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
-                if (filtersToggleIcon) {
-                    filtersToggleIcon.classList.toggle('fa-angle-up', isExpanded);
-                    filtersToggleIcon.classList.toggle('fa-angle-down', !isExpanded);
-                }
-                if (filtersToggleText) {
-                    filtersToggleText.textContent = isExpanded ? 'إخفاء البحث المتقدم' : 'عرض البحث المتقدم';
-                }
-            }
-
-            function collectFiltersFromForm() {
-                const filters = {};
-
-                const searchValue = searchTermInput ? searchTermInput.value.trim() : '';
-                if (searchValue) {
-                    filters.SearchTerm = searchValue;
-                }
-
-                const numberInput = document.getElementById('numberFilter');
-                if (numberInput) {
-                    const value = numberInput.value.trim();
-                    if (value) {
-                        filters.Number = value;
-                    }
-                }
-
-                const referenceInput = document.getElementById('referenceFilter');
-                if (referenceInput) {
-                    const value = referenceInput.value.trim();
-                    if (value) {
-                        filters.Reference = value;
-                    }
-                }
-
-                const descriptionInput = document.getElementById('descriptionFilter');
-                if (descriptionInput) {
-                    const value = descriptionInput.value.trim();
-                    if (value) {
-                        filters.Description = value;
-                    }
-                }
-
-                const createdByInput = document.getElementById('createdByFilter');
-                if (createdByInput) {
-                    const value = createdByInput.value.trim();
-                    if (value) {
-                        filters.CreatedBy = value;
-                    }
-                }
-
-                const branchSelect = document.getElementById('branchFilter');
-                if (branchSelect && branchSelect.value) {
-                    const parsedBranch = parseInt(branchSelect.value, 10);
-                    if (!Number.isNaN(parsedBranch)) {
-                        filters.BranchId = parsedBranch;
-                    }
-                }
-
-                const statusSelect = document.getElementById('statusFilter');
-                if (statusSelect && statusSelect.value) {
-                    filters.Status = statusSelect.value;
-                }
-
-                const fromDateInput = document.getElementById('fromDate');
-                if (fromDateInput && fromDateInput.value) {
-                    filters.FromDate = fromDateInput.value;
-                }
-
-                const toDateInput = document.getElementById('toDate');
-                if (toDateInput && toDateInput.value) {
-                    filters.ToDate = toDateInput.value;
-                }
-
-                const minAmountInput = document.getElementById('minAmount');
-                if (minAmountInput && minAmountInput.value) {
-                    const parsedMin = parseFloat(minAmountInput.value);
-                    if (!Number.isNaN(parsedMin)) {
-                        filters.MinAmount = parsedMin;
-                    }
-                }
-
-                const maxAmountInput = document.getElementById('maxAmount');
-                if (maxAmountInput && maxAmountInput.value) {
-                    const parsedMax = parseFloat(maxAmountInput.value);
-                    if (!Number.isNaN(parsedMax)) {
-                        filters.MaxAmount = parsedMax;
-                    }
-                }
-
-                const unbalancedOnly = document.getElementById('unbalancedOnly');
-                if (unbalancedOnly && unbalancedOnly.checked) {
-                    filters.ShowUnbalancedOnly = true;
-                }
-
-                return filters;
-            }
-
-            function sanitizeFilters() {
-                const result = {};
-                Object.entries(state.filters).forEach(([key, value]) => {
-                    if (value === undefined || value === null || value === '') {
-                        return;
-                    }
-                    result[key] = value;
-                });
-                return result;
-            }
-
-            function updateSummary(summary, totalRecords) {
-                const total = Number(totalRecords || 0);
-                const balanced = Number(summary?.balanced || 0);
-                const unbalanced = Number(summary?.unbalanced || 0);
-
-                summaryTotal.textContent = total.toLocaleString();
-                summaryBalanced.textContent = balanced.toLocaleString();
-                summaryUnbalanced.textContent = unbalanced.toLocaleString();
-                summaryDebit.textContent = formatNumber(summary?.totalDebit || 0);
-                summaryCredit.textContent = formatNumber(summary?.totalCredit || 0);
-            }
-
-            function updatePagination(totalPages, totalRecords) {
-                pagination.innerHTML = '';
-
-                const currentPage = state.page;
-                const safeTotalPages = Math.max(totalPages || 0, 0);
-
-                if (safeTotalPages <= 1) {
-                    const text = totalRecords === 0 ? '0-0' : '1-' + totalRecords;
-                    rangeInfo.textContent = text;
-                    return;
-                }
-
-                const maxButtons = 5;
-                let start = Math.max(1, currentPage - Math.floor(maxButtons / 2));
-                let end = start + maxButtons - 1;
-                if (end > safeTotalPages) {
-                    end = safeTotalPages;
-                    start = Math.max(1, end - maxButtons + 1);
-                }
-
-                function addButton(page, label, disabled, active) {
-                    const li = document.createElement('li');
-                    li.className = 'page-item';
-                    if (disabled) {
-                        li.classList.add('disabled');
-                    }
-                    if (active) {
-                        li.classList.add('active');
-                    }
-
-                    const button = document.createElement('button');
-                    button.type = 'button';
-                    button.className = 'page-link';
-                    button.textContent = label;
-                    button.dataset.page = page;
-                    button.disabled = !!disabled;
-                    if (active) {
-                        button.setAttribute('aria-current', 'page');
-                    }
-
-                    li.appendChild(button);
-                    pagination.appendChild(li);
-                }
-
-                addButton(currentPage - 1, 'السابق', currentPage === 1, false);
-                for (let page = start; page <= end; page++) {
-                    addButton(page, page.toString(), false, page === currentPage);
-                }
-                addButton(currentPage + 1, 'التالي', currentPage === safeTotalPages, false);
-
-                const startRecord = totalRecords === 0 ? 0 : (currentPage - 1) * state.pageSize + 1;
-                const endRecord = totalRecords === 0 ? 0 : Math.min(currentPage * state.pageSize, totalRecords);
-                rangeInfo.textContent = startRecord + '-' + endRecord;
-            }
-
-            async function loadData(showLoading = true) {
-                if (showLoading) {
-                    loadingOverlay.hidden = false;
-                    if (grid && typeof grid.showSpinner === 'function') {
-                        grid.showSpinner();
-                    }
-                }
-
-                try {
-                    const response = await fetch(endpoints.data, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'RequestVerificationToken': antiForgeryToken
-                        },
-                        credentials: 'same-origin',
-                        body: JSON.stringify({
-                            page: state.page,
-                            pageSize: state.pageSize,
-                            sortColumn: state.sortColumn,
-                            sortDirection: state.sortDirection,
-                            filters: sanitizeFilters(),
-                            columnFilters: serializeColumnFilters()
-                        })
-                    });
-
-                    if (!response.ok) {
-                        throw new Error('فشل في تحميل البيانات');
-                    }
-
-                    const result = await response.json();
-                    const rawItems = result.items || [];
-                    const items = rawItems.map(normalizeEntry);
-                    const summary = result.summary || {};
-                    const totalRecords = result.totalRecords ?? items.length;
-                    const totalPages = result.totalPages ?? 0;
-
-                    state.page = result.page ?? state.page;
-                    state.pageSize = result.pageSize ?? state.pageSize;
-
-                    if (grid) {
-                        grid.dataSource = Array.isArray(items) ? items : [];
-                        if (typeof grid.dataBind === 'function') {
-                            grid.dataBind();
-                        }
-                        else if (typeof grid.refresh === 'function') {
-                            grid.refresh();
-                        }
-                        applyGrouping();
-                        applyGridFilterState();
-                    }
-
-                    updateSummary(summary, totalRecords);
-                    updatePagination(totalPages, totalRecords);
-                    totalRecordsLabel.textContent = Number(totalRecords || 0).toLocaleString();
-                }
-                catch (error) {
-                    console.error(error);
-                    if (grid) {
-                        grid.dataSource = [];
-                        grid.refresh();
-                    }
-                    alert('حدث خطأ أثناء تحميل البيانات.');
-                }
-                finally {
-                    loadingOverlay.hidden = true;
-                    if (grid && typeof grid.hideSpinner === 'function') {
-                        grid.hideSpinner();
-                    }
-                }
-            }
-        })();
+        grid.query = buildQuery();
     </script>
-
 }
