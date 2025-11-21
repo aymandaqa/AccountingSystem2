@@ -189,6 +189,11 @@
         }
 
         function applyFilters() {
+            const grid = getGridInstance();
+            if (!grid) {
+                return;
+            }
+
             grid.query = buildQuery();
             grid.refresh();
         }
@@ -207,6 +212,11 @@
         }
 
         function getSelectedEntry() {
+            const grid = getGridInstance();
+            if (!grid) {
+                return null;
+            }
+
             const records = grid.getSelectedRecords();
             return records && records.length > 0 ? records[0] : null;
         }
@@ -295,7 +305,10 @@
                 });
 
                 if (response.ok) {
-                    grid.refresh();
+                    const grid = getGridInstance();
+                    if (grid) {
+                        grid.refresh();
+                    }
                 } else {
                     const errorText = await response.text();
                     ej.popups.DialogUtility.alert({ title: 'خطأ', content: errorText || 'تعذر حذف القيد.' });
