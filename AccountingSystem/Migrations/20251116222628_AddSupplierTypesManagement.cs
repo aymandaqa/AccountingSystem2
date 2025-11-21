@@ -15,6 +15,7 @@ namespace AccountingSystem.Migrations
         {
             migrationBuilder.RenameColumn(
                 name: "Type",
+                schema: "dbo",
                 table: "Suppliers",
                 newName: "SupplierTypeId");
 
@@ -117,6 +118,7 @@ namespace AccountingSystem.Migrations
 
             migrationBuilder.RenameColumn(
                 name: "SupplierTypeId",
+                schema: "dbo",
                 table: "Suppliers",
                 newName: "Type");
         }
