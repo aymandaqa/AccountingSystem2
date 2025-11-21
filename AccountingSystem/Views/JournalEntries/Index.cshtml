@@ -14,6 +14,17 @@
     var detailsUrl = Url.Action("Details", "JournalEntries", new { id = "__id__" });
     var printUrl = Url.Action("Print", "JournalEntries", new { id = "__id__" });
     var deleteUrl = Url.Action("Delete", "JournalEntries");
+
+    var toolbarItems = new List<object>
+    {
+        new { id = "JournalEntries_Add", text = "إضافة", prefixIcon = "e-add" },
+        new { id = "JournalEntries_Edit", text = "تعديل", prefixIcon = "e-edit" },
+        new { id = "JournalEntries_Delete", text = "حذف", prefixIcon = "e-delete" },
+        new { id = "JournalEntries_Details", text = "عرض", prefixIcon = "e-file" },
+        new { id = "JournalEntries_Print", text = "طباعة", prefixIcon = "e-print" },
+        new { id = "JournalEntries_Refresh", text = "تحديث", prefixIcon = "e-refresh" },
+        "Search"
+    };
 }
 
 <section class="container py-4">
@@ -79,6 +90,7 @@
             <ejs-grid id="JournalEntriesGrid" gridLines="Both" enableRtl="@rtl"
                       allowPaging="true" allowSorting="true" allowFiltering="true"
                       height="650" toolbarClick="onToolbarClick" actionBegin="onActionBegin"
+                      toolbar="@toolbarItems"
                       allowSelection="true">
                 <e-grid-selectionsettings type="Single"></e-grid-selectionsettings>
                 <e-grid-pagesettings pageCount="5" pageSizes="true"></e-grid-pagesettings>
@@ -98,15 +110,6 @@
                     <e-grid-column field="LinesCount" headerText="عدد البنود" textAlign="Center" width="120"></e-grid-column>
                     <e-grid-column field="StatusDisplay" headerText="الحالة" width="140"></e-grid-column>
                 </e-grid-columns>
-                <e-grid-toolbarItems>
-                    <e-grid-toolbarItem id="JournalEntries_Add" text="إضافة" prefixIcon="e-add"></e-grid-toolbarItem>
-                    <e-grid-toolbarItem id="JournalEntries_Edit" text="تعديل" prefixIcon="e-edit"></e-grid-toolbarItem>
-                    <e-grid-toolbarItem id="JournalEntries_Delete" text="حذف" prefixIcon="e-delete"></e-grid-toolbarItem>
-                    <e-grid-toolbarItem id="JournalEntries_Details" text="عرض" prefixIcon="e-file"></e-grid-toolbarItem>
-                    <e-grid-toolbarItem id="JournalEntries_Print" text="طباعة" prefixIcon="e-print"></e-grid-toolbarItem>
-                    <e-grid-toolbarItem prefixIcon="e-refresh" id="JournalEntries_Refresh" text="تحديث"></e-grid-toolbarItem>
-                    <e-grid-toolbarItem name="Search"></e-grid-toolbarItem>
-                </e-grid-toolbarItems>
             </ejs-grid>
         </div>
     </div>
