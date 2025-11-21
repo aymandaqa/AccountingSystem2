@@ -132,6 +132,7 @@
                                 <tr>
                                     <th scope="col">الحساب</th>
                                     <th scope="col" class="text-end">الرصيد (@Model.DashboardBaseCurrencyCode)</th>
+                                    <th scope="col" class="text-center">إجراءات</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -396,4 +397,35 @@
             border-top: none;
         }
     </style>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleIcon = (button, isOpen) => {
+                const icon = button.querySelector('i');
+                if (!icon) {
+                    return;
+                }
+
+                icon.classList.toggle('fa-chevron-right', !isOpen);
+                icon.classList.toggle('fa-chevron-down', isOpen);
+            };
+
+            document.querySelectorAll('.dashboard-account-table .dashboard-toggle').forEach(button => {
+                const targetSelector = button.getAttribute('data-bs-target');
+                if (!targetSelector) {
+                    return;
+                }
+
+                const target = document.querySelector(targetSelector);
+                if (!target) {
+                    return;
+                }
+
+                target.addEventListener('show.bs.collapse', () => toggleIcon(button, true));
+                target.addEventListener('hide.bs.collapse', () => toggleIcon(button, false));
+            });
+        });
+    </script>
 }
