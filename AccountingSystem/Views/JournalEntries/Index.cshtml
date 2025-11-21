@@ -163,7 +163,14 @@
         };
 
         const gridElement = document.getElementById('JournalEntriesGrid');
-        const grid = gridElement.ej2_instances[0];
+
+        function getGridInstance() {
+            if (!gridElement || !Array.isArray(gridElement.ej2_instances) || gridElement.ej2_instances.length === 0) {
+                return null;
+            }
+
+            return gridElement.ej2_instances[0];
+        }
 
         function getParamsObject() {
             return {
@@ -222,6 +229,11 @@
         }
 
         function getEntryById(entryId) {
+            const grid = getGridInstance();
+            if (!grid) {
+                return null;
+            }
+
             const parsedId = parseInt(entryId, 10);
             if (Number.isNaN(parsedId)) {
                 return null;
@@ -319,7 +331,10 @@
         }
 
         function handleExcelExport() {
-            grid.excelExport();
+            const grid = getGridInstance();
+            if (grid) {
+                grid.excelExport();
+            }
         }
 
         function onActionButtonClick(event) {
@@ -378,7 +393,10 @@
             }
         });
 
-        grid.element.addEventListener('click', onActionButtonClick);
-        grid.query = buildQuery();
+        const grid = getGridInstance();
+        if (grid) {
+            grid.element.addEventListener('click', onActionButtonClick);
+            grid.query = buildQuery();
+        }
     </script>
 }
