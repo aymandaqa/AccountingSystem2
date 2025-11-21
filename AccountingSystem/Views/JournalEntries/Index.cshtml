@@ -128,7 +128,7 @@
 <script id="journalEntryActionsTemplate" type="text/x-template">
     <div class="d-flex justify-content-center gap-1">
         <button type="button" class="btn btn-sm btn-outline-primary" data-action="details" data-entry-id="${Id}" title="عرض">
-            <span class="e-icons e-file"></span>
+            <span class="e-icons e-eye"></span>
         </button>
         <button type="button" class="btn btn-sm btn-outline-secondary" data-action="print" data-entry-id="${Id}" title="طباعة">
             <span class="e-icons e-print"></span>
@@ -309,12 +309,20 @@
                 return;
             }
 
-            const confirm = await ej.popups.DialogUtility.confirm({
-                title: 'تأكيد الحذف',
-                content: 'سيتم إلغاء القيد الحالي. هل تريد المتابعة؟',
-                okButton: { text: 'نعم' },
-                cancelButton: { text: 'لا' }
-            }).then(value => value === 'ok');
+            const confirm = await new Promise(resolve => {
+                ej.popups.DialogUtility.confirm({
+                    title: 'تأكيد الحذف',
+                    content: 'سيتم إلغاء القيد الحالي. هل تريد المتابعة؟',
+                    okButton: {
+                        text: 'نعم',
+                        click: () => resolve(true)
+                    },
+                    cancelButton: {
+                        text: 'لا',
+                        click: () => resolve(false)
+                    }
+                });
+            });
 
             if (!confirm) {
                 return;
