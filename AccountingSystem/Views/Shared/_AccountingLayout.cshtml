@@ -67,6 +67,7 @@
         var canCurrencies = (await AuthorizationService.AuthorizeAsync(User, "currencies.view")).Succeeded;
         var canSuppliers = (await AuthorizationService.AuthorizeAsync(User, "suppliers.view")).Succeeded;
         var canSupplierTypes = (await AuthorizationService.AuthorizeAsync(User, "suppliertypes.view")).Succeeded;
+        var showSuppliers = canSuppliers || canSupplierTypes;
         var canAgents = (await AuthorizationService.AuthorizeAsync(User, "agents.view")).Succeeded;
         var canSystemSettings = (await AuthorizationService.AuthorizeAsync(User, "systemsettings.view")).Succeeded;
         var canPermissionGroups = (await AuthorizationService.AuthorizeAsync(User, "permissiongroups.view")).Succeeded;
@@ -148,6 +149,7 @@
         var currentController = ViewContext.RouteData.Values["controller"]?.ToString()?.ToLower();
         var currentAction = ViewContext.RouteData.Values["action"]?.ToString()?.ToLower();
         var accountsActive = currentController == "accounts";
+        var suppliersActive = currentController == "suppliers" || currentController == "suppliertypes";
         var operationsActive = currentController == "cashboxclosures" || currentController == "expenses" || currentController == "transfers";
         var vouchersActive = currentController == "receiptvouchers" || currentController == "disbursementvouchers" || currentController == "paymentvouchers" || currentController == "workflowapprovals" || currentController == "workflowdefinitions" || currentController == "transactions";
         var accountMgmtActive = currentController == "accountmanagement";
@@ -239,26 +241,37 @@
                             </a>
                         </li>
                     }
-                    @if (canSuppliers)
+                    @if (showSuppliers)
                     {
                         <li class="nav-item" data-menu-key="suppliers">
-                            <a class="nav-link @(currentController == "suppliers" ? "active" : "")"
-                               asp-controller="Suppliers"
-                               asp-action="Index"
-                               asp-require-permission="suppliers.view">
-                                <i class="fas fa-truck"></i> الموردين
+                            <a class="nav-link nav-link-toggle d-flex align-items-center justify-content-between" data-bs-toggle="collapse" href="#suppliersMenu" data-bs-target="#suppliersMenu" role="button" aria-expanded="@(suppliersActive ? "true" : "false")" aria-controls="suppliersMenu">
+                                <span class="nav-link-label"><i class="fas fa-truck"></i> إدارة الموردين</span>
+                                <i class="fas fa-angle-down toggle-icon"></i>
                             </a>
-                        </li>
-                    }
-                    @if (canSupplierTypes)
-                    {
-                        <li class="nav-item" data-menu-key="suppliertypes">
-                            <a class="nav-link @(currentController == "suppliertypes" ? "active" : "")"
-                               asp-controller="SupplierTypes"
-                               asp-action="Index"
-                               asp-require-permission="suppliertypes.view">
-                                <i class="fa-solid fa-tags"></i> أنواع الموردين
-                            </a>
+                            <ul class="submenu collapse nav flex-column @(suppliersActive ? "show" : "")" id="suppliersMenu">
+                                @if (canSuppliers)
+                                {
+                                    <li class="nav-item">
+                                        <a class="nav-link @(currentController == "suppliers" ? "active" : "")"
+                                           asp-controller="Suppliers"
+                                           asp-action="Index"
+                                           asp-require-permission="suppliers.view">
+                                            <i class="fas fa-truck"></i> الموردين
+                                        </a>
+                                    </li>
+                                }
+                                @if (canSupplierTypes)
+                                {
+                                    <li class="nav-item">
+                                        <a class="nav-link @(currentController == "suppliertypes" ? "active" : "")"
+                                           asp-controller="SupplierTypes"
+                                           asp-action="Index"
+                                           asp-require-permission="suppliertypes.view">
+                                            <i class="fa-solid fa-tags"></i> أنواع الموردين
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
                         </li>
                     }
                     @if (canSystemSettings)
