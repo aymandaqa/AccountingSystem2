@@ -240,6 +240,25 @@ namespace AccountingSystem.Services
                 return;
             }
 
+            var approvalMode = action.WorkflowInstance.WorkflowDefinition?.ApprovalMode ?? WorkflowApprovalMode.Linear;
+            if (approvalMode == WorkflowApprovalMode.Linear)
+            {
+                var pendingActionsInLinearMode = action.WorkflowInstance.Actions
+                    .Where(a => a.Status == WorkflowActionStatus.Pending && a.Id != action.Id)
+                    .ToList();
+
+                foreach (var pendingAction in pendingActionsInLinearMode)
+                {
+                    pendingAction.Status = WorkflowActionStatus.Skipped;
+                    pendingAction.ActionedAt = DateTime.Now;
+                    await _notificationService.MarkWorkflowActionNotificationsAsReadAsync(pendingAction.Id, cancellationToken);
+                }
+
+                await CompleteWorkflowAsync(action.WorkflowInstance, userId, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+                return;
+            }
+
             var groupActions = action.WorkflowInstance.Actions
                 .Where(a => a.WorkflowStep.ParentStepId == action.WorkflowStep.ParentStepId)
                 .ToList();
