@@ -17,6 +17,9 @@ namespace AccountingSystem.ViewModels.Workflows
 
         public WorkflowDocumentType DocumentType { get; set; } = WorkflowDocumentType.PaymentVoucher;
 
+        [Display(Name = "آلية الاعتماد")]
+        public WorkflowApprovalMode ApprovalMode { get; set; } = WorkflowApprovalMode.Linear;
+
         public List<WorkflowStepInputModel> Steps { get; set; } = new();
     }
 

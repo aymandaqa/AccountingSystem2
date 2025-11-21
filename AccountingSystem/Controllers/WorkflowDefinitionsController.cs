@@ -74,6 +74,7 @@ namespace AccountingSystem.Controllers
                 Name = model.Name,
                 DocumentType = model.DocumentType,
                 BranchId = model.BranchId,
+                ApprovalMode = model.ApprovalMode,
                 CreatedById = user?.Id,
                 CreatedAt = DateTime.Now,
                 IsActive = true
@@ -103,6 +104,7 @@ namespace AccountingSystem.Controllers
                 Name = definition.Name,
                 BranchId = definition.BranchId,
                 DocumentType = definition.DocumentType,
+                ApprovalMode = definition.ApprovalMode,
                 Steps = definition.Steps
                     .OrderBy(s => s.Order)
                     .Select(s => new WorkflowStepInputModel
@@ -153,6 +155,7 @@ namespace AccountingSystem.Controllers
             definition.Name = model.Name;
             definition.BranchId = model.BranchId;
             definition.DocumentType = model.DocumentType;
+            definition.ApprovalMode = model.ApprovalMode;
             definition.UpdatedAt = DateTime.Now;
 
             var stepIds = definition.Steps.Select(s => s.Id).ToList();

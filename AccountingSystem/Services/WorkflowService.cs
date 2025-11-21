@@ -100,6 +100,7 @@ namespace AccountingSystem.Services
             var instance = new WorkflowInstance
             {
                 WorkflowDefinitionId = definition.Id,
+                WorkflowDefinition = definition,
                 DocumentType = documentType,
                 DocumentId = documentId,
                 DocumentAmount = documentAmount,
@@ -357,9 +358,18 @@ namespace AccountingSystem.Services
                 .Select(a => a.WorkflowStepId)
                 .ToHashSet();
 
-            return pendingActions
+            var candidates = pendingActions
                 .Where(a => !a.WorkflowStep.ParentStepId.HasValue || completedSteps.Contains(a.WorkflowStep.ParentStepId.Value))
                 .ToList();
+
+            var approvalMode = instance.WorkflowDefinition?.ApprovalMode ?? WorkflowApprovalMode.Linear;
+            if (approvalMode == WorkflowApprovalMode.Hierarchy && candidates.Any())
+            {
+                var nextOrder = candidates.Min(a => a.WorkflowStep.Order);
+                return candidates.Where(a => a.WorkflowStep.Order == nextOrder).ToList();
+            }
+
+            return candidates;
         }
 
         private HashSet<int> GetReadyActionIds(WorkflowInstance instance)

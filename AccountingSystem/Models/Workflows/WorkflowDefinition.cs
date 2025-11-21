@@ -18,6 +18,8 @@ namespace AccountingSystem.Models.Workflows
 
         public int? BranchId { get; set; }
 
+        public WorkflowApprovalMode ApprovalMode { get; set; } = WorkflowApprovalMode.Linear;
+
         [StringLength(450)]
         public string? CreatedById { get; set; }
 
