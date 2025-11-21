@@ -21,13 +21,16 @@ namespace AccountingSystem.Controllers
         private readonly ApplicationDbContext _context;
         private readonly UserManager<User> _userManager;
         private readonly IJournalEntryService _journalEntryService;
+        private readonly IAccountService _accountService;
+        private const string EmployeeLoanParentAccountSettingKey = "EmployeeLoansParentAccountId";
         private const string StatusMessageKey = "StatusMessage";
 
-        public EmployeeLoansController(ApplicationDbContext context, UserManager<User> userManager, IJournalEntryService journalEntryService)
+        public EmployeeLoansController(ApplicationDbContext context, UserManager<User> userManager, IJournalEntryService journalEntryService, IAccountService accountService)
         {
             _context = context;
             _userManager = userManager;
             _journalEntryService = journalEntryService;
+            _accountService = accountService;
         }
 
         public async Task<IActionResult> Index()
@@ -117,18 +120,16 @@ namespace AccountingSystem.Controllers
                 ModelState.AddModelError(nameof(model.EmployeeId), "الموظف المحدد غير متاح");
             }
 
-            var account = await _context.Accounts
-                .Include(a => a.Currency)
-                .FirstOrDefaultAsync(a => a.Id == model.AccountId && a.IsActive && a.CanPostTransactions);
+            var loanParentAccount = await GetLoanParentAccountAsync();
 
-            if (account == null)
+            if (loanParentAccount == null)
             {
-                ModelState.AddModelError(nameof(model.AccountId), "الحساب المحدد غير متاح");
+                ModelState.AddModelError(string.Empty, "لم يتم العثور على حساب قروض الموظفين في الإعدادات أو أنه غير صالح.");
             }
 
-            if (employee?.Account != null && account != null && employee.Account.CurrencyId != account.CurrencyId)
+            if (employee?.Account != null && loanParentAccount != null && employee.Account.CurrencyId != loanParentAccount.CurrencyId)
             {
-                ModelState.AddModelError(nameof(model.AccountId), "عملة حساب القرض لا تطابق عملة حساب الموظف");
+                ModelState.AddModelError(string.Empty, "عملة حساب قروض الموظفين لا تطابق عملة حساب الموظف");
             }
 
             if (!model.UseCustomSchedule && model.InstallmentCount <= 0)
@@ -176,10 +177,19 @@ namespace AccountingSystem.Controllers
                     model.Frequency);
             }
 
+            if (!ModelState.IsValid || loanParentAccount == null || employee == null)
+            {
+                return View(model);
+            }
+
+            var accountName = $"قرض {employee.Name}";
+            var (loanAccountId, _) = await _accountService.CreateAccountAsync(accountName, loanParentAccount.Id);
+            var loanAccount = await _context.Accounts.FirstAsync(a => a.Id == loanAccountId);
+
             var loan = new EmployeeLoan
             {
                 EmployeeId = employee!.Id,
-                AccountId = account!.Id,
+                AccountId = loanAccount.Id,
                 PrincipalAmount = Math.Round(model.PrincipalAmount, 2, MidpointRounding.AwayFromZero),
                 InstallmentAmount = Math.Round(model.InstallmentAmount, 2, MidpointRounding.AwayFromZero),
                 InstallmentCount = schedule.Count,
@@ -203,7 +213,7 @@ namespace AccountingSystem.Controllers
 
             var lines = new List<JournalEntryLine>
             {
-                new JournalEntryLine { AccountId = account.Id, DebitAmount = model.PrincipalAmount },
+                new JournalEntryLine { AccountId = loanAccount.Id, DebitAmount = model.PrincipalAmount },
                 new JournalEntryLine { AccountId = employee.AccountId, CreditAmount = model.PrincipalAmount }
             };
 
@@ -581,6 +591,21 @@ namespace AccountingSystem.Controllers
 
             var model = BuildLoanDetailsViewModel(loan);
             return View(model);
+        }
+
+        private async Task<Account?> GetLoanParentAccountAsync()
+        {
+            var setting = await _context.SystemSettings
+                .FirstOrDefaultAsync(s => s.Key == EmployeeLoanParentAccountSettingKey);
+
+            if (setting == null || !int.TryParse(setting.Value, out var parentAccountId))
+            {
+                return null;
+            }
+
+            return await _context.Accounts
+                .Include(a => a.Currency)
+                .FirstOrDefaultAsync(a => a.Id == parentAccountId && a.CanHaveChildren);
         }
 
         private async Task<EmployeeLoanFormViewModel> BuildFormViewModelAsync(EmployeeLoanFormViewModel model)
