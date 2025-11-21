@@ -1,7 +1,11 @@
+@using AccountingSystem.Models
 @using AccountingSystem.ViewComponents
+@using AccountingSystem.ViewModels.Dashboard
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
+@using System.Globalization
+@using System.Linq
 @inject IAuthorizationService AuthorizationService
 @inject UserManager<User> UserManager
 @inject AccountingSystem.Data.ApplicationDbContext DbContext
@@ -101,6 +105,7 @@
         var canCashClosuresReport = (await AuthorizationService.AuthorizeAsync(User, "cashclosures.report")).Succeeded;
         var canTransfersView = (await AuthorizationService.AuthorizeAsync(User, "transfers.view")).Succeeded;
         var canTransfersManage = (await AuthorizationService.AuthorizeAsync(User, "transfers.manage")).Succeeded;
+        var canTransfersApprove = (await AuthorizationService.AuthorizeAsync(User, "transfers.approve")).Succeeded;
         var showOperations = canCashClosuresView || canCashClosuresCreate || canCashClosuresApprove || canCashClosuresReport || canTransfersView || canTransfersManage;
 
         var canJournalView = (await AuthorizationService.AuthorizeAsync(User, "journal.view")).Succeeded;
@@ -146,6 +151,12 @@
         var canEmployeesEdit = (await AuthorizationService.AuthorizeAsync(User, "employees.edit")).Succeeded;
         var showHr = canEmployeesView || canPayrollView || canSalaryPaymentsView || canEmployeeAdvancesView || canPayrollProcess || canEmployeesEdit;
 
+        var dashboardModel = ViewData.Model as CashPerformanceDashboardViewModel;
+        var pendingIncomingTransfers = dashboardModel?.PendingIncomingTransfers ?? Enumerable.Empty<Transfer>();
+        var hasPendingIncomingTransfers = dashboardModel?.HasPendingIncomingTransfers == true;
+        var incomingTransfersPermission = canTransfersManage ? "transfers.manage" : (canTransfersApprove ? "transfers.approve" : string.Empty);
+        var transferReturnUrl = Url.Action("Index", "Dashboard");
+
         var currentController = ViewContext.RouteData.Values["controller"]?.ToString()?.ToLower();
         var currentAction = ViewContext.RouteData.Values["action"]?.ToString()?.ToLower();
         var accountsActive = currentController == "accounts";
@@ -158,6 +169,62 @@
         var settingsActive = currentController == "branches" || currentController == "costcenters" || currentController == "currencies" || currentController == "users" || currentController == "permissiongroups";
         var hrActive = currentController == "employees" || currentController == "payrolls" || currentController == "deductiontypes" || currentController == "employeedeductions" || currentController == "employeeloans";
         var assetsActive = currentController == "assets" || currentController == "assetexpenses" || currentController == "assettypes" || currentController == "assetdepreciations";
+    }
+
+    @if (hasPendingIncomingTransfers)
+    {
+        <div class="modal fade" id="incomingTransfersModal" tabindex="-1" aria-labelledby="incomingTransfersLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning-subtle">
+                        <h5 class="modal-title" id="incomingTransfersLabel">حوالات واردة بانتظار المعالجة</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-4">يبدو أن لديك حوالات واردة قيد الانتظار. يرجى مراجعتها واستلامها لإغلاقها.</p>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">المرسل</th>
+                                        <th scope="col">الفرع المرسل</th>
+                                        <th scope="col" class="text-end">المبلغ</th>
+                                        <th scope="col">تاريخ الإنشاء</th>
+                                        <th scope="col" class="text-end">الإجراء</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var transfer in pendingIncomingTransfers)
+                                    {
+                                        <tr>
+                                            <td class="fw-semibold">@(transfer.Sender?.FullName ?? transfer.SenderId)</td>
+                                            <td>@(transfer.FromBranch?.NameAr ?? "-")</td>
+                                            <td class="text-end">@transfer.Amount.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                            <td class="text-nowrap">@transfer.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td class="text-end">
+                                                <a class="btn btn-primary btn-sm"
+                                                   asp-controller="Transfers"
+                                                   asp-action="Approve"
+                                                   asp-route-id="@transfer.Id"
+                                                   asp-route-accept="true"
+                                                   asp-route-returnUrl="@transferReturnUrl"
+                                                   asp-require-permission="@incomingTransfersPermission">
+                                                    <i class="fa fa-check ms-1"></i> استلام الحوالة
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">تجاهل</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     }
     <div id="wrapper" class="d-flex">
         <nav id="sidebar" class="d-flex flex-column">
@@ -1449,6 +1516,12 @@
             var currencySelect = document.querySelector('select[name="CurrencyId"]');
             var accountSelect = document.querySelector('select[name="AccountId"]');
             var sidebarMenu = document.getElementById('sidebarMenu');
+            var incomingTransfersModalElement = document.getElementById('incomingTransfersModal');
+
+            if (incomingTransfersModalElement && window.bootstrap) {
+                var incomingTransfersModal = bootstrap.Modal.getOrCreateInstance(incomingTransfersModalElement);
+                incomingTransfersModal.show();
+            }
             if (currencySelect && accountSelect) {
                 function filterAccounts() {
                     var currency = currencySelect.value;
