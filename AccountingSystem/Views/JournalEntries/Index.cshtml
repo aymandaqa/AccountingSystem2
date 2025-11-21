@@ -105,18 +105,18 @@
             <e-grid-editSettings allowAdding="false" allowDeleting="false" allowEditing="false"></e-grid-editSettings>
             <e-data-manager url="@dataUrl" adaptor="UrlAdaptor"></e-data-manager>
             <e-grid-columns>
-                <e-grid-column field="Id" isPrimaryKey="true" visible="false" allowEditing="false" width="50"></e-grid-column>
-                <e-grid-column field="Number" headerText="رقم القيد" width="140"></e-grid-column>
-                <e-grid-column field="Date" headerText="التاريخ" type="date" format="dd/MM/yyyy" width="140"></e-grid-column>
-                <e-grid-column field="Description" headerText="الوصف" width="200"></e-grid-column>
-                <e-grid-column field="Reference" headerText="المرجع" width="140"></e-grid-column>
-                <e-grid-column field="BranchName" headerText="الفرع" width="150"></e-grid-column>
-                <e-grid-column field="CreatedByName" headerText="مدخل القيد" width="160"></e-grid-column>
-                <e-grid-column field="TotalDebit" headerText="إجمالي المدين" textAlign="Right" format="N2" width="140"></e-grid-column>
-                <e-grid-column field="TotalCredit" headerText="إجمالي الدائن" textAlign="Right" format="N2" width="140"></e-grid-column>
-                <e-grid-column field="LinesCount" headerText="عدد البنود" textAlign="Center" width="120"></e-grid-column>
-                <e-grid-column field="StatusDisplay" headerText="الحالة" width="140"></e-grid-column>
-                <e-grid-column headerText="الخيارات" width="220" textAlign="Center" template="#journalEntryActionsTemplate"></e-grid-column>
+                <e-grid-column field="Id" isPrimaryKey="true" visible="false" allowEditing="false" width="100%"></e-grid-column>
+                <e-grid-column field="Number" headerText="رقم القيد" width="100%"></e-grid-column>
+                <e-grid-column field="Date" headerText="التاريخ" type="date" format="dd/MM/yyyy HH:mm" width="100%"></e-grid-column>
+                <e-grid-column field="Description" headerText="الوصف" width="100%"></e-grid-column>
+                <e-grid-column field="Reference" headerText="المرجع" width="100%"></e-grid-column>
+                <e-grid-column field="BranchName" headerText="الفرع" width="100%"></e-grid-column>
+                <e-grid-column field="CreatedByName" headerText="مدخل القيد" width="100%"></e-grid-column>
+                <e-grid-column field="TotalDebit" headerText="إجمالي المدين" textAlign="Right" format="N2" width="100%"></e-grid-column>
+                <e-grid-column field="TotalCredit" headerText="إجمالي الدائن" textAlign="Right" format="N2" width="100%"></e-grid-column>
+                <e-grid-column field="LinesCount" headerText="عدد البنود" textAlign="Center" width="100%"></e-grid-column>
+                <e-grid-column field="StatusDisplay" headerText="الحالة" width="100%"></e-grid-column>
+                <e-grid-column headerText="الخيارات" width="100%" textAlign="Center" template="#journalEntryActionsTemplate"></e-grid-column>
             </e-grid-columns>
         </ejs-grid>
     </div>
@@ -133,15 +133,15 @@
         </button>
         @if (canEdit)
         {
-                                                            <button type="button" class="btn btn-sm btn-outline-warning" data-action="edit" data-entry-id="${Id}" title="تعديل">
-                                                                <span class="e-icons e-edit"></span>
-                                                            </button>
+                                                                                        <button type="button" class="btn btn-sm btn-outline-warning" data-action="edit" data-entry-id="${Id}" title="تعديل">
+                                                                                            <span class="e-icons e-edit"></span>
+                                                                                        </button>
         }
         @if (canDelete)
         {
-                                                            <button type="button" class="btn btn-sm btn-outline-danger" data-action="delete" data-entry-id="${Id}" title="حذف">
-                                                                <span class="e-icons e-delete"></span>
-                                                            </button>
+                                                                                        <button type="button" class="btn btn-sm btn-outline-danger" data-action="delete" data-entry-id="${Id}" title="حذف">
+                                                                                            <span class="e-icons e-delete"></span>
+                                                                                        </button>
         }
     </div>
 </script>
