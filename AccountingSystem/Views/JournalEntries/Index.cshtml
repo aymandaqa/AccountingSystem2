@@ -311,16 +311,22 @@
             }
 
             const confirm = await new Promise(resolve => {
-                ej.popups.DialogUtility.confirm({
+                const dialog = ej.popups.DialogUtility.confirm({
                     title: 'تأكيد الحذف',
                     content: 'سيتم إلغاء القيد الحالي. هل تريد المتابعة؟',
                     okButton: {
                         text: 'نعم',
-                        click: () => resolve(true)
+                        click: () => {
+                            dialog.hide();
+                            resolve(true);
+                        }
                     },
                     cancelButton: {
                         text: 'لا',
-                        click: () => resolve(false)
+                        click: () => {
+                            dialog.hide();
+                            resolve(false);
+                        }
                     }
                 });
             });
