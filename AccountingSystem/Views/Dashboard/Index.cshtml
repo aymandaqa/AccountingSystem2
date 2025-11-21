@@ -126,22 +126,18 @@
                 }
                 else
                 {
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle dashboard-account-table">
-                            <thead class="table-light">
-                                <tr>
-                                    <th scope="col">الحساب</th>
-                                    <th scope="col" class="text-end">الرصيد (@Model.DashboardBaseCurrencyCode)</th>
-                                    <th scope="col" class="text-center">إجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @await Html.PartialAsync("_DashboardAccountSubTable", Model.DashboardAccountTree, new ViewDataDictionary(ViewData)
-                                {
-                                    ["DashboardBaseCurrencyCode"] = Model.DashboardBaseCurrencyCode
-                                })
-                            </tbody>
-                        </table>
+                    <div class="dashboard-account-tree">
+                        <div class="dashboard-account-tree-header px-3 py-2 d-flex text-muted small">
+                            <div class="flex-grow-1">الحساب</div>
+                            <div class="text-end" style="width: 180px;">الرصيد (@Model.DashboardBaseCurrencyCode)</div>
+                            <div class="text-center" style="width: 150px;">إجراءات</div>
+                        </div>
+                        <ul class="list-unstyled mb-0 dashboard-account-tree-list">
+                            @await Html.PartialAsync("_DashboardAccountSubTable", Model.DashboardAccountTree, new ViewDataDictionary(ViewData)
+                            {
+                                ["DashboardBaseCurrencyCode"] = Model.DashboardBaseCurrencyCode
+                            })
+                        </ul>
                     </div>
                 }
             </div>
@@ -377,24 +373,50 @@
 
 @section Styles {
     <style>
-        .dashboard-account-table .dashboard-toggle {
+        .dashboard-account-tree {
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        .dashboard-account-tree-header {
+            border-bottom: 1px solid #dee2e6;
+            background-color: #f8f9fa;
+        }
+
+        .dashboard-account-tree-list {
+            margin: 0;
+            padding: 0;
+        }
+
+        .dashboard-account-node {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #f1f3f5;
+        }
+
+        .dashboard-account-node:last-child {
+            border-bottom: none;
+        }
+
+        .dashboard-toggle {
             width: 32px;
             height: 32px;
         }
 
-        .dashboard-account-table .dashboard-toggle-placeholder {
+        .dashboard-toggle-placeholder {
             width: 32px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            color: #adb5bd;
         }
 
-        .dashboard-account-subtable {
-            background-color: #f8f9fa;
+        .dashboard-account-children {
+            margin-top: 0.5rem;
         }
 
-        .dashboard-account-subtable td {
-            border-top: none;
+        .dashboard-account-children .dashboard-account-node {
+            border-bottom: 1px solid #edf0f2;
         }
     </style>
 }
