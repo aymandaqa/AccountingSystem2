@@ -31,7 +31,6 @@ namespace AccountingSystem.ViewModels
         public int EmployeeId { get; set; }
 
         [Display(Name = "الحساب")]
-        [Required]
         public int AccountId { get; set; }
 
         [Display(Name = "قيمة القرض")]

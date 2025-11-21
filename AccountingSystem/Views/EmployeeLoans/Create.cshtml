@@ -23,12 +23,10 @@
                         </select>
                         <span asp-validation-for="EmployeeId" class="text-danger"></span>
                     </div>
-                    <div class="col-md-6">
-                        <label asp-for="AccountId" class="form-label"></label>
-                        <select asp-for="AccountId" asp-items="Model.Accounts" class="form-select">
-                            <option value="">اختر حساب القرض</option>
-                        </select>
-                        <span asp-validation-for="AccountId" class="text-danger"></span>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <div class="alert alert-secondary w-100 mb-0">
+                            سيتم إنشاء حساب القرض تلقائياً أسفل الحساب المحدد في الإعدادات.
+                        </div>
                     </div>
                 </div>
 

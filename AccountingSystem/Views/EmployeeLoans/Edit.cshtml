@@ -29,10 +29,8 @@
                     </div>
                     <div class="col-md-6">
                         <label asp-for="AccountId" class="form-label"></label>
-                        <select asp-for="AccountId" asp-items="Model.Accounts" class="form-select">
-                            <option value="">اختر حساب القرض</option>
-                        </select>
-                        <span asp-validation-for="AccountId" class="text-danger"></span>
+                        <input type="hidden" asp-for="AccountId" />
+                        <input class="form-control" value="@Model.Accounts.FirstOrDefault(a => a.Value == Model.AccountId.ToString())?.Text" readonly />
                     </div>
                 </div>
 
