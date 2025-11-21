@@ -290,6 +290,8 @@ namespace AccountingSystem.Controllers
                 worksheet.Cell(5, 3).Value = "الحساب";
                 worksheet.Cell(5, 4).Value = "الأصول المرتبطة";
                 worksheet.Cell(5, 5).Value = $"إجمالي العائد ({model.BaseCurrencyCode})";
+                worksheet.Cell(5, 6).Value = $"مصروف الأصل ({model.BaseCurrencyCode})";
+                worksheet.Cell(5, 7).Value = "الصافي (المصروف - العائد)";
 
                 var currentRow = 6;
                 foreach (var row in model.Rows)
@@ -305,6 +307,8 @@ namespace AccountingSystem.Controllers
                         ? "-"
                         : row.AssetsDisplay;
                     worksheet.Cell(currentRow, 5).Value = Math.Round(row.TotalRevenue, 2, MidpointRounding.AwayFromZero);
+                    worksheet.Cell(currentRow, 6).Value = Math.Round(row.AssetExpenses, 2, MidpointRounding.AwayFromZero);
+                    worksheet.Cell(currentRow, 7).Value = Math.Round(row.NetAmount, 2, MidpointRounding.AwayFromZero);
                     currentRow++;
                 }
 
@@ -312,8 +316,12 @@ namespace AccountingSystem.Controllers
                 worksheet.Cell(currentRow, 1).Style.Font.Bold = true;
                 worksheet.Cell(currentRow, 5).Value = Math.Round(model.GrandTotal, 2, MidpointRounding.AwayFromZero);
                 worksheet.Cell(currentRow, 5).Style.Font.Bold = true;
+                worksheet.Cell(currentRow, 6).Value = Math.Round(model.GrandAssetExpenses, 2, MidpointRounding.AwayFromZero);
+                worksheet.Cell(currentRow, 6).Style.Font.Bold = true;
+                worksheet.Cell(currentRow, 7).Value = Math.Round(model.GrandNetAmount, 2, MidpointRounding.AwayFromZero);
+                worksheet.Cell(currentRow, 7).Style.Font.Bold = true;
 
-                worksheet.Range(5, 1, 5, 5).Style.Font.Bold = true;
+                worksheet.Range(5, 1, 5, 7).Style.Font.Bold = true;
                 worksheet.Columns().AdjustToContents();
             }
 
@@ -5369,6 +5377,21 @@ namespace AccountingSystem.Controllers
             var rows = new List<DriverRevenueReportRowViewModel>();
             var processedAccounts = new HashSet<int>();
 
+            var driverAssetExpenses = await (from expense in _context.AssetExpenses.AsNoTracking()
+                                              join asset in _context.Assets.AsNoTracking() on expense.AssetId equals asset.Id
+                                              where asset.DriverId.HasValue
+                                                  && asset.AllowAssetExpenses
+                                                  && !asset.IsDisposed
+                                                  && expense.Date >= normalizedFrom
+                                                  && expense.Date <= normalizedTo
+                                              group new { expense, asset } by asset.DriverId into g
+                                              select new
+                                              {
+                                                  DriverId = g.Key!.Value,
+                                                  TotalExpenses = g.Sum(x => x.expense.Amount * x.expense.ExchangeRate)
+                                              })
+                .ToDictionaryAsync(x => x.DriverId, x => x.TotalExpenses);
+
             foreach (var info in driverAccounts)
             {
                 if (!info.AccountId.HasValue)
@@ -5397,6 +5420,12 @@ namespace AccountingSystem.Controllers
                     : (!string.IsNullOrWhiteSpace(info.DriverIdRaw) ? $"سائق {info.DriverIdRaw}" : "سائق غير معروف");
                 var branchName = resolvedInfo?.BranchName ?? string.Empty;
 
+                var assetExpenses = 0m;
+                if (info.DriverId.HasValue && driverAssetExpenses.TryGetValue(info.DriverId.Value, out var totalExpenses))
+                {
+                    assetExpenses = totalExpenses;
+                }
+
                 rows.Add(new DriverRevenueReportRowViewModel
                 {
                     DriverId = info.DriverId,
@@ -5404,7 +5433,9 @@ namespace AccountingSystem.Controllers
                     BranchName = branchName,
                     AccountCode = info.AccountCode,
                     AccountName = info.AccountName,
-                    TotalRevenue = total
+                    TotalRevenue = total,
+                    AssetExpenses = assetExpenses,
+                    NetAmount = assetExpenses - total
                 });
             }
 
@@ -5455,6 +5486,8 @@ namespace AccountingSystem.Controllers
 
             model.Rows = rows;
             model.GrandTotal = rows.Sum(r => r.TotalRevenue);
+            model.GrandAssetExpenses = rows.Sum(r => r.AssetExpenses);
+            model.GrandNetAmount = rows.Sum(r => r.NetAmount);
 
             return model;
         }

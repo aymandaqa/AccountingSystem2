@@ -50,7 +50,9 @@
                             <i class="fas fa-info-circle fa-lg"></i>
                             <div>
                                 <div>الفترة من <strong>@Model.FromDate.ToString("dd/MM/yyyy")</strong> إلى <strong>@Model.ToDate.ToString("dd/MM/yyyy")</strong></div>
-                                <div>الإجمالي الكلي: <strong>@Model.GrandTotal.ToString("N2") @Model.BaseCurrencyCode</strong></div>
+                                <div>إجمالي العائد: <strong>@Model.GrandTotal.ToString("N2") @Model.BaseCurrencyCode</strong></div>
+                                <div>إجمالي مصروف الأصل: <strong>@Model.GrandAssetExpenses.ToString("N2") @Model.BaseCurrencyCode</strong></div>
+                                <div>الصافي الكلي (المصروف - العائد): <strong>@Model.GrandNetAmount.ToString("N2") @Model.BaseCurrencyCode</strong></div>
                             </div>
                         </div>
 
@@ -63,6 +65,8 @@
                                         <th>الحساب</th>
                                         <th>الأصول المرتبطة</th>
                                         <th class="text-end">إجمالي العائد (@Model.BaseCurrencyCode)</th>
+                                        <th class="text-end">مصروف الأصل (@Model.BaseCurrencyCode)</th>
+                                        <th class="text-end">الصافي (المصروف - العائد)</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -92,6 +96,8 @@
                                                 }
                                             </td>
                                             <td class="text-end">@row.TotalRevenue.ToString("N2")</td>
+                                            <td class="text-end">@row.AssetExpenses.ToString("N2")</td>
+                                            <td class="text-end">@row.NetAmount.ToString("N2")</td>
                                         </tr>
                                     }
                                 </tbody>
@@ -99,6 +105,8 @@
                                     <tr class="fw-bold">
                                         <td colspan="4">الإجمالي</td>
                                         <td class="text-end">@Model.GrandTotal.ToString("N2")</td>
+                                        <td class="text-end">@Model.GrandAssetExpenses.ToString("N2")</td>
+                                        <td class="text-end">@Model.GrandNetAmount.ToString("N2")</td>
                                     </tr>
                                 </tfoot>
                             </table>
