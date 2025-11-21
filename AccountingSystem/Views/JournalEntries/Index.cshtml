@@ -18,11 +18,8 @@
     var toolbarItems = new List<object>
     {
         new { id = "JournalEntries_Add", text = "إضافة", prefixIcon = "e-add" },
-        new { id = "JournalEntries_Edit", text = "تعديل", prefixIcon = "e-edit" },
-        new { id = "JournalEntries_Delete", text = "حذف", prefixIcon = "e-delete" },
-        new { id = "JournalEntries_Details", text = "عرض", prefixIcon = "e-file" },
-        new { id = "JournalEntries_Print", text = "طباعة", prefixIcon = "e-print" },
         new { id = "JournalEntries_Refresh", text = "تحديث", prefixIcon = "e-refresh" },
+        new { id = "JournalEntries_ExcelExport", text = "تصدير إكسل", prefixIcon = "e-excelexport" },
         "Search"
     };
 }
@@ -91,7 +88,7 @@
                       allowPaging="true" allowSorting="true" allowFiltering="true"
                       height="650" toolbarClick="onToolbarClick" actionBegin="onActionBegin"
                       toolbar="@toolbarItems"
-                      allowSelection="true">
+                      allowSelection="true" allowExcelExport="true">
                 <e-grid-selectionsettings type="Single"></e-grid-selectionsettings>
                 <e-grid-pagesettings pageCount="5" pageSizes="true"></e-grid-pagesettings>
                 <e-grid-filterSettings type="Menu" immediateModeDelay="100"></e-grid-filterSettings>
@@ -109,11 +106,35 @@
                     <e-grid-column field="TotalCredit" headerText="إجمالي الدائن" textAlign="Right" format="N2" width="140"></e-grid-column>
                     <e-grid-column field="LinesCount" headerText="عدد البنود" textAlign="Center" width="120"></e-grid-column>
                     <e-grid-column field="StatusDisplay" headerText="الحالة" width="140"></e-grid-column>
+                    <e-grid-column headerText="الخيارات" width="220" textAlign="Center" template="#journalEntryActionsTemplate"></e-grid-column>
                 </e-grid-columns>
             </ejs-grid>
         </div>
     </div>
 </section>
+
+<script id="journalEntryActionsTemplate" type="text/x-template">
+    <div class="d-flex justify-content-center gap-1">
+        <button type="button" class="btn btn-sm btn-outline-primary" data-action="details" data-entry-id="${Id}" title="عرض">
+            <span class="e-icons e-file"></span>
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-action="print" data-entry-id="${Id}" title="طباعة">
+            <span class="e-icons e-print"></span>
+        </button>
+        @if (canEdit)
+        {
+            <button type="button" class="btn btn-sm btn-outline-warning" data-action="edit" data-entry-id="${Id}" title="تعديل">
+                <span class="e-icons e-edit"></span>
+            </button>
+        }
+        @if (canDelete)
+        {
+            <button type="button" class="btn btn-sm btn-outline-danger" data-action="delete" data-entry-id="${Id}" title="حذف">
+                <span class="e-icons e-delete"></span>
+            </button>
+        }
+    </div>
+</script>
 
 <form id="antiForgeryForm" asp-antiforgery="true"></form>
 
@@ -141,15 +162,8 @@
             search: document.getElementById('searchTerm')
         };
 
-        function getGridInstance() {
-            const gridElement = document.getElementById('JournalEntriesGrid');
-            if (!gridElement || !gridElement.ej2_instances || gridElement.ej2_instances.length === 0) {
-                console.error('JournalEntries grid instance is not ready yet.');
-                return null;
-            }
-
-            return gridElement.ej2_instances[0];
-        }
+        const gridElement = document.getElementById('JournalEntriesGrid');
+        const grid = gridElement.ej2_instances[0];
 
         function getParamsObject() {
             return {
@@ -207,13 +221,22 @@
             return records && records.length > 0 ? records[0] : null;
         }
 
-        function handleEdit() {
+        function getEntryById(entryId) {
+            const parsedId = parseInt(entryId, 10);
+            if (Number.isNaN(parsedId)) {
+                return null;
+            }
+
+            return grid.currentViewData.find(item => item.Id === parsedId) || null;
+        }
+
+        function handleEdit(entry) {
             if (!permissions.canEdit) {
                 ej.popups.DialogUtility.alert({ title: 'صلاحيات', content: 'ليست لديك صلاحية التعديل.' });
                 return;
             }
 
-            const selected = getSelectedEntry();
+            const selected = entry || getSelectedEntry();
             if (!selected) {
                 ej.popups.DialogUtility.alert({ title: 'تعديل', content: 'يرجى اختيار قيد أولاً.' });
                 return;
@@ -223,8 +246,8 @@
             window.location.href = url;
         }
 
-        function handleDetails() {
-            const selected = getSelectedEntry();
+        function handleDetails(entry) {
+            const selected = entry || getSelectedEntry();
             if (!selected) {
                 ej.popups.DialogUtility.alert({ title: 'عرض', content: 'يرجى اختيار قيد أولاً.' });
                 return;
@@ -234,8 +257,8 @@
             window.open(url, '_blank');
         }
 
-        function handlePrint() {
-            const selected = getSelectedEntry();
+        function handlePrint(entry) {
+            const selected = entry || getSelectedEntry();
             if (!selected) {
                 ej.popups.DialogUtility.alert({ title: 'طباعة', content: 'يرجى اختيار قيد أولاً.' });
                 return;
@@ -245,13 +268,13 @@
             window.open(url, '_blank');
         }
 
-        async function handleDelete() {
+        async function handleDelete(entry) {
             if (!permissions.canDelete) {
                 ej.popups.DialogUtility.alert({ title: 'صلاحيات', content: 'ليست لديك صلاحية الحذف.' });
                 return;
             }
 
-            const selected = getSelectedEntry();
+            const selected = entry || getSelectedEntry();
             if (!selected) {
                 ej.popups.DialogUtility.alert({ title: 'حذف', content: 'يرجى اختيار قيد أولاً.' });
                 return;
@@ -295,30 +318,51 @@
             }
         }
 
+        function handleExcelExport() {
+            grid.excelExport();
+        }
+
+        function onActionButtonClick(event) {
+            const actionButton = event.target.closest('[data-action][data-entry-id]');
+            if (!actionButton) {
+                return;
+            }
+
+            const entry = getEntryById(actionButton.dataset.entryId);
+            if (!entry) {
+                return;
+            }
+
+            switch (actionButton.dataset.action) {
+                case 'edit':
+                    handleEdit(entry);
+                    break;
+                case 'delete':
+                    handleDelete(entry);
+                    break;
+                case 'details':
+                    handleDetails(entry);
+                    break;
+                case 'print':
+                    handlePrint(entry);
+                    break;
+                default:
+                    break;
+            }
+        }
+
         function onToolbarClick(args) {
             switch (args.item.id) {
                 case 'JournalEntries_Add':
                     window.location.href = endpoints.create;
                     break;
-                case 'JournalEntries_Edit':
-                    args.cancel = true;
-                    handleEdit();
-                    break;
-                case 'JournalEntries_Delete':
-                    args.cancel = true;
-                    handleDelete();
-                    break;
-                case 'JournalEntries_Details':
-                    args.cancel = true;
-                    handleDetails();
-                    break;
-                case 'JournalEntries_Print':
-                    args.cancel = true;
-                    handlePrint();
-                    break;
                 case 'JournalEntries_Refresh':
                     args.cancel = true;
                     applyFilters();
+                    break;
+                case 'JournalEntries_ExcelExport':
+                    args.cancel = true;
+                    handleExcelExport();
                     break;
                 default:
                     break;
@@ -334,9 +378,7 @@
             }
         });
 
-        const grid = getGridInstance();
-        if (grid) {
-            grid.query = buildQuery();
-        }
+        grid.element.addEventListener('click', onActionButtonClick);
+        grid.query = buildQuery();
     </script>
 }
