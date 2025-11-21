@@ -679,18 +679,28 @@ namespace AccountingSystem.Controllers
             var driverLookup = new Dictionary<int, string>();
             if (driverIds.Any())
             {
-                driverLookup = await _roadContext.Drives
+                var driverRecords = await _roadContext.Drives
                     .AsNoTracking()
                     .Where(d => driverIds.Contains(d.Id))
                     .Select(d => new
                     {
                         d.Id,
-                        Name = new[] { d.FirstName, d.SecoundName, d.FamilyName }
-                            .Where(p => !string.IsNullOrWhiteSpace(p))
-                            .DefaultIfEmpty($"سائق {d.Id}")
-                            .Aggregate(string.Empty, (acc, part) => string.IsNullOrEmpty(acc) ? part! : $"{acc} {part}")
+                        d.FirstName,
+                        d.SecoundName,
+                        d.FamilyName
                     })
-                    .ToDictionaryAsync(d => d.Id, d => string.IsNullOrWhiteSpace(d.Name) ? $"سائق {d.Id}" : d.Name);
+                    .ToListAsync();
+
+                driverLookup = driverRecords.ToDictionary(
+                    d => d.Id,
+                    d =>
+                    {
+                        var parts = new[] { d.FirstName, d.SecoundName, d.FamilyName }
+                            .Where(p => !string.IsNullOrWhiteSpace(p));
+
+                        var name = string.Join(" ", parts);
+                        return string.IsNullOrWhiteSpace(name) ? $"سائق {d.Id}" : name;
+                    });
             }
 
             var model = assets.Select(a => new AssetListViewModel
