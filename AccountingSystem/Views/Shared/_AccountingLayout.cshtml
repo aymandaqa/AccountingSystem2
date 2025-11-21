@@ -152,7 +152,7 @@
         var showHr = canEmployeesView || canPayrollView || canSalaryPaymentsView || canEmployeeAdvancesView || canPayrollProcess || canEmployeesEdit;
 
         var dashboardModel = ViewData.Model as CashPerformanceDashboardViewModel;
-        var pendingIncomingTransfers = dashboardModel?.PendingIncomingTransfers ?? Enumerable.Empty<Transfer>();
+        var pendingIncomingTransfers = dashboardModel?.PendingIncomingTransfers ?? Enumerable.Empty<PaymentTransfer>();
         var hasPendingIncomingTransfers = dashboardModel?.HasPendingIncomingTransfers == true;
         var incomingTransfersPermission = canTransfersManage ? "transfers.manage" : (canTransfersApprove ? "transfers.approve" : string.Empty);
         var transferReturnUrl = Url.Action("Index", "Dashboard");
