@@ -15,7 +15,9 @@ namespace AccountingSystem.Services
             JournalEntryStatus status,
             string? reference = null,
             string? number = null,
-            string? approvedById = null);
+            string? approvedById = null,
+            string? attachmentFilePath = null,
+            string? attachmentFileName = null);
 
         Task<string> GenerateJournalEntryNumber();
 

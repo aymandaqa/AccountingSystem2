@@ -1,5 +1,6 @@
-using Microsoft.AspNetCore.Mvc.Rendering;
 using AccountingSystem.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Linq;
@@ -17,6 +18,7 @@ namespace AccountingSystem.ViewModels
         [Range(1, int.MaxValue, ErrorMessage = "يجب اختيار الفرع")]
         public int BranchId { get; set; }
         public int? CostCenterId { get; set; }
+        public IFormFile? Attachment { get; set; }
         public List<JournalEntryLineViewModel> Lines { get; set; } = new List<JournalEntryLineViewModel>();
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> CostCenters { get; set; } = new List<SelectListItem>();
@@ -45,6 +47,9 @@ namespace AccountingSystem.ViewModels
         public string? Notes { get; set; }
         public string Status { get; set; } = string.Empty;
         public string BranchName { get; set; } = string.Empty;
+        public string EntryType { get; set; } = string.Empty;
+        public string? AttachmentFileName { get; set; }
+        public string? AttachmentFilePath { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public string CreatedByName { get; set; } = string.Empty;

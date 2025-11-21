@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using AccountingSystem.Data;
+using AccountingSystem.Extensions;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -1277,7 +1278,7 @@ namespace AccountingSystem.Controllers
                     {
                         Key = group.Key,
                         Reference = string.IsNullOrWhiteSpace(firstEntry.Reference) ? null : firstEntry.Reference,
-                        TypeDisplay = GetTransactionType(firstEntry.Reference, firstEntry.Description),
+                        TypeDisplay = TransactionTypeHelper.GetTransactionType(firstEntry.Reference, firstEntry.Description),
                         Date = firstEntry.Date,
                         CreatedAt = firstEntry.CreatedAt,
                         Description = firstEntry.Description,
@@ -1704,7 +1705,7 @@ namespace AccountingSystem.Controllers
                                 TotalDebit = x.TotalDebit,
                                 TotalCredit = x.TotalCredit,
                                 CashImpactAmount = cashImpact,
-                                TransactionTypeName = GetTransactionType(x.Reference, x.Description),
+                                TransactionTypeName = TransactionTypeHelper.GetTransactionType(x.Reference, x.Description),
                                 Lines = linesForEntry
                             };
                         })
@@ -6139,7 +6140,7 @@ namespace AccountingSystem.Controllers
                             JournalEntryId = line.JournalEntryId,
                             JournalEntryNumber = line.JournalEntry.Number,
                             Reference = line.JournalEntry.Reference ?? string.Empty,
-                            MovementType = line.JournalEntry.Description,
+                            MovementType = TransactionTypeHelper.GetTransactionType(line.JournalEntry.Reference, line.JournalEntry.Description),
                             Description = line.Description ?? string.Empty,
                             BranchName = line.JournalEntry.Branch?.NameAr ?? string.Empty,
                             CreatedByName = line.JournalEntry.CreatedBy?.FullName ?? line.JournalEntry.CreatedBy?.UserName ?? string.Empty,
@@ -6193,78 +6194,6 @@ namespace AccountingSystem.Controllers
             }
 
             return long.TryParse(digits, out id);
-        }
-
-        private static string GetTransactionType(string? reference, string description)
-        {
-            if (string.IsNullOrWhiteSpace(reference))
-            {
-                return "قيد محاسبي يدوي";
-            }
-
-            var trimmed = reference.Trim();
-
-            if (trimmed.StartsWith("RCV:", StringComparison.OrdinalIgnoreCase))
-            {
-                return "سند قبض";
-            }
-
-            if (trimmed.StartsWith("DSBV:", StringComparison.OrdinalIgnoreCase))
-            {
-                return "سند صرف";
-            }
-
-            if (trimmed.StartsWith("سند مصاريف:", StringComparison.Ordinal))
-            {
-                return "سند مصاريف";
-            }
-
-            if (trimmed.StartsWith("سند دفع وكيل:", StringComparison.Ordinal))
-            {
-                return "سند دفع وكيل";
-            }
-
-            if (trimmed.StartsWith("SALPAY:", StringComparison.OrdinalIgnoreCase))
-            {
-                return "دفع راتب";
-            }
-
-            if (trimmed.StartsWith("EMPADV:", StringComparison.OrdinalIgnoreCase))
-            {
-                return "سلفة موظف";
-            }
-
-            if (trimmed.StartsWith("PR-", StringComparison.OrdinalIgnoreCase))
-            {
-                return "دفعة رواتب";
-            }
-
-            if (trimmed.StartsWith("CashBoxClosure:", StringComparison.OrdinalIgnoreCase))
-            {
-                return "إقفال صندوق";
-            }
-
-            if (trimmed.StartsWith("DriverInvoice:", StringComparison.OrdinalIgnoreCase))
-            {
-                return "فاتورة سائق";
-            }
-
-            if (trimmed.StartsWith("PaymenToBusiness:", StringComparison.OrdinalIgnoreCase))
-            {
-                return "دفعة بزنس";
-            }
-
-            if (trimmed.StartsWith("ASSET:", StringComparison.OrdinalIgnoreCase))
-            {
-                return "عملية أصل";
-            }
-
-            if (trimmed.StartsWith("PAYV:", StringComparison.OrdinalIgnoreCase))
-            {
-                return "سند نقدي";
-            }
-
-            return "حركة محاسبية";
         }
 
         private static string FormatAmount(decimal? value, string? currencyCode = null)

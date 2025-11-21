@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using AccountingSystem.Data;
+using AccountingSystem.Extensions;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
 using AccountingSystem.Services;
@@ -26,15 +27,17 @@ namespace AccountingSystem.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IJournalEntryService _journalEntryService;
+        private readonly IAttachmentStorageService _attachmentStorageService;
 
         private static readonly MethodInfo StringContainsMethod = typeof(string).GetMethod(nameof(string.Contains), new[] { typeof(string) })!;
         private static readonly MethodInfo StringStartsWithMethod = typeof(string).GetMethod(nameof(string.StartsWith), new[] { typeof(string) })!;
         private static readonly MethodInfo StringEndsWithMethod = typeof(string).GetMethod(nameof(string.EndsWith), new[] { typeof(string) })!;
 
-        public JournalEntriesController(ApplicationDbContext context, IJournalEntryService journalEntryService)
+        public JournalEntriesController(ApplicationDbContext context, IJournalEntryService journalEntryService, IAttachmentStorageService attachmentStorageService)
         {
             _context = context;
             _journalEntryService = journalEntryService;
+            _attachmentStorageService = attachmentStorageService;
         }
 
         private sealed class JournalEntryFilterParameters
@@ -1187,6 +1190,7 @@ namespace AccountingSystem.Controllers
                         DateFormatted = entry.Date.ToString("dd/MM/yyyy"),
                         MonthGroup = entry.Date.ToString("yyyy-MM"),
                         MonthGroupLabel = entry.Date.ToString("MMMM yyyy", arabicCulture),
+                        EntryType = TransactionTypeHelper.GetTransactionType(entry.Reference, entry.Description),
                         entry.Description,
                         entry.Reference,
                         Status = entry.Status.ToString(),
@@ -1256,17 +1260,18 @@ namespace AccountingSystem.Controllers
             worksheet.Cell(1, 2).Value = "التاريخ";
             worksheet.Cell(1, 3).Value = "الفرع";
             worksheet.Cell(1, 4).Value = "الوصف";
-            worksheet.Cell(1, 5).Value = "المرجع";
-            worksheet.Cell(1, 6).Value = "الحالة";
-            worksheet.Cell(1, 7).Value = "أنشئ بواسطة";
-            worksheet.Cell(1, 8).Value = "إجمالي المدين";
-            worksheet.Cell(1, 9).Value = "إجمالي الدائن";
-            worksheet.Cell(1, 10).Value = "عدد البنود";
+            worksheet.Cell(1, 5).Value = "نوع القيد";
+            worksheet.Cell(1, 6).Value = "المرجع";
+            worksheet.Cell(1, 7).Value = "الحالة";
+            worksheet.Cell(1, 8).Value = "أنشئ بواسطة";
+            worksheet.Cell(1, 9).Value = "إجمالي المدين";
+            worksheet.Cell(1, 10).Value = "إجمالي الدائن";
+            worksheet.Cell(1, 11).Value = "عدد البنود";
             worksheet.Row(1).Style.Font.Bold = true;
 
             worksheet.Column(2).Style.DateFormat.Format = "yyyy-MM-dd";
-            worksheet.Column(8).Style.NumberFormat.Format = "#,##0.00";
             worksheet.Column(9).Style.NumberFormat.Format = "#,##0.00";
+            worksheet.Column(10).Style.NumberFormat.Format = "#,##0.00";
 
             var row = 2;
             decimal totalDebit = 0m;
@@ -1276,17 +1281,19 @@ namespace AccountingSystem.Controllers
             {
                 var statusInfo = GetStatusInfo(entry.Status);
                 var createdBy = BuildCreatedBy(entry.CreatedByFirstName, entry.CreatedByLastName, entry.CreatedByUserName);
+                var entryType = TransactionTypeHelper.GetTransactionType(entry.Reference, entry.Description);
 
                 worksheet.Cell(row, 1).Value = entry.Number;
                 worksheet.Cell(row, 2).Value = entry.Date;
                 worksheet.Cell(row, 3).Value = entry.BranchName ?? string.Empty;
                 worksheet.Cell(row, 4).Value = entry.Description ?? string.Empty;
-                worksheet.Cell(row, 5).Value = entry.Reference ?? string.Empty;
-                worksheet.Cell(row, 6).Value = statusInfo.Text;
-                worksheet.Cell(row, 7).Value = createdBy;
-                worksheet.Cell(row, 8).Value = entry.TotalDebit;
-                worksheet.Cell(row, 9).Value = entry.TotalCredit;
-                worksheet.Cell(row, 10).Value = entry.LinesCount;
+                worksheet.Cell(row, 5).Value = entryType;
+                worksheet.Cell(row, 6).Value = entry.Reference ?? string.Empty;
+                worksheet.Cell(row, 7).Value = statusInfo.Text;
+                worksheet.Cell(row, 8).Value = createdBy;
+                worksheet.Cell(row, 9).Value = entry.TotalDebit;
+                worksheet.Cell(row, 10).Value = entry.TotalCredit;
+                worksheet.Cell(row, 11).Value = entry.LinesCount;
 
                 totalDebit += entry.TotalDebit;
                 totalCredit += entry.TotalCredit;
@@ -1296,11 +1303,11 @@ namespace AccountingSystem.Controllers
 
             if (row > 2)
             {
-                worksheet.Cell(row, 7).Value = "الإجمالي";
-                worksheet.Cell(row, 7).Style.Font.Bold = true;
-                worksheet.Cell(row, 8).Value = totalDebit;
-                worksheet.Cell(row, 9).Value = totalCredit;
-                worksheet.Range(row, 8, row, 9).Style.Font.Bold = true;
+                worksheet.Cell(row, 8).Value = "الإجمالي";
+                worksheet.Cell(row, 8).Style.Font.Bold = true;
+                worksheet.Cell(row, 9).Value = totalDebit;
+                worksheet.Cell(row, 10).Value = totalCredit;
+                worksheet.Range(row, 9, row, 10).Style.Font.Bold = true;
             }
 
             worksheet.Columns().AdjustToContents();
@@ -1536,6 +1543,8 @@ namespace AccountingSystem.Controllers
                 CostCenterId = line.CostCenterId
             }).ToList();
 
+            var attachmentResult = await _attachmentStorageService.SaveAsync(model.Attachment, "journal-entries");
+
             try
             {
                 await _journalEntryService.CreateJournalEntryAsync(
@@ -1546,7 +1555,9 @@ namespace AccountingSystem.Controllers
                     lines,
                     JournalEntryStatus.Draft,
                     model.Reference,
-                    model.Number);
+                    model.Number,
+                    attachmentFilePath: attachmentResult?.FilePath,
+                    attachmentFileName: attachmentResult?.FileName);
 
                 return RedirectToAction(nameof(Index));
             }
@@ -1988,6 +1999,9 @@ namespace AccountingSystem.Controllers
                 Notes = entry.Notes,
                 Status = entry.Status.ToString(),
                 BranchName = entry.Branch.NameAr,
+                EntryType = TransactionTypeHelper.GetTransactionType(entry.Reference, entry.Description),
+                AttachmentFileName = entry.AttachmentFileName,
+                AttachmentFilePath = entry.AttachmentFilePath,
                 CreatedAt = entry.CreatedAt,
                 UpdatedAt = entry.UpdatedAt,
                 CreatedByName = GetUserDisplayName(entry.CreatedBy),
