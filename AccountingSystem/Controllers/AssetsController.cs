@@ -25,19 +25,22 @@ namespace AccountingSystem.Controllers
         private readonly IJournalEntryService _journalEntryService;
         private readonly IAccountService _accountService;
         private readonly IAssetCostCenterService _assetCostCenterService;
+        private readonly RoadFnDbContext _roadContext;
 
         public AssetsController(
             ApplicationDbContext context,
             UserManager<User> userManager,
             IJournalEntryService journalEntryService,
             IAccountService accountService,
-            IAssetCostCenterService assetCostCenterService)
+            IAssetCostCenterService assetCostCenterService,
+            RoadFnDbContext roadContext)
         {
             _context = context;
             _userManager = userManager;
             _journalEntryService = journalEntryService;
             _accountService = accountService;
             _assetCostCenterService = assetCostCenterService;
+            _roadContext = roadContext;
         }
 
         [HttpPost]
@@ -667,6 +670,29 @@ namespace AccountingSystem.Controllers
                 .OrderBy(a => a.Name)
                 .ToListAsync();
 
+            var driverIds = assets
+                .Where(a => a.DriverId.HasValue)
+                .Select(a => a.DriverId!.Value)
+                .Distinct()
+                .ToList();
+
+            var driverLookup = new Dictionary<int, string>();
+            if (driverIds.Any())
+            {
+                driverLookup = await _roadContext.Drives
+                    .AsNoTracking()
+                    .Where(d => driverIds.Contains(d.Id))
+                    .Select(d => new
+                    {
+                        d.Id,
+                        Name = new[] { d.FirstName, d.SecoundName, d.FamilyName }
+                            .Where(p => !string.IsNullOrWhiteSpace(p))
+                            .DefaultIfEmpty($"سائق {d.Id}")
+                            .Aggregate(string.Empty, (acc, part) => string.IsNullOrEmpty(acc) ? part! : $"{acc} {part}")
+                    })
+                    .ToDictionaryAsync(d => d.Id, d => string.IsNullOrWhiteSpace(d.Name) ? $"سائق {d.Id}" : d.Name);
+            }
+
             var model = assets.Select(a => new AssetListViewModel
             {
                 Id = a.Id,
@@ -677,6 +703,10 @@ namespace AccountingSystem.Controllers
                 Notes = a.Notes,
                 OpeningBalance = a.OpeningBalance,
                 AccountId = a.AccountId,
+                AllowAssetExpenses = a.AllowAssetExpenses,
+                DriverName = a.DriverId.HasValue && driverLookup.TryGetValue(a.DriverId.Value, out var driverName)
+                    ? driverName
+                    : null,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
                 IsDepreciable = a.AssetType.IsDepreciable && !a.IsDisposed,
@@ -993,6 +1023,7 @@ namespace AccountingSystem.Controllers
                 AssetTypes = assetTypeSelection.SelectList,
                 AssetTypeOptions = assetTypeSelection.Options,
                 Suppliers = await GetSuppliersAsync(),
+                Drivers = await GetDriversAsync(),
                 DepreciationFrequencies = GetDepreciationFrequencySelectList(),
                 PurchaseDate = DateTime.Today
             };
@@ -1019,6 +1050,7 @@ namespace AccountingSystem.Controllers
             Account? capitalAccount = null;
             Account? supplierAccount = null;
             AssetType? assetType = null;
+            var drivers = await GetDriversAsync();
 
             if (ModelState.IsValid)
             {
@@ -1047,6 +1079,15 @@ namespace AccountingSystem.Controllers
                 {
                     ModelState.AddModelError(string.Empty, "يرجى اختيار حساب واحد للقيد: المورد أو رأس المال");
                 }
+
+                if (model.DriverId.HasValue)
+                {
+                    var driverExists = await _roadContext.Drives.AnyAsync(d => d.Id == model.DriverId.Value);
+                    if (!driverExists)
+                    {
+                        ModelState.AddModelError(nameof(model.DriverId), "السائق المحدد غير موجود");
+                    }
+                }
             }
 
             if (ModelState.IsValid && model.SupplierId.HasValue && (!model.PurchaseAmount.HasValue || model.PurchaseAmount.Value <= 0))
@@ -1057,6 +1098,15 @@ namespace AccountingSystem.Controllers
             if (ModelState.IsValid && model.PurchaseAmount.HasValue && model.PurchaseAmount.Value > 0 && !model.SupplierId.HasValue)
             {
                 ModelState.AddModelError(nameof(model.SupplierId), "حدد المورد المرتبط بقيمة الشراء");
+            }
+
+            if (ModelState.IsValid && model.DriverId.HasValue)
+            {
+                var driverExists = await _roadContext.Drives.AnyAsync(d => d.Id == model.DriverId.Value);
+                if (!driverExists)
+                {
+                    ModelState.AddModelError(nameof(model.DriverId), "السائق المحدد غير موجود");
+                }
             }
 
             if (ModelState.IsValid && model.CapitalAccountId.HasValue)
@@ -1176,6 +1226,7 @@ namespace AccountingSystem.Controllers
                 model.AssetTypeOptions = assetTypeSelection.Options;
                 model.DepreciationFrequencies = GetDepreciationFrequencySelectList(model.DepreciationFrequency);
                 model.Suppliers = await GetSuppliersAsync();
+                model.Drivers = drivers;
                 if (assetType != null && assetType.IsDepreciable && model.OriginalCost.HasValue)
                 {
                     model.OpeningBalance = model.OriginalCost.Value;
@@ -1243,6 +1294,8 @@ namespace AccountingSystem.Controllers
                     PurchaseDate = purchaseDate,
                     SupplierId = model.SupplierId,
                     PurchaseAmount = model.PurchaseAmount,
+                    AllowAssetExpenses = model.AllowAssetExpenses,
+                    DriverId = model.DriverId,
                     AccumulatedDepreciation = 0,
                     BookValue = bookValue
                 };
@@ -1303,6 +1356,7 @@ namespace AccountingSystem.Controllers
             model.AssetTypeOptions = selection.Options;
             model.DepreciationFrequencies = GetDepreciationFrequencySelectList(model.DepreciationFrequency);
             model.Suppliers = await GetSuppliersAsync();
+            model.Drivers = await GetDriversAsync();
             if (assetType != null && assetType.IsDepreciable && model.OriginalCost.HasValue)
             {
                 model.OpeningBalance = model.OriginalCost.Value;
@@ -1335,6 +1389,8 @@ namespace AccountingSystem.Controllers
                 OpeningBalance = asset.OpeningBalance,
                 AccountId = asset.AccountId,
                 AccountCode = asset.Account?.Code,
+                AllowAssetExpenses = asset.AllowAssetExpenses,
+                DriverId = asset.DriverId,
                 OriginalCost = asset.OriginalCost,
                 SalvageValue = asset.SalvageValue,
                 DepreciationPeriods = asset.DepreciationPeriods,
@@ -1346,7 +1402,8 @@ namespace AccountingSystem.Controllers
                 AssetTypes = assetTypeSelection.SelectList,
                 AssetTypeOptions = assetTypeSelection.Options,
                 DepreciationFrequencies = GetDepreciationFrequencySelectList(asset.DepreciationFrequency),
-                Suppliers = suppliers
+                Suppliers = suppliers,
+                Drivers = await GetDriversAsync()
             };
 
             return View(model);
@@ -1515,6 +1572,8 @@ namespace AccountingSystem.Controllers
                 asset.UpdatedAt = DateTime.Now;
                 asset.SupplierId = model.SupplierId;
                 asset.PurchaseAmount = model.PurchaseAmount;
+                asset.AllowAssetExpenses = model.AllowAssetExpenses;
+                asset.DriverId = model.DriverId;
 
                 if (assetType.IsDepreciable && model.OriginalCost.HasValue)
                 {
@@ -1587,6 +1646,7 @@ namespace AccountingSystem.Controllers
             model.AssetTypeOptions = assetTypeSelection.Options;
             model.DepreciationFrequencies = GetDepreciationFrequencySelectList(model.DepreciationFrequency);
             model.Suppliers = await GetSuppliersAsync();
+            model.Drivers = await GetDriversAsync();
             if (assetType != null && assetType.IsDepreciable && model.OriginalCost.HasValue)
             {
                 model.OpeningBalance = model.OriginalCost.Value;
@@ -1691,6 +1751,38 @@ namespace AccountingSystem.Controllers
                     Value = a.Id.ToString(),
                     Text = $"{a.Code} - {a.NameAr}"
                 }).ToListAsync();
+        }
+
+        private async Task<IEnumerable<SelectListItem>> GetDriversAsync()
+        {
+            return await _roadContext.Drives
+                .AsNoTracking()
+                .OrderBy(d => d.FirstName)
+                .ThenBy(d => d.SecoundName)
+                .Select(d => new SelectListItem
+                {
+                    Value = d.Id.ToString(),
+                    Text = GetDriverDisplayName(d)
+                }).ToListAsync();
+        }
+
+        private static string GetDriverDisplayName(Roadfn.Models.Drife driver)
+        {
+            var nameParts = new[] { driver.FirstName, driver.SecoundName, driver.FamilyName }
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .ToList();
+
+            if (nameParts.Any())
+            {
+                return string.Join(" ", nameParts);
+            }
+
+            if (!string.IsNullOrWhiteSpace(driver.Phone1))
+            {
+                return $"سائق {driver.Id} ({driver.Phone1})";
+            }
+
+            return $"سائق {driver.Id}";
         }
 
         private async Task<IEnumerable<SelectListItem>> GetSuppliersAsync()

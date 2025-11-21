@@ -61,6 +61,7 @@
                                         <th>اسم السائق</th>
                                         <th>الفرع</th>
                                         <th>الحساب</th>
+                                        <th>الأصول المرتبطة</th>
                                         <th class="text-end">إجمالي العائد (@Model.BaseCurrencyCode)</th>
                                     </tr>
                                 </thead>
@@ -80,13 +81,23 @@
                                                     @($"{row.AccountCode} - {row.AccountName}")
                                                 }
                                             </td>
+                                            <td>
+                                                @if (row.AssetNames.Any())
+                                                {
+                                                    <span>@row.AssetsDisplay</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">لا يوجد</span>
+                                                }
+                                            </td>
                                             <td class="text-end">@row.TotalRevenue.ToString("N2")</td>
                                         </tr>
                                     }
                                 </tbody>
                                 <tfoot class="table-secondary">
                                     <tr class="fw-bold">
-                                        <td colspan="3">الإجمالي</td>
+                                        <td colspan="4">الإجمالي</td>
                                         <td class="text-end">@Model.GrandTotal.ToString("N2")</td>
                                     </tr>
                                 </tfoot>
