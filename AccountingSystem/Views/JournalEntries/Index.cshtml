@@ -150,8 +150,8 @@
         };
 
         const permissions = {
-            canEdit: @canEdit.ToString().ToLower(),
-            canDelete: @canDelete.ToString().ToLower()
+            canEdit: @canEdit.ToString().ToLowerInvariant(),
+            canDelete: @canDelete.ToString().ToLowerInvariant()
         };
 
         const filterControls = {
