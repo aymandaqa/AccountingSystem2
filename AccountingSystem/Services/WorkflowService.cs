@@ -242,10 +242,12 @@ namespace AccountingSystem.Services
             var groupActions = action.WorkflowInstance.Actions
                 .Where(a => a.WorkflowStep.ParentStepId == action.WorkflowStep.ParentStepId)
                 .ToList();
-            var isOrGroup = groupActions.Any(a => a.WorkflowStep.Connector == WorkflowStepConnector.Or);
-            if (isOrGroup)
+            var orGroupActions = groupActions
+                .Where(a => a.WorkflowStep.Connector == WorkflowStepConnector.Or)
+                .ToList();
+            if (orGroupActions.Any(a => a.Id == action.Id))
             {
-                foreach (var sibling in groupActions.Where(a => a.Id != action.Id && a.Status == WorkflowActionStatus.Pending))
+                foreach (var sibling in orGroupActions.Where(a => a.Id != action.Id && a.Status == WorkflowActionStatus.Pending))
                 {
                     sibling.Status = WorkflowActionStatus.Skipped;
                     sibling.ActionedAt = DateTime.Now;
