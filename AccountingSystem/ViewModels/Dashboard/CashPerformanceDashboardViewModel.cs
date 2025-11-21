@@ -17,6 +17,8 @@ namespace AccountingSystem.ViewModels.Dashboard
 
         public IReadOnlyList<PaymentTransfer> PendingTransfers { get; set; } = new List<PaymentTransfer>();
 
+        public IReadOnlyList<PaymentTransfer> PendingIncomingTransfers { get; set; } = new List<PaymentTransfer>();
+
         public decimal TotalCustomerDuesOnRoad { get; set; }
 
         public decimal TotalCashWithDriverOnRoad { get; set; }
@@ -40,6 +42,8 @@ namespace AccountingSystem.ViewModels.Dashboard
         public bool HasDashboardAccounts => DashboardAccountTree.Any();
 
         public bool HasPendingTransfers => PendingTransfers.Any();
+
+        public bool HasPendingIncomingTransfers => PendingIncomingTransfers.Any();
 
         public string CurrentUserId { get; set; } = string.Empty;
     }
