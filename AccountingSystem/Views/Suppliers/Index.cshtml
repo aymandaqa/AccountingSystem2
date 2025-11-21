@@ -37,18 +37,18 @@
             <e-grid-editSettings allowAdding="false" allowDeleting="false" allowEditing="false"></e-grid-editSettings>
             <e-data-manager url="@dataUrl" adaptor="UrlAdaptor"></e-data-manager>
             <e-grid-columns>
-                <e-grid-column field="Id" isPrimaryKey="true" visible="false" width="40" allowEditing="false"></e-grid-column>
-                <e-grid-column field="Name" headerText="الاسم" width="180"></e-grid-column>
-                <e-grid-column field="Phone" headerText="التليفون" width="140"></e-grid-column>
-                <e-grid-column field="Email" headerText="البريد الإلكتروني" width="180"></e-grid-column>
-                <e-grid-column field="SupplierType" headerText="نوع المورد" width="140"></e-grid-column>
-                <e-grid-column field="Permissions" headerText="الصلاحيات" width="200"></e-grid-column>
-                <e-grid-column field="Branches" headerText="الفروع المسموح بها" width="200"></e-grid-column>
-                <e-grid-column field="CreatedBy" headerText="المستخدم" width="150"></e-grid-column>
-                <e-grid-column field="CreatedAt" headerText="وقت الإنشاء" type="datetime" format="yyyy-MM-dd HH:mm" width="160"></e-grid-column>
-                <e-grid-column field="Balance" headerText="رصيد المورد" textAlign="Right" format="N2" width="140"></e-grid-column>
-                <e-grid-column field="CurrencyCode" headerText="العملة" width="100"></e-grid-column>
-                <e-grid-column headerText="الإجراءات" textAlign="Center" width="180" template="#supplier-actions-template"></e-grid-column>
+                <e-grid-column field="Id" isPrimaryKey="true" visible="false" width="100%" allowEditing="false"></e-grid-column>
+                <e-grid-column field="Name" headerText="الاسم" width="100%"></e-grid-column>
+                <e-grid-column field="Phone" headerText="التليفون" width="100%"></e-grid-column>
+                <e-grid-column field="Email" headerText="البريد الإلكتروني" width="100%"></e-grid-column>
+                <e-grid-column field="SupplierType" headerText="نوع المورد" width="100%" "></e-grid-column>
+                <e-grid-column field="Permissions" headerText="الصلاحيات" width="100%"></e-grid-column>
+                <e-grid-column field="Branches" headerText="الفروع المسموح بها" width="100%"></e-grid-column>
+                <e-grid-column field="CreatedBy" headerText="المستخدم" width="100%"></e-grid-column>
+                <e-grid-column field="CreatedAt" headerText="وقت الإنشاء" type="datetime" format="yyyy-MM-dd HH:mm" width="100%"></e-grid-column>
+                <e-grid-column field="Balance" headerText="رصيد المورد" textAlign="Right" format="N2" width="100%"></e-grid-column>
+                <e-grid-column field="CurrencyCode" headerText="العملة" width="100%"></e-grid-column>
+                <e-grid-column headerText="الإجراءات" textAlign="Center" width="100%" template="#supplier-actions-template"></e-grid-column>
             </e-grid-columns>
         </ejs-grid>
     </div>
