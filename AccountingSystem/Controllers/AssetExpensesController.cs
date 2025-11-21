@@ -405,6 +405,8 @@ namespace AccountingSystem.Controllers
                 return Challenge();
             }
 
+            model.Date = DateTime.Now;
+
             var userBranchIds = await GetUserBranchIdsAsync(user.Id);
 
             var asset = await _context.Assets
