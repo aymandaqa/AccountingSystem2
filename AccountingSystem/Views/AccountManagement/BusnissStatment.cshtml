@@ -271,7 +271,7 @@
 </ejs-dialog>
 
 <script type="text/x-jsrender" id="ShipmentTrackingNo">
-    <div id="${ShipmentTrackingNo}" class="statustemp" style="color:#6610f2;font-weight: bold;" data-tracking="${ShipmentTrackingNo}" onclick='Shipdetails(${Id}, this)'>
+    <div id="${ShipmentTrackingNo}" class="statustemp" style="color:#6610f2;font-weight: bold;" data-id="${Id}" data-tracking="${ShipmentTrackingNo}">
         <button class="btn btn-primary btn-sm" type="button">${ShipmentTrackingNo}</button>
     </div>
 </script>
@@ -301,6 +301,16 @@
             $("#detailstab").html(data);
         };
     }
+
+    $(document).on('click', '.statustemp', function () {
+        var element = this;
+        var shipmentId = element.dataset ? element.dataset.id : null;
+        if (!shipmentId) {
+            return;
+        }
+
+        Shipdetails(shipmentId, element);
+    });
 
     function onfiltering(e) {
         var query = new ej.data.Query();
