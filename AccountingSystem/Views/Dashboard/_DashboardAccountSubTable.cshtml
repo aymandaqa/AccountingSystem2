@@ -1,3 +1,4 @@
+@using System
 @model IEnumerable<AccountingSystem.ViewModels.AccountTreeNodeViewModel>
 @{
     var baseCurrencyCode = ViewData["DashboardBaseCurrencyCode"] as string ?? string.Empty;
@@ -6,10 +7,10 @@
 @foreach (var node in Model)
 {
     var hasChildren = node.Children.Any();
-    var collapseId = $"dashboard-account-{node.Id}";
-    <tr class="align-middle">
-        <td>
-            <div class="d-flex align-items-start gap-2">
+    var collapseId = $"dashboard-account-{node.Id}-{Guid.NewGuid():N}";
+    <li class="dashboard-account-node">
+        <div class="d-flex align-items-start gap-3 flex-wrap flex-md-nowrap">
+            <div class="d-flex align-items-start gap-2 flex-grow-1">
                 @if (hasChildren)
                 {
                     <button type="button"
@@ -23,7 +24,7 @@
                 }
                 else
                 {
-                    <span class="dashboard-toggle-placeholder text-muted">
+                    <span class="dashboard-toggle-placeholder">
                         <i class="fas fa-circle"></i>
                     </span>
                 }
@@ -32,46 +33,42 @@
                     <div class="text-muted small">@node.CurrencyCode</div>
                 </div>
             </div>
-        </td>
-        <td class="text-end text-nowrap">
-            <span class="fw-semibold">@node.BalanceBase.ToString("N2")</span>
-            @if (!string.IsNullOrWhiteSpace(baseCurrencyCode))
-            {
-                <span class="text-muted">@baseCurrencyCode</span>
-            }
-        </td>
-        <td class="text-center">
-            @if (node.Id > 0)
-            {
-                <a class="btn btn-outline-primary btn-sm"
-                   asp-controller="Reports"
-                   asp-action="AccountStatement"
-                   asp-route-accountId="@node.Id"
-                   target="_blank"
-                   asp-require-permission="reports.accountstatement">
-                    <i class="fas fa-file-alt ms-1"></i> كشف حساب
-                </a>
-            }
-            else
-            {
-                <span class="text-muted">-</span>
-            }
-        </td>
-    </tr>
+            <div class="text-end" style="width: 180px;">
+                <div class="fw-semibold">@node.BalanceBase.ToString("N2")</div>
+                @if (!string.IsNullOrWhiteSpace(baseCurrencyCode))
+                {
+                    <div class="text-muted small">@baseCurrencyCode</div>
+                }
+            </div>
+            <div class="text-center" style="width: 150px;">
+                @if (node.Id > 0)
+                {
+                    <a class="btn btn-outline-primary btn-sm"
+                       asp-controller="Reports"
+                       asp-action="AccountStatement"
+                       asp-route-accountId="@node.Id"
+                       target="_blank"
+                       asp-require-permission="reports.accountstatement">
+                        <i class="fas fa-file-alt ms-1"></i> كشف حساب
+                    </a>
+                }
+                else
+                {
+                    <span class="text-muted">-</span>
+                }
+            </div>
+        </div>
 
-    if (hasChildren)
-    {
-        <tr class="collapse" id="@collapseId">
-            <td colspan="3" class="p-0 border-0">
-                <table class="table table-sm mb-0 dashboard-account-subtable">
-                    <tbody>
-                        @await Html.PartialAsync("_DashboardAccountSubTable", node.Children, new ViewDataDictionary(ViewData)
-                        {
-                            ["DashboardBaseCurrencyCode"] = baseCurrencyCode
-                        })
-                    </tbody>
-                </table>
-            </td>
-        </tr>
-    }
+        @if (hasChildren)
+        {
+            <div class="collapse dashboard-account-children" id="@collapseId">
+                <ul class="list-unstyled ms-4 ps-3 border-start">
+                    @await Html.PartialAsync("_DashboardAccountSubTable", node.Children, new ViewDataDictionary(ViewData)
+                    {
+                        ["DashboardBaseCurrencyCode"] = baseCurrencyCode
+                    })
+                </ul>
+            </div>
+        }
+    </li>
 }
