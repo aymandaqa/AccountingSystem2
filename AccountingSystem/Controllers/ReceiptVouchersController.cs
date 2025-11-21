@@ -278,6 +278,8 @@ namespace AccountingSystem.Controllers
             if (user == null)
                 return Challenge();
 
+            model.Date = DateTime.Now;
+
             if (user.PaymentBranchId == null)
             {
                 TempData["ErrorMessage"] = "لم يتم إعداد فرع الصندوق للمستخدم.";

@@ -299,6 +299,8 @@ namespace AccountingSystem.Controllers
             if (user == null || user.PaymentAccountId == null || user.PaymentBranchId == null)
                 return Challenge();
 
+            model.Date = DateTime.Now;
+
             var userBranchIds = await GetUserBranchIdsAsync(user.Id);
 
             if (!model.SupplierId.HasValue)
@@ -438,6 +440,8 @@ namespace AccountingSystem.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null || user.PaymentAccountId == null || user.PaymentBranchId == null)
                 return Challenge();
+
+            model.Date = DateTime.Now;
 
             ModelState.Remove(nameof(PaymentVoucher.SupplierId));
             ModelState.Remove(nameof(PaymentVoucher.AccountId));

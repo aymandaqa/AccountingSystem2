@@ -42,11 +42,7 @@
             <label class="form-label">عملة السند</label>
             <input type="text" class="form-control" id="currencyDisplay" readonly />
         </div>
-        <div class="col-md-6">
-            <label class="form-label">سعر الصرف</label>
-            <input asp-for="ExchangeRate" class="form-control" />
-            <span asp-validation-for="ExchangeRate" class="text-danger"></span>
-        </div>
+        <input asp-for="ExchangeRate" type="hidden" value="1" />
         <div class="col-md-6">
             <label class="form-label">المبلغ</label>
             <input asp-for="Amount" class="form-control" />
@@ -54,7 +50,7 @@
         </div>
         <div class="col-md-6">
             <label class="form-label">التاريخ</label>
-            <input asp-for="Date" type="date" class="form-control" />
+            <input asp-for="Date" type="datetime-local" class="form-control" readonly />
             <span asp-validation-for="Date" class="text-danger"></span>
         </div>
         <div class="col-md-6">
@@ -88,6 +84,14 @@
             const modalElement = document.getElementById('receiptVoucherConfirmModal');
             const summaryList = document.getElementById('receiptVoucherSummary');
             const confirmBtn = document.getElementById('receiptVoucherConfirmBtn');
+            const dateInput = document.getElementById('Date');
+
+            function setCurrentDateTime() {
+                if (!dateInput || dateInput.value) return;
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                dateInput.value = now.toISOString().slice(0, 16);
+            }
 
             function updatePaymentAccountInfo() {
                 const option = paymentAccountSelect.options[paymentAccountSelect.selectedIndex];
@@ -117,6 +121,8 @@
 
             supplierSelect.addEventListener('change', updateFromSupplier);
             paymentAccountSelect.addEventListener('change', updatePaymentAccountInfo);
+
+            setCurrentDateTime();
 
             if (supplierSelect.value) {
                 updateFromSupplier();
