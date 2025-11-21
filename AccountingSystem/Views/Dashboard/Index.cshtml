@@ -14,6 +14,56 @@
     var transferReturnUrl = Url.Action("Index", "Dashboard");
 }
 
+@if (Model.HasPendingIncomingTransfers)
+{
+    <div class="modal fade" id="incomingTransfersModal" tabindex="-1" aria-labelledby="incomingTransfersLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning-subtle">
+                    <h5 class="modal-title" id="incomingTransfersLabel">حوالات واردة بانتظار المعالجة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-4">يبدو أن لديك حوالات واردة قيد الانتظار. يرجى مراجعتها واستلامها لإغلاقها.</p>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">المرسل</th>
+                                    <th scope="col">الفرع المرسل</th>
+                                    <th scope="col" class="text-end">المبلغ</th>
+                                    <th scope="col">تاريخ الإنشاء</th>
+                                    <th scope="col" class="text-end">الإجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var transfer in Model.PendingIncomingTransfers)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">@(transfer.Sender?.FullName ?? transfer.SenderId)</td>
+                                        <td>@(transfer.FromBranch?.NameAr ?? "-")</td>
+                                        <td class="text-end">@transfer.Amount.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                        <td class="text-nowrap">@transfer.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                        <td class="text-end">
+                                            <a class="btn btn-primary btn-sm" asp-controller="Transfers" asp-action="Approve" asp-route-id="@transfer.Id" asp-route-accept="true" asp-route-returnUrl="@transferReturnUrl" asp-require-permission="@(canManageTransfers ? "transfers.manage" : "transfers.approve")">
+                                                <i class="fa fa-check ms-1"></i> استلام الحوالة
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">تجاهل</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 <div class="container-fluid py-4">
     @if (canWorkflowDefinitionsManage)
     {
@@ -448,6 +498,12 @@
                 target.addEventListener('show.bs.collapse', () => toggleIcon(button, true));
                 target.addEventListener('hide.bs.collapse', () => toggleIcon(button, false));
             });
+
+            const incomingTransfersModalElement = document.getElementById('incomingTransfersModal');
+            if (incomingTransfersModalElement) {
+                const modal = new bootstrap.Modal(incomingTransfersModalElement);
+                modal.show();
+            }
         });
     </script>
 }

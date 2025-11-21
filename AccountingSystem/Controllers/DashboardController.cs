@@ -54,6 +54,9 @@ namespace AccountingSystem.Controllers
                 var pendingTransfers = string.IsNullOrWhiteSpace(userId)
                     ? Array.Empty<PaymentTransfer>()
                     : await LoadPendingTransfersForUserAsync(userId);
+                var pendingIncomingTransfers = string.IsNullOrWhiteSpace(userId)
+                    ? Array.Empty<PaymentTransfer>()
+                    : await LoadIncomingPendingTransfersForUserAsync(userId);
                 var dashboardAccounts = await LoadDashboardAccountTreeAsync();
 
                 var viewModel = new CashPerformanceDashboardViewModel
@@ -62,6 +65,7 @@ namespace AccountingSystem.Controllers
                     MyPendingRequests = myPendingRequests,
                     PendingApprovals = pendingApprovals,
                     PendingTransfers = pendingTransfers,
+                    PendingIncomingTransfers = pendingIncomingTransfers,
                     CurrentUserId = userId,
                     TotalCustomerDuesOnRoad = records.Sum(r => r.CustomerDuesOnRoad),
                     TotalCashWithDriverOnRoad = records.Sum(r => r.CashWithDriverOnRoad),
@@ -130,6 +134,39 @@ namespace AccountingSystem.Controllers
             else
             {
                 query = query.Where(t => t.SenderId == userId || t.ReceiverId == userId);
+            }
+
+            return await query
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+        }
+
+        private async Task<IReadOnlyList<PaymentTransfer>> LoadIncomingPendingTransfersForUserAsync(string userId)
+        {
+            var user = await _userManager.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+            {
+                return Array.Empty<PaymentTransfer>();
+            }
+
+            var query = _context.PaymentTransfers
+                .AsNoTracking()
+                .Include(t => t.Sender)
+                .Include(t => t.FromBranch)
+                .Include(t => t.ToBranch)
+                .Where(t => t.Status == TransferStatus.Pending);
+
+            if (user.PaymentBranchId.HasValue)
+            {
+                var branchId = user.PaymentBranchId.Value;
+                query = query.Where(t => t.ToBranchId.HasValue && t.ToBranchId.Value == branchId);
+            }
+            else
+            {
+                query = query.Where(t => t.ReceiverId == userId);
             }
 
             return await query
