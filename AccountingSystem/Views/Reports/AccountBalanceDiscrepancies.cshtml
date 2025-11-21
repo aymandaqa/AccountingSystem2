@@ -19,6 +19,14 @@
             </span>
         </div>
         <div class="card-body">
+            @if (TempData["SuccessMessage"] is string successMessage)
+            {
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    @successMessage
+                </div>
+            }
+
             <div class="alert alert-info">
                 <div class="d-flex align-items-center">
                     <i class="fas fa-info-circle fa-lg me-2"></i>
@@ -77,6 +85,7 @@
                                 <th class="text-end">رصيد القيود</th>
                                 <th class="text-end">الفرق</th>
                                 <th class="text-end">الرصيد الافتتاحي</th>
+                                <th>إجراء</th>
                                 <th>القيود</th>
                             </tr>
                         </thead>
@@ -101,6 +110,16 @@
                                     <td class="text-end fw-bold @diffClass">@account.Difference.ToString("N2")</td>
                                     <td class="text-end">@account.OpeningBalance.ToString("N2")</td>
                                     <td>
+                                        <form asp-action="FixAccountBalance" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="accountId" value="@account.AccountId" />
+                                            <button type="submit" class="btn btn-outline-success btn-sm" onclick="return confirm('هل أنت متأكد من إصلاح رصيد الحساب ليطابق القيود المرحلة؟');">
+                                                <i class="fas fa-tools me-1"></i>
+                                                إصلاح الرصيد
+                                            </button>
+                                        </form>
+                                    </td>
+                                    <td>
                                         <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId" aria-expanded="false" aria-controls="@collapseId">
                                             <i class="fas fa-list me-1"></i>
                                             عرض القيود
@@ -108,7 +127,7 @@
                                     </td>
                                 </tr>
                                 <tr class="collapse bg-light" id="@collapseId">
-                                    <td colspan="8">
+                                    <td colspan="9">
                                         <div class="p-3 border rounded">
                                             <h6 class="fw-bold mb-3">
                                                 القيود المرحلة المرتبطة بالحساب

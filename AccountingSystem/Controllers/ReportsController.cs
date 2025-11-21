@@ -3317,6 +3317,47 @@ namespace AccountingSystem.Controllers
             return View(model);
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> FixAccountBalance(int accountId)
+        {
+            var account = await _context.Accounts
+                .FirstOrDefaultAsync(a => a.Id == accountId);
+
+            if (account == null)
+            {
+                return NotFound();
+            }
+
+            var totals = await _context.JournalEntryLines
+                .AsNoTracking()
+                .Where(l => l.AccountId == accountId && l.JournalEntry.Status == JournalEntryStatus.Posted)
+                .GroupBy(_ => 1)
+                .Select(g => new
+                {
+                    TotalDebit = g.Sum(l => l.DebitAmount),
+                    TotalCredit = g.Sum(l => l.CreditAmount)
+                })
+                .FirstOrDefaultAsync();
+
+            var totalDebit = totals?.TotalDebit ?? 0m;
+            var totalCredit = totals?.TotalCredit ?? 0m;
+
+            decimal ledgerBalance = account.OpeningBalance;
+            ledgerBalance += account.Nature == AccountNature.Debit
+                ? totalDebit - totalCredit
+                : totalCredit - totalDebit;
+
+            account.CurrentBalance = ledgerBalance;
+
+            _context.Accounts.Update(account);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "تم إصلاح رصيد الحساب ليتطابق مع القيود المرحلة.";
+
+            return RedirectToAction(nameof(AccountBalanceDiscrepancies));
+        }
+
         // GET: Reports/PendingTransactions
         [Authorize(Policy = "reports.pending")]
         public async Task<IActionResult> PendingTransactions(int? branchId, DateTime? fromDate, DateTime? toDate)
