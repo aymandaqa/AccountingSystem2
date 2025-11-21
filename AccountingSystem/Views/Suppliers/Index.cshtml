@@ -30,16 +30,12 @@
                   allowPaging="true"
                   allowSorting="true"
                   allowFiltering="true"
+                  toolbar="@(new[] { "Search" })"
                   dataBound="onSuppliersDataBound">
             <e-grid-pagesettings pageCount="5" pageSizes="true"></e-grid-pagesettings>
             <e-grid-filterSettings type="Excel" immediateModeDelay="100"></e-grid-filterSettings>
             <e-grid-editSettings allowAdding="false" allowDeleting="false" allowEditing="false"></e-grid-editSettings>
             <e-data-manager url="@dataUrl" adaptor="UrlAdaptor"></e-data-manager>
-            <e-grid-toolbar>
-                <e-grid-toolbarItems>
-                    <e-grid-toolbarItem name="Search"></e-grid-toolbarItem>
-                </e-grid-toolbarItems>
-            </e-grid-toolbar>
             <e-grid-columns>
                 <e-grid-column field="Id" isPrimaryKey="true" visible="false" width="40" allowEditing="false"></e-grid-column>
                 <e-grid-column field="Name" headerText="الاسم" width="180"></e-grid-column>
