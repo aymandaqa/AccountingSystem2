@@ -20,6 +20,15 @@
 </div>
 
 <div class="mb-3">
+    <label asp-for="ApprovalMode" class="form-label"></label>
+    <select asp-for="ApprovalMode" class="form-select" asp-items="Html.GetEnumSelectList<AccountingSystem.Models.Workflows.WorkflowApprovalMode>()"></select>
+    <div class="form-text">
+        <strong>الموافقة الخطية (Linear):</strong> السند يظهر لجميع المستخدمين الذين يملكون حد اعتماد يساوي أو يفوق مبلغ السند ويمكن لأي واحد منهم اعتماده مباشرة.<br />
+        <strong>الموافقة الهرمية (Hierarchy):</strong> يتم عرض السند لأدنى مستوى حد اعتماد مناسب ثم ينتقل تلقائياً للمستوى الأعلى بعد الموافقة.
+    </div>
+</div>
+
+<div class="mb-3">
     <label asp-for="Name" class="form-label"></label>
     <input asp-for="Name" class="form-control" />
     <span asp-validation-for="Name" class="text-danger"></span>
