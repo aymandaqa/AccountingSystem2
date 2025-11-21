@@ -58,15 +58,15 @@
 
 <script id="supplier-actions-template" type="text/x-template">
     <div class="btn-group btn-group-sm" role="group">
-        ${if(AccountId)}
-        <a class="btn btn-outline-success" href="/Reports/AccountStatement?accountId=${AccountId}" target="_blank" data-permission="statement" title="كشف الحساب">
+        ${if(accountId)}
+        <a class="btn btn-outline-success" href="/Reports/AccountStatement?accountId=${accountId}" target="_blank" data-permission="statement" title="كشف الحساب">
             <i class="fas fa-file-alt"></i>
         </a>
         ${/if}
-        <a class="btn btn-outline-warning" href="/Suppliers/Edit/${Id}" data-permission="edit" title="تعديل">
+        <a class="btn btn-outline-warning" href="/Suppliers/Edit/${id}" data-permission="edit" title="تعديل">
             <i class="fas fa-edit"></i>
         </a>
-        <button type="button" class="btn btn-outline-danger" data-permission="delete" onclick="deleteSupplier(${Id})" title="حذف">
+        <button type="button" class="btn btn-outline-danger" data-permission="delete" onclick="deleteSupplier(${id})" title="حذف">
             <i class="fas fa-trash"></i>
         </button>
     </div>
