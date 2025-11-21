@@ -609,3 +609,12 @@ body {
         width: calc(100vw - 2rem);
     }
 }
+
+/* Ensure Bootstrap modals appear above sidebar overlays and loading layers */
+.modal-backdrop {
+    z-index: 2000;
+}
+
+.modal {
+    z-index: 2005;
+}
