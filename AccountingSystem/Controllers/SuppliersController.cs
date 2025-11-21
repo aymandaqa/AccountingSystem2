@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ClosedXML.Excel;
+using Syncfusion.EJ2.Base;
 
 namespace AccountingSystem.Controllers
 {
@@ -42,6 +43,7 @@ namespace AccountingSystem.Controllers
                 .Include(s => s.SupplierBranches)
                     .ThenInclude(sb => sb.Branch)
                 .Include(s => s.SupplierType)
+                .Where(s => s.IsActive)
                 .AsQueryable();
 
             if (userBranchIds.Count > 0)
@@ -82,13 +84,19 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Suppliers
-        public async Task<IActionResult> Index(
-            string? search,
-            int? branchId,
-            int? supplierTypeId,
-            SupplierBalanceFilter balanceFilter = SupplierBalanceFilter.All,
-            int page = 1,
-            int pageSize = 10)
+        public async Task<IActionResult> Index()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Challenge();
+            }
+
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UrlDatasource([FromBody] DataManagerRequest dm)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -101,79 +109,84 @@ namespace AccountingSystem.Controllers
                 .Select(ub => ub.BranchId)
                 .ToListAsync();
 
-            var allowedPageSizes = new[] { 10, 25, 50, 100 };
-            if (!allowedPageSizes.Contains(pageSize))
-            {
-                pageSize = allowedPageSizes.First();
-            }
-
-            page = Math.Max(1, page);
-
-            var suppliersQuery = BuildSuppliersQuery(search, branchId, balanceFilter, userBranchIds, supplierTypeId);
-
-            var totalCount = await suppliersQuery.CountAsync();
-            var totalPages = pageSize > 0 ? (int)Math.Ceiling(totalCount / (double)pageSize) : 0;
-            if (totalPages > 0 && page > totalPages)
-            {
-                page = totalPages;
-            }
-
-            if (page <= 0)
-            {
-                page = 1;
-            }
-
-            var suppliers = await suppliersQuery
-                .OrderBy(s => s.NameAr)
-                .ThenBy(s => s.Id)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
+            var suppliers = await BuildSuppliersQuery(
+                    search: null,
+                    branchId: null,
+                    balanceFilter: SupplierBalanceFilter.All,
+                    userBranchIds: userBranchIds,
+                    supplierTypeId: null)
                 .ToListAsync();
 
-            var branchesQuery = _context.Branches.AsNoTracking();
-
-            if (userBranchIds.Count > 0)
+            var dataSource = suppliers.Select(s =>
             {
-                branchesQuery = branchesQuery.Where(b => userBranchIds.Contains(b.Id));
-            }
-            else if (user.PaymentBranchId.HasValue)
-            {
-                branchesQuery = branchesQuery.Where(b => b.Id == user.PaymentBranchId.Value);
-            }
+                var permissions = Enum.GetValues(typeof(SupplierAuthorization))
+                    .Cast<SupplierAuthorization>()
+                    .Where(a => a != SupplierAuthorization.None && s.AuthorizedOperations.HasFlag(a))
+                    .Select(a => a.GetDisplayName())
+                    .ToList();
 
-            var branches = await branchesQuery
-                .OrderBy(b => b.NameAr)
-                .Select(b => new SelectListItem
+                var branchNames = s.SupplierBranches != null && s.SupplierBranches.Any()
+                    ? s.SupplierBranches
+                        .Where(sb => sb.Branch != null)
+                        .Select(sb => !string.IsNullOrWhiteSpace(sb.Branch!.NameAr)
+                            ? sb.Branch!.NameAr
+                            : (sb.Branch!.NameEn ?? sb.Branch!.Code))
+                        .ToList()
+                    : new List<string>();
+
+                var createdByName = s.CreatedBy != null
+                    ? (!string.IsNullOrWhiteSpace(s.CreatedBy.FullName)
+                        ? s.CreatedBy.FullName
+                        : s.CreatedBy.UserName ?? string.Empty)
+                    : string.Empty;
+
+                return new SupplierGridItemViewModel
                 {
-                    Value = b.Id.ToString(),
-                    Text = string.IsNullOrWhiteSpace(b.NameAr) ? b.NameEn ?? b.Code : b.NameAr
-                })
-                .ToListAsync();
+                    Id = s.Id,
+                    Name = s.NameAr,
+                    Phone = string.IsNullOrWhiteSpace(s.Phone) ? "-" : s.Phone!,
+                    Email = string.IsNullOrWhiteSpace(s.Email) ? "-" : s.Email!,
+                    SupplierType = s.SupplierType?.Name ?? "-",
+                    Permissions = permissions.Count == 0 ? "-" : string.Join("، ", permissions),
+                    Branches = branchNames.Count == 0 ? "-" : string.Join("، ", branchNames),
+                    CreatedBy = string.IsNullOrWhiteSpace(createdByName) ? "-" : createdByName,
+                    CreatedAt = s.CreatedAt,
+                    Balance = s.Account != null ? s.Account.CurrentBalance * -1 : 0m,
+                    CurrencyCode = s.Account?.Currency?.Code ?? string.Empty,
+                    AccountId = s.AccountId
+                };
+            });
 
-            ViewBag.Branches = branches;
-            ViewBag.SelectedBranchId = branchId;
-            ViewBag.SelectedType = supplierTypeId;
-            ViewBag.SelectedBalanceFilter = balanceFilter;
-            ViewBag.PageSize = pageSize;
-            ViewBag.PageSizeOptions = allowedPageSizes;
-            ViewBag.UserBranchIds = userBranchIds;
+            var operation = new DataOperations();
 
-            ViewBag.SupplierTypes = await _context.SupplierTypes
-                .AsNoTracking()
-                .Where(t => t.IsActive)
-                .OrderBy(t => t.Name)
-                .ToListAsync();
-
-            var model = new PaginatedListViewModel<Supplier>
+            if (dm.Search != null && dm.Search.Count > 0)
             {
-                Items = suppliers,
-                TotalCount = totalCount,
-                PageIndex = page,
-                PageSize = pageSize,
-                SearchTerm = search
-            };
+                dataSource = operation.PerformSearching(dataSource, dm.Search);
+            }
 
-            return View(model);
+            if (dm.Where != null && dm.Where.Count > 0)
+            {
+                dataSource = operation.PerformFiltering(dataSource, dm.Where, dm.Where[0].Operator);
+            }
+
+            var count = dataSource.Count();
+
+            if (dm.Sorted != null && dm.Sorted.Count > 0)
+            {
+                dataSource = operation.PerformSorting(dataSource, dm.Sorted);
+            }
+
+            if (dm.Skip != 0)
+            {
+                dataSource = operation.PerformSkip(dataSource, dm.Skip);
+            }
+
+            if (dm.Take != 0)
+            {
+                dataSource = operation.PerformTake(dataSource, dm.Take);
+            }
+
+            return dm.RequiresCounts ? Json(new { result = dataSource, count }) : Json(dataSource);
         }
 
         [HttpGet]

@@ -549,6 +549,18 @@ namespace AccountingSystem.Controllers
                 (_context.Accounts.Find(model.ParentId.Value)?.Level ?? 0) + 1 : 1;
             account.CurrencyId = model.CurrencyId;
 
+            if (isDeactivating)
+            {
+                var linkedSuppliers = await _context.Suppliers
+                    .Where(s => s.AccountId == account.Id && s.IsActive)
+                    .ToListAsync();
+
+                foreach (var supplier in linkedSuppliers)
+                {
+                    supplier.IsActive = false;
+                }
+            }
+
             await _context.SaveChangesAsync();
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 return Json(new { success = true });
