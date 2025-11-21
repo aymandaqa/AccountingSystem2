@@ -18,7 +18,7 @@
                     </h4>
                 </div>
                 <div class="card-body">
-                    <form asp-action="Create" method="post" id="journalEntryForm">
+                    <form asp-action="Create" method="post" id="journalEntryForm" enctype="multipart/form-data">
                         <div class="row mb-3">
                             <div class="col-md-3">
                                 <label asp-for="Number" class="form-label">رقم القيد:</label>
@@ -27,7 +27,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label asp-for="Date" class="form-label">التاريخ:</label>
-                                <input asp-for="Date" type="date" class="form-control" />
+                                <input asp-for="Date" type="datetime-local" class="form-control" asp-format="{0:yyyy-MM-ddTHH:mm}" />
                                 <span asp-validation-for="Date" class="text-danger"></span>
                             </div>
                             <div class="col-md-3">
@@ -48,6 +48,18 @@
                                 <label asp-for="Reference" class="form-label">المرجع:</label>
                                 <input asp-for="Reference" class="form-control" placeholder="رقم الفاتورة أو المرجع" />
                                 <span asp-validation-for="Reference" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label class="form-label">نوع القيد:</label>
+                                <input type="text" class="form-control" value="قيد يدوي" readonly />
+                            </div>
+                            <div class="col-md-9">
+                                <label asp-for="Attachment" class="form-label">المرفق (اختياري):</label>
+                                <input asp-for="Attachment" type="file" class="form-control" accept="image/*,.pdf,.doc,.docx" />
+                                <span asp-validation-for="Attachment" class="text-danger"></span>
                             </div>
                         </div>
 

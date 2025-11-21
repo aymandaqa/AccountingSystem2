@@ -23,6 +23,12 @@ namespace AccountingSystem.Models
         [StringLength(1000)]
         public string? Notes { get; set; }
 
+        [StringLength(260)]
+        public string? AttachmentFileName { get; set; }
+
+        [StringLength(500)]
+        public string? AttachmentFilePath { get; set; }
+
         public decimal TotalDebit { get; set; } = 0;
 
         public decimal TotalCredit { get; set; } = 0;

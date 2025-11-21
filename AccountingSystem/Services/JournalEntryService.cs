@@ -32,7 +32,9 @@ namespace AccountingSystem.Services
             JournalEntryStatus status,
             string? reference = null,
             string? number = null,
-            string? approvedById = null)
+            string? approvedById = null,
+            string? attachmentFilePath = null,
+            string? attachmentFileName = null)
         {
             if (lines == null || !lines.Any())
                 throw new System.ArgumentException("Entry must contain at least one line", nameof(lines));
@@ -115,6 +117,8 @@ namespace AccountingSystem.Services
                     reference,
                     number,
                     approvedById,
+                    attachmentFilePath,
+                    attachmentFileName,
                     totalDebit,
                     totalCredit);
             }
@@ -137,6 +141,8 @@ namespace AccountingSystem.Services
                         reference,
                         number,
                         approvedById,
+                        attachmentFilePath,
+                        attachmentFileName,
                         totalDebit,
                         totalCredit);
 
@@ -264,6 +270,8 @@ namespace AccountingSystem.Services
             string? reference,
             string? number,
             string? approvedById,
+            string? attachmentFilePath,
+            string? attachmentFileName,
             decimal totalDebit,
             decimal totalCredit)
         {
@@ -281,7 +289,9 @@ namespace AccountingSystem.Services
                 TotalCredit = totalCredit,
                 Status = status,
                 ApprovedById = approvedById,
-                ApprovedAt = approvedById != null ? System.DateTime.Now : null
+                ApprovedAt = approvedById != null ? System.DateTime.Now : null,
+                AttachmentFileName = attachmentFileName,
+                AttachmentFilePath = attachmentFilePath
             };
 
             foreach (var line in lineItems)

@@ -50,7 +50,7 @@
                             <strong>رقم القيد:</strong> @Model.Number
                         </div>
                         <div class="col-md-3">
-                            <strong>التاريخ:</strong> @Model.Date.ToString("dd/MM/yyyy")
+                            <strong>التاريخ:</strong> @Model.Date.ToString("dd/MM/yyyy HH:mm")
                         </div>
                         <div class="col-md-3">
                             <strong>الفرع:</strong> @Model.BranchName
@@ -74,6 +74,25 @@
                                 default:
                                     <span class="badge bg-secondary">@Model.Status</span>
                                     break;
+                            }
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>نوع القيد:</strong>
+                            <span class="ms-1">@Model.EntryType</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>المرفق:</strong>
+                            @if (!string.IsNullOrWhiteSpace(Model.AttachmentFilePath))
+                            {
+                                var attachmentText = string.IsNullOrWhiteSpace(Model.AttachmentFileName) ? "عرض المرفق" : Model.AttachmentFileName;
+                                <a class="ms-1" href="@Url.ContentFromAttachmentPath(Model.AttachmentFilePath)" target="_blank" rel="noopener">@attachmentText</a>
+                            }
+                            else
+                            {
+                                <span class="text-muted ms-1">لا يوجد</span>
                             }
                         </div>
                     </div>
