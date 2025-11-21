@@ -117,10 +117,10 @@ namespace AccountingSystem.Services
             await NotifyUnreadCountsAsync(userId, cancellationToken);
         }
 
-        public async Task MarkWorkflowActionNotificationsAsReadAsync(int workflowActionId, string userId, CancellationToken cancellationToken = default)
+        public async Task MarkWorkflowActionNotificationsAsReadAsync(int workflowActionId, CancellationToken cancellationToken = default)
         {
             var notifications = await _context.Notifications
-                .Where(n => n.WorkflowActionId == workflowActionId && n.UserId == userId && !n.IsRead)
+                .Where(n => n.WorkflowActionId == workflowActionId && !n.IsRead)
                 .ToListAsync(cancellationToken);
 
             if (notifications.Count == 0)
@@ -135,10 +135,18 @@ namespace AccountingSystem.Services
 
             foreach (var notification in notifications)
             {
-                await _hubContext.Clients.User(userId).SendAsync("NotificationMarkedAsRead", notification.Id, cancellationToken);
+                await _hubContext.Clients.User(notification.UserId).SendAsync("NotificationMarkedAsRead", notification.Id, cancellationToken);
             }
 
-            await NotifyUnreadCountsAsync(userId, cancellationToken);
+            var affectedUsers = notifications
+                .Select(n => n.UserId)
+                .Distinct()
+                .ToList();
+
+            foreach (var affectedUser in affectedUsers)
+            {
+                await NotifyUnreadCountsAsync(affectedUser, cancellationToken);
+            }
         }
 
         public async Task MarkAllAsReadAsync(string userId, CancellationToken cancellationToken = default)

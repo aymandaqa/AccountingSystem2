@@ -232,7 +232,7 @@ namespace AccountingSystem.Services
             action.ActionedAt = DateTime.Now;
             action.Notes = notes;
 
-            await _notificationService.MarkWorkflowActionNotificationsAsReadAsync(action.Id, userId, cancellationToken);
+            await _notificationService.MarkWorkflowActionNotificationsAsReadAsync(action.Id, cancellationToken);
 
             if (!approve)
             {

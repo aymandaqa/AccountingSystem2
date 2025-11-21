@@ -9,7 +9,7 @@ namespace AccountingSystem.Services
     {
         Task CreateNotificationAsync(Notification notification, CancellationToken cancellationToken = default);
         Task CreateNotificationsAsync(IEnumerable<Notification> notifications, CancellationToken cancellationToken = default);
-        Task MarkWorkflowActionNotificationsAsReadAsync(int workflowActionId, string userId, CancellationToken cancellationToken = default);
+        Task MarkWorkflowActionNotificationsAsReadAsync(int workflowActionId, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<Notification>> GetRecentNotificationsAsync(string userId, int count = 5, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<Notification>> GetRecentWorkflowNotificationsAsync(string userId, int count = 5, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<Notification>> GetRecentLoginNotificationsAsync(string userId, int count = 5, CancellationToken cancellationToken = default);
