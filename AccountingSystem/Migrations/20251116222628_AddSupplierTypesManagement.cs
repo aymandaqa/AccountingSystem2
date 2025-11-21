@@ -13,11 +13,29 @@ namespace AccountingSystem.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.RenameColumn(
-                name: "Type",
-                schema: "dbo",
-                table: "Suppliers",
-                newName: "SupplierTypeId");
+            // In some environments the old "Type" column might have already been removed or renamed,
+            // so guard the rename to avoid the SQL Server ambiguity error.
+            migrationBuilder.Sql(
+                @"IF COL_LENGTH('dbo.Suppliers', 'Type') IS NOT NULL AND COL_LENGTH('dbo.Suppliers', 'SupplierTypeId') IS NULL
+BEGIN
+    EXEC sp_rename N'[dbo].[Suppliers].[Type]', N'SupplierTypeId', 'COLUMN';
+END");
+
+            // Ensure the SupplierTypeId column exists before altering it (for databases where Type never existed).
+            migrationBuilder.Sql(
+                @"IF COL_LENGTH('dbo.Suppliers', 'SupplierTypeId') IS NULL
+BEGIN
+    ALTER TABLE [dbo].[Suppliers]
+    ADD [SupplierTypeId] int NOT NULL CONSTRAINT DF_Suppliers_SupplierTypeId DEFAULT 2;
+    -- Remove the default constraint to let EF handle defaults below
+    DECLARE @df_name nvarchar(128);
+    SELECT @df_name = df.name
+    FROM sys.default_constraints df
+    INNER JOIN sys.columns c ON c.default_object_id = df.object_id
+    INNER JOIN sys.tables t ON t.object_id = c.object_id
+    WHERE t.name = 'Suppliers' AND c.name = 'SupplierTypeId';
+    IF @df_name IS NOT NULL EXEC('ALTER TABLE [dbo].[Suppliers] DROP CONSTRAINT [' + @df_name + ']');
+END");
 
             migrationBuilder.AlterColumn<int>(
                 name: "SupplierTypeId",
@@ -116,11 +134,11 @@ namespace AccountingSystem.Migrations
                 keyColumn: "Id",
                 keyValue: 117);
 
-            migrationBuilder.RenameColumn(
-                name: "SupplierTypeId",
-                schema: "dbo",
-                table: "Suppliers",
-                newName: "Type");
+            migrationBuilder.Sql(
+                @"IF COL_LENGTH('dbo.Suppliers', 'Type') IS NULL AND COL_LENGTH('dbo.Suppliers', 'SupplierTypeId') IS NOT NULL
+BEGIN
+    EXEC sp_rename N'[dbo].[Suppliers].[SupplierTypeId]', N'Type', 'COLUMN';
+END");
         }
     }
 }
