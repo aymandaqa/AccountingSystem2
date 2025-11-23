@@ -47,8 +47,11 @@ namespace AccountingSystem.Services
 
                 foreach (var line in targetLines)
                 {
-                    var desiredDebit = candidate.ShPrice < 0 ? Math.Abs(candidate.ShPrice) : 0m;
-                    var desiredCredit = candidate.ShPrice > 0 ? candidate.ShPrice : 0m;
+                    // Payments to suppliers should debit their liability account (210101) and credit
+                    // the cash/bank account. Reverse the orientation when the amount is negative
+                    // (e.g., refund/adjustment).
+                    var desiredDebit = candidate.ShPrice > 0 ? candidate.ShPrice : 0m;
+                    var desiredCredit = candidate.ShPrice < 0 ? Math.Abs(candidate.ShPrice) : 0m;
 
                     var needsUpdate = line.DebitAmount != desiredDebit || line.CreditAmount != desiredCredit;
 
@@ -76,8 +79,8 @@ namespace AccountingSystem.Services
                     var counterpartAmount = desiredDebit + desiredCredit;
 
                     var counterpartNeedsUpdate = candidate.ShPrice < 0
-                        ? counterpart.CreditAmount != counterpartAmount || counterpart.DebitAmount != 0
-                        : counterpart.DebitAmount != counterpartAmount || counterpart.CreditAmount != 0;
+                        ? counterpart.DebitAmount != counterpartAmount || counterpart.CreditAmount != 0
+                        : counterpart.CreditAmount != counterpartAmount || counterpart.DebitAmount != 0;
 
                     if (!counterpartNeedsUpdate)
                     {
@@ -86,13 +89,13 @@ namespace AccountingSystem.Services
 
                     if (candidate.ShPrice < 0)
                     {
-                        counterpart.CreditAmount = counterpartAmount;
-                        counterpart.DebitAmount = 0;
+                        counterpart.DebitAmount = counterpartAmount;
+                        counterpart.CreditAmount = 0;
                     }
                     else
                     {
-                        counterpart.DebitAmount = counterpartAmount;
-                        counterpart.CreditAmount = 0;
+                        counterpart.CreditAmount = counterpartAmount;
+                        counterpart.DebitAmount = 0;
                     }
 
                     updatedLines++;
