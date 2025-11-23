@@ -19,13 +19,13 @@ namespace AccountingSystem.Services
         public async Task<int> FixBusinessPaymentEntriesAsync(DateTime startDate)
         {
             var candidates = await (from w in _roadContext.RPTPaymentHistoryUsers
-                                    join h in _roadContext.BisnessUserPaymentHeader on w.Id equals h.Id
-                                    join d in _roadContext.BisnessUserPaymentDetails on w.Id equals d.HeaderId
+                                    join h in _roadContext.BisnessUserPaymentHeader on w.ID equals h.Id
+                                    join d in _roadContext.BisnessUserPaymentDetails on w.ID equals d.HeaderId
                                     join s in _roadContext.Shipments on d.ShipmentId equals s.Id
-                                    where h.PaymentDate >= startDate
+                                    where h.PaymentDate >= startDate && !s.ShipmentTrackingNo.EndsWith("ex")
                                     select new
                                     {
-                                        PaymentId = w.Id,
+                                        PaymentId = w.ID,
                                         s.ShipmentTrackingNo,
                                         ShPrice = (s.ShipmentTotal ?? 0) - (s.ShipmentFees ?? 0) - (s.ShipmentExtraFees ?? 0)
                                     })
@@ -40,7 +40,7 @@ namespace AccountingSystem.Services
                     .Include(l => l.JournalEntry)
                     .Where(l => l.Reference == candidate.PaymentId.ToString()
                         && l.Description != null
-                        && l.Description.Contains(candidate.ShipmentTrackingNo ?? string.Empty)
+                        && l.Description.Contains(candidate.ShipmentTrackingNo ?? string.Empty) && !l.Description.Contains(candidate.ShipmentTrackingNo + "_ex" ?? string.Empty)
                         && l.Description.Contains("دفع ذمة مورد")
                         && l.Account.Code.StartsWith("210101"))
                     .ToListAsync();

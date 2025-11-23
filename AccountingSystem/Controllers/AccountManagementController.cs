@@ -415,8 +415,8 @@ namespace Roadfn.Controllers
             return View();
         }
 
-        [HttpPost]
-        [Authorize(Policy = "accountmanagement.busnissstatment")]
+        [HttpGet]
+        //[Authorize(Policy = "accountmanagement.busnissstatment")]
         public async Task<IActionResult> FixBusinessPaymentEntries(DateTime? fromDate)
         {
             var startDate = fromDate?.Date ?? DateTime.Today.AddDays(-1);
