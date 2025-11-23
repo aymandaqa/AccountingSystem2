@@ -47,6 +47,16 @@
             }
             else
             {
+                <div class="d-flex justify-content-end mb-3">
+                    <form asp-action="FixAllAccountBalances" method="post" onsubmit="return confirm('هل تريد إصلاح أرصدة جميع الحسابات لتتطابق مع القيود المرحلة؟');">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-tools me-1"></i>
+                            إصلاح الكل
+                        </button>
+                    </form>
+                </div>
+
                 <div class="row g-3 mb-4">
                     <div class="col-sm-6 col-lg-3">
                         <div class="border rounded p-3 h-100 text-center">
