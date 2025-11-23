@@ -3359,6 +3359,66 @@ namespace AccountingSystem.Controllers
             return RedirectToAction(nameof(AccountBalanceDiscrepancies));
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> FixAllAccountBalances()
+        {
+            const decimal tolerance = 0.01m;
+
+            var postedTotals = await _context.JournalEntryLines
+                .AsNoTracking()
+                .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted)
+                .GroupBy(l => l.AccountId)
+                .Select(g => new
+                {
+                    AccountId = g.Key,
+                    TotalDebit = g.Sum(l => l.DebitAmount),
+                    TotalCredit = g.Sum(l => l.CreditAmount)
+                })
+                .ToDictionaryAsync(g => g.AccountId);
+
+            var accounts = await _context.Accounts
+                .OrderBy(a => a.Code)
+                .ToListAsync();
+
+            var fixedCount = 0;
+
+            foreach (var account in accounts)
+            {
+                postedTotals.TryGetValue(account.Id, out var totals);
+
+                var totalDebit = totals?.TotalDebit ?? 0m;
+                var totalCredit = totals?.TotalCredit ?? 0m;
+
+                decimal ledgerBalance = account.OpeningBalance;
+                ledgerBalance += account.Nature == AccountNature.Debit
+                    ? totalDebit - totalCredit
+                    : totalCredit - totalDebit;
+
+                var difference = account.CurrentBalance - ledgerBalance;
+
+                if (Math.Abs(difference) < tolerance)
+                {
+                    continue;
+                }
+
+                account.CurrentBalance = ledgerBalance;
+                fixedCount++;
+            }
+
+            if (fixedCount > 0)
+            {
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = $"تم إصلاح أرصدة {fixedCount} حساب/حسابات لتتطابق مع القيود المرحلة.";
+            }
+            else
+            {
+                TempData["SuccessMessage"] = "لا توجد فروقات تحتاج إلى إصلاح.";
+            }
+
+            return RedirectToAction(nameof(AccountBalanceDiscrepancies));
+        }
+
         // GET: Reports/PendingTransactions
         [Authorize(Policy = "reports.pending")]
         public async Task<IActionResult> PendingTransactions(int? branchId, DateTime? fromDate, DateTime? toDate)
