@@ -649,7 +649,7 @@ namespace Roadfn.Controllers
                                        ShipmentExtraFees = sh.ShipmentExtraFees,
                                        ShipmentFees = sh.ShipmentFees,
                                        ShipmentContains = sh.ShipmentContains,
-                                       PaidAmountFromShipmentFees = sh.PaidAmountFromShipmentFees,
+                                       PaidAmountFromShipmentFees = Convert.ToDecimal(sh.PaidAmountFromShipmentFees),
                                        Alert = sh.Alert,
                                        sh.IUser
                                    })
@@ -1117,9 +1117,9 @@ namespace Roadfn.Controllers
 
 
                     var tot = sh.ShipmentPrice;
-                    if (sh.PaidAmountFromShipmentFees > 0)
+                    if (Convert.ToDecimal(sh.PaidAmountFromShipmentFees) > 0)
                     {
-                        tot = sh.PaidAmountFromShipmentFees * -1;
+                        tot = Convert.ToDecimal(sh.PaidAmountFromShipmentFees) * -1;
                     }
 
                     #region CustomerAccounttxn txn
@@ -1649,11 +1649,11 @@ namespace Roadfn.Controllers
             var tot = shipmentTotals - shipmentFees - listpay.Sum(t => t.ShipmentExtraFees);
             if (tot > 0)
             {
-                tot = tot - listpay.Sum(t => t.PaidAmountFromShipmentFees);
+                tot = tot - listpay.Sum(t => Convert.ToDecimal(t.PaidAmountFromShipmentFees));
             }
             else
             {
-                tot = tot + listpay.Sum(t => t.PaidAmountFromShipmentFees);
+                tot = tot + listpay.Sum(t => Convert.ToDecimal(t.PaidAmountFromShipmentFees));
 
             }
 
@@ -1730,11 +1730,11 @@ namespace Roadfn.Controllers
                 var tot1 = sh.ShipmentTotal - sh.ShipmentFees - sh.ShipmentExtraFees;
                 if (tot1 > 0)
                 {
-                    tot1 = tot1 - sh.PaidAmountFromShipmentFees;
+                    tot1 = tot1 - Convert.ToDecimal(sh.PaidAmountFromShipmentFees);
                 }
                 else
                 {
-                    tot1 = tot1 + sh.PaidAmountFromShipmentFees;
+                    tot1 = tot1 + Convert.ToDecimal(sh.PaidAmountFromShipmentFees);
 
                 }
 
