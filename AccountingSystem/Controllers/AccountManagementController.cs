@@ -30,7 +30,8 @@ namespace Roadfn.Controllers
         private readonly IJournalEntryService _journalEntryService;
         private readonly IAccountService _accountService;
         private readonly UserManager<User> _userManager;
-        public AccountManagementController(RoadFnDbContext context, UserManager<User> userManager, IWebHostEnvironment env, IConfiguration iConfig, IJournalEntryService journalEntryService, IAccountService accountService, ApplicationDbContext accontext)
+        private readonly BusinessPaymentReconciliationService _businessPaymentReconciliationService;
+        public AccountManagementController(RoadFnDbContext context, UserManager<User> userManager, IWebHostEnvironment env, IConfiguration iConfig, IJournalEntryService journalEntryService, IAccountService accountService, ApplicationDbContext accontext, BusinessPaymentReconciliationService businessPaymentReconciliationService)
         {
             _context = context;
             _env = env;
@@ -39,6 +40,7 @@ namespace Roadfn.Controllers
             _accountService = accountService;
             _accontext = accontext;
             _userManager = userManager;
+            _businessPaymentReconciliationService = businessPaymentReconciliationService;
 
         }
 
@@ -411,6 +413,15 @@ namespace Roadfn.Controllers
             var br = user.BusinessAccountBranchIds.Split(",");
             ViewBag.CompanyBranches = await _context.CompanyBranches.Where(t => br.Contains(t.Id.ToString())).ToListAsync();
             return View();
+        }
+
+        [HttpPost]
+        [Authorize(Policy = "accountmanagement.busnissstatment")]
+        public async Task<IActionResult> FixBusinessPaymentEntries(DateTime? fromDate)
+        {
+            var startDate = fromDate?.Date ?? DateTime.Today.AddDays(-1);
+            var updatedCount = await _businessPaymentReconciliationService.FixBusinessPaymentEntriesAsync(startDate);
+            return Ok(new { updated = updatedCount });
         }
 
         public async Task<IActionResult> UrlDatasourceRPTPaymentHistoryDriver([FromBody] DataManagerRequest dm, DateTime? fromDate, DateTime? toDate, int CompanyBranches)
