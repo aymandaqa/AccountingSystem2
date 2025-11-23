@@ -113,6 +113,7 @@ builder.Services.AddScoped<IAssetCostCenterService, AssetCostCenterService>();
 builder.Services.AddScoped<IAssetDepreciationService, AssetDepreciationService>();
 builder.Services.AddScoped<IUserSessionService, UserSessionService>();
 builder.Services.AddScoped<IAttachmentStorageService, AttachmentStorageService>();
+builder.Services.AddScoped<BusinessPaymentReconciliationService>();
 builder.Services.AddSignalR();
 
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
