@@ -69,7 +69,7 @@
                         <option value="">كل الحسابات المخصصة للمستخدمين</option>
                         @foreach (var account in Model.Accounts)
                         {
-                            <option value="@account.Value" @(account.Selected ? "selected" : string.Empty)>@account.Text</option>
+                            <option value="@account.Value" selected="@account.Selected">@account.Text</option>
                         }
                     </select>
                 </div>
