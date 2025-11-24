@@ -49,6 +49,17 @@ namespace AccountingSystem.Services
                 .Distinct()
                 .ToList();
 
+            var approverUserIds = actions
+                .Select(a => a.WorkflowStep.ApproverUserId)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Select(id => id!)
+                .Distinct()
+                .ToList();
+
+            var allUserIds = actionUserIds
+                .Union(approverUserIds)
+                .ToList();
+
             var workflowStepBranches = actions
                 .Select(a => a.WorkflowStep.BranchId)
                 .Where(id => id.HasValue)
@@ -57,7 +68,7 @@ namespace AccountingSystem.Services
                 .ToList();
 
             var userNames = await _context.Users
-                .Where(u => actionUserIds.Contains(u.Id))
+                .Where(u => allUserIds.Contains(u.Id))
                 .Select(u => new { u.Id, Name = (u.FirstName + " " + u.LastName).Trim() })
                 .ToDictionaryAsync(u => u.Id, u => string.IsNullOrWhiteSpace(u.Name) ? u.Id : u.Name, cancellationToken);
 
