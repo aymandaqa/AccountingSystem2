@@ -6380,7 +6380,7 @@ namespace AccountingSystem.Controllers
         {
             var baseCurrency = await _context.Currencies.FirstAsync(c => c.IsBase);
             var accounts = await _context.Accounts
-                .Where(a => a.CanPostTransactions)
+                .Where(a => a.CanPostTransactions && a.IsActive)
                 .Select(a => new SelectListItem
                 {
                     Value = a.Id.ToString(),
