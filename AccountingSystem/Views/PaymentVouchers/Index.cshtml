@@ -5,7 +5,7 @@
 @using System.Linq
 
 @{
-    ViewData["Title"] = "سندات الدفع";
+    ViewData["Title"] = "سندات المصاريف";
     var pageSizeOptions = new[] { 10, 25, 50, 100 };
     var branches = ViewBag.UserBranches as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
     int? selectedBranchId = ViewBag.SelectedBranchId as int?;
@@ -25,7 +25,7 @@
 <div class="card shadow-sm">
     <div class="card-header bg-white py-3 d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
         <div>
-            <h1 class="h4 mb-1">سندات الدفع</h1>
+            <h1 class="h4 mb-1">سندات المصاريف</h1>
             <p class="text-muted mb-0">تابع حركة المدفوعات مع مرشحات تفصيلية حسب الأعمدة المختلفة.</p>
         </div>
         <div class="d-flex flex-wrap gap-2">
@@ -118,8 +118,8 @@
                         var exchangeRate = voucher.ExchangeRate;
                         var amount = voucher.Amount;
                         var attachmentText = string.IsNullOrWhiteSpace(voucher.AttachmentFilePath)
-                            ? "-"
-                            : (string.IsNullOrWhiteSpace(voucher.AttachmentFileName) ? "عرض المرفق" : voucher.AttachmentFileName);
+                        ? "-"
+                        : (string.IsNullOrWhiteSpace(voucher.AttachmentFileName) ? "عرض المرفق" : voucher.AttachmentFileName);
                         var statusText = voucher.Status switch
                         {
                             PaymentVoucherStatus.PendingApproval => "بانتظار الموافقة",
@@ -129,8 +129,8 @@
                             _ => voucher.Status.ToString()
                         };
                         var approvalInfo = voucher.ApprovedAt.HasValue
-                            ? string.Format(CultureInfo.CurrentCulture, "{0:dd/MM/yyyy HH:mm} - {1}", voucher.ApprovedAt.Value, voucher.ApprovedBy?.FullName ?? voucher.ApprovedById ?? "-")
-                            : "غير معتمد";
+                        ? string.Format(CultureInfo.CurrentCulture, "{0:dd/MM/yyyy HH:mm} - {1}", voucher.ApprovedAt.Value, voucher.ApprovedBy?.FullName ?? voucher.ApprovedById ?? "-")
+                        : "غير معتمد";
                         var branchName = voucher.CreatedBy?.PaymentBranch?.NameAr ?? "-";
                         var journalReference = item.JournalEntryReference ?? "لا يوجد قيد";
                         var journalNumber = item.JournalEntryNumber ?? "-";
@@ -139,112 +139,112 @@
                         var amountNumeric = amount.ToString("G17", CultureInfo.InvariantCulture);
                         var exchangeNumeric = exchangeRate.ToString("G17", CultureInfo.InvariantCulture);
                         var rejectionReason = item.RejectionReason;
-                    <tr>
-                        <td data-filter-value="@voucher.Id">@voucher.Id</td>
-                        <td data-filter-value="@journalNumber">
-                            @if (item.JournalEntryId.HasValue)
-                            {
-                                <div class="d-flex flex-column align-items-start gap-1">
-                                    <span class="fw-semibold">@journalNumber</span>
-                                    <small class="text-muted">@journalReference</small>
-                                    <a asp-controller="JournalEntries"
-                                       asp-action="Details"
-                                       asp-route-id="@item.JournalEntryId.Value"
-                                       asp-require-permission="journal.view"
-                                       class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-book-open me-1"></i>
-                                        عرض القيد
-                                    </a>
-                                </div>
-                            }
-                            else
-                            {
-                                <span class="text-muted">لا يوجد قيد</span>
-                            }
-                        </td>
-                        <td data-filter-value="@voucher.Date.ToString("dd/MM/yyyy HH:mm")" data-filter-date="@dateValue">@voucher.Date.ToString("dd/MM/yyyy HH:mm")</td>
-                        <td data-filter-value="@expenseAccount">
-                            @if (voucher.Account != null)
-                            {
-                                <div class="d-flex flex-column align-items-start">
-                                    <span class="fw-semibold">@voucher.Account.NameAr</span>
-                                    <small class="text-muted">@voucher.Account.Code</small>
-                                </div>
-                            }
-                            else
-                            {
-                                <span class="text-muted">-</span>
-                            }
-                        </td>
-                        <td data-filter-value="@supplierName">@supplierName</td>
-                        <td data-filter-value="@agentName">@agentName</td>
-                        <td data-filter-value="@currencyCode">@currencyCode</td>
-                        <td data-filter-value="@exchangeRate.ToString("N6")" data-filter-numeric="@exchangeNumeric">@exchangeRate.ToString("N6")</td>
-                        <td data-filter-value="@amount.ToString("N2")" data-filter-numeric="@amountNumeric">@amount.ToString("N2")</td>
-                        <td data-filter-value="@attachmentText">
-                            @if (!string.IsNullOrWhiteSpace(voucher.AttachmentFilePath))
-                            {
-                                <a href="@Url.ContentFromAttachmentPath(voucher.AttachmentFilePath)" target="_blank" rel="noopener">@attachmentText</a>
-                            }
-                            else
-                            {
-                                <span class="text-muted">-</span>
-                            }
-                        </td>
-                        <td data-filter-value="@statusText">
-                            @switch (voucher.Status)
-                            {
-                                case PaymentVoucherStatus.Draft:
-                                    <span class="badge bg-secondary">مسودة</span>
-                                    break;
-                                case PaymentVoucherStatus.PendingApproval:
-                                    <span class="badge bg-warning text-dark">بانتظار الموافقة</span>
-                                    break;
-                                case PaymentVoucherStatus.Approved:
-                                    <span class="badge bg-success">معتمد</span>
-                                    break;
-                                case PaymentVoucherStatus.Rejected:
-                                    <div class="d-flex flex-column gap-1">
-                                        <span class="badge bg-danger">مرفوض</span>
-                                        @if (!string.IsNullOrWhiteSpace(rejectionReason))
-                                        {
-                                            <small class="text-danger">سبب الرفض: @rejectionReason</small>
-                                        }
+                        <tr>
+                            <td data-filter-value="@voucher.Id">@voucher.Id</td>
+                            <td data-filter-value="@journalNumber">
+                                @if (item.JournalEntryId.HasValue)
+                                {
+                                    <div class="d-flex flex-column align-items-start gap-1">
+                                        <span class="fw-semibold">@journalNumber</span>
+                                        <small class="text-muted">@journalReference</small>
+                                        <a asp-controller="JournalEntries"
+                                           asp-action="Details"
+                                           asp-route-id="@item.JournalEntryId.Value"
+                                           asp-require-permission="journal.view"
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-book-open me-1"></i>
+                                            عرض القيد
+                                        </a>
                                     </div>
-                                    break;
-                            }
-                        </td>
-                        <td data-filter-value="@approvalInfo">
-                            @if (voucher.ApprovedAt.HasValue)
-                            {
-                                <div>@voucher.ApprovedAt.Value.ToString("dd/MM/yyyy HH:mm")</div>
-                                <small class="text-muted">@((voucher.ApprovedBy?.FullName) ?? voucher.ApprovedById ?? "-")</small>
-                            }
-                            else
-                            {
-                                <span class="text-muted">غير معتمد</span>
-                            }
-                        </td>
-                        <td data-filter-value="@notesText">@notesText</td>
-                        <td data-filter-value="@branchName">@branchName</td>
-                        <td class="text-end">
-                            <form asp-action="Delete"
-                                  asp-route-id="@voucher.Id"
-                                  method="post"
-                                  class="d-inline"
-                                  asp-require-permission="paymentvouchers.delete"
-                                  onsubmit="return confirm('هل أنت متأكد من حذف سند الصرف؟');">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="fromDate" value="@fromDateValue" />
-                                <input type="hidden" name="toDate" value="@toDateValue" />
-                                <input type="hidden" name="searchTerm" value="@searchTerm" />
-                                <input type="hidden" name="branchId" value="@selectedBranchId" />
-                                <input type="hidden" name="page" value="@Model.PageIndex" />
-                                <input type="hidden" name="pageSize" value="@Model.PageSize" />
-                                <button type="submit" class="btn btn-sm btn-danger">حذف</button>
-                            </form>
-                        </td>
-                    </tr>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">لا يوجد قيد</span>
+                                }
+                            </td>
+                            <td data-filter-value="@voucher.Date.ToString("dd/MM/yyyy HH:mm")" data-filter-date="@dateValue">@voucher.Date.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td data-filter-value="@expenseAccount">
+                                @if (voucher.Account != null)
+                                {
+                                    <div class="d-flex flex-column align-items-start">
+                                        <span class="fw-semibold">@voucher.Account.NameAr</span>
+                                        <small class="text-muted">@voucher.Account.Code</small>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                            <td data-filter-value="@supplierName">@supplierName</td>
+                            <td data-filter-value="@agentName">@agentName</td>
+                            <td data-filter-value="@currencyCode">@currencyCode</td>
+                            <td data-filter-value="@exchangeRate.ToString("N6")" data-filter-numeric="@exchangeNumeric">@exchangeRate.ToString("N6")</td>
+                            <td data-filter-value="@amount.ToString("N2")" data-filter-numeric="@amountNumeric">@amount.ToString("N2")</td>
+                            <td data-filter-value="@attachmentText">
+                                @if (!string.IsNullOrWhiteSpace(voucher.AttachmentFilePath))
+                                {
+                                    <a href="@Url.ContentFromAttachmentPath(voucher.AttachmentFilePath)" target="_blank" rel="noopener">@attachmentText</a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                            <td data-filter-value="@statusText">
+                                @switch (voucher.Status)
+                                {
+                                    case PaymentVoucherStatus.Draft:
+                                        <span class="badge bg-secondary">مسودة</span>
+                                        break;
+                                    case PaymentVoucherStatus.PendingApproval:
+                                        <span class="badge bg-warning text-dark">بانتظار الموافقة</span>
+                                        break;
+                                    case PaymentVoucherStatus.Approved:
+                                        <span class="badge bg-success">معتمد</span>
+                                        break;
+                                    case PaymentVoucherStatus.Rejected:
+                                        <div class="d-flex flex-column gap-1">
+                                            <span class="badge bg-danger">مرفوض</span>
+                                            @if (!string.IsNullOrWhiteSpace(rejectionReason))
+                                            {
+                                                <small class="text-danger">سبب الرفض: @rejectionReason</small>
+                                            }
+                                        </div>
+                                        break;
+                                }
+                            </td>
+                            <td data-filter-value="@approvalInfo">
+                                @if (voucher.ApprovedAt.HasValue)
+                                {
+                                    <div>@voucher.ApprovedAt.Value.ToString("dd/MM/yyyy HH:mm")</div>
+                                    <small class="text-muted">@((voucher.ApprovedBy?.FullName) ?? voucher.ApprovedById ?? "-")</small>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">غير معتمد</span>
+                                }
+                            </td>
+                            <td data-filter-value="@notesText">@notesText</td>
+                            <td data-filter-value="@branchName">@branchName</td>
+                            <td class="text-end">
+                                <form asp-action="Delete"
+                                      asp-route-id="@voucher.Id"
+                                      method="post"
+                                      class="d-inline"
+                                      asp-require-permission="paymentvouchers.delete"
+                                      onsubmit="return confirm('هل أنت متأكد من حذف سند الصرف؟');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="fromDate" value="@fromDateValue" />
+                                    <input type="hidden" name="toDate" value="@toDateValue" />
+                                    <input type="hidden" name="searchTerm" value="@searchTerm" />
+                                    <input type="hidden" name="branchId" value="@selectedBranchId" />
+                                    <input type="hidden" name="page" value="@Model.PageIndex" />
+                                    <input type="hidden" name="pageSize" value="@Model.PageSize" />
+                                    <button type="submit" class="btn btn-sm btn-danger">حذف</button>
+                                </form>
+                            </td>
+                        </tr>
                     }
                     <tr class="no-results @(Model.Items.Any() ? "d-none" : string.Empty)">
                         <td colspan="15" class="text-center text-muted">لا توجد نتائج مطابقة للمرشحات الحالية.</td>

@@ -1561,7 +1561,7 @@ namespace AccountingSystem.Controllers
             return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
-        [Authorize(Policy = "accounts.txn")]
+        [Authorize(Policy = "useracc.view")]
         public async Task<IActionResult> UserAccountJournalEntries(DateTime? fromDate, DateTime? toDate, int? accountId, string? reference)
         {
             var today = DateTime.Today;
