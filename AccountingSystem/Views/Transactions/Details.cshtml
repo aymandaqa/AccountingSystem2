@@ -1,0 +1,46 @@
+@model AccountingSystem.ViewModels.TransactionListItemViewModel
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "تفاصيل الحركة";
+    var transactionType = ViewBag.TransactionTypeKey as string ?? Model.TypeKey;
+}
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h1 class="h5 mb-0">تفاصيل الحركة المالية</h1>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-right ms-1"></i> العودة لقائمة الحركات
+        </a>
+    </div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">النوع</dt>
+            <dd class="col-sm-9">@Model.Type</dd>
+
+            <dt class="col-sm-3">المعرف</dt>
+            <dd class="col-sm-9">@Model.Id</dd>
+
+            <dt class="col-sm-3">التاريخ</dt>
+            <dd class="col-sm-9">@Model.Date.ToString("yyyy/MM/dd HH:mm", CultureInfo.CurrentCulture)</dd>
+
+            <dt class="col-sm-3">الطرف / البيان</dt>
+            <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(Model.Counterparty) ? "-" : Model.Counterparty)</dd>
+
+            <dt class="col-sm-3">المبلغ</dt>
+            <dd class="col-sm-9">@Model.Amount.ToString("N2", CultureInfo.CurrentCulture) @Model.CurrencyCode</dd>
+
+            <dt class="col-sm-3">الفرع</dt>
+            <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(Model.BranchName) ? "-" : Model.BranchName)</dd>
+
+            <dt class="col-sm-3">الحالة</dt>
+            <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(Model.Status) ? "-" : Model.Status)</dd>
+
+            <dt class="col-sm-3">المستخدم</dt>
+            <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(Model.CreatedByName) ? "-" : Model.CreatedByName)</dd>
+
+            <dt class="col-sm-3">ملاحظات</dt>
+            <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(Model.Notes) ? "-" : Model.Notes)</dd>
+        </dl>
+    </div>
+</div>
