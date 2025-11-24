@@ -94,6 +94,7 @@
                         <th scope="col">سعر الصرف</th>
                         <th scope="col">المبلغ</th>
                         <th scope="col">المبلغ بالعملة الأساسية</th>
+                        <th scope="col">الملاحظات</th>
                         <th scope="col">المرفق</th>
                         <th scope="col">الحالة</th>
                         <th scope="col">اعتماد الحركة</th>
@@ -113,6 +114,7 @@
                         var exchangeRate = voucher.ExchangeRate;
                         var amount = voucher.Amount;
                         var baseAmount = voucher.Amount * voucher.ExchangeRate;
+                        var notesText = string.IsNullOrWhiteSpace(voucher.Notes) ? "-" : voucher.Notes;
                         var attachmentText = string.IsNullOrWhiteSpace(voucher.AttachmentFilePath)
                             ? "-"
                             : (string.IsNullOrWhiteSpace(voucher.AttachmentFileName) ? "عرض المرفق" : voucher.AttachmentFileName);
@@ -142,6 +144,7 @@
                         <td data-filter-value="@exchangeRate.ToString("N6")" data-filter-numeric="@exchangeNumeric">@exchangeRate.ToString("N6")</td>
                         <td data-filter-value="@amount.ToString("N2")" data-filter-numeric="@amountNumeric">@amount.ToString("N2")</td>
                         <td data-filter-value="@baseAmount.ToString("N2")" data-filter-numeric="@baseAmountNumeric">@baseAmount.ToString("N2")</td>
+                        <td data-filter-value="@notesText">@notesText</td>
                         <td data-filter-value="@attachmentText">
                             @if (!string.IsNullOrWhiteSpace(voucher.AttachmentFilePath))
                             {
@@ -219,7 +222,7 @@
                     </tr>
                     }
                     <tr class="no-results @(Model.Items.Any() ? "d-none" : string.Empty)">
-                        <td colspan="14" class="text-center text-muted">لا توجد نتائج مطابقة للمرشحات الحالية.</td>
+                        <td colspan="15" class="text-center text-muted">لا توجد نتائج مطابقة للمرشحات الحالية.</td>
                     </tr>
                 </tbody>
             </table>
