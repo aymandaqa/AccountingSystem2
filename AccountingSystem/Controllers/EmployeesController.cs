@@ -64,6 +64,7 @@ namespace AccountingSystem.Controllers
                     AccountCode = employee.Account?.Code ?? string.Empty,
                     AccountName = employee.Account?.NameAr ?? string.Empty,
                     AccountId = employee.AccountId,
+                    AccountBalance = employee.Account?.CurrentBalance ?? 0m,
                     IsActive = employee.IsActive,
                     NationalId = employee.NationalId
                 });

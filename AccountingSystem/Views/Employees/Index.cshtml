@@ -1,4 +1,5 @@
 @using Microsoft.AspNetCore.Mvc.Rendering
+@using System.Linq
 @model List<AccountingSystem.ViewModels.EmployeeListItemViewModel>
 @{
     ViewData["Title"] = "إدارة الموظفين";
@@ -85,9 +86,12 @@
     </div>
 
     <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h3 class="card-title">قائمة الموظفين</h3>
-            <span class="badge bg-secondary" id="employeeCount">@Model.Count موظف</span>
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h3 class="card-title mb-0">قائمة الموظفين</h3>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="badge bg-secondary" id="employeeCount">@Model.Count موظف</span>
+                <span class="badge bg-info text-dark" id="totalBalanceBadge">إجمالي الأرصدة: @Model.Sum(e => e.AccountBalance).ToString("N2")</span>
+            </div>
         </div>
         <div class="card-body">
             @if (Model.Any())
@@ -101,6 +105,7 @@
                                 <th>المسمى الوظيفي</th>
                                 <th>الراتب</th>
                                 <th>الفرع</th>
+                                <th class="text-end">رصيد الحساب</th>
                                 <th>الحساب</th>
                                 <th>الحالة</th>
                                 <th class="text-center">الإجراءات</th>
@@ -109,7 +114,7 @@
                         <tbody>
                             @foreach (var employee in Model)
                             {
-                                <tr data-branch-id="@employee.BranchId">
+                                <tr data-branch-id="@employee.BranchId" data-account-balance="@employee.AccountBalance.ToString(System.Globalization.CultureInfo.InvariantCulture)">
                                     <td>
                                         <strong>@employee.Name</strong>
                                         <div class="text-muted small">@employee.AccountCode - @employee.AccountName</div>
@@ -118,6 +123,7 @@
                                     <td>@employee.JobTitle</td>
                                     <td>@employee.Salary.ToString("N2")</td>
                                     <td>@employee.BranchName</td>
+                                    <td class="text-end fw-semibold">@employee.AccountBalance.ToString("N2")</td>
                                     <td>
                                         <span class="badge bg-light text-dark">@employee.AccountCode</span>
                                     </td>
@@ -180,11 +186,17 @@
             const searchInput = document.getElementById('employeeSearch');
             const table = document.getElementById('employeesTable');
             const countBadge = document.getElementById('employeeCount');
+            const totalBadge = document.getElementById('totalBalanceBadge');
+
+            if (!table) {
+                return;
+            }
 
             function applyFilters() {
                 const branchValue = branchFilter.value;
                 const searchValue = searchInput.value.toLowerCase();
                 let visibleCount = 0;
+                let totalBalance = 0;
 
                 table.querySelectorAll('tbody tr').forEach(row => {
                     const branchId = row.getAttribute('data-branch-id');
@@ -195,16 +207,21 @@
                     if (matchesBranch && matchesSearch) {
                         row.style.display = '';
                         visibleCount++;
+                        const balance = parseFloat(row.getAttribute('data-account-balance')) || 0;
+                        totalBalance += balance;
                     } else {
                         row.style.display = 'none';
                     }
                 });
 
                 countBadge.textContent = visibleCount + ' موظف';
+                totalBadge.textContent = 'إجمالي الأرصدة: ' + totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
 
             branchFilter.addEventListener('change', applyFilters);
             searchInput.addEventListener('input', applyFilters);
+
+            applyFilters();
 
             document.querySelectorAll('.toggle-status').forEach(button => {
                 button.addEventListener('click', function () {
