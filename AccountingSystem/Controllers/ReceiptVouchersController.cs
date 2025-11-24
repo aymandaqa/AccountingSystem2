@@ -80,6 +80,8 @@ namespace AccountingSystem.Controllers
                 .Take(normalizedPageSize)
                 .ToListAsync();
 
+            var voucherIds = vouchers.Select(v => v.Id).ToList();
+
             var voucherReferences = vouchers
                 .Select(v => $"RCV:{v.Id}")
                 .ToList();
@@ -104,9 +106,26 @@ namespace AccountingSystem.Controllers
                 }
             }
 
+            var workflowInstances = await _context.WorkflowInstances
+                .Where(i => i.DocumentType == WorkflowDocumentType.ReceiptVoucher && voucherIds.Contains(i.DocumentId))
+                .Include(i => i.Actions)
+                .OrderByDescending(i => i.CreatedAt)
+                .ToListAsync();
+
+            var workflowLookup = workflowInstances
+                .GroupBy(i => i.DocumentId)
+                .ToDictionary(g => g.Key, g => g.First());
+
             var items = vouchers
                 .Select(v =>
                 {
+                    workflowLookup.TryGetValue(v.Id, out var instance);
+                    var rejectionReason = instance?.Actions?
+                        .Where(a => a.Status == WorkflowActionStatus.Rejected)
+                        .OrderByDescending(a => a.ActionedAt)
+                        .Select(a => a.Notes)
+                        .FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
+
                     if (journalEntryLookup.TryGetValue(v.Id, out var entry))
                     {
                         return new ReceiptVoucherListItemViewModel
@@ -114,13 +133,15 @@ namespace AccountingSystem.Controllers
                             Voucher = v,
                             JournalEntryId = entry.Id,
                             JournalEntryNumber = entry.Number,
-                            JournalEntryReference = entry.Reference
+                            JournalEntryReference = entry.Reference,
+                            RejectionReason = rejectionReason
                         };
                     }
 
                     return new ReceiptVoucherListItemViewModel
                     {
-                        Voucher = v
+                        Voucher = v,
+                        RejectionReason = rejectionReason
                     };
                 })
                 .ToList();

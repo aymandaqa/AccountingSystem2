@@ -110,6 +110,8 @@ namespace AccountingSystem.Controllers
                 .Take(normalizedPageSize)
                 .ToListAsync();
 
+            var voucherIds = vouchers.Select(v => v.Id).ToList();
+
             var journalEntryLookup = new Dictionary<int, (int Id, string Number, string Reference)>();
 
             if (vouchers.Any())
@@ -134,8 +136,25 @@ namespace AccountingSystem.Controllers
                 }
             }
 
+            var workflowInstances = await _context.WorkflowInstances
+                .Where(i => i.DocumentType == WorkflowDocumentType.PaymentVoucher && voucherIds.Contains(i.DocumentId))
+                .Include(i => i.Actions)
+                .OrderByDescending(i => i.CreatedAt)
+                .ToListAsync();
+
+            var workflowLookup = workflowInstances
+                .GroupBy(i => i.DocumentId)
+                .ToDictionary(g => g.Key, g => g.First());
+
             var items = vouchers.Select(v =>
             {
+                workflowLookup.TryGetValue(v.Id, out var instance);
+                var rejectionReason = instance?.Actions?
+                    .Where(a => a.Status == WorkflowActionStatus.Rejected)
+                    .OrderByDescending(a => a.ActionedAt)
+                    .Select(a => a.Notes)
+                    .FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
+
                 if (journalEntryLookup.TryGetValue(v.Id, out var entry))
                 {
                     return new PaymentVoucherListItemViewModel
@@ -143,13 +162,15 @@ namespace AccountingSystem.Controllers
                         Voucher = v,
                         JournalEntryId = entry.Id,
                         JournalEntryNumber = entry.Number,
-                        JournalEntryReference = entry.Reference
+                        JournalEntryReference = entry.Reference,
+                        RejectionReason = rejectionReason
                     };
                 }
 
                 return new PaymentVoucherListItemViewModel
                 {
-                    Voucher = v
+                    Voucher = v,
+                    RejectionReason = rejectionReason
                 };
             }).ToList();
 

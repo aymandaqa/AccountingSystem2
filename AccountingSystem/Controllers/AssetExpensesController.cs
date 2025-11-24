@@ -202,7 +202,12 @@ namespace AccountingSystem.Controllers
                     AttachmentFilePath = AttachmentPathHelper.NormalizeForClient(e.AttachmentFilePath),
                     JournalEntryId = journalEntryId,
                     JournalEntryNumber = journalEntryNumber,
-                    WorkflowStatus = instance?.Status
+                    WorkflowStatus = instance?.Status,
+                    RejectionReason = instance?.Actions?
+                        .Where(a => a.Status == WorkflowActionStatus.Rejected)
+                        .OrderByDescending(a => a.ActionedAt)
+                        .Select(a => a.Notes)
+                        .FirstOrDefault(n => !string.IsNullOrWhiteSpace(n))
                 };
             }).ToList();
 

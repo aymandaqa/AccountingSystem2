@@ -11,5 +11,7 @@ namespace AccountingSystem.ViewModels
         public string? JournalEntryNumber { get; set; }
 
         public string? JournalEntryReference { get; set; }
+
+        public string? RejectionReason { get; set; }
     }
 }
