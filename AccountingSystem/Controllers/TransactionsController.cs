@@ -39,6 +39,8 @@ namespace AccountingSystem.Controllers
             DateTime? toDate = null,
             string? searchTerm = null,
             int? branchId = null,
+            string? typeFilter = null,
+            string? statusFilter = null,
             int page = 1,
             int pageSize = 25)
         {
@@ -58,13 +60,22 @@ namespace AccountingSystem.Controllers
             var normalizedPageSize = pageSize <= 0 ? 25 : Math.Min(pageSize, 100);
             var currentPage = Math.Max(page, 1);
 
+            if (!fromDate.HasValue && !toDate.HasValue)
+            {
+                var today = DateTime.Today;
+                fromDate = today;
+                toDate = today;
+            }
+
             var orderedTransactions = await BuildTransactionsAsync(
                 user,
                 userBranchIds,
                 fromDate,
                 toDate,
                 branchId,
-                searchTerm);
+                searchTerm,
+                typeFilter,
+                statusFilter);
 
             var totalCount = orderedTransactions.Count;
             var pagedItems = orderedTransactions
@@ -128,6 +139,8 @@ namespace AccountingSystem.Controllers
                 SearchTerm = searchTerm,
                 FromDate = fromDate,
                 ToDate = toDate,
+                TypeFilter = typeFilter,
+                StatusFilter = statusFilter,
                 TypeSummaries = typeSummaries,
                 StatusSummaries = statusSummaries
             };
@@ -140,7 +153,9 @@ namespace AccountingSystem.Controllers
             DateTime? fromDate = null,
             DateTime? toDate = null,
             string? searchTerm = null,
-            int? branchId = null)
+            int? branchId = null,
+            string? typeFilter = null,
+            string? statusFilter = null)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -155,13 +170,22 @@ namespace AccountingSystem.Controllers
 
             var userBranchIds = await GetUserBranchIdsAsync(user.Id);
 
+            if (!fromDate.HasValue && !toDate.HasValue)
+            {
+                var today = DateTime.Today;
+                fromDate = today;
+                toDate = today;
+            }
+
             var transactions = await BuildTransactionsAsync(
                 user,
                 userBranchIds,
                 fromDate,
                 toDate,
                 branchId,
-                searchTerm);
+                searchTerm,
+                typeFilter,
+                statusFilter);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Transactions");
@@ -589,7 +613,9 @@ namespace AccountingSystem.Controllers
             DateTime? fromDate,
             DateTime? toDate,
             int? branchId,
-            string? searchTerm)
+            string? searchTerm,
+            string? typeFilter,
+            string? statusFilter)
         {
             var transactions = new List<TransactionListItemViewModel>();
 
@@ -613,6 +639,22 @@ namespace AccountingSystem.Controllers
                         (!string.IsNullOrWhiteSpace(t.CreatedByName) && t.CreatedByName.Contains(normalizedSearch, comparison)) ||
                         t.Id.ToString(CultureInfo.InvariantCulture).Contains(normalizedSearch, comparison) ||
                         t.Amount.ToString(CultureInfo.InvariantCulture).Contains(normalizedSearch, comparison))
+                    .ToList();
+            }
+
+            var normalizedTypeFilter = typeFilter?.Trim();
+            if (!string.IsNullOrWhiteSpace(normalizedTypeFilter))
+            {
+                transactions = transactions
+                    .Where(t => string.Equals(t.Type, normalizedTypeFilter, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            var normalizedStatusFilter = statusFilter?.Trim();
+            if (!string.IsNullOrWhiteSpace(normalizedStatusFilter))
+            {
+                transactions = transactions
+                    .Where(t => string.Equals(t.Status ?? "غير محدد", normalizedStatusFilter, StringComparison.OrdinalIgnoreCase))
                     .ToList();
             }
 
