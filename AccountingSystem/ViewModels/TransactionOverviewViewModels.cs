@@ -45,6 +45,10 @@ namespace AccountingSystem.ViewModels
         public required IReadOnlyList<TransactionSummaryItemViewModel> TypeSummaries { get; init; }
 
         public required IReadOnlyList<TransactionSummaryItemViewModel> StatusSummaries { get; init; }
+
+        public string? TypeFilter { get; init; }
+
+        public string? StatusFilter { get; init; }
     }
 }
 
