@@ -404,6 +404,15 @@
                                     </a>
                                 </li>
 
+                                <li class="nav-item">
+                                    <a class="nav-link"
+                                       asp-controller="Reports"
+                                       asp-action="UserAccountJournalEntries"
+                                       asp-require-permission="cashclosures.view">
+                                        <i class="fas fa-wallet"></i> حركات حسابات المستخدم
+                                    </a>
+                                </li>
+
 
                                 @if (canCashClosuresApprove)
                                 {
