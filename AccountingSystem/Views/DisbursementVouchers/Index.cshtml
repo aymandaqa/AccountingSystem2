@@ -1,4 +1,4 @@
-@model AccountingSystem.ViewModels.PaginatedListViewModel<AccountingSystem.Models.DisbursementVoucher>
+@model AccountingSystem.ViewModels.PaginatedListViewModel<AccountingSystem.ViewModels.DisbursementVoucherListItemViewModel>
 @using AccountingSystem.Models
 @using Microsoft.AspNetCore.Mvc.Rendering
 @using System.Globalization
@@ -108,6 +108,8 @@
             <table class="table table-striped table-hover align-middle">
                 <thead class="table-light align-middle">
                     <tr>
+                        <th scope="col">رقم السند</th>
+                        <th scope="col">رقم القيد</th>
                         <th scope="col">التاريخ والوقت</th>
                         <th scope="col">المورد</th>
                         <th scope="col">العملة</th>
@@ -122,8 +124,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var voucher in Model.Items)
+                    @foreach (var item in Model.Items)
                     {
+                        var voucher = item.Voucher;
                         var supplierName = voucher.Supplier?.NameAr ?? "-";
                         var currencyCode = voucher.Currency?.Code ?? "-";
                         var amount = voucher.Amount;
@@ -146,7 +149,29 @@
                         var dateValue = voucher.Date.ToString("yyyy-MM-dd");
                         var amountNumeric = amount.ToString("G17", CultureInfo.InvariantCulture);
                         var baseAmountNumeric = baseAmount.ToString("G17", CultureInfo.InvariantCulture);
+                        var rejectionReason = item.RejectionReason;
                     <tr>
+                        <td data-filter-value="@voucher.Id">@voucher.Id</td>
+                        <td data-filter-value="@item.JournalEntryNumber">
+                            @if (item.JournalEntryId.HasValue)
+                            {
+                                <div class="d-flex flex-column align-items-start gap-1">
+                                    <span class="fw-semibold">@item.JournalEntryNumber</span>
+                                    <a asp-controller="JournalEntries"
+                                       asp-action="Details"
+                                       asp-route-id="@item.JournalEntryId.Value"
+                                       asp-require-permission="journal.view"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-book-open me-1"></i>
+                                        عرض القيد
+                                    </a>
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-muted">لا يوجد قيد</span>
+                            }
+                        </td>
                         <td data-filter-value="@voucher.Date.ToString("dd/MM/yyyy HH:mm")" data-filter-date="@dateValue">@voucher.Date.ToString("dd/MM/yyyy HH:mm")</td>
                         <td data-filter-value="@supplierName">@supplierName</td>
                         <td data-filter-value="@currencyCode">@currencyCode</td>
@@ -172,7 +197,13 @@
                                     <span class="badge bg-success">معتمد</span>
                                     break;
                                 case DisbursementVoucherStatus.Rejected:
-                                    <span class="badge bg-danger">مرفوض</span>
+                                    <div class="d-flex flex-column gap-1">
+                                        <span class="badge bg-danger">مرفوض</span>
+                                        @if (!string.IsNullOrWhiteSpace(rejectionReason))
+                                        {
+                                            <small class="text-danger">سبب الرفض: @rejectionReason</small>
+                                        }
+                                    </div>
                                     break;
                             }
                         </td>
@@ -209,7 +240,7 @@
                     </tr>
                     }
                     <tr class="no-results @(Model.Items.Any() ? "d-none" : string.Empty)">
-                        <td colspan="11" class="text-center text-muted">لا توجد نتائج مطابقة للمرشحات الحالية.</td>
+                        <td colspan="13" class="text-center text-muted">لا توجد نتائج مطابقة للمرشحات الحالية.</td>
                     </tr>
                 </tbody>
             </table>

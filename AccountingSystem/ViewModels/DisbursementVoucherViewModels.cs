@@ -2,15 +2,13 @@ using AccountingSystem.Models;
 
 namespace AccountingSystem.ViewModels
 {
-    public class ReceiptVoucherListItemViewModel
+    public class DisbursementVoucherListItemViewModel
     {
-        public ReceiptVoucher Voucher { get; set; } = null!;
+        public DisbursementVoucher Voucher { get; set; } = null!;
 
         public int? JournalEntryId { get; set; }
 
         public string? JournalEntryNumber { get; set; }
-
-        public string? JournalEntryReference { get; set; }
 
         public string? RejectionReason { get; set; }
     }

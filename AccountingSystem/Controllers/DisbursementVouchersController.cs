@@ -79,6 +79,56 @@ namespace AccountingSystem.Controllers
                 .Take(normalizedPageSize)
                 .ToListAsync();
 
+            var voucherIds = vouchers.Select(v => v.Id).ToList();
+
+            var workflowInstances = await _context.WorkflowInstances
+                .Where(i => i.DocumentType == WorkflowDocumentType.DisbursementVoucher && voucherIds.Contains(i.DocumentId))
+                .Include(i => i.Actions)
+                .OrderByDescending(i => i.CreatedAt)
+                .ToListAsync();
+
+            var workflowLookup = workflowInstances
+                .GroupBy(i => i.DocumentId)
+                .ToDictionary(g => g.Key, g => g.First());
+
+            var references = vouchers.Select(v => $"DSBV:{v.Id}").ToList();
+            var journalEntries = await _context.JournalEntries
+                .Where(j => j.Reference != null && references.Contains(j.Reference))
+                .Select(j => new { j.Reference, j.Id, j.Number })
+                .ToListAsync();
+
+            var journalEntryLookup = journalEntries
+                .Where(j => j.Reference != null)
+                .ToDictionary(j => j.Reference!, j => (j.Id, j.Number));
+
+            var items = vouchers.Select(voucher =>
+            {
+                workflowLookup.TryGetValue(voucher.Id, out var instance);
+                var rejectionReason = instance?.Actions?
+                    .Where(a => a.Status == WorkflowActionStatus.Rejected)
+                    .OrderByDescending(a => a.ActionedAt)
+                    .Select(a => a.Notes)
+                    .FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
+
+                var referenceKey = $"DSBV:{voucher.Id}";
+                int? journalEntryId = null;
+                string? journalEntryNumber = null;
+
+                if (journalEntryLookup.TryGetValue(referenceKey, out var entry))
+                {
+                    journalEntryId = entry.Id;
+                    journalEntryNumber = entry.Number;
+                }
+
+                return new DisbursementVoucherListItemViewModel
+                {
+                    Voucher = voucher,
+                    JournalEntryId = journalEntryId,
+                    JournalEntryNumber = journalEntryNumber,
+                    RejectionReason = rejectionReason
+                };
+            }).ToList();
+
             var branchesQuery = _context.Branches.AsNoTracking();
 
             if (userBranchIds.Any())
@@ -102,9 +152,9 @@ namespace AccountingSystem.Controllers
             ViewBag.UserBranches = branchOptions;
             ViewBag.SelectedBranchId = branchId;
 
-            var model = new PaginatedListViewModel<DisbursementVoucher>
+            var model = new PaginatedListViewModel<DisbursementVoucherListItemViewModel>
             {
-                Items = vouchers,
+                Items = items,
                 TotalCount = totalCount,
                 PageIndex = currentPage,
                 PageSize = normalizedPageSize,

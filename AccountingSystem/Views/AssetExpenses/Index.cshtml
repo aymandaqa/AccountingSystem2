@@ -72,6 +72,8 @@
                     <table class="table table-striped table-hover align-middle">
                         <thead class="table-light">
                             <tr>
+                                <th scope="col">رقم السند</th>
+                                <th scope="col" class="text-center">القيد المحاسبي</th>
                                 <th scope="col">الأصل</th>
                                 <th scope="col">الفرع</th>
                                 <th scope="col">الحساب</th>
@@ -84,7 +86,6 @@
                                 <th scope="col">المرفق</th>
                                 <th scope="col">ملاحظات</th>
                                 <th scope="col">الحالة</th>
-                                <th scope="col" class="text-center">القيد المحاسبي</th>
                                 <th scope="col" class="text-center">الإجراءات</th>
                             </tr>
                         </thead>
@@ -99,8 +100,30 @@
                                     AccountingSystem.Models.Workflows.WorkflowInstanceStatus.Approved => "معتمد",
                                     _ => "معتمد"
                                 };
+                                var rejectionReason = item.RejectionReason;
 
                                 <tr>
+                                    <td data-filter-value="@item.Id">@item.Id</td>
+                                    <td class="text-center" data-filter-value="@item.JournalEntryNumber">
+                                        @if (item.JournalEntryId.HasValue)
+                                        {
+                                            <div class="d-flex flex-column align-items-center gap-1">
+                                                <span class="fw-semibold">@item.JournalEntryNumber</span>
+                                                <a asp-controller="JournalEntries"
+                                                   asp-action="Details"
+                                                   asp-route-id="@item.JournalEntryId.Value"
+                                                   asp-require-permission="journal.view"
+                                                   class="btn btn-sm btn-outline-primary"
+                                                   title="عرض القيد @item.JournalEntryNumber">
+                                                    <i class="fas fa-book-open"></i>
+                                                </a>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
                                     <td data-filter-value="@item.AssetName"><strong>@item.AssetName</strong></td>
                                     <td data-filter-value="@item.BranchName">@item.BranchName</td>
                                     <td data-filter-value="@item.ExpenseAccountName">@item.ExpenseAccountName</td>
@@ -130,7 +153,13 @@
                                                 <span class="badge bg-warning text-dark">قيد الاعتماد</span>
                                                 break;
                                             case AccountingSystem.Models.Workflows.WorkflowInstanceStatus.Rejected:
-                                                <span class="badge bg-danger">مرفوض</span>
+                                                <div class="d-flex flex-column gap-1 align-items-start">
+                                                    <span class="badge bg-danger">مرفوض</span>
+                                                    @if (!string.IsNullOrWhiteSpace(item.RejectionReason))
+                                                    {
+                                                        <small class="text-danger">سبب الرفض: @item.RejectionReason</small>
+                                                    }
+                                                </div>
                                                 break;
                                             case AccountingSystem.Models.Workflows.WorkflowInstanceStatus.Cancelled:
                                                 <span class="badge bg-secondary">ملغي</span>
@@ -141,23 +170,6 @@
                                             default:
                                                 <span class="badge bg-success">معتمد</span>
                                                 break;
-                                        }
-                                    </td>
-                                    <td class="text-center" data-filter-value="@item.JournalEntryNumber">
-                                        @if (item.JournalEntryId.HasValue)
-                                        {
-                                            <a asp-controller="JournalEntries"
-                                               asp-action="Details"
-                                               asp-route-id="@item.JournalEntryId.Value"
-                                               asp-require-permission="journal.view"
-                                               class="btn btn-sm btn-outline-primary"
-                                               title="عرض القيد @item.JournalEntryNumber">
-                                                <i class="fas fa-book-open"></i>
-                                            </a>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">-</span>
                                         }
                                     </td>
                                     <td class="text-center">
@@ -175,7 +187,7 @@
                                 </tr>
                             }
                             <tr class="no-results d-none">
-                                <td colspan="14" class="text-center text-muted">لا توجد نتائج مطابقة للمرشحات الحالية.</td>
+                                <td colspan="15" class="text-center text-muted">لا توجد نتائج مطابقة للمرشحات الحالية.</td>
                             </tr>
                         </tbody>
                     </table>

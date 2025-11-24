@@ -90,6 +90,8 @@
             <table class="table table-striped table-hover align-middle">
                 <thead class="table-light align-middle">
                     <tr>
+                        <th scope="col">رقم السند</th>
+                        <th scope="col">رقم القيد</th>
                         <th scope="col">التاريخ والوقت</th>
                         <th scope="col">حساب المصروف</th>
                         <th scope="col">المورد</th>
@@ -100,7 +102,6 @@
                         <th scope="col">المرفق</th>
                         <th scope="col">الحالة</th>
                         <th scope="col">اعتماد الحركة</th>
-                        <th scope="col">القيد المالي</th>
                         <th scope="col">ملاحظات</th>
                         <th scope="col">الفرع</th>
                         <th scope="col" class="text-end">إجراءات</th>
@@ -137,7 +138,30 @@
                         var dateValue = voucher.Date.ToString("yyyy-MM-dd");
                         var amountNumeric = amount.ToString("G17", CultureInfo.InvariantCulture);
                         var exchangeNumeric = exchangeRate.ToString("G17", CultureInfo.InvariantCulture);
+                        var rejectionReason = item.RejectionReason;
                     <tr>
+                        <td data-filter-value="@voucher.Id">@voucher.Id</td>
+                        <td data-filter-value="@journalNumber">
+                            @if (item.JournalEntryId.HasValue)
+                            {
+                                <div class="d-flex flex-column align-items-start gap-1">
+                                    <span class="fw-semibold">@journalNumber</span>
+                                    <small class="text-muted">@journalReference</small>
+                                    <a asp-controller="JournalEntries"
+                                       asp-action="Details"
+                                       asp-route-id="@item.JournalEntryId.Value"
+                                       asp-require-permission="journal.view"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-book-open me-1"></i>
+                                        عرض القيد
+                                    </a>
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-muted">لا يوجد قيد</span>
+                            }
+                        </td>
                         <td data-filter-value="@voucher.Date.ToString("dd/MM/yyyy HH:mm")" data-filter-date="@dateValue">@voucher.Date.ToString("dd/MM/yyyy HH:mm")</td>
                         <td data-filter-value="@expenseAccount">
                             @if (voucher.Account != null)
@@ -180,7 +204,13 @@
                                     <span class="badge bg-success">معتمد</span>
                                     break;
                                 case PaymentVoucherStatus.Rejected:
-                                    <span class="badge bg-danger">مرفوض</span>
+                                    <div class="d-flex flex-column gap-1">
+                                        <span class="badge bg-danger">مرفوض</span>
+                                        @if (!string.IsNullOrWhiteSpace(rejectionReason))
+                                        {
+                                            <small class="text-danger">سبب الرفض: @rejectionReason</small>
+                                        }
+                                    </div>
                                     break;
                             }
                         </td>
@@ -193,27 +223,6 @@
                             else
                             {
                                 <span class="text-muted">غير معتمد</span>
-                            }
-                        </td>
-                        <td data-filter-value="@journalReference">
-                            @if (item.JournalEntryId.HasValue)
-                            {
-                                <div class="d-flex flex-column align-items-start gap-1">
-                                    <span class="fw-semibold">@item.JournalEntryReference</span>
-                                    <small class="text-muted">رقم القيد: @journalNumber</small>
-                                    <a asp-controller="JournalEntries"
-                                       asp-action="Details"
-                                       asp-route-id="@item.JournalEntryId.Value"
-                                       asp-require-permission="journal.view"
-                                       class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-book-open me-1"></i>
-                                        عرض القيد
-                                    </a>
-                                </div>
-                            }
-                            else
-                            {
-                                <span class="text-muted">لا يوجد قيد</span>
                             }
                         </td>
                         <td data-filter-value="@notesText">@notesText</td>
@@ -238,7 +247,7 @@
                     </tr>
                     }
                     <tr class="no-results @(Model.Items.Any() ? "d-none" : string.Empty)">
-                        <td colspan="14" class="text-center text-muted">لا توجد نتائج مطابقة للمرشحات الحالية.</td>
+                        <td colspan="15" class="text-center text-muted">لا توجد نتائج مطابقة للمرشحات الحالية.</td>
                     </tr>
                 </tbody>
             </table>

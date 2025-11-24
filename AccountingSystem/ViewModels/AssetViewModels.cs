@@ -130,6 +130,7 @@ namespace AccountingSystem.ViewModels
         public int? JournalEntryId { get; set; }
         public string? JournalEntryNumber { get; set; }
         public WorkflowInstanceStatus? WorkflowStatus { get; set; }
+        public string? RejectionReason { get; set; }
     }
 
     public class CreateAssetExpenseViewModel
