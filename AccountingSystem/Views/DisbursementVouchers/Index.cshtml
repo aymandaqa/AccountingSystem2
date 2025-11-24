@@ -117,6 +117,7 @@
                         <th scope="col">الحالة</th>
                         <th scope="col">اعتماد الحركة</th>
                         <th scope="col">الفرع</th>
+                        <th scope="col">الملاحظات</th>
                         <th scope="col" class="text-end">إجراءات</th>
                     </tr>
                 </thead>
@@ -141,6 +142,7 @@
                             ? string.Format(CultureInfo.CurrentCulture, "{0:dd/MM/yyyy HH:mm} - {1}", voucher.ApprovedAt.Value, voucher.ApprovedBy?.FullName ?? voucher.ApprovedById ?? "-")
                             : "غير معتمد";
                         var branchName = voucher.CreatedBy?.PaymentBranch?.NameAr ?? "-";
+                        var notes = string.IsNullOrWhiteSpace(voucher.Notes) ? "-" : voucher.Notes;
                         var dateValue = voucher.Date.ToString("yyyy-MM-dd");
                         var amountNumeric = amount.ToString("G17", CultureInfo.InvariantCulture);
                         var baseAmountNumeric = baseAmount.ToString("G17", CultureInfo.InvariantCulture);
@@ -186,6 +188,7 @@
                             }
                         </td>
                         <td data-filter-value="@branchName">@branchName</td>
+                        <td data-filter-value="@notes">@notes</td>
                         <td class="text-end">
                             <form asp-action="Delete"
                                   asp-route-id="@voucher.Id"
@@ -206,7 +209,7 @@
                     </tr>
                     }
                     <tr class="no-results @(Model.Items.Any() ? "d-none" : string.Empty)">
-                        <td colspan="10" class="text-center text-muted">لا توجد نتائج مطابقة للمرشحات الحالية.</td>
+                        <td colspan="11" class="text-center text-muted">لا توجد نتائج مطابقة للمرشحات الحالية.</td>
                     </tr>
                 </tbody>
             </table>
