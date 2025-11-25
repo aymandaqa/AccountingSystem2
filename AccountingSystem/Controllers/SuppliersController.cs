@@ -154,9 +154,9 @@ namespace AccountingSystem.Controllers
                 .Select(ub => ub.BranchId)
                 .ToListAsync();
 
-            var branchId = ParseNullableInt(dm.Params?.GetValueOrDefault("branchId"));
-            var supplierTypeId = ParseNullableInt(dm.Params?.GetValueOrDefault("supplierTypeId"));
-            var balanceFilter = ParseBalanceFilter(dm.Params?.GetValueOrDefault("balanceFilter"));
+            var branchId = ParseNullableInt(Request.Query["branchId"].FirstOrDefault());
+            var supplierTypeId = ParseNullableInt(Request.Query["supplierTypeId"].FirstOrDefault());
+            var balanceFilter = ParseBalanceFilter(Request.Query["balanceFilter"].FirstOrDefault());
 
             var suppliers = await BuildSuppliersQuery(
                     search: null,
