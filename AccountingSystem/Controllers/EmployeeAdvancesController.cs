@@ -19,6 +19,14 @@ namespace AccountingSystem.Controllers
         private readonly UserManager<User> _userManager;
         private readonly IJournalEntryService _journalEntryService;
 
+        private async Task<List<int>> GetUserBranchIdsAsync(string userId)
+        {
+            return await _context.UserBranches
+                .Where(ub => ub.UserId == userId)
+                .Select(ub => ub.BranchId)
+                .ToListAsync();
+        }
+
         public EmployeeAdvancesController(
             ApplicationDbContext context,
             UserManager<User> userManager,
@@ -37,11 +45,28 @@ namespace AccountingSystem.Controllers
                 return Challenge();
             }
 
-            var advances = await _context.EmployeeAdvances
-                .Where(a => a.CreatedById == user.Id)
+            var userBranchIds = await GetUserBranchIdsAsync(user.Id);
+
+            var query = _context.EmployeeAdvances
                 .Include(a => a.Employee).ThenInclude(e => e.Branch)
                 .Include(a => a.PaymentAccount)
                 .Include(a => a.Currency)
+                .AsQueryable();
+
+            if (userBranchIds.Any())
+            {
+                query = query.Where(a => userBranchIds.Contains(a.BranchId));
+            }
+            else if (user.PaymentBranchId.HasValue)
+            {
+                query = query.Where(a => a.BranchId == user.PaymentBranchId.Value);
+            }
+            else
+            {
+                query = query.Where(a => a.CreatedById == user.Id);
+            }
+
+            var advances = await query
                 .OrderByDescending(a => a.Date)
                 .ThenByDescending(a => a.Id)
                 .ToListAsync();
@@ -203,13 +228,30 @@ namespace AccountingSystem.Controllers
                 return Challenge();
             }
 
-            var advance = await _context.EmployeeAdvances
+            var userBranchIds = await GetUserBranchIdsAsync(user.Id);
+
+            var query = _context.EmployeeAdvances
                 .Include(a => a.Employee).ThenInclude(e => e.Branch)
                 .Include(a => a.PaymentAccount).ThenInclude(a => a.Currency)
                 .Include(a => a.Currency)
                 .Include(a => a.CreatedBy)
                 .Include(a => a.Branch)
-                .FirstOrDefaultAsync(a => a.Id == id && a.CreatedById == user.Id);
+                .AsQueryable();
+
+            if (userBranchIds.Any())
+            {
+                query = query.Where(a => userBranchIds.Contains(a.BranchId));
+            }
+            else if (user.PaymentBranchId.HasValue)
+            {
+                query = query.Where(a => a.BranchId == user.PaymentBranchId.Value);
+            }
+            else
+            {
+                query = query.Where(a => a.CreatedById == user.Id);
+            }
+
+            var advance = await query.FirstOrDefaultAsync(a => a.Id == id);
 
             if (advance == null)
             {
