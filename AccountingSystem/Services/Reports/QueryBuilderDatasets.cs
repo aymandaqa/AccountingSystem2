@@ -214,8 +214,8 @@ public static class QueryBuilderDatasets
                             .Select(sb => sb.Branch!.NameAr ?? sb.Branch!.NameEn ?? sb.Branch!.Code))
                         : null,
                     Currency = s.Account != null && s.Account.Currency != null ? s.Account.Currency.Code : null,
-                    OpeningBalance = s.Account?.OpeningBalance ?? 0m,
-                    CurrentBalance = s.Account?.CurrentBalance ?? 0m,
+                    OpeningBalance = s.Account != null ? s.Account.OpeningBalance : 0m,
+                    CurrentBalance = s.Account != null ? s.Account.CurrentBalance : 0m,
                 })
         )
     };
