@@ -414,6 +414,7 @@ namespace AccountingSystem.ViewModels
         public List<AccountTransactionViewModel> Transactions { get; set; } = new List<AccountTransactionViewModel>();
         public List<SelectListItem> Accounts { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> Branches { get; set; } = new List<SelectListItem>();
+        public bool IsAccountSelectionLocked { get; set; }
     }
 
     public class AccountTransactionViewModel

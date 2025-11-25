@@ -202,7 +202,8 @@ namespace AccountingSystem.Controllers
                     CreatedAt = s.CreatedAt,
                     Balance = s.Account != null ? s.Account.CurrentBalance * -1 : 0m,
                     CurrencyCode = s.Account?.Currency?.Code ?? string.Empty,
-                    AccountId = s.AccountId
+                    AccountId = s.AccountId,
+                    ShowAccountStatement = s.ShowAccountStatement
                 };
             });
 
@@ -502,6 +503,7 @@ namespace AccountingSystem.Controllers
                     Phone = model.Phone,
                     Email = model.Email,
                     IsActive = model.IsActive,
+                    ShowAccountStatement = model.ShowAccountStatement,
                     SupplierTypeId = model.SupplierTypeId,
                     AuthorizedOperations = CombineAuthorizations(model.SelectedAuthorizations),
                     AccountId = account.Id,
@@ -548,6 +550,7 @@ namespace AccountingSystem.Controllers
                 Phone = supplier.Phone,
                 Email = supplier.Email,
                 IsActive = supplier.IsActive,
+                ShowAccountStatement = supplier.ShowAccountStatement,
                 SupplierTypeId = supplier.SupplierTypeId,
                 SelectedAuthorizations = SplitAuthorizations(supplier.AuthorizedOperations),
                 SelectedBranchIds = supplier.SupplierBranches.Select(sb => sb.BranchId).ToList()
@@ -616,6 +619,7 @@ namespace AccountingSystem.Controllers
                 supplier.Phone = model.Phone;
                 supplier.Email = model.Email;
                 supplier.IsActive = model.IsActive;
+                supplier.ShowAccountStatement = model.ShowAccountStatement;
                 supplier.SupplierTypeId = model.SupplierTypeId;
                 supplier.AuthorizedOperations = CombineAuthorizations(model.SelectedAuthorizations);
 

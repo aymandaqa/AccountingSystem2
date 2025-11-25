@@ -117,6 +117,7 @@
                 <e-grid-column field="CreatedAt" headerText="وقت الإنشاء" type="datetime" format="yyyy-MM-dd HH:mm" width="100%"></e-grid-column>
                 <e-grid-column field="Balance" headerText="رصيد المورد" textAlign="Right" format="N2" width="100%"></e-grid-column>
                 <e-grid-column field="CurrencyCode" headerText="العملة" width="100%"></e-grid-column>
+                <e-grid-column field="ShowAccountStatement" headerText="إظهار كشف الحساب" displayAsCheckBox="true" textAlign="Center" width="100%"></e-grid-column>
                 <e-grid-column headerText="الإجراءات" textAlign="Center" width="100%" template="#supplier-actions-template"></e-grid-column>
             </e-grid-columns>
         </ejs-grid>
@@ -127,8 +128,8 @@
 
 <script id="supplier-actions-template" type="text/x-template">
     <div class="btn-group btn-group-sm" role="group">
-        ${if(AccountId)}
-        <a class="btn btn-outline-success" href="/Reports/AccountStatement?accountId=${AccountId}" target="_blank" data-permission="statement" title="كشف الحساب">
+        ${if(AccountId && ShowAccountStatement)}
+        <a class="btn btn-outline-success" href="/Reports/AccountStatement?accountId=${AccountId}&lockAccount=true" target="_blank" data-permission="statement" title="كشف الحساب">
             <i class="fas fa-file-alt"></i>
         </a>
         ${/if}
