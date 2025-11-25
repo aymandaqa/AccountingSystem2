@@ -1264,6 +1264,30 @@ namespace AccountingSystem.Controllers
             });
         }
 
+        [HttpGet]
+        public async Task<IActionResult> PrintBatch(int id)
+        {
+            var viewModel = await BuildBatchPrintViewModel(id);
+            if (viewModel == null)
+            {
+                return NotFound();
+            }
+
+            return View(viewModel);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> PrintPayslips(int id)
+        {
+            var viewModel = await BuildBatchPrintViewModel(id);
+            if (viewModel == null)
+            {
+                return NotFound();
+            }
+
+            return View(viewModel);
+        }
+
         private static decimal SanitizeAmount(decimal amount)
         {
             if (amount < 0)
@@ -1272,6 +1296,108 @@ namespace AccountingSystem.Controllers
             }
 
             return Math.Round(amount, 2, MidpointRounding.AwayFromZero);
+        }
+
+        private async Task<PayrollBatchPrintViewModel?> BuildBatchPrintViewModel(int id)
+        {
+            var batch = await _context.PayrollBatches
+                .AsNoTracking()
+                .Include(b => b.Branch)
+                .Include(b => b.PaymentAccount)
+                .Include(b => b.Lines)
+                    .ThenInclude(l => l.Employee)
+                .Include(b => b.Lines)
+                    .ThenInclude(l => l.Deductions)
+                        .ThenInclude(d => d.DeductionType)
+                            .ThenInclude(dt => dt.Account)
+                .Include(b => b.Lines)
+                    .ThenInclude(l => l.Deductions)
+                        .ThenInclude(d => d.Account)
+                .Include(b => b.Lines)
+                    .ThenInclude(l => l.Allowances)
+                        .ThenInclude(a => a.AllowanceType)
+                            .ThenInclude(at => at.Account)
+                .Include(b => b.Lines)
+                    .ThenInclude(l => l.Allowances)
+                        .ThenInclude(a => a.Account)
+                .FirstOrDefaultAsync(b => b.Id == id);
+
+            if (batch == null)
+            {
+                return null;
+            }
+
+            var periodDate = batch.Year > 0 && batch.Month > 0
+                ? new DateTime(batch.Year, batch.Month, 1)
+                : (DateTime?)null;
+            var arabicCulture = new CultureInfo("ar");
+            var periodDisplay = periodDate?.ToString("MMMM yyyy", arabicCulture) ?? "---";
+
+            var employees = batch.Lines
+                .OrderBy(l => l.Employee.Name)
+                .Select(l =>
+                {
+                    var baseSalary = Math.Max(0, l.GrossAmount - l.AllowanceAmount);
+                    return new PayrollBatchEmployeePrintViewModel
+                    {
+                        EmployeeId = l.EmployeeId,
+                        Name = l.Employee.Name,
+                        JobTitle = l.Employee.JobTitle ?? string.Empty,
+                        BaseSalary = baseSalary,
+                        AllowanceTotal = l.AllowanceAmount,
+                        DeductionTotal = l.DeductionAmount,
+                        NetAmount = l.Amount,
+                        Allowances = l.Allowances
+                            .OrderBy(a => a.Id)
+                            .Select(a => new PayrollItemBreakdownViewModel
+                            {
+                                Type = a.Type ?? a.AllowanceType?.Name ?? "",
+                                Description = a.Description,
+                                Amount = a.Amount,
+                                AccountCode = a.Account?.Code ?? a.AllowanceType?.Account?.Code
+                            })
+                            .ToList(),
+                        Deductions = l.Deductions
+                            .OrderBy(d => d.Id)
+                            .Select(d => new PayrollItemBreakdownViewModel
+                            {
+                                Type = d.Type ?? d.DeductionType?.Name ?? "",
+                                Description = d.Description,
+                                Amount = d.Amount,
+                                AccountCode = d.Account?.Code ?? d.DeductionType?.Account?.Code
+                            })
+                            .ToList()
+                    };
+                })
+                .ToList();
+
+            return new PayrollBatchPrintViewModel
+            {
+                BatchId = batch.Id,
+                BranchName = batch.Branch?.NameAr ?? string.Empty,
+                PeriodDisplay = periodDisplay,
+                StatusDisplay = GetStatusDisplay(batch.Status),
+                ReferenceNumber = batch.ReferenceNumber,
+                PaymentAccount = batch.PaymentAccount?.NameAr ?? batch.PaymentAccount?.NameEn,
+                CreatedAt = batch.CreatedAt,
+                ConfirmedAt = batch.ConfirmedAt,
+                TotalNet = batch.TotalAmount,
+                TotalBase = employees.Sum(e => e.BaseSalary),
+                TotalAllowance = employees.Sum(e => e.AllowanceTotal),
+                TotalDeduction = employees.Sum(e => e.DeductionTotal),
+                Employees = employees
+            };
+        }
+
+        private static string GetStatusDisplay(PayrollBatchStatus status)
+        {
+            return status switch
+            {
+                PayrollBatchStatus.Draft => "مسودة",
+                PayrollBatchStatus.Confirmed => "معتمد",
+                PayrollBatchStatus.Cancelled => "ملغى",
+                _ => status.ToString()
+            };
         }
 
         private static string? TrimAndTruncate(string? value, int maxLength)
