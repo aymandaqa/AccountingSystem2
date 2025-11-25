@@ -57,6 +57,9 @@ namespace AccountingSystem.Controllers
                 var pendingIncomingTransfers = string.IsNullOrWhiteSpace(userId)
                     ? Array.Empty<PaymentTransfer>()
                     : await LoadIncomingPendingTransfersForUserAsync(userId);
+                var hasPaymentAccount = string.IsNullOrWhiteSpace(userId)
+                    ? false
+                    : await UserHasPaymentAccountAsync(userId);
                 var dashboardAccounts = await LoadDashboardAccountTreeAsync();
 
                 var viewModel = new CashPerformanceDashboardViewModel
@@ -74,7 +77,8 @@ namespace AccountingSystem.Controllers
                     TotalCashOnBranchBox = records.Sum(r => r.CashOnBranchBox) + transfersBalance,
                     DashboardAccountTree = dashboardAccounts.Nodes,
                     DashboardBaseCurrencyCode = dashboardAccounts.BaseCurrencyCode,
-                    DashboardParentAccountName = dashboardAccounts.ParentAccountName
+                    DashboardParentAccountName = dashboardAccounts.ParentAccountName,
+                    HasPaymentAccount = hasPaymentAccount
                 };
 
                 return View(viewModel);
@@ -172,6 +176,27 @@ namespace AccountingSystem.Controllers
             return await query
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
+        }
+
+        private async Task<bool> UserHasPaymentAccountAsync(string userId)
+        {
+            var user = await _userManager.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+            {
+                return false;
+            }
+
+            if (user.PaymentAccountId.HasValue)
+            {
+                return true;
+            }
+
+            return await _context.UserPaymentAccounts
+                .AsNoTracking()
+                .AnyAsync(upa => upa.UserId == userId);
         }
 
         private async Task<(List<AccountTreeNodeViewModel> Nodes, string BaseCurrencyCode, string ParentAccountName)> LoadDashboardAccountTreeAsync()
