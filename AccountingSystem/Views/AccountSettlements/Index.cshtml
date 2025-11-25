@@ -1,0 +1,222 @@
+@model AccountingSystem.ViewModels.AccountSettlementIndexViewModel
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "تسوية حساب مالي";
+    var hasAccount = Model.AccountId.HasValue;
+}
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white py-3">
+        <h1 class="h4 mb-1">تسوية حساب مالي</h1>
+        <p class="text-muted mb-0">فصل الحركات المدينة والدائنة يدويًا وتحويل الحركات المتطابقة إلى كشف التسويات بشكل منظم.</p>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-12 col-lg-6">
+                <label class="form-label fw-semibold">اختر الحساب</label>
+                <select class="form-select" name="accountId" asp-items="Model.Accounts">
+                    <option value="">-- اختر حساباً --</option>
+                </select>
+                <div class="form-text">يتم تحديث الحركات غير المسوّاة تلقائياً عند اختيار الحساب أو إعادة التحميل.</div>
+            </div>
+            <div class="col-12 col-lg-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fa-solid fa-filter ms-1"></i> عرض الحركات
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-check-circle ms-1"></i> @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-circle-exclamation ms-1"></i> @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (hasAccount)
+{
+    <form asp-action="Settle" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="AccountId" value="@Model.AccountId" />
+        <div class="row g-3">
+            <div class="col-12 col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 class="h5 mb-0">الحركات المدينة غير المسوّاة</h2>
+                            <small class="text-muted">حدد الحركات التي ترغب في تسويتها من الجانب المدين.</small>
+                        </div>
+                        <span class="badge bg-primary">@Model.DebitLines.Count</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 50px;"></th>
+                                    <th>التاريخ</th>
+                                    <th>رقم القيد</th>
+                                    <th>البيان</th>
+                                    <th class="text-end">المبلغ (مدين)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.DebitLines.Any())
+                                {
+                                    foreach (var line in Model.DebitLines)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <input class="form-check-input" type="checkbox" name="SelectedDebitIds" value="@line.LineId" />
+                                            </td>
+                                            <td>@line.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</td>
+                                            <td>@line.JournalNumber</td>
+                                            <td>
+                                                <div class="fw-semibold">@line.Description</div>
+                                                @if (!string.IsNullOrWhiteSpace(line.Reference))
+                                                {
+                                                    <small class="text-muted">@line.Reference</small>
+                                                }
+                                            </td>
+                                            <td class="text-end text-success fw-semibold">@line.Debit.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">لا توجد حركات مدينة غير مسوّاة.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 class="h5 mb-0">الحركات الدائنة غير المسوّاة</h2>
+                            <small class="text-muted">حدد الحركات التي ترغب في تسويتها من الجانب الدائن.</small>
+                        </div>
+                        <span class="badge bg-secondary">@Model.CreditLines.Count</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 50px;"></th>
+                                    <th>التاريخ</th>
+                                    <th>رقم القيد</th>
+                                    <th>البيان</th>
+                                    <th class="text-end">المبلغ (دائن)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.CreditLines.Any())
+                                {
+                                    foreach (var line in Model.CreditLines)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <input class="form-check-input" type="checkbox" name="SelectedCreditIds" value="@line.LineId" />
+                                            </td>
+                                            <td>@line.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</td>
+                                            <td>@line.JournalNumber</td>
+                                            <td>
+                                                <div class="fw-semibold">@line.Description</div>
+                                                @if (!string.IsNullOrWhiteSpace(line.Reference))
+                                                {
+                                                    <small class="text-muted">@line.Reference</small>
+                                                }
+                                            </td>
+                                            <td class="text-end text-danger fw-semibold">@line.Credit.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">لا توجد حركات دائنة غير مسوّاة.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end mt-3 gap-2">
+            <div class="text-muted small me-auto">يتم ترتيب الحركات المسوّاة في كشف التسويات بترتيب اختيارها: الحركة المدينة أولاً ثم الدائنة.</div>
+            <button type="submit" class="btn btn-success">
+                <i class="fa-solid fa-link ms-1"></i> تسوية الحركات المحددة
+            </button>
+        </div>
+    </form>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="h5 mb-0">كشف التسويات</h2>
+                <small class="text-muted">يتم عرض كل تسوية مع ترتيب الحركة المدينة تليها الحركة الدائنة.</small>
+            </div>
+            <span class="badge bg-info">@Model.SettledPairs.Count</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 140px;">تاريخ التسوية</th>
+                        <th>الحركة المدينة</th>
+                        <th>الحركة الدائنة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.SettledPairs.Any())
+                    {
+                        foreach (var pair in Model.SettledPairs)
+                        {
+                            <tr>
+                                <td class="text-nowrap">@pair.CreatedAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)</td>
+                                <td>
+                                    <div class="fw-semibold">@pair.DebitLine.Description</div>
+                                    <div class="text-muted small">رقم القيد: @pair.DebitLine.JournalNumber | التاريخ: @pair.DebitLine.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</div>
+                                    <div class="text-success fw-semibold">@pair.DebitLine.Debit.ToString("N2", CultureInfo.InvariantCulture)</div>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">@pair.CreditLine.Description</div>
+                                    <div class="text-muted small">رقم القيد: @pair.CreditLine.JournalNumber | التاريخ: @pair.CreditLine.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</div>
+                                    <div class="text-danger fw-semibold">@pair.CreditLine.Credit.ToString("N2", CultureInfo.InvariantCulture)</div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4">لم يتم تسجيل أي تسويات لهذا الحساب بعد.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert alert-info">
+        <i class="fa-solid fa-info-circle ms-1"></i> يرجى اختيار حساب لعرض الحركات غير المسوّاة وإجراء التسويات.
+    </div>
+}

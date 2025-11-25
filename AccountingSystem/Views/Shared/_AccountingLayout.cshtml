@@ -171,7 +171,7 @@
         var accountsActive = currentController == "accounts";
         var suppliersActive = currentController == "suppliers" || currentController == "suppliertypes";
         var operationsActive = currentController == "cashboxclosures" || currentController == "expenses" || currentController == "transfers";
-        var vouchersActive = currentController == "receiptvouchers" || currentController == "disbursementvouchers" || currentController == "paymentvouchers" || currentController == "workflowapprovals" || currentController == "workflowdefinitions" || currentController == "transactions";
+        var vouchersActive = currentController == "receiptvouchers" || currentController == "disbursementvouchers" || currentController == "paymentvouchers" || currentController == "workflowapprovals" || currentController == "workflowdefinitions" || currentController == "transactions" || currentController == "accountsettlements";
         var accountMgmtActive = currentController == "accountmanagement";
         var journalActive = currentController == "journalentries";
         var reportsActive = currentController == "reports" || currentController == "dynamicrdlcreports";
@@ -520,6 +520,13 @@
                                            asp-controller="Transactions"
                                            asp-action="Index">
                                             <i class="fas fa-table-list"></i> كل الحركات
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="AccountSettlements"
+                                           asp-action="Index">
+                                            <i class="fa-solid fa-scale-balanced"></i> تسوية حساب مالي
                                         </a>
                                     </li>
                                 }
