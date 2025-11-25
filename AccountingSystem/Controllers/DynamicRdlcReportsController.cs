@@ -13,7 +13,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.AspNetCore.Hosting;
 using System.IO;
-using Syncfusion.EJ.ReportViewer;
+using BoldReports.Web;
+using BoldReports.Web.ReportViewer;
 
 namespace AccountingSystem.Controllers
 {
@@ -75,7 +76,14 @@ namespace AccountingSystem.Controllers
         [HttpGet]
         public IActionResult GetResource(string key, string resourcetype, bool isPrint)
         {
-            return ReportHelper.GetResource(key, resourcetype, isPrint);
+            var resource = new ReportResource
+            {
+                key = key,
+                resourcetype = resourcetype,
+                isPrint = isPrint
+            };
+
+            return ReportHelper.GetResource(resource, this, _cache);
         }
 
         [HttpPost]
