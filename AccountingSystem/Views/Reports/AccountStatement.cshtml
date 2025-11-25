@@ -9,6 +9,7 @@
         ? (string.IsNullOrWhiteSpace(Model!.SelectedBranchName) ? "جميع الفروع" : Model.SelectedBranchName!)
         : "جميع الفروع";
     var transactionsCount = Model?.Transactions?.Count ?? 0;
+    var isAccountLocked = Model?.IsAccountSelectionLocked == true;
 }
 
 @section Styles {
@@ -352,9 +353,14 @@
         <div class="card-body p-4">
             <div class="filter-card shadow-sm p-4 mb-4">
                 <form method="get" class="row g-3 align-items-end">
+                    @if (isAccountLocked && Model?.AccountId != null)
+                    {
+                        <input type="hidden" name="accountId" value="@Model.AccountId" />
+                        <input type="hidden" name="lockAccount" value="true" />
+                    }
                     <div class="col-md-3">
                         <label for="accountId" class="form-label">الحساب</label>
-                        <select name="accountId" id="accountId" class="form-select account-select" required>
+                        <select name="accountId" id="accountId" class="form-select account-select" required @(isAccountLocked ? "disabled" : null)>
                             <option value="">اختر الحساب</option>
                             @if (Model?.Accounts != null)
                             {
@@ -452,11 +458,11 @@
                                 <div class="meta">يمكنك طباعة كشف الحساب أو فتح نسخة للطباعة في نافذة جديدة.</div>
                             </div>
                             <div class="d-flex flex-wrap gap-2 mt-3">
-                                <a class="btn btn-outline-primary" target="_blank" href="@Url.Action("PrintAccountStatement", "Reports", new { accountId = Model.AccountId, branchId = Model.BranchId, fromDate = Model.FromDate.ToString("yyyy-MM-ddTHH:mm"), toDate = Model.ToDate.ToString("yyyy-MM-ddTHH:mm") })">
+                                <a class="btn btn-outline-primary" target="_blank" href="@Url.Action("PrintAccountStatement", "Reports", new { accountId = Model.AccountId, branchId = Model.BranchId, fromDate = Model.FromDate.ToString("yyyy-MM-ddTHH:mm"), toDate = Model.ToDate.ToString("yyyy-MM-ddTHH:mm"), lockAccount = Model.IsAccountSelectionLocked })">
                                     <i class="fas fa-print me-1"></i>
                                     طباعة A4
                                 </a>
-                                <a class="btn btn-outline-success" href="@Url.Action("AccountStatementExcel", "Reports", new { accountId = Model.AccountId, branchId = Model.BranchId, fromDate = Model.FromDate.ToString("yyyy-MM-ddTHH:mm"), toDate = Model.ToDate.ToString("yyyy-MM-ddTHH:mm") })">
+                                <a class="btn btn-outline-success" href="@Url.Action("AccountStatementExcel", "Reports", new { accountId = Model.AccountId, branchId = Model.BranchId, fromDate = Model.FromDate.ToString("yyyy-MM-ddTHH:mm"), toDate = Model.ToDate.ToString("yyyy-MM-ddTHH:mm"), lockAccount = Model.IsAccountSelectionLocked })">
                                     <i class="fas fa-file-excel me-1"></i>
                                     تصدير Excel
                                 </a>
@@ -732,9 +738,16 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
-        $('#accountId').select2({
+        const isAccountLocked = @isAccountLocked.ToString().ToLowerInvariant();
+        const accountSelect = $('#accountId');
+
+        accountSelect.select2({
             placeholder: 'اختر الحساب',
             width: '100%'
         });
+
+        if (isAccountLocked) {
+            accountSelect.prop('disabled', true);
+        }
     </script>
 }

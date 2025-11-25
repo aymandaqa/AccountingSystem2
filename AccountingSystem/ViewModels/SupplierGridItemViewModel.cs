@@ -16,5 +16,6 @@ namespace AccountingSystem.ViewModels
         public decimal Balance { get; set; }
         public string CurrencyCode { get; set; } = string.Empty;
         public int? AccountId { get; set; }
+        public bool ShowAccountStatement { get; set; }
     }
 }
