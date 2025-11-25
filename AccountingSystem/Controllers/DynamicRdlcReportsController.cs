@@ -68,21 +68,20 @@ namespace AccountingSystem.Controllers
         }
 
         [HttpPost]
-        public IActionResult PostReportAction([FromBody] Dictionary<string, object> jsonResult)
+        public object PostReportAction([FromBody] Dictionary<string, object> jsonResult)
         {
             return ReportHelper.ProcessReport(jsonResult, this, _cache);
         }
 
-        [HttpGet]
-        public IActionResult GetResource(string key, string resourcetype, bool isPrint)
+        [HttpPost]
+        public object PostFormReportAction()
         {
-            var resource = new ReportResource
-            {
-                key = key,
-                resourcetype = resourcetype,
-                isPrint = isPrint
-            };
+            return ReportHelper.PostFormReportAction(this, _cache);
+        }
 
+        [HttpGet]
+        public object GetResource(ReportResource resource)
+        {
             return ReportHelper.GetResource(resource, this, _cache);
         }
 
