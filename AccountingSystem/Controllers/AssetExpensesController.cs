@@ -707,10 +707,10 @@ namespace AccountingSystem.Controllers
                 .Where(a => a.AllowAssetExpenses && !a.IsDisposed)
                 .AsQueryable();
 
-            if (userBranchIds.Any())
-            {
-                query = query.Where(a => userBranchIds.Contains(a.BranchId));
-            }
+            //if (userBranchIds.Any())
+            //{
+            //    query = query.Where(a => userBranchIds.Contains(a.BranchId));
+            //}
 
             return await query
                 .OrderBy(a => a.Name)
