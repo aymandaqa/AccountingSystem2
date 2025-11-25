@@ -42,12 +42,12 @@ namespace AccountingSystem.Services.Reports
 
             if (TryParseDate(parameters, "fromDate", out var fromDate))
             {
-                query = query.Where(l => l.JournalEntry!.EntryDate >= fromDate);
+                query = query.Where(l => l.JournalEntry!.Date >= fromDate);
             }
 
             if (TryParseDate(parameters, "toDate", out var toDate))
             {
-                query = query.Where(l => l.JournalEntry!.EntryDate <= toDate);
+                query = query.Where(l => l.JournalEntry!.Date <= toDate);
             }
 
             if (TryParseInt(parameters, "branchId", out var branchId))
@@ -61,13 +61,13 @@ namespace AccountingSystem.Services.Reports
             }
 
             var data = await query
-                .OrderByDescending(l => l.JournalEntry!.EntryDate)
+                .OrderByDescending(l => l.JournalEntry!.Date)
                 .Select(l => new JournalEntryLineReportRow
                 {
                     BranchName = l.JournalEntry!.Branch != null ? l.JournalEntry.Branch.NameAr : string.Empty,
-                    AccountNumber = l.Account!.Number,
+                    AccountNumber = l.Account!.Code,
                     AccountName = l.Account.NameAr ?? l.Account.NameEn ?? string.Empty,
-                    EntryDate = l.JournalEntry.EntryDate,
+                    EntryDate = l.JournalEntry.Date,
                     Reference = l.JournalEntry.Reference ?? string.Empty,
                     Description = l.Description ?? string.Empty,
                     Debit = l.Debit,
@@ -97,13 +97,15 @@ namespace AccountingSystem.Services.Reports
 
             var receiptVouchers = _context.ReceiptVouchers
                 .Include(v => v.Account)
-                .Include(v => v.PaymentAccount)
+                .Include(v => v.CreatedBy)
+                    .ThenInclude(u => u.PaymentAccount)
                 .Include(v => v.Currency)
                 .Where(v => v.Date >= fromDate && v.Date <= toDate);
 
             var paymentVouchers = _context.PaymentVouchers
                 .Include(v => v.Account)
-                .Include(v => v.PaymentAccount)
+                .Include(v => v.CreatedBy)
+                    .ThenInclude(u => u.PaymentAccount)
                 .Include(v => v.Currency)
                 .Where(v => v.Date >= fromDate && v.Date <= toDate);
 
@@ -138,8 +140,10 @@ namespace AccountingSystem.Services.Reports
                 {
                     VoucherType = "سند دفع",
                     Date = v.Date,
-                    DebitAccount = v.PaymentAccount.NameAr ?? v.PaymentAccount.NameEn ?? string.Empty,
-                    CreditAccount = v.Account.NameAr ?? v.Account.NameEn ?? string.Empty,
+                    DebitAccount = v.Account != null ? v.Account.NameAr ?? v.Account.NameEn ?? string.Empty : string.Empty,
+                    CreditAccount = v.IsCash && v.CreatedBy.PaymentAccount != null
+                        ? v.CreatedBy.PaymentAccount.NameAr ?? v.CreatedBy.PaymentAccount.NameEn ?? string.Empty
+                        : v.Account != null ? v.Account.NameAr ?? v.Account.NameEn ?? string.Empty : string.Empty,
                     Amount = v.Amount,
                     Currency = v.Currency.Code,
                     Notes = v.Notes ?? string.Empty
