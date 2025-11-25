@@ -46,5 +46,7 @@ namespace AccountingSystem.ViewModels.Dashboard
         public bool HasPendingIncomingTransfers => PendingIncomingTransfers.Any();
 
         public string CurrentUserId { get; set; } = string.Empty;
+
+        public bool HasPaymentAccount { get; set; }
     }
 }
