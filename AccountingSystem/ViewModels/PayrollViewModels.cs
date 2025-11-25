@@ -57,6 +57,44 @@ namespace AccountingSystem.ViewModels
         public string? ReferenceNumber { get; set; }
     }
 
+    public class PayrollBatchPrintViewModel
+    {
+        public int BatchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+        public string PeriodDisplay { get; set; } = string.Empty;
+        public string StatusDisplay { get; set; } = string.Empty;
+        public string? ReferenceNumber { get; set; }
+        public string? PaymentAccount { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? ConfirmedAt { get; set; }
+        public decimal TotalNet { get; set; }
+        public decimal TotalBase { get; set; }
+        public decimal TotalAllowance { get; set; }
+        public decimal TotalDeduction { get; set; }
+        public List<PayrollBatchEmployeePrintViewModel> Employees { get; set; } = new();
+    }
+
+    public class PayrollBatchEmployeePrintViewModel
+    {
+        public int EmployeeId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string JobTitle { get; set; } = string.Empty;
+        public decimal BaseSalary { get; set; }
+        public decimal AllowanceTotal { get; set; }
+        public decimal DeductionTotal { get; set; }
+        public decimal NetAmount { get; set; }
+        public List<PayrollItemBreakdownViewModel> Allowances { get; set; } = new();
+        public List<PayrollItemBreakdownViewModel> Deductions { get; set; } = new();
+    }
+
+    public class PayrollItemBreakdownViewModel
+    {
+        public string Type { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public decimal Amount { get; set; }
+        public string? AccountCode { get; set; }
+    }
+
     public class PayrollEmployeeSelection
     {
         public int EmployeeId { get; set; }

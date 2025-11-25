@@ -140,6 +140,12 @@
                                             <button type="button" class="btn btn-outline-info btn-sm view-batch" data-id="@item.Id" title="عرض التفاصيل">
                                                 <i class="fas fa-eye"></i>
                                             </button>
+                                            <a class="btn btn-outline-secondary btn-sm" asp-action="PrintBatch" asp-route-id="@item.Id" target="_blank" title="طباعة السجل">
+                                                <i class="fas fa-print"></i>
+                                            </a>
+                                            <a class="btn btn-outline-primary btn-sm" asp-action="PrintPayslips" asp-route-id="@item.Id" target="_blank" title="طباعة قسائم الرواتب">
+                                                <i class="fas fa-file-invoice-dollar"></i>
+                                            </a>
                                             @if (item.Status == "Draft")
                                             {
                                                 <button type="button" class="btn btn-success btn-sm confirm-batch" data-id="@item.Id" title="اعتماد الدفعة" asp-require-permission="payroll.process">

@@ -1,0 +1,205 @@
+@model AccountingSystem.ViewModels.PayrollBatchPrintViewModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>طباعة سجل الرواتب</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { direction: rtl; font-family: 'Tajawal', 'Segoe UI', sans-serif; }
+        .page-container { padding: 2rem; }
+        .print-actions { position: sticky; top: 0; background: #fff; padding: 1rem 0; z-index: 10; }
+        .summary-card { background: #f8f9fa; }
+        .section-title { border-bottom: 2px solid #0d6efd; padding-bottom: .5rem; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <div class="print-actions d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0">سجل تنزيل الرواتب</h4>
+            <button class="btn btn-primary" onclick="window.print()">
+                <i class="fas fa-print ms-1"></i>
+                طباعة
+            </button>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <div class="text-muted small mb-1">الفرع</div>
+                        <div class="fw-bold">@Model.BranchName</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <div class="text-muted small mb-1">شهر الرواتب</div>
+                        <div class="fw-bold">@Model.PeriodDisplay</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <div class="text-muted small mb-1">الحالة</div>
+                        <div class="fw-bold">@Model.StatusDisplay</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <div class="text-muted small mb-1">مرجع القيد</div>
+                        <div class="fw-bold">@(string.IsNullOrWhiteSpace(Model.ReferenceNumber) ? "---" : Model.ReferenceNumber)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <div class="text-muted small mb-1">حساب الدفع</div>
+                        <div class="fw-bold">@(string.IsNullOrWhiteSpace(Model.PaymentAccount) ? "---" : Model.PaymentAccount)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <div class="text-muted small mb-1">تاريخ الإنشاء</div>
+                        <div class="fw-bold">@Model.CreatedAt.ToString("dd/MM/yyyy")</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <div class="text-muted small mb-1">تاريخ الاعتماد</div>
+                        <div class="fw-bold">@(Model.ConfirmedAt.HasValue ? Model.ConfirmedAt.Value.ToString("dd/MM/yyyy") : "---")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="text-muted small">إجمالي الراتب الأساسي</div>
+                        <div class="fw-bold h5">@Model.TotalBase.ToString("N2")</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-muted small">إجمالي البدلات</div>
+                        <div class="fw-bold h5 text-success">@Model.TotalAllowance.ToString("N2")</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-muted small">إجمالي الخصومات</div>
+                        <div class="fw-bold h5 text-danger">@Model.TotalDeduction.ToString("N2")</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-muted small">الصافي</div>
+                        <div class="fw-bold h5 text-primary">@Model.TotalNet.ToString("N2")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center section-title">
+                <h5 class="mb-0">تفاصيل الموظفين</h5>
+                <span class="badge bg-secondary">@Model.Employees.Count موظف</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>الموظف</th>
+                            <th>المسمى الوظيفي</th>
+                            <th class="text-end">الراتب الأساسي</th>
+                            <th class="text-end">البدلات</th>
+                            <th class="text-end">الخصومات</th>
+                            <th class="text-end">الصافي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var employee in Model.Employees)
+                        {
+                            <tr>
+                                <td>@employee.Name</td>
+                                <td>@(string.IsNullOrWhiteSpace(employee.JobTitle) ? "---" : employee.JobTitle)</td>
+                                <td class="text-end">@employee.BaseSalary.ToString("N2")</td>
+                                <td class="text-end text-success">@employee.AllowanceTotal.ToString("N2")</td>
+                                <td class="text-end text-danger">@employee.DeductionTotal.ToString("N2")</td>
+                                <td class="text-end fw-bold text-primary">@employee.NetAmount.ToString("N2")</td>
+                            </tr>
+                            @if (employee.Allowances.Any() || employee.Deductions.Any())
+                            {
+                                <tr class="table-light">
+                                    <td colspan="6">
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <h6 class="text-success">تفاصيل البدلات</h6>
+                                                @if (!employee.Allowances.Any())
+                                                {
+                                                    <div class="text-muted small">لا توجد بدلات</div>
+                                                }
+                                                else
+                                                {
+                                                    <ul class="list-unstyled mb-0">
+                                                        @foreach (var allowance in employee.Allowances)
+                                                        {
+                                                            <li class="mb-1">
+                                                                <span class="fw-semibold">@allowance.Type</span>
+                                                                <span class="text-muted small ms-2">@allowance.Description</span>
+                                                                <span class="badge bg-success-subtle text-success float-start">@allowance.Amount.ToString("N2")</span>
+                                                                @if (!string.IsNullOrWhiteSpace(allowance.AccountCode))
+                                                                {
+                                                                    <span class="text-muted small d-block">@allowance.AccountCode</span>
+                                                                }
+                                                            </li>
+                                                        }
+                                                    </ul>
+                                                }
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6 class="text-danger">تفاصيل الخصومات</h6>
+                                                @if (!employee.Deductions.Any())
+                                                {
+                                                    <div class="text-muted small">لا توجد خصومات</div>
+                                                }
+                                                else
+                                                {
+                                                    <ul class="list-unstyled mb-0">
+                                                        @foreach (var deduction in employee.Deductions)
+                                                        {
+                                                            <li class="mb-1">
+                                                                <span class="fw-semibold">@deduction.Type</span>
+                                                                <span class="text-muted small ms-2">@deduction.Description</span>
+                                                                <span class="badge bg-danger-subtle text-danger float-start">@deduction.Amount.ToString("N2")</span>
+                                                                @if (!string.IsNullOrWhiteSpace(deduction.AccountCode))
+                                                                {
+                                                                    <span class="text-muted small d-block">@deduction.AccountCode</span>
+                                                                }
+                                                            </li>
+                                                        }
+                                                    </ul>
+                                                }
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script src="https://kit.fontawesome.com/a2e0e9c6c1.js" crossorigin="anonymous"></script>
+</body>
+</html>
