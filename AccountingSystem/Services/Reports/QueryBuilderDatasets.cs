@@ -1,5 +1,6 @@
 using AccountingSystem.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace AccountingSystem.Services;
 
@@ -171,6 +172,51 @@ public static class QueryBuilderDatasets
                     IsCash = v.IsCash,
                     Notes = v.Notes
                 })
+        ),
+        new(
+            "supplierAccountBalances",
+            "أرصدة حسابات الموردين",
+            "تتبع أرصدة حسابات الموردين مع فروعهم المرتبطة والعملة.",
+            new List<QueryDatasetField>
+            {
+                new("SupplierId", "معرّف المورد", QueryFieldType.Number, "المورد"),
+                new("SupplierName", "اسم المورد", QueryFieldType.String, "المورد"),
+                new("SupplierType", "نوع المورد", QueryFieldType.String, "المورد"),
+                new("AccountId", "معرّف الحساب", QueryFieldType.Number, "الحساب"),
+                new("AccountCode", "كود الحساب", QueryFieldType.String, "الحساب"),
+                new("AccountName", "اسم الحساب", QueryFieldType.String, "الحساب"),
+                new("BranchCode", "كود فرع الحساب", QueryFieldType.String, "الفرع"),
+                new("BranchName", "اسم فرع الحساب", QueryFieldType.String, "الفرع"),
+                new("LinkedBranches", "الفروع المرتبطة", QueryFieldType.String, "المورد"),
+                new("Currency", "العملة", QueryFieldType.String, "العملة"),
+                new("OpeningBalance", "الرصيد الافتتاحي", QueryFieldType.Decimal, "القيم"),
+                new("CurrentBalance", "الرصيد الحالي", QueryFieldType.Decimal, "القيم"),
+            },
+            context => context.Suppliers
+                .AsNoTracking()
+                .Include(s => s.Account)!.ThenInclude(a => a!.Branch)
+                .Include(s => s.Account)!.ThenInclude(a => a!.Currency)
+                .Include(s => s.SupplierBranches)!.ThenInclude(sb => sb.Branch)
+                .Include(s => s.SupplierType)
+                .Select(s => new SupplierAccountBalanceRow
+                {
+                    SupplierId = s.Id,
+                    SupplierName = s.NameAr,
+                    SupplierType = s.SupplierType != null ? s.SupplierType.Name : null,
+                    AccountId = s.AccountId,
+                    AccountCode = s.Account != null ? s.Account.Code : null,
+                    AccountName = s.Account != null ? s.Account.NameAr : null,
+                    BranchCode = s.Account != null && s.Account.Branch != null ? s.Account.Branch.Code : null,
+                    BranchName = s.Account != null && s.Account.Branch != null ? s.Account.Branch.NameAr : null,
+                    LinkedBranches = s.SupplierBranches != null && s.SupplierBranches.Any()
+                        ? string.Join("، ", s.SupplierBranches
+                            .Where(sb => sb.Branch != null)
+                            .Select(sb => sb.Branch!.NameAr ?? sb.Branch!.NameEn ?? sb.Branch!.Code))
+                        : null,
+                    Currency = s.Account != null && s.Account.Currency != null ? s.Account.Currency.Code : null,
+                    OpeningBalance = s.Account?.OpeningBalance ?? 0m,
+                    CurrentBalance = s.Account?.CurrentBalance ?? 0m,
+                })
         )
     };
 
@@ -256,4 +302,20 @@ public class PaymentVoucherQueryRow : VoucherQueryRow
         get => base.Supplier;
         set => base.Supplier = value;
     }
+}
+
+public class SupplierAccountBalanceRow
+{
+    public int SupplierId { get; set; }
+    public string SupplierName { get; set; } = string.Empty;
+    public string? SupplierType { get; set; }
+    public int? AccountId { get; set; }
+    public string? AccountCode { get; set; }
+    public string? AccountName { get; set; }
+    public string? BranchCode { get; set; }
+    public string? BranchName { get; set; }
+    public string? LinkedBranches { get; set; }
+    public string? Currency { get; set; }
+    public decimal OpeningBalance { get; set; }
+    public decimal CurrentBalance { get; set; }
 }
