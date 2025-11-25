@@ -174,7 +174,7 @@
         var vouchersActive = currentController == "receiptvouchers" || currentController == "disbursementvouchers" || currentController == "paymentvouchers" || currentController == "workflowapprovals" || currentController == "workflowdefinitions" || currentController == "transactions";
         var accountMgmtActive = currentController == "accountmanagement";
         var journalActive = currentController == "journalentries";
-        var reportsActive = currentController == "reports";
+        var reportsActive = currentController == "reports" || currentController == "dynamicrdlcreports";
         var settingsActive = currentController == "branches" || currentController == "costcenters" || currentController == "currencies" || currentController == "users" || currentController == "permissiongroups";
         var hrActive = currentController == "employees" || currentController == "payrolls" || currentController == "deductiontypes" || currentController == "employeedeductions" || currentController == "employeeloans";
         var assetsActive = currentController == "assets" || currentController == "assetexpenses" || currentController == "assettypes" || currentController == "assetdepreciations";
@@ -1032,6 +1032,14 @@
                                            asp-action="QueryBuilder"
                                            asp-require-permission="reports.dynamic">
                                             <i class="fas fa-project-diagram"></i> مصمم التقارير
+                                        </a>
+                                    </li>
+                                    <li class="report-item nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="DynamicRdlcReports"
+                                           asp-action="Index"
+                                           asp-require-permission="reports.dynamic">
+                                            <i class="fa-solid fa-file-circle-plus"></i> تقارير RDLC الديناميكية
                                         </a>
                                     </li>
                                 }

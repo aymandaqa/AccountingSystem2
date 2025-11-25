@@ -18,6 +18,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AccountingSystem.Configuration;
+using AccountingSystem.Services.Reports;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -114,6 +115,9 @@ builder.Services.AddScoped<IAssetDepreciationService, AssetDepreciationService>(
 builder.Services.AddScoped<IUserSessionService, UserSessionService>();
 builder.Services.AddScoped<IAttachmentStorageService, AttachmentStorageService>();
 builder.Services.AddScoped<BusinessPaymentReconciliationService>();
+builder.Services.AddScoped<IFinancialReportCatalog, FinancialReportCatalog>();
+builder.Services.AddScoped<IFinancialReportDataService, FinancialReportDataService>();
+builder.Services.AddMemoryCache();
 builder.Services.AddSignalR();
 
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
