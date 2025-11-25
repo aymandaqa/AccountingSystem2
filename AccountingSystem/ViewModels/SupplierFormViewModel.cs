@@ -30,6 +30,9 @@ namespace AccountingSystem.ViewModels
         [Display(Name = "نشط")]
         public bool IsActive { get; set; } = true;
 
+        [Display(Name = "إظهار زر كشف الحساب في القائمة")]
+        public bool ShowAccountStatement { get; set; } = true;
+
         [Display(Name = "نوع المورد")]
         [Required]
         public int SupplierTypeId { get; set; }

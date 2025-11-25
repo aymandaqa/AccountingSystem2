@@ -23,6 +23,8 @@ namespace AccountingSystem.Models
 
         public bool IsActive { get; set; } = true;
 
+        public bool ShowAccountStatement { get; set; } = true;
+
         public int? AccountId { get; set; }
         public virtual Account? Account { get; set; }
 

@@ -5259,16 +5259,16 @@ namespace AccountingSystem.Controllers
         }
 
         // GET: Reports/AccountStatement
-        public async Task<IActionResult> AccountStatement(int? accountId, int? branchId, DateTime? fromDate, DateTime? toDate)
+        public async Task<IActionResult> AccountStatement(int? accountId, int? branchId, DateTime? fromDate, DateTime? toDate, bool lockAccount = false)
         {
-            var viewModel = await BuildAccountStatementViewModel(accountId, branchId, fromDate, toDate);
+            var viewModel = await BuildAccountStatementViewModel(accountId, branchId, fromDate, toDate, lockAccount);
             return View(viewModel);
         }
 
         [HttpGet]
-        public async Task<IActionResult> AccountStatementExcel(int? accountId, int? branchId, DateTime? fromDate, DateTime? toDate)
+        public async Task<IActionResult> AccountStatementExcel(int? accountId, int? branchId, DateTime? fromDate, DateTime? toDate, bool lockAccount = false)
         {
-            var viewModel = await BuildAccountStatementViewModel(accountId, branchId, fromDate, toDate);
+            var viewModel = await BuildAccountStatementViewModel(accountId, branchId, fromDate, toDate, lockAccount);
 
             if (viewModel.AccountId == null)
             {
@@ -5448,9 +5448,9 @@ namespace AccountingSystem.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> PrintAccountStatement(int? accountId, int? branchId, DateTime? fromDate, DateTime? toDate)
+        public async Task<IActionResult> PrintAccountStatement(int? accountId, int? branchId, DateTime? fromDate, DateTime? toDate, bool lockAccount = false)
         {
-            var viewModel = await BuildAccountStatementViewModel(accountId, branchId, fromDate, toDate);
+            var viewModel = await BuildAccountStatementViewModel(accountId, branchId, fromDate, toDate, lockAccount);
             if (viewModel.AccountId == null)
             {
                 return RedirectToAction(nameof(AccountStatement), new { accountId, branchId, fromDate, toDate });
@@ -6376,7 +6376,7 @@ namespace AccountingSystem.Controllers
                 }).ToListAsync();
         }
 
-        private async Task<AccountStatementViewModel> BuildAccountStatementViewModel(int? accountId, int? branchId, DateTime? fromDate, DateTime? toDate)
+        private async Task<AccountStatementViewModel> BuildAccountStatementViewModel(int? accountId, int? branchId, DateTime? fromDate, DateTime? toDate, bool lockAccount = false)
         {
             var baseCurrency = await _context.Currencies.FirstAsync(c => c.IsBase);
             var accounts = await _context.Accounts
@@ -6415,7 +6415,8 @@ namespace AccountingSystem.Controllers
                 Accounts = accounts,
                 Branches = branches,
                 BaseCurrencyCode = baseCurrency.Code,
-                SelectedBranchName = selectedBranchName
+                SelectedBranchName = selectedBranchName,
+                IsAccountSelectionLocked = lockAccount && accountId.HasValue
             };
 
             if (accountId.HasValue)
