@@ -1,0 +1,157 @@
+@model AccountingSystem.ViewModels.Reports.DynamicRdlcReportViewModel
+@using Newtonsoft.Json
+@using Newtonsoft.Json.Serialization
+@{ 
+    ViewData["Title"] = "عارض التقارير (RDLC)";
+    var serializationSettings = new JsonSerializerSettings
+    {
+        ContractResolver = new CamelCasePropertyNamesContractResolver()
+    };
+    var reportsJson = JsonConvert.SerializeObject(Model.Reports, serializationSettings);
+    var lookupJson = JsonConvert.SerializeObject(Model.Lookups, serializationSettings);
+}
+
+<link rel="stylesheet" href="https://cdn.syncfusion.com/ej2/31.2.12/material.css" />
+<script src="https://cdn.syncfusion.com/ej2/31.2.12/dist/ej2.min.js"></script>
+<script src="https://cdn.syncfusion.com/ej2/ej2-reportviewer/dist/ej2-reportviewer.min.js"></script>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">قائمة التقارير الديناميكية</h4>
+                <p class="text-muted">اختر تقريراً، ثم أضف المحددات المطلوبة وسيتم إنشاء مصدر البيانات من الكيانات المالية بشكل مباشر.</p>
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label">التقرير</label>
+                        <select class="form-select" id="reportPicker"></select>
+                    </div>
+                    <div class="col-md-8">
+                        <div id="parameterContainer" class="row g-2"></div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end mt-3">
+                    <button id="runReport" class="btn btn-primary">تشغيل التقرير</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-list-ul me-2"></i>
+                    <h5 class="mb-0">معاينة التقرير</h5>
+                </div>
+                <ejs-reportviewer id="rdlcViewer"
+                                  style="height:800px;"
+                                  report-service-url="/DynamicRdlcReports"
+                                  enable-parameter-block-scrolling="true"
+                                  locale="ar-AE"
+                                  enable-annotation="false"
+                                  processing-mode="Local">
+                </ejs-reportviewer>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const reports = @Html.Raw(reportsJson);
+        const lookups = @Html.Raw(lookupJson);
+
+        const reportPicker = document.getElementById('reportPicker');
+        const parameterContainer = document.getElementById('parameterContainer');
+        const runButton = document.getElementById('runReport');
+
+        function renderReportOptions() {
+            reportPicker.innerHTML = '';
+            reports.forEach(report => {
+                const option = document.createElement('option');
+                option.value = report.key;
+                option.textContent = `${report.name}`;
+                option.dataset.description = report.description;
+                reportPicker.appendChild(option);
+            });
+            buildParameters();
+        }
+
+        function buildParameters() {
+            parameterContainer.innerHTML = '';
+            const selectedKey = reportPicker.value;
+            const selectedReport = reports.find(r => r.key === selectedKey);
+            if (!selectedReport) return;
+
+            selectedReport.parameters.forEach(param => {
+                const col = document.createElement('div');
+                col.classList.add('col-md-3');
+
+                const wrapper = document.createElement('div');
+                wrapper.classList.add('form-group');
+
+                const label = document.createElement('label');
+                label.classList.add('form-label');
+                label.textContent = param.displayName;
+                wrapper.appendChild(label);
+
+                let input;
+                if (param.type === 3) { // Lookup
+                    input = document.createElement('select');
+                    input.classList.add('form-select');
+                    input.dataset.paramName = param.name;
+                    const items = lookups[param.name] || [];
+                    input.appendChild(new Option('الكل', ''));
+                    items.forEach(item => {
+                        input.appendChild(new Option(item.text, item.value));
+                    });
+                } else {
+                    input = document.createElement('input');
+                    input.classList.add('form-control');
+                    input.dataset.paramName = param.name;
+                    if (param.type === 2) {
+                        input.type = 'date';
+                    } else if (param.type === 1) {
+                        input.type = 'number';
+                        input.step = '1';
+                    } else {
+                        input.type = 'text';
+                    }
+                }
+
+                wrapper.appendChild(input);
+                col.appendChild(wrapper);
+                parameterContainer.appendChild(col);
+            });
+        }
+
+        function gatherParameters() {
+            const fields = parameterContainer.querySelectorAll('[data-param-name]');
+            const parameters = [];
+            fields.forEach(field => {
+                parameters.push({
+                    name: field.dataset.paramName,
+                    values: [field.value]
+                });
+            });
+            return parameters;
+        }
+
+        function runSelectedReport() {
+            const viewer = document.getElementById('rdlcViewer').ej2_instances[0];
+            if (!viewer) return;
+
+            const key = reportPicker.value;
+            viewer.reportPath = key;
+            viewer.parameters = gatherParameters();
+            viewer.refreshReport();
+        }
+
+        reportPicker.addEventListener('change', buildParameters);
+        runButton.addEventListener('click', runSelectedReport);
+        renderReportOptions();
+    </script>
+}
