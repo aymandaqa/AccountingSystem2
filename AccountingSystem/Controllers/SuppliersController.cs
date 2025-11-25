@@ -1,7 +1,9 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using AccountingSystem.Data;
 using AccountingSystem.Extensions;
 using AccountingSystem.Models;
@@ -154,9 +156,9 @@ namespace AccountingSystem.Controllers
                 .Select(ub => ub.BranchId)
                 .ToListAsync();
 
-            var branchId = ParseNullableInt(Request.Query["branchId"].FirstOrDefault());
-            var supplierTypeId = ParseNullableInt(Request.Query["supplierTypeId"].FirstOrDefault());
-            var balanceFilter = ParseBalanceFilter(Request.Query["balanceFilter"].FirstOrDefault());
+            var branchId = ParseNullableInt(ReadRequestParameter(dm, "branchId"));
+            var supplierTypeId = ParseNullableInt(ReadRequestParameter(dm, "supplierTypeId"));
+            var balanceFilter = ParseBalanceFilter(ReadRequestParameter(dm, "balanceFilter"));
 
             var suppliers = await BuildSuppliersQuery(
                     search: null,
@@ -289,6 +291,67 @@ namespace AccountingSystem.Controllers
             return Enum.TryParse<SupplierBalanceFilter>(value.ToString(), out var parsed)
                 ? parsed
                 : SupplierBalanceFilter.All;
+        }
+
+        private string? ReadRequestParameter(DataManagerRequest dm, string key)
+        {
+            static string? TryReadFromDictionary(object? dictionary, string dictionaryKey)
+            {
+                if (dictionary is IDictionary<string, object?> genericDict && genericDict.TryGetValue(dictionaryKey, out var value))
+                {
+                    return value?.ToString();
+                }
+
+                if (dictionary is IDictionary nonGenericDict && nonGenericDict.Contains(dictionaryKey))
+                {
+                    return nonGenericDict[dictionaryKey]?.ToString();
+                }
+
+                if (dictionary is JsonElement element && element.ValueKind == JsonValueKind.Object && element.TryGetProperty(dictionaryKey, out var property))
+                {
+                    return property.ValueKind switch
+                    {
+                        JsonValueKind.String => property.GetString(),
+                        JsonValueKind.Number => property.GetRawText(),
+                        JsonValueKind.True or JsonValueKind.False => property.GetBoolean().ToString(),
+                        JsonValueKind.Null => null,
+                        _ => property.GetRawText()
+                    };
+                }
+
+                return null;
+            }
+
+            var paramsProperty = dm.GetType().GetProperty("Params");
+            if (paramsProperty != null)
+            {
+                var value = TryReadFromDictionary(paramsProperty.GetValue(dm), key);
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value;
+                }
+            }
+
+            var additionalParamsProperty = dm.GetType().GetProperty("AdditionalParams");
+            if (additionalParamsProperty != null)
+            {
+                var value = TryReadFromDictionary(additionalParamsProperty.GetValue(dm), key);
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value;
+                }
+            }
+
+            if (Request.Query.TryGetValue(key, out var queryValues))
+            {
+                var queryValue = queryValues.ToString();
+                if (!string.IsNullOrWhiteSpace(queryValue))
+                {
+                    return queryValue;
+                }
+            }
+
+            return null;
         }
 
         [HttpGet]
