@@ -4328,7 +4328,7 @@ namespace AccountingSystem.Migrations
 
                     b.Navigation("CreatedBy");
 
-                    b.Navigation("Pairs");
+                    // Collection navigation configured on AccountSettlementPair
                 });
 
             modelBuilder.Entity("AccountingSystem.Models.AccountSettlementPair", b =>

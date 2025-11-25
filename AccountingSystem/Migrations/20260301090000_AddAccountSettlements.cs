@@ -1,13 +1,10 @@
 using System;
-using AccountingSystem.Data;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace AccountingSystem.Migrations
 {
-    [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260301090000_AddAccountSettlements")]
     public partial class AddAccountSettlements : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
