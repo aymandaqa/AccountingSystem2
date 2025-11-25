@@ -92,7 +92,52 @@ namespace AccountingSystem.Controllers
                 return Challenge();
             }
 
-            return View();
+            var userBranchIds = await _context.UserBranches
+                .Where(ub => ub.UserId == user.Id)
+                .Select(ub => ub.BranchId)
+                .ToListAsync();
+
+            var branchOptions = await _context.Branches
+                .Where(b => b.IsActive && (userBranchIds.Count == 0 || userBranchIds.Contains(b.Id)))
+                .OrderBy(b => b.NameAr)
+                .Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = string.IsNullOrWhiteSpace(b.NameAr) ? b.Code : b.NameAr
+                })
+                .ToListAsync();
+
+            var supplierTypeOptions = await _context.SupplierTypes
+                .Where(t => t.IsActive)
+                .OrderBy(t => t.Name)
+                .Select(t => new SelectListItem
+                {
+                    Value = t.Id.ToString(),
+                    Text = t.Name
+                })
+                .ToListAsync();
+
+            var suppliers = await BuildSuppliersQuery(
+                    search: null,
+                    branchId: null,
+                    balanceFilter: SupplierBalanceFilter.All,
+                    userBranchIds: userBranchIds,
+                    supplierTypeId: null)
+                .ToListAsync();
+
+            var balances = suppliers
+                .Select(s => s.Account != null ? s.Account.CurrentBalance * -1 : 0m)
+                .ToList();
+
+            var model = new SuppliersIndexViewModel
+            {
+                BranchOptions = branchOptions,
+                SupplierTypeOptions = supplierTypeOptions,
+                PositiveBalanceTotal = balances.Where(b => b > 0).Sum(),
+                NegativeBalanceTotal = balances.Where(b => b < 0).Sum()
+            };
+
+            return View(model);
         }
 
         [HttpPost]
@@ -109,12 +154,16 @@ namespace AccountingSystem.Controllers
                 .Select(ub => ub.BranchId)
                 .ToListAsync();
 
+            var branchId = ParseNullableInt(dm.Params?.GetValueOrDefault("branchId"));
+            var supplierTypeId = ParseNullableInt(dm.Params?.GetValueOrDefault("supplierTypeId"));
+            var balanceFilter = ParseBalanceFilter(dm.Params?.GetValueOrDefault("balanceFilter"));
+
             var suppliers = await BuildSuppliersQuery(
                     search: null,
-                    branchId: null,
-                    balanceFilter: SupplierBalanceFilter.All,
+                    branchId: branchId,
+                    balanceFilter: balanceFilter,
                     userBranchIds: userBranchIds,
-                    supplierTypeId: null)
+                    supplierTypeId: supplierTypeId)
                 .ToListAsync();
 
             var dataSource = suppliers.Select(s =>
@@ -187,6 +236,59 @@ namespace AccountingSystem.Controllers
             }
 
             return dm.RequiresCounts ? Json(new { result = dataSource, count }) : Json(dataSource);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetSupplierTotals(
+            int? branchId,
+            int? supplierTypeId,
+            SupplierBalanceFilter balanceFilter = SupplierBalanceFilter.All)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Challenge();
+            }
+
+            var userBranchIds = await _context.UserBranches
+                .Where(ub => ub.UserId == user.Id)
+                .Select(ub => ub.BranchId)
+                .ToListAsync();
+
+            var suppliers = await BuildSuppliersQuery(null, branchId, balanceFilter, userBranchIds, supplierTypeId)
+                .ToListAsync();
+
+            var balances = suppliers
+                .Select(s => s.Account != null ? s.Account.CurrentBalance * -1 : 0m)
+                .ToList();
+
+            return Json(new
+            {
+                positive = balances.Where(b => b > 0).Sum(),
+                negative = balances.Where(b => b < 0).Sum()
+            });
+        }
+
+        private static int? ParseNullableInt(object? value)
+        {
+            if (value == null)
+            {
+                return null;
+            }
+
+            return int.TryParse(value.ToString(), out var parsed) ? parsed : null;
+        }
+
+        private static SupplierBalanceFilter ParseBalanceFilter(object? value)
+        {
+            if (value == null)
+            {
+                return SupplierBalanceFilter.All;
+            }
+
+            return Enum.TryParse<SupplierBalanceFilter>(value.ToString(), out var parsed)
+                ? parsed
+                : SupplierBalanceFilter.All;
         }
 
         [HttpGet]

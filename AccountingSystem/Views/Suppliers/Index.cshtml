@@ -1,5 +1,8 @@
+@using AccountingSystem.Extensions
+@using AccountingSystem.ViewModels
 @using Microsoft.AspNetCore.Authorization
 @using System.Globalization
+@model SuppliersIndexViewModel
 @inject IAuthorizationService AuthorizationService
 @{
     ViewData["Title"] = "الموردين";
@@ -7,6 +10,7 @@
     var dataUrl = Url.Action("UrlDatasource", "Suppliers");
     var createUrl = Url.Action("Create", "Suppliers");
     var exportUrl = Url.Action("ExportExcel", "Suppliers");
+    var totalsUrl = Url.Action("GetSupplierTotals", "Suppliers");
     var canEdit = (await AuthorizationService.AuthorizeAsync(User, "suppliers.edit")).Succeeded;
     var canDelete = (await AuthorizationService.AuthorizeAsync(User, "suppliers.delete")).Succeeded;
     var canViewStatement = (await AuthorizationService.AuthorizeAsync(User, "reports.accountstatement")).Succeeded;
@@ -22,22 +26,82 @@
             <a class="btn btn-primary" href="@createUrl" asp-require-permission="suppliers.create">
                 <i class="fas fa-plus-circle ms-1"></i> مورد جديد
             </a>
-            <a class="btn btn-success" href="@exportUrl" asp-require-permission="suppliers.view">
+            <a class="btn btn-success" id="exportExcelButton" href="@exportUrl" asp-require-permission="suppliers.view">
                 <i class="fas fa-file-excel ms-1"></i> تصدير Excel
             </a>
         </div>
     </div>
     <div class="card-body">
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-lg-4">
+                <label for="supplierTypeFilter" class="form-label">نوع المورد</label>
+                <select id="supplierTypeFilter" class="form-select" data-suppliers-filter>
+                    <option value="">الكل</option>
+                    @foreach (var option in Model.SupplierTypeOptions)
+                    {
+                        <option value="@option.Value">@option.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-lg-4">
+                <label for="branchFilter" class="form-label">الفروع</label>
+                <select id="branchFilter" class="form-select" data-suppliers-filter>
+                    <option value="">الكل</option>
+                    @foreach (var option in Model.BranchOptions)
+                    {
+                        <option value="@option.Value">@option.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-lg-4">
+                <label for="balanceFilter" class="form-label">حالة رصيد الحساب</label>
+                <select id="balanceFilter" class="form-select" data-suppliers-filter>
+                    @foreach (var filter in Enum.GetValues(typeof(SupplierBalanceFilter)).Cast<SupplierBalanceFilter>())
+                    {
+                        <option value="@((int)filter)">@filter.GetDisplayName()</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-md-6">
+                <div class="card border-success h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="text-success fw-semibold">إجمالي الأرصدة الموجبة</div>
+                                <div class="fs-4" id="positiveBalanceTotal">@Model.PositiveBalanceTotal.ToString("N2")</div>
+                            </div>
+                            <div class="display-6 text-success"><i class="fas fa-arrow-up"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="card border-danger h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="text-danger fw-semibold">إجمالي الأرصدة السالبة</div>
+                                <div class="fs-4" id="negativeBalanceTotal">@Model.NegativeBalanceTotal.ToString("N2")</div>
+                            </div>
+                            <div class="display-6 text-danger"><i class="fas fa-arrow-down"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="mb-3 text-muted small">يمكنك استخدام فلاتر Excel أو البحث العام في الشريط العلوي للوصول إلى المورد المطلوب.</div>
         <ejs-grid id="SuppliersGrid"
                   gridLines="Both"
                   enableRtl="@rtl"
-                  allowPaging="true"
+                  allowPaging="false"
                   allowSorting="true"
                   allowFiltering="true"
                   toolbar="@(new[] { "Search" })"
                   dataBound="onSuppliersDataBound">
-            <e-grid-pagesettings pageCount="5" pageSizes="true"></e-grid-pagesettings>
             <e-grid-filterSettings type="Excel" immediateModeDelay="100"></e-grid-filterSettings>
             <e-grid-editSettings allowAdding="false" allowDeleting="false" allowEditing="false"></e-grid-editSettings>
             <e-data-manager url="@dataUrl" adaptor="UrlAdaptor"></e-data-manager>
@@ -85,6 +149,10 @@
             canViewStatement: @canViewStatement.ToString().ToLowerInvariant()
         };
 
+        const dataUrl = '@dataUrl';
+        const totalsUrl = '@totalsUrl';
+        const exportUrl = '@exportUrl';
+
         function onSuppliersDataBound() {
             const gridElement = document.getElementById('SuppliersGrid');
             const grid = gridElement?.ej2_instances?.[0];
@@ -103,6 +171,85 @@
             if (!supplierPermissions.canViewStatement) {
                 gridElement.querySelectorAll('[data-permission="statement"]').forEach(btn => btn.remove());
             }
+        }
+
+        function getFilterValues() {
+            const supplierTypeId = document.getElementById('supplierTypeFilter')?.value;
+            const branchId = document.getElementById('branchFilter')?.value;
+            const balanceFilter = document.getElementById('balanceFilter')?.value;
+
+            return {
+                supplierTypeId: supplierTypeId ?? '',
+                branchId: branchId ?? '',
+                balanceFilter: balanceFilter ?? ''
+            };
+        }
+
+        function buildQuery() {
+            const filters = getFilterValues();
+            let query = new ej.data.Query();
+
+            if (filters.branchId) {
+                query = query.addParams('branchId', filters.branchId);
+            }
+
+            if (filters.supplierTypeId) {
+                query = query.addParams('supplierTypeId', filters.supplierTypeId);
+            }
+
+            if (filters.balanceFilter !== undefined && filters.balanceFilter !== null) {
+                query = query.addParams('balanceFilter', filters.balanceFilter);
+            }
+
+            return query;
+        }
+
+        function refreshSuppliersGrid() {
+            const grid = document.getElementById('SuppliersGrid')?.ej2_instances?.[0];
+            if (!grid) {
+                return;
+            }
+
+            grid.query = buildQuery();
+            grid.refresh();
+        }
+
+        async function refreshSupplierTotals() {
+            const filters = getFilterValues();
+            const queryString = new URLSearchParams(filters).toString();
+            const response = await fetch(`${totalsUrl}?${queryString}`);
+
+            if (!response.ok) {
+                return;
+            }
+
+            const totals = await response.json();
+            document.getElementById('positiveBalanceTotal').textContent = Number(totals.positive).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('negativeBalanceTotal').textContent = Number(totals.negative).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function updateExportLink() {
+            const filters = getFilterValues();
+            const link = document.getElementById('exportExcelButton');
+            if (!link) {
+                return;
+            }
+
+            const params = new URLSearchParams();
+            if (filters.branchId) {
+                params.append('branchId', filters.branchId);
+            }
+
+            if (filters.supplierTypeId) {
+                params.append('supplierTypeId', filters.supplierTypeId);
+            }
+
+            if (filters.balanceFilter) {
+                params.append('balanceFilter', filters.balanceFilter);
+            }
+
+            const url = params.toString() ? `${exportUrl}?${params}` : exportUrl;
+            link.href = url;
         }
 
         async function deleteSupplier(id) {
@@ -131,5 +278,25 @@
                 grid?.refresh();
             }
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const grid = document.getElementById('SuppliersGrid')?.ej2_instances?.[0];
+            if (grid) {
+                grid.dataSource = new ej.data.DataManager({ url: dataUrl, adaptor: new ej.data.UrlAdaptor() });
+                grid.query = buildQuery();
+                grid.refresh();
+            }
+
+            document.querySelectorAll('[data-suppliers-filter]').forEach(element => {
+                element.addEventListener('change', () => {
+                    refreshSuppliersGrid();
+                    refreshSupplierTotals();
+                    updateExportLink();
+                });
+            });
+
+            refreshSupplierTotals();
+            updateExportLink();
+        });
     </script>
 }
