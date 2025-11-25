@@ -86,6 +86,8 @@ namespace AccountingSystem.Data
         public DbSet<Agent> Agents { get; set; }
         public DbSet<Counter> Counters { get; set; }
         public DbSet<CashPerformanceRecord> CashPerformanceRecords => Set<CashPerformanceRecord>();
+        public DbSet<AccountSettlement> AccountSettlements { get; set; }
+        public DbSet<AccountSettlementPair> AccountSettlementPairs { get; set; }
 
         public override int SaveChanges()
         {
@@ -836,6 +838,42 @@ namespace AccountingSystem.Data
                 entity.HasOne(e => e.CostCenter)
                     .WithMany(e => e.JournalEntryLines)
                     .HasForeignKey(e => e.CostCenterId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<AccountSettlement>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CreatedAt).HasColumnType("datetime2");
+
+                entity.HasOne(e => e.Account)
+                    .WithMany()
+                    .HasForeignKey(e => e.AccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.CreatedBy)
+                    .WithMany()
+                    .HasForeignKey(e => e.CreatedById)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<AccountSettlementPair>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.HasOne(e => e.Settlement)
+                    .WithMany(e => e.Pairs)
+                    .HasForeignKey(e => e.AccountSettlementId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.DebitLine)
+                    .WithMany()
+                    .HasForeignKey(e => e.DebitLineId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.CreditLine)
+                    .WithMany()
+                    .HasForeignKey(e => e.CreditLineId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
