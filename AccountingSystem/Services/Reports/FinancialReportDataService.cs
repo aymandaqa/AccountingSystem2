@@ -70,8 +70,8 @@ namespace AccountingSystem.Services.Reports
                     EntryDate = l.JournalEntry.Date,
                     Reference = l.JournalEntry.Reference ?? string.Empty,
                     Description = l.Description ?? string.Empty,
-                    Debit = l.Debit,
-                    Credit = l.Credit
+                    Debit = l.DebitAmount,
+                    Credit = l.CreditAmount
                 })
                 .ToListAsync();
 
