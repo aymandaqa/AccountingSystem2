@@ -54,8 +54,8 @@ namespace AccountingSystem.Controllers
                         .Select(b => new SelectListItem { Text = b.NameAr, Value = b.Id.ToString() })
                         .ToListAsync(),
                     ["accountId"] = await _context.Accounts
-                        .OrderBy(a => a.Number)
-                        .Select(a => new SelectListItem { Text = $"{a.Number} - {a.NameAr ?? a.NameEn}", Value = a.Id.ToString() })
+                        .OrderBy(a => a.Code)
+                        .Select(a => new SelectListItem { Text = $"{a.Code} - {a.NameAr ?? a.NameEn}", Value = a.Id.ToString() })
                         .ToListAsync(),
                     ["currencyId"] = await _context.Currencies
                         .OrderBy(c => c.Code)
@@ -76,7 +76,17 @@ namespace AccountingSystem.Controllers
         [HttpPost]
         public object PostFormReportAction()
         {
-            return ReportHelper.PostFormReportAction(this, _cache);
+            var form = Request?.Form;
+            var parameters = new Dictionary<string, object>();
+            if (form != null)
+            {
+                foreach (var key in form.Keys)
+                {
+                    parameters[key] = form[key];
+                }
+            }
+
+            return ReportHelper.ProcessReport(parameters, this, _cache);
         }
 
         [HttpGet]
@@ -109,7 +119,10 @@ namespace AccountingSystem.Controllers
             if (reportOption.ReportModel != null)
             {
                 reportOption.ReportModel.ReportPath = fullPath;
-                reportOption.ReportModel.DataSources ??= new List<ReportDataSource>();
+                if (reportOption.ReportModel.DataSources == null)
+                {
+                    reportOption.ReportModel.DataSources = new ReportDataSourceCollection();
+                }
                 var parameterMap = BuildParameterMap(reportOption);
                 var dataSources = await _dataService.GetDataSourcesAsync(definition.Key, parameterMap);
                 foreach (var ds in dataSources)
