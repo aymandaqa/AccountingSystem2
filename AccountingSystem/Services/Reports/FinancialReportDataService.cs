@@ -34,21 +34,27 @@ namespace AccountingSystem.Services.Reports
 
         private async Task<Dictionary<string, IEnumerable>> BuildJournalEntryLinesDataAsync(IDictionary<string, string?> parameters)
         {
+            var today = DateTime.Today;
+            var defaultFrom = new DateTime(today.Year, today.Month, 1);
+
             var query = _context.JournalEntryLines
                 .Include(l => l.JournalEntry)
                 .ThenInclude(j => j.Branch)
                 .Include(l => l.Account)
                 .AsQueryable();
 
-            if (TryParseDate(parameters, "fromDate", out var fromDate))
+            if (!TryParseDate(parameters, "fromDate", out var fromDate) || !fromDate.HasValue)
             {
-                query = query.Where(l => l.JournalEntry!.Date >= fromDate);
+                fromDate = defaultFrom;
             }
 
-            if (TryParseDate(parameters, "toDate", out var toDate))
+            if (!TryParseDate(parameters, "toDate", out var toDate) || !toDate.HasValue)
             {
-                query = query.Where(l => l.JournalEntry!.Date <= toDate);
+                toDate = today;
             }
+
+            query = query.Where(l => l.JournalEntry!.Date >= fromDate.Value);
+            query = query.Where(l => l.JournalEntry!.Date <= toDate.Value);
 
             if (TryParseInt(parameters, "branchId", out var branchId))
             {

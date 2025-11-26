@@ -7,6 +7,7 @@ namespace AccountingSystem.ViewModels.Reports
     {
         public List<DynamicRdlcReportDefinition> Reports { get; set; } = new();
         public Dictionary<string, List<SelectListItem>> Lookups { get; set; } = new();
+        public Dictionary<string, string> DefaultParameters { get; set; } = new();
     }
 
     public class DynamicRdlcReportDefinition

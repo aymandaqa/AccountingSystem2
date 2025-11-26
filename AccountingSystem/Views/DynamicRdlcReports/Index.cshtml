@@ -9,6 +9,7 @@
     };
     var reportsJson = JsonConvert.SerializeObject(Model.Reports, serializationSettings);
     var lookupJson = JsonConvert.SerializeObject(Model.Lookups, serializationSettings);
+    var defaultsJson = JsonConvert.SerializeObject(Model.DefaultParameters, serializationSettings);
 }
 
 <link rel="stylesheet" href="https://cdn.boldreports.com/6.1.20/site/v6.1.20/styles/material.css" />
@@ -25,6 +26,7 @@
                     <div class="col-md-4">
                         <label class="form-label">التقرير</label>
                         <select class="form-select" id="reportPicker"></select>
+                        <small class="text-muted d-block mt-1" id="reportDescription"></small>
                     </div>
                     <div class="col-md-8">
                         <div id="parameterContainer" class="row g-2"></div>
@@ -63,9 +65,11 @@
     <script>
         const reports = @Html.Raw(reportsJson);
         const lookups = @Html.Raw(lookupJson);
+        const defaultParameters = @Html.Raw(defaultsJson);
 
         const reportPicker = document.getElementById('reportPicker');
         const parameterContainer = document.getElementById('parameterContainer');
+        const reportDescription = document.getElementById('reportDescription');
         const runButton = document.getElementById('runReport');
 
         function renderReportOptions() {
@@ -85,6 +89,8 @@
             const selectedKey = reportPicker.value;
             const selectedReport = reports.find(r => r.key === selectedKey);
             if (!selectedReport) return;
+
+            reportDescription.textContent = selectedReport.description || '';
 
             selectedReport.parameters.forEach(param => {
                 const col = document.createElement('div');
@@ -114,6 +120,9 @@
                     input.dataset.paramName = param.name;
                     if (param.type === 2) {
                         input.type = 'date';
+                        if (defaultParameters[param.name]) {
+                            input.value = defaultParameters[param.name];
+                        }
                     } else if (param.type === 1) {
                         input.type = 'number';
                         input.step = '1';
@@ -154,5 +163,7 @@
         reportPicker.addEventListener('change', buildParameters);
         runButton.addEventListener('click', runSelectedReport);
         renderReportOptions();
+        // استخدم القيم الافتراضية لتشغيل أول تقرير فور فتح الصفحة
+        setTimeout(runSelectedReport, 150);
     </script>
 }
