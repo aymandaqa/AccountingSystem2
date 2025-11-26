@@ -213,11 +213,32 @@ namespace AccountingSystem.Services
             return preview;
         }
 
+        private const int MaxLineDescriptionLength = 500;
+
         private static string BuildLineDescription(string baseDescription, string? notes)
         {
-            return string.IsNullOrWhiteSpace(notes)
-                ? baseDescription
-                : baseDescription + Environment.NewLine + notes;
+            if (string.IsNullOrWhiteSpace(notes))
+            {
+                return baseDescription.Length <= MaxLineDescriptionLength
+                    ? baseDescription
+                    : baseDescription[..MaxLineDescriptionLength];
+            }
+
+            var separator = Environment.NewLine;
+            var availableNoteLength = MaxLineDescriptionLength - baseDescription.Length - separator.Length;
+
+            if (availableNoteLength <= 0)
+            {
+                return baseDescription.Length <= MaxLineDescriptionLength
+                    ? baseDescription
+                    : baseDescription[..MaxLineDescriptionLength];
+            }
+
+            var truncatedNotes = notes.Length > availableNoteLength
+                ? notes[..availableNoteLength]
+                : notes;
+
+            return baseDescription + separator + truncatedNotes;
         }
     }
 }
