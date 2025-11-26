@@ -26,7 +26,7 @@ namespace AccountingSystem.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(int? accountId)
+        public async Task<IActionResult> Index(int? accountId, DateTime? fromDate, DateTime? toDate)
         {
             var accounts = await _context.Accounts
                 .AsNoTracking()
@@ -44,7 +44,9 @@ namespace AccountingSystem.Controllers
                 AccountId = accountId,
                 Accounts = accounts,
                 AccountName = accounts.FirstOrDefault(a => a.Value == accountId?.ToString())?.Text,
-                SettlementDate = DateTime.Now
+                SettlementDate = toDate ?? DateTime.Now,
+                FromDate = fromDate,
+                ToDate = toDate
             };
 
             if (accountId.HasValue)
@@ -55,6 +57,19 @@ namespace AccountingSystem.Controllers
                     .Where(l => l.AccountId == accountId.Value)
                     .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted || l.JournalEntry.Status == JournalEntryStatus.Approved)
                     .Where(l => !_context.AccountSettlementPairs.Any(p => p.DebitLineId == l.Id || p.CreditLineId == l.Id));
+
+                if (fromDate.HasValue)
+                {
+                    unsettledLinesQuery = unsettledLinesQuery
+                        .Where(l => l.JournalEntry.Date >= fromDate.Value.Date);
+                }
+
+                if (toDate.HasValue)
+                {
+                    var toDateExclusive = toDate.Value.Date.AddDays(1);
+                    unsettledLinesQuery = unsettledLinesQuery
+                        .Where(l => l.JournalEntry.Date < toDateExclusive);
+                }
 
                 var unsettledLines = await unsettledLinesQuery
                     .OrderBy(l => l.JournalEntry.Date)
@@ -98,6 +113,20 @@ namespace AccountingSystem.Controllers
                     .OrderByDescending(p => p.Settlement.CreatedAt)
                     .ThenByDescending(p => p.Id)
                     .ToListAsync();
+
+                if (fromDate.HasValue)
+                {
+                    settledPairs = settledPairs
+                        .Where(p => p.Settlement.CreatedAt.Date >= fromDate.Value.Date)
+                        .ToList();
+                }
+
+                if (toDate.HasValue)
+                {
+                    settledPairs = settledPairs
+                        .Where(p => p.Settlement.CreatedAt.Date <= toDate.Value.Date)
+                        .ToList();
+                }
 
                 model.SettledPairs = settledPairs
                     .Select(p => new AccountSettlementPairViewModel
@@ -198,7 +227,7 @@ namespace AccountingSystem.Controllers
 
             var user = await _userManager.GetUserAsync(User);
 
-            var settlementDate = request.SettlementDate ?? DateTime.Now;
+            var settlementDate = request.SettlementDate ?? request.ToDate ?? DateTime.Now;
 
             var settlement = new AccountSettlement
             {
@@ -220,7 +249,12 @@ namespace AccountingSystem.Controllers
             await _context.SaveChangesAsync();
 
             TempData["Success"] = "تم نقل الحركات المحددة إلى كشف التسويات بنجاح.";
-            return RedirectToAction(nameof(Index), new { accountId = request.AccountId });
+            return RedirectToAction(nameof(Index), new
+            {
+                accountId = request.AccountId,
+                fromDate = request.FromDate?.ToString("yyyy-MM-dd"),
+                toDate = request.ToDate?.ToString("yyyy-MM-dd")
+            });
         }
     }
 }

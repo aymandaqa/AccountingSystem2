@@ -29,6 +29,8 @@ namespace AccountingSystem.ViewModels
         public List<AccountSettlementLineViewModel> DebitLines { get; set; } = new();
         public List<AccountSettlementLineViewModel> CreditLines { get; set; } = new();
         public List<AccountSettlementPairViewModel> SettledPairs { get; set; } = new();
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
         public DateTime SettlementDate { get; set; } = DateTime.Now;
     }
 
@@ -38,5 +40,7 @@ namespace AccountingSystem.ViewModels
         public List<int> SelectedDebitIds { get; set; } = new();
         public List<int> SelectedCreditIds { get; set; } = new();
         public DateTime? SettlementDate { get; set; }
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
     }
 }
