@@ -49,6 +49,13 @@
     <form asp-action="Settle" method="post">
         @Html.AntiForgeryToken()
         <input type="hidden" name="AccountId" value="@Model.AccountId" />
+        <div class="row g-3 mb-2">
+            <div class="col-12 col-lg-4">
+                <label class="form-label fw-semibold">تاريخ التسوية</label>
+                <input type="datetime-local" class="form-control" name="SettlementDate" value="@Model.SettlementDate.ToString(\"yyyy-MM-ddTHH:mm\")" />
+                <div class="form-text">سيتم استخدام هذا التاريخ لحفظ المطابقة.</div>
+            </div>
+        </div>
         <div class="row g-3">
             <div class="col-12 col-lg-6">
                 <div class="card h-100">

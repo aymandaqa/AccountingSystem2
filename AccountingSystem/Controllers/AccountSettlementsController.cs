@@ -43,7 +43,8 @@ namespace AccountingSystem.Controllers
             {
                 AccountId = accountId,
                 Accounts = accounts,
-                AccountName = accounts.FirstOrDefault(a => a.Value == accountId?.ToString())?.Text
+                AccountName = accounts.FirstOrDefault(a => a.Value == accountId?.ToString())?.Text,
+                SettlementDate = DateTime.Now
             };
 
             if (accountId.HasValue)
@@ -183,10 +184,12 @@ namespace AccountingSystem.Controllers
 
             var user = await _userManager.GetUserAsync(User);
 
+            var settlementDate = request.SettlementDate ?? DateTime.Now;
+
             var settlement = new AccountSettlement
             {
                 AccountId = request.AccountId,
-                CreatedAt = DateTime.Now,
+                CreatedAt = settlementDate,
                 CreatedById = user?.Id
             };
 
