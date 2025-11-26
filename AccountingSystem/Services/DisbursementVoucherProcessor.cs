@@ -106,7 +106,7 @@ namespace AccountingSystem.Services
             {
                 Account = loadedVoucher.Account,
                 Debit = loadedVoucher.Amount,
-                Description = "سند دفع"
+                Description = BuildLineDescription("سند دفع", loadedVoucher.Notes)
             });
 
             var paymentAccount = loadedVoucher.CreatedBy.PaymentAccount
@@ -116,10 +116,17 @@ namespace AccountingSystem.Services
             {
                 Account = paymentAccount,
                 Credit = loadedVoucher.Amount,
-                Description = "سند دفع"
+                Description = BuildLineDescription("سند دفع", loadedVoucher.Notes)
             });
 
             return preview;
+        }
+
+        private static string BuildLineDescription(string baseDescription, string? notes)
+        {
+            return string.IsNullOrWhiteSpace(notes)
+                ? baseDescription
+                : baseDescription + Environment.NewLine + notes;
         }
     }
 }

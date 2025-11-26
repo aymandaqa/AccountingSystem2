@@ -158,7 +158,7 @@ namespace AccountingSystem.Services
             {
                 Account = loadedExpense.ExpenseAccount,
                 Debit = loadedExpense.Amount,
-                Description = "مصروف أصل",
+                Description = BuildLineDescription("مصروف أصل", loadedExpense.Notes),
                 CostCenter = costCenter
             });
 
@@ -166,7 +166,7 @@ namespace AccountingSystem.Services
             {
                 Account = supplierAccount,
                 Credit = loadedExpense.Amount,
-                Description = "مصروف أصل"
+                Description = BuildLineDescription("مصروف أصل", loadedExpense.Notes)
             });
 
             if (loadedExpense.IsCash && paymentAccount != null)
@@ -175,14 +175,14 @@ namespace AccountingSystem.Services
                 {
                     Account = supplierAccount,
                     Debit = loadedExpense.Amount,
-                    Description = "دفع مصروف أصل"
+                    Description = BuildLineDescription("دفع مصروف أصل", loadedExpense.Notes)
                 });
 
                 preview.Lines.Add(new JournalEntryPreviewLine
                 {
                     Account = paymentAccount,
                     Credit = loadedExpense.Amount,
-                    Description = "دفع مصروف أصل"
+                    Description = BuildLineDescription("دفع مصروف أصل", loadedExpense.Notes)
                 });
             }
 
@@ -200,6 +200,13 @@ namespace AccountingSystem.Services
             preview.Description = string.Join(Environment.NewLine, descriptionLines);
 
             return preview;
+        }
+
+        private static string BuildLineDescription(string baseDescription, string? notes)
+        {
+            return string.IsNullOrWhiteSpace(notes)
+                ? baseDescription
+                : baseDescription + Environment.NewLine + notes;
         }
     }
 }
