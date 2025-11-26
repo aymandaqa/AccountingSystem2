@@ -90,16 +90,33 @@ else
                                                                 <td>@(string.IsNullOrWhiteSpace(request.CurrencyCode) ? "-" : request.CurrencyCode)</td>
                                                                 <td>
                                                                     <div class="d-flex flex-wrap gap-1 justify-content-end">
-                                                                        <form asp-action="Approve" method="post" class="d-inline">
-                                                                            @Html.AntiForgeryToken()
-                                                                            <input type="hidden" name="actionId" value="@request.ActionId" />
-                                                                            <button type="submit" class="btn btn-success btn-sm">
-                                                                                <i class="fa fa-check ms-1"></i> موافقة
-                                                                            </button>
-                                                                        </form>
+                                                                        <button class="btn btn-success btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#approve-@request.ActionId" aria-expanded="false" aria-controls="approve-@request.ActionId">
+                                                                            <i class="fa fa-check ms-1"></i> موافقة
+                                                                        </button>
                                                                         <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#@detailId" aria-expanded="false" aria-controls="@detailId">
                                                                             <i class="fa fa-info-circle ms-1"></i> تفاصيل الطلب
                                                                         </button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="5" class="p-0">
+                                                                    <div class="collapse" id="approve-@request.ActionId" data-bs-parent="#@typeCollapseId">
+                                                                        <div class="card rounded-0 border-top">
+                                                                            <div class="card-body">
+                                                                                <form asp-action="Approve" method="post">
+                                                                                    @Html.AntiForgeryToken()
+                                                                                    <input type="hidden" name="actionId" value="@request.ActionId" />
+                                                                                    <div class="mb-3">
+                                                                                        <label class="form-label">ملاحظات المدقق (اختيارية)</label>
+                                                                                        <textarea name="notes" class="form-control" rows="3" placeholder="أدخل ملاحظاتك إن وجدت"></textarea>
+                                                                                    </div>
+                                                                                    <button type="submit" class="btn btn-success">
+                                                                                        <i class="fa fa-check ms-1"></i> تأكيد الموافقة
+                                                                                    </button>
+                                                                                </form>
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
                                                                 </td>
                                                             </tr>
