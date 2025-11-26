@@ -156,14 +156,25 @@ namespace AccountingSystem.Controllers
                 return RedirectToAction(nameof(Index), new { accountId = request.AccountId });
             }
 
+            var debitOrderLookup = debitIds
+                .Select((id, index) => new { id, index })
+                .ToDictionary(x => x.id, x => x.index);
+
+            var creditOrderLookup = creditIds
+                .Select((id, index) => new { id, index })
+                .ToDictionary(x => x.id, x => x.index);
+
             var validDebitLines = await _context.JournalEntryLines
                 .Include(l => l.JournalEntry)
                 .Where(l => debitIds.Contains(l.Id) && l.AccountId == request.AccountId)
                 .Where(l => l.DebitAmount > 0)
                 .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted || l.JournalEntry.Status == JournalEntryStatus.Approved)
                 .Where(l => !_context.AccountSettlementPairs.Any(p => p.DebitLineId == l.Id || p.CreditLineId == l.Id))
-                .OrderBy(l => debitIds.IndexOf(l.Id))
                 .ToListAsync();
+
+            validDebitLines = validDebitLines
+                .OrderBy(l => debitOrderLookup.TryGetValue(l.Id, out var index) ? index : int.MaxValue)
+                .ToList();
 
             var validCreditLines = await _context.JournalEntryLines
                 .Include(l => l.JournalEntry)
@@ -171,8 +182,11 @@ namespace AccountingSystem.Controllers
                 .Where(l => l.CreditAmount > 0)
                 .Where(l => l.JournalEntry.Status == JournalEntryStatus.Posted || l.JournalEntry.Status == JournalEntryStatus.Approved)
                 .Where(l => !_context.AccountSettlementPairs.Any(p => p.DebitLineId == l.Id || p.CreditLineId == l.Id))
-                .OrderBy(l => creditIds.IndexOf(l.Id))
                 .ToListAsync();
+
+            validCreditLines = validCreditLines
+                .OrderBy(l => creditOrderLookup.TryGetValue(l.Id, out var index) ? index : int.MaxValue)
+                .ToList();
 
             var pairCount = Math.Min(validDebitLines.Count, validCreditLines.Count);
 

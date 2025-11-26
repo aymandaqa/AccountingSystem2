@@ -261,24 +261,24 @@
                 overflow-y: auto;
                 position: relative;
                 scrollbar-gutter: stable;
-                border-radius: 1.25rem;
             }
 
-            .movement-table table {
-                border-collapse: separate;
-                border-spacing: 0;
-            }
-
-            .movement-table thead th {
-                background: linear-gradient(120deg, #0ea5e9, #2563eb);
-                color: #fff;
-                border: none;
-                font-weight: 700;
+            .movement-table thead {
                 position: sticky;
-                inset-block-start: 0;
-                z-index: 2;
-                box-shadow: 0 6px 12px rgba(15, 23, 42, 0.08);
+                top: 0;
+                z-index: 3;
             }
+
+                .movement-table thead th {
+                    background: linear-gradient(120deg, #0ea5e9, #2563eb);
+                    color: #fff;
+                    border: none;
+                    font-weight: 700;
+                    position: sticky;
+                    top: 0;
+                    z-index: 4;
+                    box-shadow: 0 6px 12px rgba(15, 23, 42, 0.08);
+                }
 
             .movement-table tbody tr.group-row td {
                 background: #f1f5f9;
