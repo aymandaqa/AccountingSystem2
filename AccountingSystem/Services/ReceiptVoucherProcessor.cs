@@ -103,17 +103,24 @@ namespace AccountingSystem.Services
             {
                 Account = loadedVoucher.PaymentAccount,
                 Debit = loadedVoucher.Amount,
-                Description = "سند قبض"
+                Description = BuildLineDescription("سند قبض", loadedVoucher.Notes)
             });
 
             preview.Lines.Add(new JournalEntryPreviewLine
             {
                 Account = loadedVoucher.Account,
                 Credit = loadedVoucher.Amount,
-                Description = "سند قبض"
+                Description = BuildLineDescription("سند قبض", loadedVoucher.Notes)
             });
 
             return preview;
+        }
+
+        private static string BuildLineDescription(string baseDescription, string? notes)
+        {
+            return string.IsNullOrWhiteSpace(notes)
+                ? baseDescription
+                : baseDescription + Environment.NewLine + notes;
         }
     }
 }

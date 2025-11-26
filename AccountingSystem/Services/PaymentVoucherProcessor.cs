@@ -137,14 +137,14 @@ namespace AccountingSystem.Services
                 {
                     Account = selectedAccount,
                     Debit = loadedVoucher.Amount,
-                    Description = "سند مصاريف"
+                    Description = BuildLineDescription("سند مصاريف", loadedVoucher.Notes)
                 });
 
                 preview.Lines.Add(new JournalEntryPreviewLine
                 {
                     Account = supplierAccount,
                     Credit = loadedVoucher.Amount,
-                    Description = "سند مصاريف"
+                    Description = BuildLineDescription("سند مصاريف", loadedVoucher.Notes)
                 });
 
                 if (loadedVoucher.IsCash && cashAccount != null)
@@ -153,21 +153,19 @@ namespace AccountingSystem.Services
                     {
                         Account = supplierAccount,
                         Debit = loadedVoucher.Amount,
-                        Description = "سند دفع مصاريف"
+                        Description = BuildLineDescription("سند دفع مصاريف", loadedVoucher.Notes)
                     });
 
                     preview.Lines.Add(new JournalEntryPreviewLine
                     {
                         Account = cashAccount,
                         Credit = loadedVoucher.Amount,
-                        Description = "سند دفع مصاريف"
+                        Description = BuildLineDescription("سند دفع مصاريف", loadedVoucher.Notes)
                     });
                 }
 
                 preview.Reference = $"سند مصاريف:{loadedVoucher.Id}";
-                preview.Description = loadedVoucher.Notes == null
-                    ? "سند مصاريف"
-                    : "سند مصاريف" + Environment.NewLine + loadedVoucher.Notes;
+                preview.Description = BuildLineDescription("سند مصاريف", loadedVoucher.Notes);
             }
             else if (loadedVoucher.AgentId.HasValue)
             {
@@ -194,20 +192,18 @@ namespace AccountingSystem.Services
                 {
                     Account = agentAccount,
                     Debit = loadedVoucher.Amount,
-                    Description = "سند دفع وكيل"
+                    Description = BuildLineDescription("سند دفع وكيل", loadedVoucher.Notes)
                 });
 
                 preview.Lines.Add(new JournalEntryPreviewLine
                 {
                     Account = selectedAccount,
                     Credit = loadedVoucher.Amount,
-                    Description = "سند دفع وكيل"
+                    Description = BuildLineDescription("سند دفع وكيل", loadedVoucher.Notes)
                 });
 
                 preview.Reference = $"سند دفع وكيل:{loadedVoucher.Id}";
-                preview.Description = loadedVoucher.Notes == null
-                    ? "سند دفع وكيل"
-                    : "سند دفع وكيل" + Environment.NewLine + loadedVoucher.Notes;
+                preview.Description = BuildLineDescription("سند دفع وكيل", loadedVoucher.Notes);
             }
             else
             {
@@ -215,6 +211,13 @@ namespace AccountingSystem.Services
             }
 
             return preview;
+        }
+
+        private static string BuildLineDescription(string baseDescription, string? notes)
+        {
+            return string.IsNullOrWhiteSpace(notes)
+                ? baseDescription
+                : baseDescription + Environment.NewLine + notes;
         }
     }
 }
