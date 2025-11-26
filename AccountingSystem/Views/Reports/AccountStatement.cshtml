@@ -254,7 +254,20 @@
         .movement-table {
             border-radius: 1.25rem;
             box-shadow: 0 22px 55px rgba(15, 23, 42, 0.08);
+            position: relative;
         }
+
+            .movement-table .table-header {
+                position: sticky;
+                top: 0;
+                z-index: 5;
+            }
+
+            .movement-table .table-header table,
+            .movement-table .table-responsive table {
+                table-layout: fixed;
+                width: 100%;
+            }
 
             .movement-table .table-responsive {
                 max-height: 70vh;
@@ -263,21 +276,23 @@
                 scrollbar-gutter: stable;
             }
 
-            .movement-table thead {
+            .movement-table .table-header thead th {
+                background: linear-gradient(120deg, #0ea5e9, #2563eb);
+                color: #fff;
+                border: none;
+                font-weight: 700;
                 position: sticky;
                 top: 0;
-                z-index: 3;
+                z-index: 6;
+                box-shadow: 0 6px 12px rgba(15, 23, 42, 0.08);
             }
 
-                .movement-table thead th {
-                    background: linear-gradient(120deg, #0ea5e9, #2563eb);
-                    color: #fff;
-                    border: none;
-                    font-weight: 700;
-                    position: sticky;
-                    top: 0;
-                    z-index: 4;
-                    box-shadow: 0 6px 12px rgba(15, 23, 42, 0.08);
+            .movement-table .body-table {
+                border-top: none;
+            }
+
+                .movement-table .body-table tbody tr:first-child td {
+                    border-top: none;
                 }
 
             .movement-table tbody tr.group-row td {
@@ -610,8 +625,20 @@
                 @if (hasTransactions)
                 {
                     <div class="movement-table">
-                        <div class="table-responsive">
-                            <table class="table table-hover table-bordered align-middle mb-0">
+                        <div class="table-header">
+                            <table class="table table-bordered align-middle mb-0 header-table">
+                                <colgroup>
+                                    <col style="width: 12%" />
+                                    <col style="width: 11%" />
+                                    <col style="width: 11%" />
+                                    <col style="width: 10%" />
+                                    <col style="width: 10%" />
+                                    <col style="width: 10%" />
+                                    <col style="width: 18%" />
+                                    <col style="width: 6%" />
+                                    <col style="width: 6%" />
+                                    <col style="width: 6%" />
+                                </colgroup>
                                 <thead class="text-center">
                                     <tr>
                                         <th>التاريخ</th>
@@ -626,6 +653,22 @@
                                         <th class="text-end">الرصيد (@Model.CurrencyCode)</th>
                                     </tr>
                                 </thead>
+                            </table>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover table-bordered align-middle mb-0 body-table">
+                                <colgroup>
+                                    <col style="width: 12%" />
+                                    <col style="width: 11%" />
+                                    <col style="width: 11%" />
+                                    <col style="width: 10%" />
+                                    <col style="width: 10%" />
+                                    <col style="width: 10%" />
+                                    <col style="width: 18%" />
+                                    <col style="width: 6%" />
+                                    <col style="width: 6%" />
+                                    <col style="width: 6%" />
+                                </colgroup>
                                 <tbody>
                                     <tr class="table-light">
                                         <td>@Model.FromDate.ToString("yyyy/MM/dd HH:mm")</td>
