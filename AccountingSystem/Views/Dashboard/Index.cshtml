@@ -137,11 +137,11 @@
                         <ul class="list-unstyled mb-0 dashboard-account-tree-list">
                             @await Html.PartialAsync("_DashboardAccountSubTable", Model.DashboardAccountTree, new ViewDataDictionary(ViewData)
                             {
-                                ["DashboardBaseCurrencyCode"] = Model.DashboardBaseCurrencyCode
-                            })
-                        </ul>
-                    </div>
-                }
+                            ["DashboardBaseCurrencyCode"] = Model.DashboardBaseCurrencyCode
+                                        })
+                </ul>
+            </div>
+                        }
             </div>
         </div>
     }
@@ -429,9 +429,9 @@
             border-bottom: 1px solid #f1f3f5;
         }
 
-        .dashboard-account-node:last-child {
-            border-bottom: none;
-        }
+            .dashboard-account-node:last-child {
+                border-bottom: none;
+            }
 
         .dashboard-toggle {
             width: 32px;
@@ -450,9 +450,9 @@
             margin-top: 0.5rem;
         }
 
-        .dashboard-account-children .dashboard-account-node {
-            border-bottom: 1px solid #edf0f2;
-        }
+            .dashboard-account-children .dashboard-account-node {
+                border-bottom: 1px solid #edf0f2;
+            }
     </style>
 }
 
