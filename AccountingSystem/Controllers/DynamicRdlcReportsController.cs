@@ -44,9 +44,17 @@ namespace AccountingSystem.Controllers
         [HttpGet]
         public async Task<IActionResult> Index()
         {
+            var today = DateTime.Today;
+            var defaultFrom = new DateTime(today.Year, today.Month, 1);
+
             var viewModel = new DynamicRdlcReportViewModel
             {
                 Reports = _catalog.GetReports().OrderBy(r => r.Name).ToList(),
+                DefaultParameters =
+                {
+                    ["fromDate"] = defaultFrom.ToString("yyyy-MM-dd"),
+                    ["toDate"] = today.ToString("yyyy-MM-dd")
+                },
                 Lookups =
                 {
                     ["branchId"] = await _context.Branches
