@@ -141,7 +141,8 @@
         }
 
         function runSelectedReport() {
-            const viewer = document.getElementById('rdlcViewer').ej2_instances[0];
+            const viewerElement = document.getElementById('rdlcViewer');
+            const viewer = viewerElement?.ej2_instances?.[0];
             if (!viewer) return;
 
             const key = reportPicker.value;
