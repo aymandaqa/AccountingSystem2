@@ -43,18 +43,18 @@ namespace AccountingSystem.Services.Reports
                 .Include(l => l.Account)
                 .AsQueryable();
 
-            if (!TryParseDate(parameters, "fromDate", out var fromDate) || !fromDate.HasValue)
+            if (!TryParseDate(parameters, "fromDate", out var fromDate))
             {
                 fromDate = defaultFrom;
             }
 
-            if (!TryParseDate(parameters, "toDate", out var toDate) || !toDate.HasValue)
+            if (!TryParseDate(parameters, "toDate", out var toDate))
             {
                 toDate = today;
             }
 
-            query = query.Where(l => l.JournalEntry!.Date >= fromDate.Value);
-            query = query.Where(l => l.JournalEntry!.Date <= toDate.Value);
+            query = query.Where(l => l.JournalEntry!.Date >= fromDate);
+            query = query.Where(l => l.JournalEntry!.Date <= toDate);
 
             if (TryParseInt(parameters, "branchId", out var branchId))
             {
