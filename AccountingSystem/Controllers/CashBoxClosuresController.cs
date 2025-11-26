@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text.Json;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
+using AccountingSystem.Models.Workflows;
 using AccountingSystem.ViewModels;
 using AccountingSystem.Services;
 
@@ -165,6 +166,12 @@ namespace AccountingSystem.Controllers
                 {
                     ModelState.AddModelError(string.Empty, "لديك طلب جرد قيد الانتظار لهذا الصندوق. يرجى انتظار معالجته قبل إنشاء طلب جديد.");
                 }
+
+                var hasPendingTransactions = await HasUnapprovedCashTransactionsAsync(account.Id);
+                if (hasPendingTransactions)
+                {
+                    ModelState.AddModelError(string.Empty, "لا يمكن إنشاء طلب إغلاق الصندوق لوجود حركات غير معتمدة على هذا الصندوق.");
+                }
             }
 
             if (!ModelState.IsValid)
@@ -253,6 +260,37 @@ namespace AccountingSystem.Controllers
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(MyClosures));
+        }
+
+        private async Task<bool> HasUnapprovedCashTransactionsAsync(int accountId)
+        {
+            var hasPendingReceipts = await _context.ReceiptVouchers
+                .AnyAsync(v => v.PaymentAccountId == accountId
+                               && v.Status == ReceiptVoucherStatus.PendingApproval);
+
+            var hasPendingPaymentVouchers = await _context.PaymentVouchers
+                .Include(v => v.CreatedBy)
+                .AnyAsync(v => v.IsCash
+                               && (v.Status == PaymentVoucherStatus.PendingApproval
+                                   || v.Status == PaymentVoucherStatus.Draft)
+                               && v.CreatedBy.PaymentAccountId == accountId);
+
+            var hasPendingDisbursementVouchers = await _context.DisbursementVouchers
+                .Include(v => v.CreatedBy)
+                .AnyAsync(v => v.Status == DisbursementVoucherStatus.PendingApproval
+                               && v.CreatedBy.PaymentAccountId == accountId);
+
+            var hasPendingAssetExpenses = await _context.AssetExpenses
+                .Include(e => e.WorkflowInstance)
+                .AnyAsync(e => e.IsCash
+                               && e.AccountId == accountId
+                               && e.WorkflowInstance != null
+                               && e.WorkflowInstance.Status == WorkflowInstanceStatus.InProgress);
+
+            return hasPendingReceipts
+                || hasPendingPaymentVouchers
+                || hasPendingDisbursementVouchers
+                || hasPendingAssetExpenses;
         }
 
         private async Task PopulateAccountDataAsync(CashBoxClosureCreateViewModel model, List<Account> accounts, Account? selectedAccount)
