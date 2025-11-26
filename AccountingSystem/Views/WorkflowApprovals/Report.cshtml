@@ -1,0 +1,91 @@
+@model AccountingSystem.ViewModels.Workflows.WorkflowApprovalReportViewModel
+@using AccountingSystem.Models.Workflows
+@{
+    ViewData["Title"] = "تقرير الموافقات";
+}
+
+<h2 class="mb-4">تقرير الموافقات</h2>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">من تاريخ</label>
+                <input type="date" name="fromDate" value="@Model.FromDate.ToString("yyyy-MM-dd")" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">إلى تاريخ</label>
+                <input type="date" name="toDate" value="@Model.ToDate.ToString("yyyy-MM-dd")" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">الحالة</label>
+                <select name="status" class="form-select">
+                    <option value="" selected="@(Model.Status == null ? "selected" : null)">الكل</option>
+                    <option value="@WorkflowActionStatus.Approved" selected="@(Model.Status == WorkflowActionStatus.Approved ? "selected" : null)">معتمد</option>
+                    <option value="@WorkflowActionStatus.Rejected" selected="@(Model.Status == WorkflowActionStatus.Rejected ? "selected" : null)">مرفوض</option>
+                    <option value="@WorkflowActionStatus.Pending" selected="@(Model.Status == WorkflowActionStatus.Pending ? "selected" : null)">قيد الانتظار</option>
+                    <option value="@WorkflowActionStatus.Skipped" selected="@(Model.Status == WorkflowActionStatus.Skipped ? "selected" : null)">متجاوز</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fa fa-search ms-1"></i> عرض التقرير
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (!Model.Items.Any())
+{
+    <div class="alert alert-info">لا توجد نتائج ضمن نطاق البحث المحدد.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">عنوان الطلب</th>
+                    <th scope="col">مقدم الطلب</th>
+                    <th scope="col">المعتمد</th>
+                    <th scope="col">تاريخ الإنشاء</th>
+                    <th scope="col">تاريخ الإجراء</th>
+                    <th scope="col">الحالة</th>
+                    <th scope="col">ملاحظات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Items)
+                {
+                    var statusClass = item.Status switch
+                    {
+                        WorkflowActionStatus.Approved => "badge bg-success",
+                        WorkflowActionStatus.Rejected => "badge bg-danger",
+                        WorkflowActionStatus.Skipped => "badge bg-secondary",
+                        _ => "badge bg-warning text-dark"
+                    };
+                    var statusText = item.Status switch
+                    {
+                        WorkflowActionStatus.Approved => "معتمد",
+                        WorkflowActionStatus.Rejected => "مرفوض",
+                        WorkflowActionStatus.Skipped => "متجاوز",
+                        _ => "قيد الانتظار"
+                    };
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">@item.Title</div>
+                            <div class="text-muted small">نوع المستند: @item.DocumentType</div>
+                        </td>
+                        <td>@(string.IsNullOrWhiteSpace(item.RequesterName) ? "غير معروف" : item.RequesterName)</td>
+                        <td>@(string.IsNullOrWhiteSpace(item.ApproverName) ? "-" : item.ApproverName)</td>
+                        <td class="text-nowrap">@item.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td class="text-nowrap">@(item.ActionedAt.HasValue ? item.ActionedAt.Value.ToString("dd/MM/yyyy HH:mm") : "-")</td>
+                        <td><span class="@statusClass">@statusText</span></td>
+                        <td>@(string.IsNullOrWhiteSpace(item.Notes) ? "-" : item.Notes)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
