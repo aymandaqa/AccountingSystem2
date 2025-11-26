@@ -260,6 +260,7 @@
             .movement-table .table-responsive {
                 max-height: 70vh;
                 overflow-y: auto;
+                position: relative;
             }
 
             .movement-table thead th {
@@ -267,6 +268,9 @@
                 color: #fff;
                 border: none;
                 font-weight: 700;
+                position: sticky;
+                top: 0;
+                z-index: 2;
             }
 
             .movement-table tbody tr.group-row td {
