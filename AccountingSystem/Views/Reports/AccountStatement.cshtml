@@ -253,7 +253,6 @@
 
         .movement-table {
             border-radius: 1.25rem;
-            overflow: hidden;
             box-shadow: 0 22px 55px rgba(15, 23, 42, 0.08);
         }
 
@@ -261,6 +260,13 @@
                 max-height: 70vh;
                 overflow-y: auto;
                 position: relative;
+                scrollbar-gutter: stable;
+                border-radius: 1.25rem;
+            }
+
+            .movement-table table {
+                border-collapse: separate;
+                border-spacing: 0;
             }
 
             .movement-table thead th {
@@ -269,8 +275,9 @@
                 border: none;
                 font-weight: 700;
                 position: sticky;
-                top: 0;
+                inset-block-start: 0;
                 z-index: 2;
+                box-shadow: 0 6px 12px rgba(15, 23, 42, 0.08);
             }
 
             .movement-table tbody tr.group-row td {
