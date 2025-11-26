@@ -5,7 +5,6 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using AccountingSystem.Data;
 using AccountingSystem.Models.Reports;
-using AccountingSystem.ViewModels.Dashboard;
 using AccountingSystem.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +15,7 @@ using AccountingSystem.ViewModels.Workflows;
 using AccountingSystem.Services;
 using AccountingSystem.Models;
 using Microsoft.AspNetCore.Identity;
+using AccountingSystem.ViewModels.Dashboard;
 
 namespace AccountingSystem.Controllers
 {
@@ -88,6 +88,69 @@ namespace AccountingSystem.Controllers
                 _logger.LogError(ex, "Failed to load cash performance data for the dashboard.");
                 return View(new CashPerformanceDashboardViewModel());
             }
+        }
+
+        [Authorize]
+        public async Task<IActionResult> ProfitabilityReport(DateTime? startDate, DateTime? endDate)
+        {
+            var (periodStart, periodEnd) = NormalizePeriod(startDate, endDate);
+            var previousPeriodEnd = periodStart.AddDays(-1);
+            var previousPeriodStart = previousPeriodEnd.AddDays(-(periodEnd - periodStart).Days);
+
+            var incomeQuery = _context.ReceiptVouchers.AsNoTracking()
+                .Where(v => v.Date >= periodStart && v.Date <= periodEnd);
+            var expenseQuery = _context.Expenses.AsNoTracking()
+                .Where(e => e.CreatedAt >= periodStart && e.CreatedAt <= periodEnd);
+            var paymentVoucherQuery = _context.PaymentVouchers.AsNoTracking()
+                .Where(p => p.Date >= periodStart && p.Date <= periodEnd);
+            var salaryQuery = _context.SalaryPayments.AsNoTracking()
+                .Where(s => s.Date >= periodStart && s.Date <= periodEnd);
+
+            var previousIncomeQuery = _context.ReceiptVouchers.AsNoTracking()
+                .Where(v => v.Date >= previousPeriodStart && v.Date <= previousPeriodEnd);
+            var previousExpenseQuery = _context.Expenses.AsNoTracking()
+                .Where(e => e.CreatedAt >= previousPeriodStart && e.CreatedAt <= previousPeriodEnd);
+            var previousPaymentVoucherQuery = _context.PaymentVouchers.AsNoTracking()
+                .Where(p => p.Date >= previousPeriodStart && p.Date <= previousPeriodEnd);
+            var previousSalaryQuery = _context.SalaryPayments.AsNoTracking()
+                .Where(s => s.Date >= previousPeriodStart && s.Date <= previousPeriodEnd);
+
+            var totalIncome = await incomeQuery.SumAsync(v => v.Amount);
+            var totalExpenses = await expenseQuery.SumAsync(e => e.Amount)
+                + await paymentVoucherQuery.SumAsync(p => p.Amount)
+                + await salaryQuery.SumAsync(s => s.Amount);
+            var netProfit = totalIncome - totalExpenses;
+
+            var previousIncome = await previousIncomeQuery.SumAsync(v => v.Amount);
+            var previousExpenses = await previousExpenseQuery.SumAsync(e => e.Amount)
+                + await previousPaymentVoucherQuery.SumAsync(p => p.Amount)
+                + await previousSalaryQuery.SumAsync(s => s.Amount);
+            var previousNetProfit = previousIncome - previousExpenses;
+
+            var weeklyComparisons = await BuildWeeklyComparisons(periodStart, periodEnd, incomeQuery, expenseQuery, paymentVoucherQuery, salaryQuery);
+            var shipmentTarget = await BuildTargetShipmentSummary(incomeQuery, totalIncome, totalExpenses);
+            var topDrivers = await LoadTopDriversAsync(periodStart, periodEnd);
+            var topUsers = await LoadTopUsersAsync(periodStart, periodEnd);
+            var branchTargets = await LoadBranchTargetsAsync(periodStart, periodEnd, totalIncome);
+            var annualProjection = CalculateAnnualProjection(netProfit, totalIncome, totalExpenses, periodStart, periodEnd);
+
+            var viewModel = new ProfitabilityReportViewModel
+            {
+                StartDate = periodStart,
+                EndDate = periodEnd,
+                TotalExpenses = totalExpenses,
+                NetProfit = netProfit,
+                NetProfitChangePercent = CalculateChangePercent(previousNetProfit, netProfit),
+                ExpensesChangePercent = CalculateChangePercent(previousExpenses, totalExpenses),
+                WeeklyComparisons = weeklyComparisons,
+                ShipmentTarget = shipmentTarget,
+                TopDrivers = topDrivers,
+                TopUsers = topUsers,
+                BranchTargets = branchTargets,
+                AnnualProjection = annualProjection
+            };
+
+            return View(viewModel);
         }
 
         private async Task<IReadOnlyList<CashPerformanceRecord>> LoadRecordsForUserAsync()
@@ -197,6 +260,193 @@ namespace AccountingSystem.Controllers
             return await _context.UserPaymentAccounts
                 .AsNoTracking()
                 .AnyAsync(upa => upa.UserId == userId);
+        }
+
+        private static (DateTime Start, DateTime End) NormalizePeriod(DateTime? startDate, DateTime? endDate)
+        {
+            var defaultStart = new DateTime(DateTime.Today.AddMonths(-1).Year, DateTime.Today.AddMonths(-1).Month, 1);
+            var defaultEnd = defaultStart.AddMonths(1).AddDays(-1);
+
+            var start = startDate?.Date ?? defaultStart;
+            var end = endDate?.Date ?? defaultEnd;
+
+            if (end < start)
+            {
+                (start, end) = (end, start);
+            }
+
+            return (start, end);
+        }
+
+        private static decimal CalculateChangePercent(decimal previousValue, decimal currentValue)
+        {
+            if (previousValue == 0)
+            {
+                return currentValue == 0 ? 0 : 100;
+            }
+
+            return Math.Round(((currentValue - previousValue) / Math.Abs(previousValue)) * 100, 2);
+        }
+
+        private static DateTime GetWeekStart(DateTime date)
+        {
+            var dayOfWeek = ((int)date.DayOfWeek + 6) % 7; // Monday = 0
+            return date.Date.AddDays(-dayOfWeek);
+        }
+
+        private async Task<IReadOnlyList<WeeklyProfitComparison>> BuildWeeklyComparisons(
+            DateTime periodStart,
+            DateTime periodEnd,
+            IQueryable<ReceiptVoucher> incomeQuery,
+            IQueryable<Expense> expenseQuery,
+            IQueryable<PaymentVoucher> paymentVoucherQuery,
+            IQueryable<SalaryPayment> salaryQuery)
+        {
+            var incomeEntries = await incomeQuery
+                .Select(v => new { v.Date, Amount = v.Amount })
+                .ToListAsync();
+
+            var expenseEntries = await expenseQuery
+                .Select(e => new { Date = e.CreatedAt, Amount = e.Amount })
+                .ToListAsync();
+
+            var paymentEntries = await paymentVoucherQuery
+                .Select(p => new { p.Date, Amount = p.Amount })
+                .ToListAsync();
+
+            var salaryEntries = await salaryQuery
+                .Select(s => new { s.Date, Amount = s.Amount })
+                .ToListAsync();
+
+            var expenses = expenseEntries
+                .Concat(paymentEntries)
+                .Concat(salaryEntries)
+                .GroupBy(e => GetWeekStart(e.Date))
+                .ToDictionary(g => g.Key, g => g.Sum(e => e.Amount));
+
+            var profits = incomeEntries
+                .GroupBy(e => GetWeekStart(e.Date))
+                .ToDictionary(g => g.Key, g => g.Sum(e => e.Amount));
+
+            var weeks = new List<WeeklyProfitComparison>();
+            var cursor = GetWeekStart(periodStart);
+            while (cursor <= periodEnd)
+            {
+                var nextWeek = cursor.AddDays(7);
+                var label = $"{cursor:dd MMM} - {nextWeek.AddDays(-1):dd MMM}";
+                var weekExpenses = expenses.TryGetValue(cursor, out var value) ? value : 0m;
+                var weekIncome = profits.TryGetValue(cursor, out var income) ? income : 0m;
+                var weekNet = weekIncome - weekExpenses;
+
+                var previousWeek = cursor.AddDays(-7);
+                var previousExpenses = expenses.TryGetValue(previousWeek, out var prevExp) ? prevExp : 0m;
+                var previousIncome = profits.TryGetValue(previousWeek, out var prevInc) ? prevInc : 0m;
+                var previousNet = previousIncome - previousExpenses;
+
+                weeks.Add(new WeeklyProfitComparison
+                {
+                    Label = label,
+                    Expenses = weekExpenses,
+                    NetProfit = weekNet,
+                    ProfitChangePercent = CalculateChangePercent(previousNet, weekNet)
+                });
+
+                cursor = nextWeek;
+            }
+
+            return weeks;
+        }
+
+        private static async Task<TargetShipmentSummary> BuildTargetShipmentSummary(
+            IQueryable<ReceiptVoucher> incomeQuery,
+            decimal totalIncome,
+            decimal totalExpenses)
+        {
+            var shipmentCount = await incomeQuery.CountAsync();
+            var averageRevenue = shipmentCount == 0 ? 0 : totalIncome / shipmentCount;
+            var targetShipments = averageRevenue == 0 ? 0 : (int)Math.Ceiling(totalExpenses / averageRevenue);
+
+            return new TargetShipmentSummary
+            {
+                TargetShipments = targetShipments,
+                BreakEvenRevenue = totalExpenses,
+                AverageRevenuePerShipment = averageRevenue
+            };
+        }
+
+        private async Task<IReadOnlyList<TopContributor>> LoadTopDriversAsync(DateTime start, DateTime end)
+        {
+            var data = await _context.PaymentVouchers.AsNoTracking()
+                .Include(p => p.Agent)
+                .Where(p => p.AgentId != null && p.Date >= start && p.Date <= end)
+                .GroupBy(p => p.Agent!.Name)
+                .Select(g => new TopContributor
+                {
+                    Name = g.Key,
+                    Value = g.Sum(x => x.Amount),
+                    Descriptor = "صافي مدفوعات"
+                })
+                .OrderByDescending(g => g.Value)
+                .Take(10)
+                .ToListAsync();
+
+            return data;
+        }
+
+        private async Task<IReadOnlyList<TopContributor>> LoadTopUsersAsync(DateTime start, DateTime end)
+        {
+            var sessions = await _context.UserSessions.AsNoTracking()
+                .Where(s => s.CreatedAt >= start && s.CreatedAt <= end)
+                .GroupBy(s => s.UserId)
+                .Select(g => new { g.Key, Count = g.Count() })
+                .OrderByDescending(g => g.Count)
+                .Take(10)
+                .ToListAsync();
+
+            var users = await _userManager.Users
+                .Where(u => sessions.Select(s => s.Key).Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.UserName ?? u.Email ?? u.Id);
+
+            return sessions
+                .Select(s => new TopContributor
+                {
+                    Name = users.TryGetValue(s.Key, out var name) ? name : s.Key,
+                    Value = s.Count,
+                    Descriptor = "جلسات"
+                })
+                .ToList();
+        }
+
+        private async Task<IReadOnlyList<BranchTargetSummary>> LoadBranchTargetsAsync(DateTime start, DateTime end, decimal totalIncome)
+        {
+            var branchExpenses = await _context.Expenses.AsNoTracking()
+                .Include(e => e.Branch)
+                .Where(e => e.CreatedAt >= start && e.CreatedAt <= end)
+                .GroupBy(e => e.Branch.Name)
+                .Select(g => new BranchTargetSummary
+                {
+                    BranchName = g.Key,
+                    RequiredTarget = g.Sum(x => x.Amount),
+                    CurrentCoverage = totalIncome == 0 ? 0 : Math.Round((g.Sum(x => x.Amount) / totalIncome) * 100, 2)
+                })
+                .OrderByDescending(g => g.RequiredTarget)
+                .ToListAsync();
+
+            return branchExpenses;
+        }
+
+        private AnnualProfitProjection CalculateAnnualProjection(decimal netProfit, decimal totalIncome, decimal totalExpenses, DateTime start, DateTime end)
+        {
+            var days = Math.Max(1, (end - start).Days + 1);
+            var remainingDays = (new DateTime(DateTime.Today.Year, 12, 31) - DateTime.Today).Days;
+            var dailyProfit = netProfit / days;
+
+            return new AnnualProfitProjection
+            {
+                ProjectedNetProfit = Math.Round(netProfit + (dailyProfit * remainingDays), 2),
+                AnnualizedRevenue = Math.Round(totalIncome / days * 365, 2),
+                AnnualizedExpenses = Math.Round(totalExpenses / days * 365, 2)
+            };
         }
 
         private async Task<(List<AccountTreeNodeViewModel> Nodes, string BaseCurrencyCode, string ParentAccountName)> LoadDashboardAccountTreeAsync()
