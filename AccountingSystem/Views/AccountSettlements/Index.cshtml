@@ -52,7 +52,10 @@
         <div class="row g-3 mb-2">
             <div class="col-12 col-lg-4">
                 <label class="form-label fw-semibold">تاريخ التسوية</label>
-                <input type="datetime-local" class="form-control" name="SettlementDate" value="@Model.SettlementDate.ToString(\"yyyy-MM-ddTHH:mm\")" />
+                <input type="datetime-local"
+                       class="form-control"
+                       name="SettlementDate"
+                       value="@Model.SettlementDate.ToString("yyyy-MM-ddTHH:mm")" />
                 <div class="form-text">سيتم استخدام هذا التاريخ لحفظ المطابقة.</div>
             </div>
         </div>
@@ -83,9 +86,9 @@
                                     foreach (var line in Model.DebitLines)
                                     {
                                         <tr>
-                                            <td>
-                                                <input class="form-check-input" type="checkbox" name="SelectedDebitIds" value="@line.LineId" />
-                                            </td>
+                                              <td>
+                                                  <input class="form-check-input" type="checkbox" name="SelectedDebitIds" value="@line.LineId" />
+                                              </td>
                                             <td>@line.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</td>
                                             <td>@line.JournalNumber</td>
                                             <td>
@@ -95,7 +98,7 @@
                                                     <small class="text-muted">@line.Reference</small>
                                                 }
                                             </td>
-                                            <td class="text-end text-success fw-semibold">@line.Debit.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                              <td class="text-end text-success fw-semibold">@line.Debit.ToString("N2", CultureInfo.InvariantCulture)</td>
                                         </tr>
                                     }
                                 }
@@ -136,9 +139,9 @@
                                     foreach (var line in Model.CreditLines)
                                     {
                                         <tr>
-                                            <td>
-                                                <input class="form-check-input" type="checkbox" name="SelectedCreditIds" value="@line.LineId" />
-                                            </td>
+                                              <td>
+                                                  <input class="form-check-input" type="checkbox" name="SelectedCreditIds" value="@line.LineId" />
+                                              </td>
                                             <td>@line.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</td>
                                             <td>@line.JournalNumber</td>
                                             <td>
@@ -148,7 +151,7 @@
                                                     <small class="text-muted">@line.Reference</small>
                                                 }
                                             </td>
-                                            <td class="text-end text-danger fw-semibold">@line.Credit.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                              <td class="text-end text-danger fw-semibold">@line.Credit.ToString("N2", CultureInfo.InvariantCulture)</td>
                                         </tr>
                                     }
                                 }
