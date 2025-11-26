@@ -422,7 +422,7 @@ namespace AccountingSystem.Controllers
             var branchExpenses = await _context.Expenses.AsNoTracking()
                 .Include(e => e.Branch)
                 .Where(e => e.CreatedAt >= start && e.CreatedAt <= end)
-                .GroupBy(e => e.Branch.Name)
+                .GroupBy(e => e.Branch.NameAr)
                 .Select(g => new BranchTargetSummary
                 {
                     BranchName = g.Key,

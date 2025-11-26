@@ -43,18 +43,14 @@ namespace AccountingSystem.Services.Reports
                 .Include(l => l.Account)
                 .AsQueryable();
 
-            if (!TryParseDate(parameters, "fromDate", out var fromDate) || !fromDate.HasValue)
-            {
-                fromDate = defaultFrom;
-            }
+            TryParseDate(parameters, "fromDate", out var fromDate);
+            TryParseDate(parameters, "toDate", out var toDate);
 
-            if (!TryParseDate(parameters, "toDate", out var toDate) || !toDate.HasValue)
-            {
-                toDate = today;
-            }
+            var fromDateValue = fromDate ?? defaultFrom;
+            var toDateValue = toDate ?? today;
 
-            query = query.Where(l => l.JournalEntry!.Date >= fromDate.Value);
-            query = query.Where(l => l.JournalEntry!.Date <= toDate.Value);
+            query = query.Where(l => l.JournalEntry!.Date >= fromDateValue);
+            query = query.Where(l => l.JournalEntry!.Date <= toDateValue);
 
             if (TryParseInt(parameters, "branchId", out var branchId))
             {
@@ -89,15 +85,11 @@ namespace AccountingSystem.Services.Reports
 
         private async Task<Dictionary<string, IEnumerable>> BuildVoucherActivityDataAsync(IDictionary<string, string?> parameters)
         {
-            if (!TryParseDate(parameters, "fromDate", out var fromDate))
-            {
-                fromDate = DateTime.Today.AddMonths(-1);
-            }
+            TryParseDate(parameters, "fromDate", out var fromDate);
+            TryParseDate(parameters, "toDate", out var toDate);
 
-            if (!TryParseDate(parameters, "toDate", out var toDate))
-            {
-                toDate = DateTime.Today;
-            }
+            var fromDateValue = fromDate ?? DateTime.Today.AddMonths(-1);
+            var toDateValue = toDate ?? DateTime.Today;
 
             TryParseInt(parameters, "currencyId", out var currencyId);
 
@@ -106,20 +98,20 @@ namespace AccountingSystem.Services.Reports
                 .Include(v => v.CreatedBy)
                     .ThenInclude(u => u.PaymentAccount)
                 .Include(v => v.Currency)
-                .Where(v => v.Date >= fromDate && v.Date <= toDate);
+                .Where(v => v.Date >= fromDateValue && v.Date <= toDateValue);
 
             var paymentVouchers = _context.PaymentVouchers
                 .Include(v => v.Account)
                 .Include(v => v.CreatedBy)
                     .ThenInclude(u => u.PaymentAccount)
                 .Include(v => v.Currency)
-                .Where(v => v.Date >= fromDate && v.Date <= toDate);
+                .Where(v => v.Date >= fromDateValue && v.Date <= toDateValue);
 
             var disbursementVouchers = _context.DisbursementVouchers
                 .Include(v => v.Account)
                 .Include(v => v.Currency)
                 .Include(v => v.Supplier)
-                .Where(v => v.Date >= fromDate && v.Date <= toDate);
+                .Where(v => v.Date >= fromDateValue && v.Date <= toDateValue);
 
             if (currencyId.HasValue)
             {
@@ -181,10 +173,16 @@ namespace AccountingSystem.Services.Reports
             };
         }
 
-        private static bool TryParseDate(IDictionary<string, string?> parameters, string key, out DateTime value)
+        private static bool TryParseDate(IDictionary<string, string?> parameters, string key, out DateTime? value)
         {
-            value = default;
-            return parameters.TryGetValue(key, out var raw) && DateTime.TryParse(raw, out value);
+            value = null;
+            if (parameters.TryGetValue(key, out var raw) && DateTime.TryParse(raw, out var parsed))
+            {
+                value = parsed;
+                return true;
+            }
+
+            return false;
         }
 
         private static bool TryParseInt(IDictionary<string, string?> parameters, string key, out int? value)
