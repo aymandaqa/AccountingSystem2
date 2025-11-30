@@ -360,12 +360,9 @@ namespace AccountingSystem.Controllers
                 throw;
             }
 
-            var returnUrl = Url.Action(nameof(Index)) ?? Url.Content("~/");
-            var printUrl = Url.Action(nameof(PrintSend), new { id = transfer.Id, returnUrl });
-            if (!string.IsNullOrEmpty(printUrl))
-                TempData["PrintUrl"] = printUrl;
+            TempData["TransferPrintUrl"] = Url.Action(nameof(PrintSend), new { id = transfer.Id });
 
-            return Redirect(returnUrl);
+            return RedirectToAction(nameof(Index));
         }
 
         [Authorize]
@@ -429,15 +426,9 @@ namespace AccountingSystem.Controllers
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+                TempData["TransferPrintUrl"] = Url.Action(nameof(PrintReceive), new { id = transfer.Id });
 
-                var safeReturnUrl = !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)
-                    ? returnUrl
-                    : Url.Action(nameof(Index)) ?? Url.Content("~/");
-
-                var printUrl = Url.Action(nameof(PrintReceive), new { id = transfer.Id, returnUrl = safeReturnUrl });
-                if (!string.IsNullOrEmpty(printUrl))
-                    TempData["PrintUrl"] = printUrl;
-                return RedirectAfterAction(safeReturnUrl);
+                return RedirectAfterAction(returnUrl);
             }
 
             if (transfer.SenderJournalEntryId.HasValue && transfer.SenderJournalEntry != null)
