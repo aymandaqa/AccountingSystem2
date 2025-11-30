@@ -189,9 +189,9 @@
         </div>
 
         <div class="d-flex justify-content-end mt-3 gap-2">
-            <div class="text-muted small me-auto">يتم ترتيب الحركات المسوّاة في كشف التسويات بترتيب اختيارها: الحركة المدينة أولاً ثم الدائنة.</div>
+            <div class="text-muted small me-auto">تُضاف الحركات المحددة كتسوية واحدة بحيث تظهر كسطر واحد في كشف التسويات أدناه.</div>
             <button type="submit" class="btn btn-success">
-                <i class="fa-solid fa-link ms-1"></i> تسوية الحركات المحددة
+                <i class="fa-solid fa-link ms-1"></i> إضافة كتسوية واحدة
             </button>
         </div>
     </form>
@@ -200,10 +200,10 @@
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                 <div>
                     <h2 class="h5 mb-0">كشف التسويات</h2>
-                    <small class="text-muted">يتم عرض كل تسوية مع ترتيب الحركة المدينة تليها الحركة الدائنة.</small>
+                    <small class="text-muted">يتم عرض كل تسوية في سطر واحد حتى لو تضمنت عدة حركات مدينة أو دائنة.</small>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-info">@Model.SettledPairs.Count</span>
+                    <span class="badge bg-info">@Model.Settlements.Count</span>
                     @if (Model.AccountId.HasValue)
                     {
                         <a class="btn btn-sm btn-outline-primary" href="@Url.Action("ExportToExcel", new { accountId = Model.AccountId, fromDate = Model.FromDate?.ToString("yyyy-MM-dd"), toDate = Model.ToDate?.ToString("yyyy-MM-dd") })">
@@ -226,31 +226,47 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @if (Model.SettledPairs.Any())
+                    @if (Model.Settlements.Any())
                     {
-                        foreach (var pair in Model.SettledPairs)
+                        foreach (var settlement in Model.Settlements)
                         {
                             <tr>
-                                <td class="text-nowrap">@pair.CreatedAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)</td>
+                                <td class="text-nowrap">@settlement.CreatedAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)</td>
                                 <td>
-                                    <div class="fw-semibold">@pair.DebitLine.Description</div>
-                                    <div class="text-muted small">رقم القيد: @pair.DebitLine.JournalNumber | التاريخ: @pair.DebitLine.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</div>
-                                    <div class="text-success fw-semibold">@pair.DebitLine.Debit.ToString("N2", CultureInfo.InvariantCulture)</div>
+                                    <div class="d-flex flex-column gap-2">
+                                        @foreach (var debit in settlement.DebitLines)
+                                        {
+                                            <div>
+                                                <div class="fw-semibold">@debit.Description</div>
+                                                <div class="text-muted small">رقم القيد: @debit.JournalNumber | التاريخ: @debit.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</div>
+                                                <div class="text-success fw-semibold">@debit.Debit.ToString("N2", CultureInfo.InvariantCulture)</div>
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="text-success fw-semibold mt-2">الإجمالي: @settlement.DebitTotal.ToString("N2", CultureInfo.InvariantCulture)</div>
                                 </td>
                                 <td>
-                                    <div class="fw-semibold">@pair.CreditLine.Description</div>
-                                    <div class="text-muted small">رقم القيد: @pair.CreditLine.JournalNumber | التاريخ: @pair.CreditLine.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</div>
-                                    <div class="text-danger fw-semibold">@pair.CreditLine.Credit.ToString("N2", CultureInfo.InvariantCulture)</div>
+                                    <div class="d-flex flex-column gap-2">
+                                        @foreach (var credit in settlement.CreditLines)
+                                        {
+                                            <div>
+                                                <div class="fw-semibold">@credit.Description</div>
+                                                <div class="text-muted small">رقم القيد: @credit.JournalNumber | التاريخ: @credit.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</div>
+                                                <div class="text-danger fw-semibold">@credit.Credit.ToString("N2", CultureInfo.InvariantCulture)</div>
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="text-danger fw-semibold mt-2">الإجمالي: @settlement.CreditTotal.ToString("N2", CultureInfo.InvariantCulture)</div>
                                 </td>
                                 <td class="text-center">
-                                    <form asp-action="DeletePair" method="post" class="d-inline">
+                                    <form asp-action="DeleteSettlement" method="post" class="d-inline">
                                         @Html.AntiForgeryToken()
-                                        <input type="hidden" name="pairId" value="@pair.PairId" />
+                                        <input type="hidden" name="settlementId" value="@settlement.SettlementId" />
                                         <input type="hidden" name="accountId" value="@Model.AccountId" />
                                         <input type="hidden" name="fromDate" value="@Model.FromDate?.ToString("o")" />
                                         <input type="hidden" name="toDate" value="@Model.ToDate?.ToString("o")" />
                                         <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('هل أنت متأكد من إلغاء هذه التسوية؟');">
-                                            <i class="fa-solid fa-rotate-left ms-1"></i> إلغاء
+                                            <i class="fa-solid fa-rotate-left ms-1"></i> إلغاء التسوية بالكامل
                                         </button>
                                     </form>
                                 </td>
