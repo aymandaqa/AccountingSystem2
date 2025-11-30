@@ -540,31 +540,26 @@ namespace AccountingSystem.Controllers
         {
             var instances = await _context.WorkflowInstances
                 .Include(i => i.Actions).ThenInclude(a => a.WorkflowStep).ThenInclude(s => s.ApproverUser)
+                .Include(i => i.Actions).ThenInclude(a => a.WorkflowStep).ThenInclude(s => s.Branch)
+                .Include(i => i.WorkflowDefinition)
                 .Include(i => i.DocumentCurrency)
                 .Where(i => i.InitiatorId == userId && i.Status == WorkflowInstanceStatus.InProgress)
                 .OrderByDescending(i => i.CreatedAt)
                 .ToListAsync();
 
-            return instances
-                .Select(MapPendingRequest)
-                .ToList();
+            var requests = new List<PendingWorkflowRequestViewModel>();
+
+            foreach (var instance in instances)
+            {
+                var pendingWith = await BuildPendingWithLabelAsync(instance);
+                requests.Add(MapPendingRequest(instance, pendingWith));
+            }
+
+            return requests;
         }
 
-        private PendingWorkflowRequestViewModel MapPendingRequest(WorkflowInstance instance)
+        private PendingWorkflowRequestViewModel MapPendingRequest(WorkflowInstance instance, string pendingWith)
         {
-            var pendingAction = instance.Actions
-                .Where(a => a.Status == WorkflowActionStatus.Pending)
-                .OrderBy(a => a.WorkflowStep.Order)
-                .FirstOrDefault();
-
-            var pendingWith = pendingAction?.WorkflowStep.ApproverUser != null
-                ? GetUserDisplayName(pendingAction.WorkflowStep.ApproverUser, pendingAction.WorkflowStep.ApproverUserId)
-                : pendingAction == null
-                    ? "-"
-                    : !string.IsNullOrWhiteSpace(pendingAction.WorkflowStep.RequiredPermission)
-                        ? $"صلاحية: {pendingAction.WorkflowStep.RequiredPermission}"
-                        : "في انتظار أول مستخدم مخول";
-
             return new PendingWorkflowRequestViewModel
             {
                 WorkflowInstanceId = instance.Id,
@@ -577,6 +572,134 @@ namespace AccountingSystem.Controllers
                 CreatedAt = instance.CreatedAt,
                 PendingWith = pendingWith
             };
+        }
+
+        private IReadOnlyList<WorkflowAction> GetReadyActions(WorkflowInstance instance)
+        {
+            var pendingActions = instance.Actions
+                .Where(a => a.Status == WorkflowActionStatus.Pending)
+                .ToList();
+
+            var completedSteps = instance.Actions
+                .Where(a => a.Status == WorkflowActionStatus.Approved || a.Status == WorkflowActionStatus.Skipped)
+                .Select(a => a.WorkflowStepId)
+                .ToHashSet();
+
+            var candidates = pendingActions
+                .Where(a => !a.WorkflowStep.ParentStepId.HasValue || completedSteps.Contains(a.WorkflowStep.ParentStepId.Value))
+                .ToList();
+
+            var approvalMode = instance.WorkflowDefinition?.ApprovalMode ?? WorkflowApprovalMode.Linear;
+            if (approvalMode == WorkflowApprovalMode.Hierarchy && candidates.Any())
+            {
+                var nextOrder = candidates.Min(a => a.WorkflowStep.Order);
+                return candidates.Where(a => a.WorkflowStep.Order == nextOrder).ToList();
+            }
+
+            return candidates;
+        }
+
+        private async Task<string> BuildPendingWithLabelAsync(WorkflowInstance instance)
+        {
+            var readyActions = GetReadyActions(instance);
+            if (!readyActions.Any())
+            {
+                return "-";
+            }
+
+            var approverNames = new List<string>();
+
+            foreach (var action in readyActions)
+            {
+                var names = await ResolveApproverNamesAsync(action.WorkflowStep);
+                approverNames.AddRange(names);
+            }
+
+            var distinctNames = approverNames
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .Distinct()
+                .ToList();
+
+            if (!distinctNames.Any())
+            {
+                return "في انتظار أول مستخدم مخول";
+            }
+
+            return distinctNames.Count == 1
+                ? distinctNames[0]
+                : $"أحد المستخدمين: {string.Join("، ", distinctNames)}";
+        }
+
+        private async Task<IReadOnlyList<string>> ResolveApproverNamesAsync(WorkflowStep step)
+        {
+            if (step.StepType == WorkflowStepType.SpecificUser && !string.IsNullOrWhiteSpace(step.ApproverUserId))
+            {
+                return new List<string> { GetUserDisplayName(step.ApproverUser, step.ApproverUserId) };
+            }
+
+            var userIds = new HashSet<string>();
+
+            switch (step.StepType)
+            {
+                case WorkflowStepType.Permission:
+                    if (!string.IsNullOrWhiteSpace(step.RequiredPermission))
+                    {
+                        var directUsers = await _context.UserPermissions
+                            .Where(up => up.IsGranted && up.Permission.Name == step.RequiredPermission)
+                            .Select(up => up.UserId)
+                            .ToListAsync();
+                        foreach (var userId in directUsers)
+                        {
+                            userIds.Add(userId);
+                        }
+
+                        var groupUsers = await _context.UserPermissionGroups
+                            .Where(upg => upg.PermissionGroup.PermissionGroupPermissions.Any(pgp => pgp.Permission.Name == step.RequiredPermission))
+                            .Select(upg => upg.UserId)
+                            .ToListAsync();
+                        foreach (var userId in groupUsers)
+                        {
+                            userIds.Add(userId);
+                        }
+                    }
+                    break;
+                case WorkflowStepType.Branch:
+                    if (step.BranchId.HasValue)
+                    {
+                        var branchUsers = await _context.UserBranches
+                            .Where(ub => ub.BranchId == step.BranchId.Value)
+                            .Select(ub => ub.UserId)
+                            .ToListAsync();
+                        foreach (var userId in branchUsers)
+                        {
+                            userIds.Add(userId);
+                        }
+                    }
+                    break;
+            }
+
+            if (!userIds.Any())
+            {
+                return Array.Empty<string>();
+            }
+
+            var users = await _context.Users
+                .Where(u => userIds.Contains(u.Id))
+                .Select(u => new { u.Id, u.FullName, u.UserName })
+                .ToListAsync();
+
+            var resolvedNames = users
+                .Select(u => string.IsNullOrWhiteSpace(u.FullName)
+                    ? string.IsNullOrWhiteSpace(u.UserName)
+                        ? u.Id
+                        : u.UserName
+                    : u.FullName)
+                .ToList();
+
+            var missingIds = userIds.Except(users.Select(u => u.Id));
+            resolvedNames.AddRange(missingIds);
+
+            return resolvedNames;
         }
 
         private static string GetUserDisplayName(User? user, string? fallbackId, string? currentValue = null)
