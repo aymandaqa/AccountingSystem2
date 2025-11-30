@@ -232,6 +232,11 @@ namespace AccountingSystem.Services
             action.ActionedAt = DateTime.Now;
             action.Notes = notes;
 
+            if (approve && !string.IsNullOrWhiteSpace(notes))
+            {
+                await AppendApprovalNoteToDocumentAsync(action, user, cancellationToken);
+            }
+
             await _notificationService.MarkWorkflowActionNotificationsAsReadAsync(action.Id, cancellationToken);
 
             if (!approve)
@@ -583,6 +588,77 @@ namespace AccountingSystem.Services
             }
 
             await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        private async Task AppendApprovalNoteToDocumentAsync(WorkflowAction action, User approver, CancellationToken cancellationToken)
+        {
+            var approverNote = BuildApproverNote(approver, action.Notes);
+            if (string.IsNullOrWhiteSpace(approverNote))
+            {
+                return;
+            }
+
+            switch (action.WorkflowInstance.DocumentType)
+            {
+                case WorkflowDocumentType.PaymentVoucher:
+                    var paymentVoucher = await _context.PaymentVouchers
+                        .FirstOrDefaultAsync(v => v.Id == action.WorkflowInstance.DocumentId, cancellationToken);
+                    if (paymentVoucher != null)
+                    {
+                        paymentVoucher.Notes = AppendToNotes(paymentVoucher.Notes, approverNote);
+                    }
+                    break;
+                case WorkflowDocumentType.ReceiptVoucher:
+                    var receiptVoucher = await _context.ReceiptVouchers
+                        .FirstOrDefaultAsync(v => v.Id == action.WorkflowInstance.DocumentId, cancellationToken);
+                    if (receiptVoucher != null)
+                    {
+                        receiptVoucher.Notes = AppendToNotes(receiptVoucher.Notes, approverNote);
+                    }
+                    break;
+                case WorkflowDocumentType.DisbursementVoucher:
+                    var disbursementVoucher = await _context.DisbursementVouchers
+                        .FirstOrDefaultAsync(v => v.Id == action.WorkflowInstance.DocumentId, cancellationToken);
+                    if (disbursementVoucher != null)
+                    {
+                        disbursementVoucher.Notes = AppendToNotes(disbursementVoucher.Notes, approverNote);
+                    }
+                    break;
+                case WorkflowDocumentType.AssetExpense:
+                    var assetExpense = await _context.AssetExpenses
+                        .FirstOrDefaultAsync(e => e.Id == action.WorkflowInstance.DocumentId, cancellationToken);
+                    if (assetExpense != null)
+                    {
+                        assetExpense.Notes = AppendToNotes(assetExpense.Notes, approverNote);
+                    }
+                    break;
+            }
+        }
+
+        private static string AppendToNotes(string? existingNotes, string approverNote)
+        {
+            if (string.IsNullOrWhiteSpace(existingNotes))
+            {
+                return approverNote;
+            }
+
+            return existingNotes.TrimEnd() + Environment.NewLine + approverNote;
+        }
+
+        private static string BuildApproverNote(User approver, string? actionNotes)
+        {
+            if (string.IsNullOrWhiteSpace(actionNotes))
+            {
+                return string.Empty;
+            }
+
+            var approverName = !string.IsNullOrWhiteSpace(approver.FullName)
+                ? approver.FullName!
+                : !string.IsNullOrWhiteSpace(approver.UserName)
+                    ? approver.UserName!
+                    : approver.Id;
+
+            return $"{approverName}: {actionNotes}";
         }
 
         private async Task CompleteWorkflowAsync(WorkflowInstance instance, string approvedById, CancellationToken cancellationToken)
