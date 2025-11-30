@@ -360,7 +360,9 @@ namespace AccountingSystem.Controllers
                 throw;
             }
 
-            return RedirectToAction(nameof(PrintSend), new { id = transfer.Id, returnUrl = Url.Action(nameof(Index)) });
+            TempData["TransferPrintUrl"] = Url.Action(nameof(PrintSend), new { id = transfer.Id });
+
+            return RedirectToAction(nameof(Index));
         }
 
         [Authorize]
@@ -424,7 +426,9 @@ namespace AccountingSystem.Controllers
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
-                return RedirectToAction(nameof(PrintReceive), new { id = transfer.Id, returnUrl });
+                TempData["TransferPrintUrl"] = Url.Action(nameof(PrintReceive), new { id = transfer.Id });
+
+                return RedirectAfterAction(returnUrl);
             }
 
             if (transfer.SenderJournalEntryId.HasValue && transfer.SenderJournalEntry != null)

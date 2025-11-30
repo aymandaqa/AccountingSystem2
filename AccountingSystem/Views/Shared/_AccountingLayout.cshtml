@@ -6,6 +6,7 @@
 @using Microsoft.EntityFrameworkCore
 @using System.Globalization
 @using System.Linq
+@using System.Text.Json
 @inject IAuthorizationService AuthorizationService
 @inject UserManager<User> UserManager
 @inject AccountingSystem.Data.ApplicationDbContext DbContext
@@ -1821,6 +1822,18 @@
         //// Set zoom to 80%
         //setZoom(0.9);
     </script>
+
+    @if (TempData["TransferPrintUrl"] is string transferPrintUrl && !string.IsNullOrWhiteSpace(transferPrintUrl))
+    {
+        <script>
+            (function () {
+                var printUrl = @Html.Raw(JsonSerializer.Serialize(transferPrintUrl));
+                if (printUrl) {
+                    window.open(printUrl, '_blank');
+                }
+            })();
+        </script>
+    }
     <ejs-scripts></ejs-scripts>
 
 </body>
