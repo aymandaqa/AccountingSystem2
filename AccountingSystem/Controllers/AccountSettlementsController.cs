@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AccountingSystem.Data;
 using AccountingSystem.Models;
 using AccountingSystem.ViewModels;
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -23,6 +24,34 @@ namespace AccountingSystem.Controllers
         {
             _context = context;
             _userManager = userManager;
+        }
+
+        private async Task<List<AccountSettlementPair>> GetSettledPairsAsync(int accountId, DateTime? fromDate, DateTime? toDate)
+        {
+            var settledPairsQuery = _context.AccountSettlementPairs
+                .AsNoTracking()
+                .Include(p => p.Settlement)
+                .Include(p => p.DebitLine)!.ThenInclude(l => l.JournalEntry)
+                .Include(p => p.CreditLine)!.ThenInclude(l => l.JournalEntry)
+                .Where(p => p.Settlement.AccountId == accountId);
+
+            if (fromDate.HasValue)
+            {
+                settledPairsQuery = settledPairsQuery
+                    .Where(p => p.Settlement.CreatedAt.Date >= fromDate.Value.Date);
+            }
+
+            if (toDate.HasValue)
+            {
+                var toDateExclusive = toDate.Value.Date.AddDays(1);
+                settledPairsQuery = settledPairsQuery
+                    .Where(p => p.Settlement.CreatedAt < toDateExclusive);
+            }
+
+            return await settledPairsQuery
+                .OrderByDescending(p => p.Settlement.CreatedAt)
+                .ThenByDescending(p => p.Id)
+                .ToListAsync();
         }
 
         [HttpGet]
@@ -104,29 +133,7 @@ namespace AccountingSystem.Controllers
                     })
                     .ToList();
 
-                var settledPairs = await _context.AccountSettlementPairs
-                    .AsNoTracking()
-                    .Include(p => p.Settlement)
-                    .Include(p => p.DebitLine)!.ThenInclude(l => l.JournalEntry)
-                    .Include(p => p.CreditLine)!.ThenInclude(l => l.JournalEntry)
-                    .Where(p => p.Settlement.AccountId == accountId.Value)
-                    .OrderByDescending(p => p.Settlement.CreatedAt)
-                    .ThenByDescending(p => p.Id)
-                    .ToListAsync();
-
-                if (fromDate.HasValue)
-                {
-                    settledPairs = settledPairs
-                        .Where(p => p.Settlement.CreatedAt.Date >= fromDate.Value.Date)
-                        .ToList();
-                }
-
-                if (toDate.HasValue)
-                {
-                    settledPairs = settledPairs
-                        .Where(p => p.Settlement.CreatedAt.Date <= toDate.Value.Date)
-                        .ToList();
-                }
+                var settledPairs = await GetSettledPairsAsync(accountId.Value, fromDate, toDate);
 
                 model.SettledPairs = settledPairs
                     .Select(p => new AccountSettlementPairViewModel
@@ -217,11 +224,18 @@ namespace AccountingSystem.Controllers
                 .OrderBy(l => creditOrderLookup.TryGetValue(l.Id, out var index) ? index : int.MaxValue)
                 .ToList();
 
-            var pairCount = Math.Min(validDebitLines.Count, validCreditLines.Count);
-
-            if (pairCount == 0)
+            if (!validDebitLines.Any() || !validCreditLines.Any())
             {
                 TempData["Error"] = "تعذر إيجاد حركات مطابقة للتسوية. تأكد من أن الحركات غير مسوّاة ومطابقة للحساب.";
+                return RedirectToAction(nameof(Index), new { accountId = request.AccountId });
+            }
+
+            var debitTotal = validDebitLines.Sum(l => l.DebitAmount);
+            var creditTotal = validCreditLines.Sum(l => l.CreditAmount);
+
+            if (debitTotal != creditTotal)
+            {
+                TempData["Error"] = $"يجب أن يتساوى إجمالي الحركات المدينة والدائنة قبل التسوية. إجمالي المدين: {debitTotal:N2}، إجمالي الدائن: {creditTotal:N2}.";
                 return RedirectToAction(nameof(Index), new { accountId = request.AccountId });
             }
 
@@ -236,12 +250,22 @@ namespace AccountingSystem.Controllers
                 CreatedById = user?.Id
             };
 
+            var pairCount = Math.Max(validDebitLines.Count, validCreditLines.Count);
+
             for (var i = 0; i < pairCount; i++)
             {
+                var debitLine = i < validDebitLines.Count
+                    ? validDebitLines[i]
+                    : validDebitLines.Last();
+
+                var creditLine = i < validCreditLines.Count
+                    ? validCreditLines[i]
+                    : validCreditLines.Last();
+
                 settlement.Pairs.Add(new AccountSettlementPair
                 {
-                    DebitLineId = validDebitLines[i].Id,
-                    CreditLineId = validCreditLines[i].Id
+                    DebitLineId = debitLine.Id,
+                    CreditLineId = creditLine.Id
                 });
             }
 
@@ -255,6 +279,106 @@ namespace AccountingSystem.Controllers
                 fromDate = request.FromDate?.ToString("yyyy-MM-dd"),
                 toDate = request.ToDate?.ToString("yyyy-MM-dd")
             });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeletePair(int pairId, int accountId, DateTime? fromDate, DateTime? toDate)
+        {
+            var pair = await _context.AccountSettlementPairs
+                .Include(p => p.Settlement)
+                .FirstOrDefaultAsync(p => p.Id == pairId);
+
+            if (pair == null)
+            {
+                return NotFound();
+            }
+
+            var settlementId = pair.AccountSettlementId;
+            _context.AccountSettlementPairs.Remove(pair);
+            await _context.SaveChangesAsync();
+
+            var hasRemainingPairs = await _context.AccountSettlementPairs
+                .AnyAsync(p => p.AccountSettlementId == settlementId);
+
+            if (!hasRemainingPairs)
+            {
+                var settlement = await _context.AccountSettlements.FindAsync(settlementId);
+                if (settlement != null)
+                {
+                    _context.AccountSettlements.Remove(settlement);
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            TempData["Success"] = "تم إلغاء التسوية المحددة وإرجاع الحركات لتصبح قابلة للتسوية مرة أخرى.";
+
+            return RedirectToAction(nameof(Index), new
+            {
+                accountId,
+                fromDate = fromDate?.ToString("yyyy-MM-dd"),
+                toDate = toDate?.ToString("yyyy-MM-dd")
+            });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExportToExcel(int? accountId, DateTime? fromDate, DateTime? toDate)
+        {
+            if (accountId == null)
+            {
+                TempData["Error"] = "يرجى اختيار حساب قبل التصدير.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var account = await _context.Accounts.FindAsync(accountId.Value);
+            if (account == null)
+            {
+                return NotFound();
+            }
+
+            var settledPairs = await GetSettledPairsAsync(accountId.Value, fromDate, toDate);
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Account Settlements");
+
+            worksheet.Cell(1, 1).Value = "الحساب";
+            worksheet.Cell(1, 2).Value = string.IsNullOrWhiteSpace(account.NameAr) ? account.NameEn : account.NameAr;
+            worksheet.Cell(2, 1).Value = "الفترة";
+            worksheet.Cell(2, 2).Value = fromDate.HasValue || toDate.HasValue
+                ? $"{fromDate?.ToString("yyyy-MM-dd") ?? "---"} إلى {toDate?.ToString("yyyy-MM-dd") ?? "---"}"
+                : "كل الفترات";
+
+            worksheet.Cell(4, 1).Value = "تاريخ التسوية";
+            worksheet.Cell(4, 2).Value = "بيان الحركة المدينة";
+            worksheet.Cell(4, 3).Value = "رقم قيد المدين";
+            worksheet.Cell(4, 4).Value = "المبلغ المدين";
+            worksheet.Cell(4, 5).Value = "بيان الحركة الدائنة";
+            worksheet.Cell(4, 6).Value = "رقم قيد الدائن";
+            worksheet.Cell(4, 7).Value = "المبلغ الدائن";
+
+            var currentRow = 5;
+
+            foreach (var pair in settledPairs)
+            {
+                worksheet.Cell(currentRow, 1).Value = pair.Settlement.CreatedAt.ToString("yyyy-MM-dd HH:mm");
+                worksheet.Cell(currentRow, 2).Value = pair.DebitLine.Description;
+                worksheet.Cell(currentRow, 3).Value = pair.DebitLine.JournalEntry.Number;
+                worksheet.Cell(currentRow, 4).Value = pair.DebitLine.DebitAmount;
+                worksheet.Cell(currentRow, 5).Value = pair.CreditLine.Description;
+                worksheet.Cell(currentRow, 6).Value = pair.CreditLine.JournalEntry.Number;
+                worksheet.Cell(currentRow, 7).Value = pair.CreditLine.CreditAmount;
+                currentRow++;
+            }
+
+            worksheet.Range(4, 1, 4, 7).Style.Font.SetBold();
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            var fileName = $"تسويات_الحساب_{account.Code}_{DateTime.Now:yyyyMMddHHmm}.xlsx";
+            return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
     }
 }
