@@ -522,14 +522,16 @@
                                             <i class="fas fa-table-list"></i> كل الحركات
                                         </a>
                                     </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link"
-                                           asp-controller="AccountSettlements"
-                                           asp-action="Index">
-                                            <i class="fa-solid fa-scale-balanced"></i> تسوية حساب مالي
-                                        </a>
-                                    </li>
+
                                 }
+                                <li class="nav-item">
+                                    <a class="nav-link"
+                                       asp-controller="AccountSettlements"
+                                       asp-action="Index" asp-require-permission="accountsettlements.view">
+                                        <i class="fa-solid fa-scale-balanced"></i> تسوية حساب مالي
+                                    </a>
+                                </li>
+
                                 @if (canReceiptVouchers)
                                 {
                                     <li class="nav-item">

@@ -14,7 +14,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AccountingSystem.Controllers
 {
-    [Authorize]
+
+    [Authorize(Policy = "accountsettlements.view")]
+
     public class AccountSettlementsController : Controller
     {
         private readonly ApplicationDbContext _context;
