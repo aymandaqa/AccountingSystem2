@@ -21,6 +21,16 @@ namespace AccountingSystem.ViewModels
         public AccountSettlementLineViewModel CreditLine { get; set; } = null!;
     }
 
+    public class AccountSettlementSummaryViewModel
+    {
+        public int SettlementId { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public List<AccountSettlementLineViewModel> DebitLines { get; set; } = new();
+        public List<AccountSettlementLineViewModel> CreditLines { get; set; } = new();
+        public decimal DebitTotal { get; set; }
+        public decimal CreditTotal { get; set; }
+    }
+
     public class AccountSettlementIndexViewModel
     {
         public int? AccountId { get; set; }
@@ -28,7 +38,7 @@ namespace AccountingSystem.ViewModels
         public IEnumerable<SelectListItem> Accounts { get; set; } = Enumerable.Empty<SelectListItem>();
         public List<AccountSettlementLineViewModel> DebitLines { get; set; } = new();
         public List<AccountSettlementLineViewModel> CreditLines { get; set; } = new();
-        public List<AccountSettlementPairViewModel> SettledPairs { get; set; } = new();
+        public List<AccountSettlementSummaryViewModel> Settlements { get; set; } = new();
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
         public DateTime SettlementDate { get; set; } = DateTime.Now;

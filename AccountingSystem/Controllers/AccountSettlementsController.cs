@@ -26,31 +26,32 @@ namespace AccountingSystem.Controllers
             _userManager = userManager;
         }
 
-        private async Task<List<AccountSettlementPair>> GetSettledPairsAsync(int accountId, DateTime? fromDate, DateTime? toDate)
+        private async Task<List<AccountSettlement>> GetSettlementsAsync(int accountId, DateTime? fromDate, DateTime? toDate)
         {
-            var settledPairsQuery = _context.AccountSettlementPairs
+            var settlementsQuery = _context.AccountSettlements
                 .AsNoTracking()
-                .Include(p => p.Settlement)
-                .Include(p => p.DebitLine)!.ThenInclude(l => l.JournalEntry)
-                .Include(p => p.CreditLine)!.ThenInclude(l => l.JournalEntry)
-                .Where(p => p.Settlement.AccountId == accountId);
+                .Include(s => s.Pairs)
+                    .ThenInclude(p => p.DebitLine)!.ThenInclude(l => l.JournalEntry)
+                .Include(s => s.Pairs)
+                    .ThenInclude(p => p.CreditLine)!.ThenInclude(l => l.JournalEntry)
+                .Where(s => s.AccountId == accountId);
 
             if (fromDate.HasValue)
             {
-                settledPairsQuery = settledPairsQuery
-                    .Where(p => p.Settlement.CreatedAt.Date >= fromDate.Value.Date);
+                settlementsQuery = settlementsQuery
+                    .Where(s => s.CreatedAt.Date >= fromDate.Value.Date);
             }
 
             if (toDate.HasValue)
             {
                 var toDateExclusive = toDate.Value.Date.AddDays(1);
-                settledPairsQuery = settledPairsQuery
-                    .Where(p => p.Settlement.CreatedAt < toDateExclusive);
+                settlementsQuery = settlementsQuery
+                    .Where(s => s.CreatedAt < toDateExclusive);
             }
 
-            return await settledPairsQuery
-                .OrderByDescending(p => p.Settlement.CreatedAt)
-                .ThenByDescending(p => p.Id)
+            return await settlementsQuery
+                .OrderByDescending(s => s.CreatedAt)
+                .ThenByDescending(s => s.Id)
                 .ToListAsync();
         }
 
@@ -133,33 +134,51 @@ namespace AccountingSystem.Controllers
                     })
                     .ToList();
 
-                var settledPairs = await GetSettledPairsAsync(accountId.Value, fromDate, toDate);
+                var settlements = await GetSettlementsAsync(accountId.Value, fromDate, toDate);
 
-                model.SettledPairs = settledPairs
-                    .Select(p => new AccountSettlementPairViewModel
+                model.Settlements = settlements
+                    .Select(s => new AccountSettlementSummaryViewModel
                     {
-                        PairId = p.Id,
-                        CreatedAt = p.Settlement.CreatedAt,
-                        DebitLine = new AccountSettlementLineViewModel
-                        {
-                            LineId = p.DebitLineId,
-                            Date = p.DebitLine.JournalEntry.Date,
-                            JournalNumber = p.DebitLine.JournalEntry.Number,
-                            Description = string.IsNullOrWhiteSpace(p.DebitLine.Description) ? p.DebitLine.JournalEntry.Description : p.DebitLine.Description,
-                            Debit = p.DebitLine.DebitAmount,
-                            Credit = p.DebitLine.CreditAmount,
-                            Reference = p.DebitLine.Reference
-                        },
-                        CreditLine = new AccountSettlementLineViewModel
-                        {
-                            LineId = p.CreditLineId,
-                            Date = p.CreditLine.JournalEntry.Date,
-                            JournalNumber = p.CreditLine.JournalEntry.Number,
-                            Description = string.IsNullOrWhiteSpace(p.CreditLine.Description) ? p.CreditLine.JournalEntry.Description : p.CreditLine.Description,
-                            Debit = p.CreditLine.DebitAmount,
-                            Credit = p.CreditLine.CreditAmount,
-                            Reference = p.CreditLine.Reference
-                        }
+                        SettlementId = s.Id,
+                        CreatedAt = s.CreatedAt,
+                        DebitLines = s.Pairs
+                            .Select(p => p.DebitLine)
+                            .DistinctBy(l => l.Id)
+                            .OrderBy(l => l.JournalEntry.Date)
+                            .ThenBy(l => l.Id)
+                            .Select(l => new AccountSettlementLineViewModel
+                            {
+                                LineId = l.Id,
+                                Date = l.JournalEntry.Date,
+                                JournalNumber = l.JournalEntry.Number,
+                                Description = string.IsNullOrWhiteSpace(l.Description) ? l.JournalEntry.Description : l.Description,
+                                Debit = l.DebitAmount,
+                                Credit = l.CreditAmount,
+                                Reference = l.Reference
+                            })
+                            .ToList(),
+                        CreditLines = s.Pairs
+                            .Select(p => p.CreditLine)
+                            .DistinctBy(l => l.Id)
+                            .OrderBy(l => l.JournalEntry.Date)
+                            .ThenBy(l => l.Id)
+                            .Select(l => new AccountSettlementLineViewModel
+                            {
+                                LineId = l.Id,
+                                Date = l.JournalEntry.Date,
+                                JournalNumber = l.JournalEntry.Number,
+                                Description = string.IsNullOrWhiteSpace(l.Description) ? l.JournalEntry.Description : l.Description,
+                                Debit = l.DebitAmount,
+                                Credit = l.CreditAmount,
+                                Reference = l.Reference
+                            })
+                            .ToList()
+                    })
+                    .Select(summary =>
+                    {
+                        summary.DebitTotal = summary.DebitLines.Sum(l => l.Debit);
+                        summary.CreditTotal = summary.CreditLines.Sum(l => l.Credit);
+                        return summary;
                     })
                     .ToList();
             }
@@ -283,33 +302,20 @@ namespace AccountingSystem.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeletePair(int pairId, int accountId, DateTime? fromDate, DateTime? toDate)
+        public async Task<IActionResult> DeleteSettlement(int settlementId, int accountId, DateTime? fromDate, DateTime? toDate)
         {
-            var pair = await _context.AccountSettlementPairs
-                .Include(p => p.Settlement)
-                .FirstOrDefaultAsync(p => p.Id == pairId);
+            var settlement = await _context.AccountSettlements
+                .Include(s => s.Pairs)
+                .FirstOrDefaultAsync(s => s.Id == settlementId);
 
-            if (pair == null)
+            if (settlement == null)
             {
                 return NotFound();
             }
 
-            var settlementId = pair.AccountSettlementId;
-            _context.AccountSettlementPairs.Remove(pair);
+            _context.AccountSettlementPairs.RemoveRange(settlement.Pairs);
+            _context.AccountSettlements.Remove(settlement);
             await _context.SaveChangesAsync();
-
-            var hasRemainingPairs = await _context.AccountSettlementPairs
-                .AnyAsync(p => p.AccountSettlementId == settlementId);
-
-            if (!hasRemainingPairs)
-            {
-                var settlement = await _context.AccountSettlements.FindAsync(settlementId);
-                if (settlement != null)
-                {
-                    _context.AccountSettlements.Remove(settlement);
-                    await _context.SaveChangesAsync();
-                }
-            }
 
             TempData["Success"] = "تم إلغاء التسوية المحددة وإرجاع الحركات لتصبح قابلة للتسوية مرة أخرى.";
 
@@ -336,7 +342,7 @@ namespace AccountingSystem.Controllers
                 return NotFound();
             }
 
-            var settledPairs = await GetSettledPairsAsync(accountId.Value, fromDate, toDate);
+            var settlements = await GetSettlementsAsync(accountId.Value, fromDate, toDate);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Account Settlements");
@@ -358,15 +364,18 @@ namespace AccountingSystem.Controllers
 
             var currentRow = 5;
 
-            foreach (var pair in settledPairs)
+            foreach (var pair in settlements
+                .SelectMany(s => s.Pairs.Select(p => new { Settlement = s, Pair = p }))
+                .OrderByDescending(x => x.Settlement.CreatedAt)
+                .ThenByDescending(x => x.Pair.Id))
             {
                 worksheet.Cell(currentRow, 1).Value = pair.Settlement.CreatedAt.ToString("yyyy-MM-dd HH:mm");
-                worksheet.Cell(currentRow, 2).Value = pair.DebitLine.Description;
-                worksheet.Cell(currentRow, 3).Value = pair.DebitLine.JournalEntry.Number;
-                worksheet.Cell(currentRow, 4).Value = pair.DebitLine.DebitAmount;
-                worksheet.Cell(currentRow, 5).Value = pair.CreditLine.Description;
-                worksheet.Cell(currentRow, 6).Value = pair.CreditLine.JournalEntry.Number;
-                worksheet.Cell(currentRow, 7).Value = pair.CreditLine.CreditAmount;
+                worksheet.Cell(currentRow, 2).Value = pair.Pair.DebitLine.Description;
+                worksheet.Cell(currentRow, 3).Value = pair.Pair.DebitLine.JournalEntry.Number;
+                worksheet.Cell(currentRow, 4).Value = pair.Pair.DebitLine.DebitAmount;
+                worksheet.Cell(currentRow, 5).Value = pair.Pair.CreditLine.Description;
+                worksheet.Cell(currentRow, 6).Value = pair.Pair.CreditLine.JournalEntry.Number;
+                worksheet.Cell(currentRow, 7).Value = pair.Pair.CreditLine.CreditAmount;
                 currentRow++;
             }
 
