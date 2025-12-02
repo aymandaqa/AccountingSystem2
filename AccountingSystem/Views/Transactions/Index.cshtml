@@ -133,7 +133,7 @@
                         <th scope="col">الفرع</th>
                         <th scope="col">الحالة</th>
                         <th scope="col">المستخدم</th>
-                        <th scope="col">ملاحظات</th>
+                        <th scope="col" class="text-break" style="min-width: 200px; max-width: 320px;">ملاحظات</th>
                         <th scope="col" class="text-end">التفاصيل</th>
                     </tr>
                 </thead>
@@ -159,7 +159,7 @@
                             <td>@item.BranchName</td>
                             <td>@(string.IsNullOrWhiteSpace(item.Status) ? "-" : item.Status)</td>
                             <td>@(string.IsNullOrWhiteSpace(item.CreatedByName) ? "-" : item.CreatedByName)</td>
-                            <td>@displayNotes</td>
+                            <td class="text-break" style="white-space: normal; min-width: 200px; max-width: 320px;">@displayNotes</td>
                             <td class="text-end">
                                 <a class="btn btn-sm btn-outline-primary"
                                    asp-controller="Transactions"
