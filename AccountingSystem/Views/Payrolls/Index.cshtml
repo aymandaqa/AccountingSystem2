@@ -4,6 +4,25 @@
     ViewData["Title"] = "إدارة الرواتب";
     var branches = ViewBag.Branches as List<SelectListItem> ?? new();
     var history = ViewBag.History as List<AccountingSystem.ViewModels.PayrollBatchHistoryViewModel> ?? new();
+    var historyBranches = history
+        .Select(h => h.BranchName?.Trim())
+        .Where(name => !string.IsNullOrWhiteSpace(name))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+    var historyMonths = history
+        .Where(h => h.Year > 0 && h.Month > 0)
+        .Select(h => new
+        {
+            h.Year,
+            h.Month,
+            Display = new DateTime(h.Year, h.Month, 1).ToString("MMMM yyyy", new CultureInfo("ar"))
+        })
+        .GroupBy(x => new { x.Year, x.Month })
+        .Select(g => g.First())
+        .OrderByDescending(x => x.Year)
+        .ThenByDescending(x => x.Month)
+        .ToList();
     var culture = CultureInfo.InvariantCulture;
 }
 
@@ -76,6 +95,55 @@
         <div class="card-body">
             @if (history.Any())
             {
+                <div class="row g-3 mb-3">
+                    <div class="col-lg-4 col-md-6">
+                        <label for="historySearchInput" class="form-label">بحث في السجل</label>
+                        <input type="search" id="historySearchInput" class="form-control" placeholder="ابحث بالفرع أو المرجع أو الحالة" />
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <label for="historyBranchFilter" class="form-label">الفروع</label>
+                        <select id="historyBranchFilter" class="form-select">
+                            <option value="">كل الفروع</option>
+                            @foreach (var branchName in historyBranches)
+                            {
+                                <option value="@branchName">@branchName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <label for="historyMonthFilter" class="form-label">رواتب الشهر</label>
+                        <select id="historyMonthFilter" class="form-select">
+                            <option value="">كل الأشهر</option>
+                            @foreach (var month in historyMonths)
+                            {
+                                <option value="@($"{month.Year:D4}-{month.Month:D2}")">@month.Display</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="row g-3 mb-3" id="historySummary">
+                    <div class="col-md-4">
+                        <div class="alert alert-secondary mb-0 h-100">
+                            <div class="small text-muted">عدد عمليات التنزيل</div>
+                            <div class="fs-5 fw-bold" id="historySummaryBatches">0</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="alert alert-secondary mb-0 h-100">
+                            <div class="small text-muted">إجمالي الموظفين</div>
+                            <div class="fs-5 fw-bold" id="historySummaryEmployees">0</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="alert alert-secondary mb-0 h-100">
+                            <div class="small text-muted">إجمالي الرواتب</div>
+                            <div class="fs-5 fw-bold" id="historySummaryAmount">0.00</div>
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (history.Any())
+            {
                 <div class="table-responsive">
                     <table class="table table-striped" id="historyTable">
                         <thead class="table-light">
@@ -94,7 +162,15 @@
                         <tbody>
                             @foreach (var item in history)
                             {
-                                <tr>
+                                var monthKey = item.Year > 0 && item.Month > 0
+                                    ? $"{item.Year:D4}-{item.Month:D2}"
+                                    : string.Empty;
+                                var periodDisplay = !string.IsNullOrEmpty(item.PeriodName)
+                                    ? item.PeriodName
+                                    : (item.Year > 0 && item.Month > 0
+                                        ? new System.DateTime(item.Year, item.Month, 1).ToString("MM/yyyy", culture)
+                                        : string.Empty);
+                                <tr data-branch="@item.BranchName" data-month="@monthKey" data-total="@item.TotalAmount" data-employees="@item.EmployeeCount" data-search="@($"{item.BranchName} {periodDisplay} {item.ReferenceNumber} {item.Status}")">
                                     <td>#@item.Id</td>
                                     <td>@item.BranchName</td>
                                     <td>
@@ -254,6 +330,12 @@
             const detailsContent = document.getElementById('detailsContent');
             const historyTable = document.getElementById('historyTable');
             const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
+            const historySearchInput = document.getElementById('historySearchInput');
+            const historyBranchFilter = document.getElementById('historyBranchFilter');
+            const historyMonthFilter = document.getElementById('historyMonthFilter');
+            const historySummaryBatches = document.getElementById('historySummaryBatches');
+            const historySummaryEmployees = document.getElementById('historySummaryEmployees');
+            const historySummaryAmount = document.getElementById('historySummaryAmount');
             const antiForgery = document.querySelector('input[name="__RequestVerificationToken"]').value;
             const deductionModalElement = document.getElementById('deductionModal');
             const deductionModal = deductionModalElement ? new bootstrap.Modal(deductionModalElement) : null;
@@ -584,6 +666,66 @@
                     return '0.00';
                 }
                 return number.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            function updateHistorySummary(batchCount, employeeCount, totalAmount) {
+                if (historySummaryBatches) {
+                    historySummaryBatches.textContent = batchCount.toLocaleString();
+                }
+
+                if (historySummaryEmployees) {
+                    historySummaryEmployees.textContent = employeeCount.toLocaleString();
+                }
+
+                if (historySummaryAmount) {
+                    historySummaryAmount.textContent = formatCurrency(totalAmount);
+                }
+            }
+
+            function applyHistoryFilters() {
+                if (!historyTable) {
+                    return;
+                }
+
+                const searchTerm = (historySearchInput?.value ?? '').trim().toLowerCase();
+                const branch = (historyBranchFilter?.value ?? '').trim().toLowerCase();
+                const month = (historyMonthFilter?.value ?? '').trim();
+
+                let visibleRows = 0;
+                let totalEmployees = 0;
+                let totalAmount = 0;
+
+                historyTable.querySelectorAll('tbody tr').forEach(row => {
+                    const rowBranch = (row.dataset.branch ?? '').trim().toLowerCase();
+                    const rowMonth = (row.dataset.month ?? '').trim();
+                    const searchIndex = (row.dataset.search ?? '').toLowerCase();
+
+                    const matchesBranch = !branch || rowBranch === branch;
+                    const matchesMonth = !month || rowMonth === month;
+                    const matchesSearch = !searchTerm || searchIndex.includes(searchTerm);
+                    const shouldShow = matchesBranch && matchesMonth && matchesSearch;
+
+                    row.classList.toggle('d-none', !shouldShow);
+
+                    if (shouldShow) {
+                        visibleRows += 1;
+                        totalEmployees += Number(row.dataset.employees ?? 0);
+                        totalAmount += Number(row.dataset.total ?? 0);
+                    }
+                });
+
+                updateHistorySummary(visibleRows, totalEmployees, totalAmount);
+            }
+
+            function bindHistoryFilters() {
+                if (!historyTable) {
+                    return;
+                }
+
+                historySearchInput?.addEventListener('input', applyHistoryFilters);
+                historyBranchFilter?.addEventListener('change', applyHistoryFilters);
+                historyMonthFilter?.addEventListener('change', applyHistoryFilters);
+                applyHistoryFilters();
             }
 
             function calculateDeductionTotal(deductions) {
@@ -1751,6 +1893,7 @@
             }
 
             attachHistoryActions();
+            bindHistoryFilters();
         });
     </script>
 }
