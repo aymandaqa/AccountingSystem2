@@ -6480,6 +6480,7 @@ namespace AccountingSystem.Controllers
                             Reference = line.JournalEntry.Reference ?? string.Empty,
                             MovementType = TransactionTypeHelper.GetTransactionType(line.JournalEntry.Reference, line.JournalEntry.Description),
                             Description = line.Description ?? string.Empty,
+                            Notes = line.JournalEntry.Notes ?? string.Empty,
                             BranchName = line.JournalEntry.Branch?.NameAr ?? string.Empty,
                             CreatedByName = line.JournalEntry.CreatedBy?.FullName ?? line.JournalEntry.CreatedBy?.UserName ?? string.Empty,
                             DebitAmount = line.DebitAmount,

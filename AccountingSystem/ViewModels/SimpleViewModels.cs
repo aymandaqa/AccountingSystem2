@@ -425,6 +425,7 @@ namespace AccountingSystem.ViewModels
         public string Reference { get; set; } = string.Empty;
         public string MovementType { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public string Notes { get; set; } = string.Empty;
         public string BranchName { get; set; } = string.Empty;
         public string CreatedByName { get; set; } = string.Empty;
         public decimal DebitAmount { get; set; }

@@ -629,15 +629,16 @@
                             <table class="table table-bordered align-middle mb-0 header-table">
                                 <colgroup>
                                     <col style="width: 12%" />
-                                    <col style="width: 11%" />
-                                    <col style="width: 11%" />
                                     <col style="width: 10%" />
                                     <col style="width: 10%" />
                                     <col style="width: 10%" />
-                                    <col style="width: 18%" />
-                                    <col style="width: 6%" />
-                                    <col style="width: 6%" />
-                                    <col style="width: 6%" />
+                                    <col style="width: 10%" />
+                                    <col style="width: 10%" />
+                                    <col style="width: 16%" />
+                                    <col style="width: 10%" />
+                                    <col style="width: 4%" />
+                                    <col style="width: 4%" />
+                                    <col style="width: 4%" />
                                 </colgroup>
                                 <thead class="text-center">
                                     <tr>
@@ -648,6 +649,7 @@
                                         <th>المستخدم</th>
                                         <th>نوع الحركة</th>
                                         <th>البيان</th>
+                                        <th>الملاحظات</th>
                                         <th class="text-end">مدين (@Model.CurrencyCode)</th>
                                         <th class="text-end">دائن (@Model.CurrencyCode)</th>
                                         <th class="text-end">الرصيد (@Model.CurrencyCode)</th>
@@ -659,20 +661,21 @@
                             <table class="table table-hover table-bordered align-middle mb-0 body-table">
                                 <colgroup>
                                     <col style="width: 12%" />
-                                    <col style="width: 11%" />
-                                    <col style="width: 11%" />
                                     <col style="width: 10%" />
                                     <col style="width: 10%" />
                                     <col style="width: 10%" />
-                                    <col style="width: 18%" />
-                                    <col style="width: 6%" />
-                                    <col style="width: 6%" />
-                                    <col style="width: 6%" />
+                                    <col style="width: 10%" />
+                                    <col style="width: 10%" />
+                                    <col style="width: 16%" />
+                                    <col style="width: 10%" />
+                                    <col style="width: 4%" />
+                                    <col style="width: 4%" />
+                                    <col style="width: 4%" />
                                 </colgroup>
                                 <tbody>
                                     <tr class="table-light">
                                         <td>@Model.FromDate.ToString("yyyy/MM/dd HH:mm")</td>
-                                        <td colspan="6" class="fw-bold text-center">الرصيد الافتتاحي</td>
+                                        <td colspan="7" class="fw-bold text-center">الرصيد الافتتاحي</td>
                                         <td class="text-end">-</td>
                                         <td class="text-end">-</td>
                                         <td class="text-end">
@@ -702,18 +705,28 @@
                                             <td>@(string.IsNullOrWhiteSpace(transaction.CreatedByName) ? "-" : transaction.CreatedByName)</td>
                                             <td>@(string.IsNullOrWhiteSpace(transaction.MovementType) ? "-" : transaction.MovementType)</td>
                                             <td>
-                                                @if (!string.IsNullOrWhiteSpace(transaction.Description))
-                                                {
-                                                    <div class="fw-semibold">@transaction.Description</div>
-                                                }
-                                                else
-                                                {
-                                                    <span class="text-muted">-</span>
-                                                }
-                                            </td>
-                                            <td class="text-end">
-                                                @if (transaction.DebitAmount > 0)
-                                                {
+                                            @if (!string.IsNullOrWhiteSpace(transaction.Description))
+                                            {
+                                                <div class="fw-semibold">@transaction.Description</div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrWhiteSpace(transaction.Notes))
+                                            {
+                                                <div class="text-muted small">@transaction.Notes</div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            @if (transaction.DebitAmount > 0)
+                                            {
                                                     <span class="text-success fw-bold">@transaction.DebitAmount.ToString("N2") @Model.CurrencyCode</span>
                                                     @if (showBaseCurrency)
                                                     {
@@ -750,7 +763,7 @@
                                     }
                                     <tr class="table-light">
                                         <td>@Model.ToDate.ToString("yyyy/MM/dd")</td>
-                                        <td colspan="6" class="fw-bold text-center">الرصيد الختامي</td>
+                                        <td colspan="7" class="fw-bold text-center">الرصيد الختامي</td>
                                         <td class="text-end">-</td>
                                         <td class="text-end">-</td>
                                         <td class="text-end">
