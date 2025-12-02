@@ -1265,6 +1265,42 @@
             </footer>
         </div>
     </div>
+
+
+    <div class="modal fade" id="shipmentsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="shipmentsModalLabel">شحنات المورد</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ejs-grid id="ShipmentsGrid" allowFiltering="true" allowSorting="true" allowPaging="true" enableRtl="true" height="400px" allowTextWrap="true">
+                        <e-data-manager url="/Reports/UrlDatasourceSupplierShipments" adaptor="UrlAdaptor"></e-data-manager>
+                        <e-grid-filterSettings type="Excel"></e-grid-filterSettings>
+                        <e-grid-pagesettings pageSize="20" pageSizes="true"></e-grid-pagesettings>
+                        <e-grid-columns>
+                            <e-grid-column field="ShipmentTrackingNo" headerText="رقم الشحنة" width="140"></e-grid-column>
+                            <e-grid-column field="ClientName" headerText="اسم العميل" width="140"></e-grid-column>
+                            <e-grid-column field="ClientPhone" headerText="هاتف العميل" width="120"></e-grid-column>
+                            <e-grid-column field="FromCityAr" headerText="من مدينة" width="120"></e-grid-column>
+                            <e-grid-column field="ToCityAr" headerText="إلى مدينة" width="120"></e-grid-column>
+                            <e-grid-column field="AreaName" headerText="المنطقة" width="120"></e-grid-column>
+                            <e-grid-column field="AreaDescription" headerText="تفاصيل" width="160"></e-grid-column>
+                            <e-grid-column field="EntryDateTime" headerText="التاريخ" width="150" format="dd/MM/yyyy HH:mm"></e-grid-column>
+                            <e-grid-column field="ShipmentPrice" headerText="سعر الشحنة" width="120" format="N2" textAlign="Right"></e-grid-column>
+                            <e-grid-column field="ShipmentFees" headerText="العمولة" width="120" format="N2" textAlign="Right"></e-grid-column>
+                            <e-grid-column field="ShipmentExtraFees" headerText="الرسوم الإضافية" width="140" format="N2" textAlign="Right"></e-grid-column>
+                            <e-grid-column field="PaidAmountFromShipmentFees" headerText="المبلغ المدفوع" width="140" format="N2" textAlign="Right"></e-grid-column>
+                            <e-grid-column field="StatusAr" headerText="الحالة" width="120"></e-grid-column>
+                            <e-grid-column field="ShipmentsType" headerText="نوع الشحنة" width="140"></e-grid-column>
+                        </e-grid-columns>
+                    </ejs-grid>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
