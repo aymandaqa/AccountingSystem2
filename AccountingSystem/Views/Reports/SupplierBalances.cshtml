@@ -32,7 +32,7 @@
 
                         <ejs-grid id="SupplierGrid" allowFiltering="true" allowSorting="true" allowPaging="true" allowExcelExport="true"
                                   gridLines="Both" enableRtl="@rtl" height="450px" allowTextWrap="true">
-                            <e-data-manager url="/AccountManagement/UrlDatasourceSupplierBalances" adaptor="UrlAdaptor"></e-data-manager>
+                            <e-data-manager url="/Reports/UrlDatasourceSupplierBalances" adaptor="UrlAdaptor"></e-data-manager>
                             <e-grid-filterSettings type="Menu"></e-grid-filterSettings>
                             <e-grid-pagesettings pageSize="20" pageSizes="true"></e-grid-pagesettings>
                             <e-grid-aggregates>
@@ -41,6 +41,7 @@
                                         <e-aggregate-column field="ShipmentsNumber" type="Sum" footerTemplate="إجمالي الشحنات: ${Sum}"></e-aggregate-column>
                                         <e-aggregate-column field="ShipmentPrice" type="Sum" footerTemplate="إجمالي مبالغ الشحن: ${Sum}"></e-aggregate-column>
                                         <e-aggregate-column field="AccountBalance" type="Sum" footerTemplate="إجمالي أرصدة الحساب: ${Sum}"></e-aggregate-column>
+                                        <e-aggregate-column field="BalanceDifference" type="Sum" footerTemplate="إجمالي فرق الرصيد: ${Sum}"></e-aggregate-column>
                                     </e-aggregate-columns>
                                 </e-grid-aggregate>
                             </e-grid-aggregates>
@@ -51,6 +52,7 @@
                                 <e-grid-column field="BranchName" headerText="الفرع" width="130"></e-grid-column>
                                 <e-grid-column field="AccountName" headerText="اسم الحساب" width="180"></e-grid-column>
                                 <e-grid-column field="AccountBalance" headerText="رصيد الحساب" width="140" format="N2" textAlign="Right"></e-grid-column>
+                                <e-grid-column field="BalanceDifference" headerText="فرق الرصيد" width="140" format="N2" textAlign="Right"></e-grid-column>
                                 <e-grid-column headerText="العمليات" width="220" template="#actionsTemplate"></e-grid-column>
                                 <e-grid-column field="SenderId" visible="false"></e-grid-column>
                                 <e-grid-column field="AccountId" visible="false"></e-grid-column>
@@ -72,7 +74,7 @@
             </div>
             <div class="modal-body">
                 <ejs-grid id="ShipmentsGrid" allowFiltering="true" allowSorting="true" allowPaging="true" enableRtl="@rtl" height="400px" allowTextWrap="true">
-                    <e-data-manager url="/AccountManagement/UrlDatasourceSupplierShipments" adaptor="UrlAdaptor"></e-data-manager>
+                    <e-data-manager url="/Reports/UrlDatasourceSupplierShipments" adaptor="UrlAdaptor"></e-data-manager>
                     <e-grid-filterSettings type="Menu"></e-grid-filterSettings>
                     <e-grid-pagesettings pageSize="20" pageSizes="true"></e-grid-pagesettings>
                     <e-grid-columns>
@@ -99,7 +101,7 @@
 
 <script id="actionsTemplate" type="text/x-jsrender">
     <div class="btn-group" role="group">
-        <button class="btn btn-outline-primary btn-sm" type="button" data-sender-id="${SenderId}" data-sender-name="${SenderName}" onclick="openShipments(this)"><i class="ti-truck"></i> عرض الشحنات</button>
+        <button class="btn btn-outline-primary btn-sm btn-open-shipments" type="button" data-sender-id="${SenderId}" data-sender-name="${SenderName}"><i class="ti-truck"></i> عرض الشحنات</button>
         {{if AccountId}}
             <a class="btn btn-outline-success btn-sm" target="_blank" href="/Reports/AccountStatement?accountId=${AccountId}&lockAccount=true"><i class="ti-clipboard"></i> كشف حساب</a>
         {{else}}
@@ -111,6 +113,17 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         refreshGrid();
+
+        var supplierGrid = document.getElementById('SupplierGrid');
+        if (supplierGrid) {
+            supplierGrid.addEventListener('click', function (event) {
+                var actionButton = event.target.closest('.btn-open-shipments');
+                if (actionButton) {
+                    event.preventDefault();
+                    openShipments(actionButton);
+                }
+            });
+        }
     });
 
     function getFilters() {
@@ -128,7 +141,7 @@
         var grid = document.getElementById('SupplierGrid').ej2_instances[0];
 
         grid.dataSource = new ej.data.DataManager({
-            url: '/AccountManagement/UrlDatasourceSupplierBalances?branchId=' + filters.branchId + '&senderId=' + filters.senderId,
+            url: '/Reports/UrlDatasourceSupplierBalances?branchId=' + filters.branchId + '&senderId=' + filters.senderId,
             adaptor: new ej.data.UrlAdaptor()
         });
         grid.refresh();
@@ -157,7 +170,7 @@
 
         var grid = document.getElementById('ShipmentsGrid').ej2_instances[0];
         grid.dataSource = new ej.data.DataManager({
-            url: '/AccountManagement/UrlDatasourceSupplierShipments?senderId=' + senderId,
+            url: '/Reports/UrlDatasourceSupplierShipments?senderId=' + senderId,
             adaptor: new ej.data.UrlAdaptor()
         });
         grid.refresh();

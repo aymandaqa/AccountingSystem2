@@ -11,6 +11,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 using QuestPDF.Helpers;
 using AccountingSystem.Services;
+using Syncfusion.EJ2.Base;
 using System;
 using System.Security.Claims;
 using System.Globalization;
@@ -1301,6 +1302,201 @@ namespace AccountingSystem.Controllers
             };
 
             return View(viewModel);
+        }
+
+        [Authorize(Policy = "reports.view")]
+        public async Task<IActionResult> SupplierBalances()
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(t => t.UserName == User.Identity.Name);
+
+            var branchIds = user?.BusinessAccountBranchIds?.Split(",", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(id => int.TryParse(id, out var parsedId) ? parsedId : (int?)null)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .ToList();
+
+            ViewBag.CompanyBranches = branchIds != null && branchIds.Any()
+                ? await _roadContext.CompanyBranches.Where(t => branchIds.Contains(t.Id)).ToListAsync()
+                : await _roadContext.CompanyBranches.ToListAsync();
+
+            ViewBag.Suppliers = await _roadContext.BusinessStatementBulk
+                .Select(b => new { b.SenderId, b.SenderName })
+                .Distinct()
+                .ToListAsync();
+
+            return View();
+        }
+
+        [Authorize(Policy = "reports.view")]
+        public async Task<IActionResult> UrlDatasourceSupplierBalances([FromBody] DataManagerRequest dm, int? branchId, int? senderId)
+        {
+            var suppliersQuery = _roadContext.BusinessStatementBulk.AsQueryable();
+
+            if (branchId.HasValue)
+            {
+                suppliersQuery = suppliersQuery.Where(t => t.CompanyBranchID == branchId.Value);
+            }
+
+            if (senderId.HasValue)
+            {
+                suppliersQuery = suppliersQuery.Where(t => t.SenderId == senderId.Value);
+            }
+
+            var suppliers = await suppliersQuery.ToListAsync();
+
+            var senderIds = suppliers.Select(s => s.SenderId.ToString()).ToList();
+
+            var mappings = senderIds.Any()
+                ? await _context.CusomerMappingAccounts
+                    .Where(m => senderIds.Contains(m.CustomerId))
+                    .ToListAsync()
+                : new List<CusomerMappingAccount>();
+
+            var accountIds = mappings
+                .Select(m => int.TryParse(m.AccountId, out var parsedId) ? parsedId : (int?)null)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .Distinct()
+                .ToList();
+
+            var accounts = accountIds.Any()
+                ? await _context.Accounts.Include(a => a.Branch).Where(a => accountIds.Contains(a.Id)).ToDictionaryAsync(a => a.Id)
+                : new Dictionary<int, Account>();
+
+            var branchIds = suppliers.Select(s => s.CompanyBranchID).Distinct().ToList();
+
+            var branches = branchIds.Any()
+                ? await _roadContext.CompanyBranches.Where(b => branchIds.Contains(b.Id)).ToDictionaryAsync(b => b.Id)
+                : new Dictionary<int, CompanyBranch>();
+
+            var data = suppliers
+                .Select(supplier =>
+                {
+                    var mapping = mappings.FirstOrDefault(m => m.CustomerId == supplier.SenderId.ToString());
+                    var shipmentBalance = supplier.ShipmentPrice;
+                    Account? account = null;
+
+                    if (mapping != null && int.TryParse(mapping.AccountId, out var accountId) && accounts.TryGetValue(accountId, out var acc))
+                    {
+                        account = acc;
+                    }
+
+                    branches.TryGetValue(supplier.CompanyBranchID, out var branch);
+
+                    var accountBalance = account?.CurrentBalance ?? 0m;
+
+                    return new
+                    {
+                        supplier.SenderId,
+                        supplier.SenderName,
+                        supplier.ShipmentsNumber,
+                        ShipmentPrice = shipmentBalance,
+                        supplier.CompanyBranchID,
+                        BranchName = branch?.BranchName,
+                        AccountId = account?.Id,
+                        AccountCode = account?.Code,
+                        AccountName = account?.NameAr,
+                        AccountBalance = accountBalance,
+                        BalanceDifference = accountBalance - shipmentBalance
+                    };
+                })
+                .AsQueryable();
+
+            DataOperations operation = new DataOperations();
+            if (dm.Search != null && dm.Search.Count > 0)
+            {
+                data = operation.PerformSearching(data, dm.Search);  //Search
+            }
+            if (dm.Sorted != null && dm.Sorted.Count > 0) //Sorting
+            {
+                data = operation.PerformSorting(data, dm.Sorted);
+            }
+            if (dm.Where != null && dm.Where.Count > 0) //Filtering
+            {
+                data = operation.PerformFiltering(data, dm.Where, dm.Where[0].Operator);
+            }
+            int count = data.Count();
+            if (dm.Skip != 0)
+            {
+                data = operation.PerformSkip(data, dm.Skip);   //Paging
+            }
+            if (dm.Take != 0)
+            {
+                data = operation.PerformTake(data, dm.Take);
+            }
+
+            return dm.RequiresCounts ? Json(new { result = data, count }) : Json(data);
+        }
+
+        [Authorize(Policy = "reports.view")]
+        public IActionResult UrlDatasourceSupplierShipments([FromBody] DataManagerRequest dm, int senderId)
+        {
+            var shipments = (from sh in _roadContext.ShipmentSummary
+                             where sh.StatusId == Convert.ToInt32(StatusEnum.InAccounting) && sh.BusinessUserID == senderId
+                             select new
+                             {
+                                 Id = sh.ID,
+                                 sh.ShipmentTrackingNo,
+                                 sh.ClientName,
+                                 sh.ClientPhone,
+                                 sh.FromCityAr,
+                                 sh.ToCityAr,
+                                 sh.AreaName,
+                                 sh.AreaDescription,
+                                 sh.EntryDateTime,
+                                 sh.ShipmentTotal,
+                                 sh.ShipmentPrice,
+                                 sh.ShipmentFees,
+                                 sh.ShipmentExtraFees,
+                                 sh.PaidAmountFromShipmentFees,
+                                 sh.ShipmentsType,
+                                 sh.StatusAr
+                             })
+                .AsEnumerable()
+                .Select(item => new
+                {
+                    item.Id,
+                    item.ShipmentTrackingNo,
+                    item.ClientName,
+                    item.ClientPhone,
+                    item.FromCityAr,
+                    item.ToCityAr,
+                    item.AreaName,
+                    item.AreaDescription,
+                    item.EntryDateTime,
+                    ShipmentTotal = Convert.ToDecimal(item.ShipmentTotal),
+                    ShipmentPrice = Convert.ToDecimal(item.ShipmentPrice),
+                    ShipmentFees = Convert.ToDecimal(item.ShipmentFees),
+                    ShipmentExtraFees = Convert.ToDecimal(item.ShipmentExtraFees),
+                    PaidAmountFromShipmentFees = Convert.ToDecimal(item.PaidAmountFromShipmentFees),
+                    item.ShipmentsType,
+                    item.StatusAr
+                })
+                .AsQueryable();
+
+            DataOperations operation = new DataOperations();
+            if (dm.Search != null && dm.Search.Count > 0)
+            {
+                shipments = operation.PerformSearching(shipments, dm.Search);  //Search
+            }
+            if (dm.Sorted != null && dm.Sorted.Count > 0) //Sorting
+            {
+                shipments = operation.PerformSorting(shipments, dm.Sorted);
+            }
+            if (dm.Where != null && dm.Where.Count > 0) //Filtering
+            {
+                shipments = operation.PerformFiltering(shipments, dm.Where, dm.Where[0].Operator);
+            }
+            int count = shipments.Count();
+            if (dm.Skip != 0)
+            {
+                shipments = operation.PerformSkip(shipments, dm.Skip);   //Paging
+            }
+            if (dm.Take != 0)
+            {
+                shipments = operation.PerformTake(shipments, dm.Take);
+            }
+            return dm.RequiresCounts ? Json(new { result = shipments, count = count }) : Json(shipments);
         }
 
         [Authorize(Policy = "reports.view")]
