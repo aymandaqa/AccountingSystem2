@@ -1,62 +1,153 @@
-@model IEnumerable<AccountingSystem.Models.SalaryPayment>
+@model AccountingSystem.ViewModels.SalaryPaymentIndexViewModel
+@using Microsoft.AspNetCore.Mvc.Rendering
+@using System.Linq
 @{
     ViewData["Title"] = "سندات صرف الرواتب";
+    var pageSizeOptions = new[] { 10, 25, 50, 100 };
+    var branches = ViewBag.UserBranches as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
+    int? selectedBranchId = ViewBag.SelectedBranchId as int?;
+    var fromDateValue = Model.FromDate?.ToString("yyyy-MM-dd");
+    var toDateValue = Model.ToDate?.ToString("yyyy-MM-dd");
+    var searchTerm = Model.SearchTerm ?? string.Empty;
+    var branchSelectList = branches.ToList();
 }
 
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="mb-0">سندات صرف الرواتب</h2>
-        <a asp-action="Create" class="btn btn-primary" asp-require-permission="salarypayments.create">سند صرف راتب جديد</a>
+<div class="card shadow-sm">
+    <div class="card-header bg-white py-3 d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+            <h1 class="h4 mb-1">سندات صرف الرواتب</h1>
+            <p class="text-muted mb-0">عرض سندات الرواتب حسب فروع المستخدم مع البحث والفرز.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a asp-action="Create" class="btn btn-primary" asp-require-permission="salarypayments.create">
+                <i class="fas fa-plus-circle ms-1"></i> سند صرف راتب جديد
+            </a>
+            <a asp-action="ExportExcel"
+               class="btn btn-success"
+               asp-route-fromDate="@fromDateValue"
+               asp-route-toDate="@toDateValue"
+               asp-route-searchTerm="@searchTerm"
+               asp-route-branchId="@selectedBranchId"
+               asp-require-permission="salarypayments.view">
+                <i class="fas fa-file-excel ms-1"></i> تصدير Excel
+            </a>
+        </div>
     </div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end mb-4" asp-action="Index">
+            <div class="col-12 col-md-3">
+                <label for="fromDate" class="form-label">من تاريخ</label>
+                <input type="date" id="fromDate" name="fromDate" class="form-control" value="@fromDateValue" />
+            </div>
+            <div class="col-12 col-md-3">
+                <label for="toDate" class="form-label">إلى تاريخ</label>
+                <input type="date" id="toDate" name="toDate" class="form-control" value="@toDateValue" />
+            </div>
+            <div class="col-12 col-md-3">
+                <label for="branchId" class="form-label">الفرع</label>
+                <select id="branchId" name="branchId" class="form-select">
+                    <option value="">كل الفروع المسموح بها</option>
+                    @foreach (var branch in branchSelectList)
+                    {
+                        <option value="@branch.Value" selected="@(selectedBranchId.HasValue && branch.Value == selectedBranchId?.ToString() ? "selected" : null)">@branch.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-md-3">
+                <label for="searchTerm" class="form-label">بحث عام</label>
+                <input type="text" id="searchTerm" name="searchTerm" class="form-control" value="@searchTerm" placeholder="ابحث باسم الموظف، الفرع أو الحساب" />
+            </div>
+            <div class="col-12 col-md-2">
+                <label for="pageSize" class="form-label">عدد السجلات</label>
+                <select id="pageSize" name="pageSize" class="form-select">
+                    @foreach (var option in pageSizeOptions)
+                    {
+                        <option value="@option" selected="@(Model.PageSize == option ? "selected" : null)">@option</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 d-flex flex-wrap gap-2 justify-content-end">
+                <input type="hidden" name="page" value="1" />
+                <button type="submit" class="btn btn-secondary"><i class="fas fa-filter ms-1"></i> تطبيق</button>
+                <a asp-action="Index" class="btn btn-outline-secondary"><i class="fas fa-undo ms-1"></i> إعادة تعيين</a>
+            </div>
+        </form>
 
-    <div class="table-responsive">
-        <table class="table table-striped table-hover align-middle">
-            <thead class="table-dark">
-                <tr>
-                    <th>التاريخ</th>
-                    <th>الموظف</th>
-                    <th>الفرع</th>
-                    <th>المبلغ</th>
-                    <th>الحساب الدافع</th>
-                    <th>رقم القيد</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model)
-                {
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+                <thead class="table-light align-middle">
                     <tr>
-                        <td>@item.Date.ToString("dd/MM/yyyy")</td>
-                        <td>@item.Employee.Name</td>
-                        <td>@item.Branch.NameAr</td>
-                        <td>@item.Amount.ToString("N2") @item.Currency.Code</td>
-                        <td>@item.PaymentAccount.NameAr</td>
-                        <td>
-                            @if (item.JournalEntryId.HasValue)
-                            {
-                                <div class="d-flex flex-column align-items-start">
-                                    <span class="fw-semibold">@item.ReferenceNumber</span>
-                                    <a asp-controller="JournalEntries"
-                                       asp-action="Details"
-                                       asp-route-id="@item.JournalEntryId.Value"
-                                       asp-require-permission="journal.view"
-                                       class="btn btn-sm btn-outline-primary mt-2">
-                                        <i class="fas fa-book-open me-1"></i>
-                                        عرض القيد
-                                    </a>
-                                </div>
-                            }
-                            else
-                            {
-                                <span class="text-muted">-</span>
-                            }
-                        </td>
-                        <td class="text-end">
-                            <a asp-action="Print" asp-route-id="@item.Id" class="btn btn-sm btn-secondary">طباعة</a>
-                        </td>
+                        <th>التاريخ</th>
+                        <th>الموظف</th>
+                        <th>الفرع</th>
+                        <th>المبلغ</th>
+                        <th>الحساب الدافع</th>
+                        <th>رقم القيد</th>
+                        <th class="text-end">إجراءات</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        var payment = item.Payment;
+                        <tr>
+                            <td>@payment.Date.ToString("dd/MM/yyyy")</td>
+                            <td>@payment.Employee.Name</td>
+                            <td>@payment.Branch.NameAr</td>
+                            <td>@payment.Amount.ToString("N2") @payment.Currency.Code</td>
+                            <td>@payment.PaymentAccount.NameAr</td>
+                            <td>
+                                @if (payment.JournalEntryId.HasValue)
+                                {
+                                    <div class="d-flex flex-column align-items-start">
+                                        <span class="fw-semibold">@item.JournalEntryNumber</span>
+                                        <a asp-controller="JournalEntries"
+                                           asp-action="Details"
+                                           asp-route-id="@payment.JournalEntryId.Value"
+                                           asp-require-permission="journal.view"
+                                           class="btn btn-sm btn-outline-primary mt-2">
+                                            <i class="fas fa-book-open me-1"></i>
+                                            عرض القيد
+                                        </a>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <a asp-action="Print" asp-route-id="@payment.Id" class="btn btn-sm btn-secondary">طباعة</a>
+                            </td>
+                        </tr>
+                    }
+                    <tr class="no-results @(Model.Items.Any() ? "d-none" : string.Empty)">
+                        <td colspan="7" class="text-center text-muted">لا توجد نتائج مطابقة للمرشحات الحالية.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        @if (Model.TotalPages > 1)
+        {
+            var startPage = Math.Max(1, Model.PageIndex - 2);
+            var endPage = Math.Min(Model.TotalPages, Model.PageIndex + 2);
+            <nav aria-label="صفحات سندات صرف الرواتب" class="mt-3">
+                <ul class="pagination justify-content-center flex-wrap mb-0">
+                    <li class="page-item @(Model.PageIndex == 1 ? "disabled" : null)">
+                        <a class="page-link" href="@Url.Action("Index", new { page = Model.PageIndex - 1, pageSize = Model.PageSize, fromDate = fromDateValue, toDate = toDateValue, searchTerm = searchTerm, branchId = selectedBranchId })">السابق</a>
+                    </li>
+                    @for (var pageNumber = startPage; pageNumber <= endPage; pageNumber++)
+                    {
+                        <li class="page-item @(pageNumber == Model.PageIndex ? "active" : null)">
+                            <a class="page-link" href="@Url.Action("Index", new { page = pageNumber, pageSize = Model.PageSize, fromDate = fromDateValue, toDate = toDateValue, searchTerm = searchTerm, branchId = selectedBranchId })">@pageNumber</a>
+                        </li>
+                    }
+                    <li class="page-item @(Model.PageIndex == Model.TotalPages ? "disabled" : null)">
+                        <a class="page-link" href="@Url.Action("Index", new { page = Model.PageIndex + 1, pageSize = Model.PageSize, fromDate = fromDateValue, toDate = toDateValue, searchTerm = searchTerm, branchId = selectedBranchId })">التالي</a>
+                    </li>
+                </ul>
+            </nav>
+        }
     </div>
 </div>
