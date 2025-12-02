@@ -40,3 +40,18 @@
         <a asp-action="Manage" class="btn btn-outline-secondary" asp-require-permission="transfers.manage">إدارة الحوالات</a>
     }
 </div>
+
+@{
+    var printUrl = TempData["PrintUrl"] as string;
+    var hasPrintUrl = !string.IsNullOrEmpty(printUrl) && Url.IsLocalUrl(printUrl);
+}
+
+@if (hasPrintUrl)
+{
+    <script>
+        window.addEventListener('DOMContentLoaded', function () {
+            const url = '@printUrl';
+            window.open(url, '_blank');
+        });
+    </script>
+}
