@@ -664,14 +664,6 @@
                                             حساب العميل كلي
                                         </a>
                                     </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link"
-                                           asp-controller="AccountManagement"
-                                           asp-action="SupplierBalances"
-                                           asp-require-permission="accountmanagement.businessstatementbulk">
-                                            أرصدة الموردين
-                                        </a>
-                                    </li>
                                 }
                                 @if (canBusnissStatment)
                                 {
@@ -944,6 +936,14 @@
                                            asp-action="TrialBalance"
                                            asp-require-permission="reports.view">
                                             <i class="fas fa-balance-scale"></i> ميزان المراجعة
+                                        </a>
+                                    </li>
+                                    <li class="report-item nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="Reports"
+                                           asp-action="SupplierBalances"
+                                           asp-require-permission="reports.view">
+                                            <i class="fas fa-truck-loading"></i> أرصدة الموردين
                                         </a>
                                     </li>
                                     <li class="report-item nav-item">

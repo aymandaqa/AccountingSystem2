@@ -597,14 +597,6 @@
                                             <i class="fa-solid fa-file-circle-check"></i><span>حساب العميل كلي</span>
                                         </a>
                                     </li>
-                                    <li>
-                                        <a class="dropdown-item"
-                                           asp-controller="AccountManagement"
-                                           asp-action="SupplierBalances"
-                                           asp-require-permission="accountmanagement.businessstatementbulk">
-                                            <i class="fa-solid fa-scale-balanced"></i><span>أرصدة الموردين</span>
-                                        </a>
-                                    </li>
                                 }
                                 @if (canBusnissStatment)
                                 {
@@ -802,6 +794,14 @@
                                                asp-action="TrialBalance"
                                                asp-require-permission="reports.view">
                                                 <i class="fa-solid fa-scale-balanced"></i><span>ميزان المراجعة</span>
+                                            </a>
+                                        </li>
+                                        <li class="report-item">
+                                            <a class="dropdown-item"
+                                               asp-controller="Reports"
+                                               asp-action="SupplierBalances"
+                                               asp-require-permission="reports.view">
+                                                <i class="fa-solid fa-truck-ramp-box"></i><span>أرصدة الموردين</span>
                                             </a>
                                         </li>
                                         <li class="report-item">
