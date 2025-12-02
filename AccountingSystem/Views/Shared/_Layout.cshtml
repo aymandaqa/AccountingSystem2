@@ -597,6 +597,14 @@
                                             <i class="fa-solid fa-file-circle-check"></i><span>حساب العميل كلي</span>
                                         </a>
                                     </li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="AccountManagement"
+                                           asp-action="SupplierBalances"
+                                           asp-require-permission="accountmanagement.businessstatementbulk">
+                                            <i class="fa-solid fa-scale-balanced"></i><span>أرصدة الموردين</span>
+                                        </a>
+                                    </li>
                                 }
                                 @if (canBusnissStatment)
                                 {

@@ -664,6 +664,14 @@
                                             حساب العميل كلي
                                         </a>
                                     </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                           asp-controller="AccountManagement"
+                                           asp-action="SupplierBalances"
+                                           asp-require-permission="accountmanagement.businessstatementbulk">
+                                            أرصدة الموردين
+                                        </a>
+                                    </li>
                                 }
                                 @if (canBusnissStatment)
                                 {

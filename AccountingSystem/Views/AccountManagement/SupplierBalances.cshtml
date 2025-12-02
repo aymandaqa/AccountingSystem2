@@ -1,0 +1,168 @@
+@{
+    ViewData["Title"] = "أرصدة الموردين";
+    var rtl = true;
+}
+
+<div class="container-full">
+    <section class="content">
+        <div class="row">
+            <div class="col-12">
+                <div class="box">
+                    <div class="box-body">
+                        <div class="row align-items-end mb-3">
+                            <div class="col-md-3 col-sm-6 mb-3 mb-md-0">
+                                <label class="form-label">الفرع</label>
+                                <ejs-dropdownlist id="BranchFilter" name="BranchFilter" dataSource="@ViewBag.CompanyBranches" placeholder="اختيار الفرع" change="refreshGrid"
+                                                  allowFiltering="true" filterType="Contains">
+                                    <e-dropdownlist-fields text="BranchName" value="Id"></e-dropdownlist-fields>
+                                </ejs-dropdownlist>
+                            </div>
+                            <div class="col-md-3 col-sm-6 mb-3 mb-md-0">
+                                <label class="form-label">المورد</label>
+                                <ejs-dropdownlist id="SupplierFilter" name="SupplierFilter" dataSource="@ViewBag.Suppliers" placeholder="اختيار المورد" change="refreshGrid"
+                                                  allowFiltering="true" filterType="Contains" popupHeight="300px">
+                                    <e-dropdownlist-fields text="SenderName" value="SenderId"></e-dropdownlist-fields>
+                                </ejs-dropdownlist>
+                            </div>
+                            <div class="col-md-6 text-start text-md-end">
+                                <button class="btn btn-primary me-2" type="button" onclick="exportExcel()"><i class="ti-layout"></i> تصدير اكسل</button>
+                                <button class="btn btn-secondary" type="button" onclick="resetFilters()"><i class="ti-reload"></i> إعادة تعيين</button>
+                            </div>
+                        </div>
+
+                        <ejs-grid id="SupplierGrid" allowFiltering="true" allowSorting="true" allowPaging="true" allowExcelExport="true"
+                                  gridLines="Both" enableRtl="@rtl" height="450px" allowTextWrap="true">
+                            <e-data-manager url="/AccountManagement/UrlDatasourceSupplierBalances" adaptor="UrlAdaptor"></e-data-manager>
+                            <e-grid-filterSettings type="Menu"></e-grid-filterSettings>
+                            <e-grid-pagesettings pageSize="20" pageSizes="true"></e-grid-pagesettings>
+                            <e-grid-aggregates>
+                                <e-grid-aggregate>
+                                    <e-aggregate-columns>
+                                        <e-aggregate-column field="ShipmentsNumber" type="Sum" footerTemplate="إجمالي الشحنات: ${Sum}"></e-aggregate-column>
+                                        <e-aggregate-column field="ShipmentPrice" type="Sum" footerTemplate="إجمالي مبالغ الشحن: ${Sum}"></e-aggregate-column>
+                                        <e-aggregate-column field="AccountBalance" type="Sum" footerTemplate="إجمالي أرصدة الحساب: ${Sum}"></e-aggregate-column>
+                                    </e-aggregate-columns>
+                                </e-grid-aggregate>
+                            </e-grid-aggregates>
+                            <e-grid-columns>
+                                <e-grid-column field="SenderName" headerText="المورد" width="150"></e-grid-column>
+                                <e-grid-column field="ShipmentsNumber" headerText="عدد الشحنات" width="120" textAlign="Right"></e-grid-column>
+                                <e-grid-column field="ShipmentPrice" headerText="رصيد الشحنات" width="140" format="N2" textAlign="Right"></e-grid-column>
+                                <e-grid-column field="BranchName" headerText="الفرع" width="130"></e-grid-column>
+                                <e-grid-column field="AccountName" headerText="اسم الحساب" width="180"></e-grid-column>
+                                <e-grid-column field="AccountBalance" headerText="رصيد الحساب" width="140" format="N2" textAlign="Right"></e-grid-column>
+                                <e-grid-column headerText="العمليات" width="220" template="#actionsTemplate"></e-grid-column>
+                                <e-grid-column field="SenderId" visible="false"></e-grid-column>
+                                <e-grid-column field="AccountId" visible="false"></e-grid-column>
+                            </e-grid-columns>
+                        </ejs-grid>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div class="modal fade" id="shipmentsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="shipmentsModalLabel">شحنات المورد</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <ejs-grid id="ShipmentsGrid" allowFiltering="true" allowSorting="true" allowPaging="true" enableRtl="@rtl" height="400px" allowTextWrap="true">
+                    <e-data-manager url="/AccountManagement/UrlDatasourceSupplierShipments" adaptor="UrlAdaptor"></e-data-manager>
+                    <e-grid-filterSettings type="Menu"></e-grid-filterSettings>
+                    <e-grid-pagesettings pageSize="20" pageSizes="true"></e-grid-pagesettings>
+                    <e-grid-columns>
+                        <e-grid-column field="ShipmentTrackingNo" headerText="رقم الشحنة" width="140"></e-grid-column>
+                        <e-grid-column field="ClientName" headerText="اسم العميل" width="140"></e-grid-column>
+                        <e-grid-column field="ClientPhone" headerText="هاتف العميل" width="120"></e-grid-column>
+                        <e-grid-column field="FromCityAr" headerText="من مدينة" width="120"></e-grid-column>
+                        <e-grid-column field="ToCityAr" headerText="إلى مدينة" width="120"></e-grid-column>
+                        <e-grid-column field="AreaName" headerText="المنطقة" width="120"></e-grid-column>
+                        <e-grid-column field="AreaDescription" headerText="تفاصيل" width="160"></e-grid-column>
+                        <e-grid-column field="EntryDateTime" headerText="التاريخ" width="150" format="dd/MM/yyyy HH:mm"></e-grid-column>
+                        <e-grid-column field="ShipmentPrice" headerText="سعر الشحنة" width="120" format="N2" textAlign="Right"></e-grid-column>
+                        <e-grid-column field="ShipmentFees" headerText="العمولة" width="120" format="N2" textAlign="Right"></e-grid-column>
+                        <e-grid-column field="ShipmentExtraFees" headerText="الرسوم الإضافية" width="140" format="N2" textAlign="Right"></e-grid-column>
+                        <e-grid-column field="PaidAmountFromShipmentFees" headerText="المبلغ المدفوع" width="140" format="N2" textAlign="Right"></e-grid-column>
+                        <e-grid-column field="StatusAr" headerText="الحالة" width="120"></e-grid-column>
+                        <e-grid-column field="ShipmentsType" headerText="نوع الشحنة" width="140"></e-grid-column>
+                    </e-grid-columns>
+                </ejs-grid>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script id="actionsTemplate" type="text/x-jsrender">
+    <div class="btn-group" role="group">
+        <button class="btn btn-outline-primary btn-sm" type="button" data-sender-id="${SenderId}" data-sender-name="${SenderName}" onclick="openShipments(this)"><i class="ti-truck"></i> عرض الشحنات</button>
+        {{if AccountId}}
+            <a class="btn btn-outline-success btn-sm" target="_blank" href="/Reports/AccountStatement?accountId=${AccountId}&lockAccount=true"><i class="ti-clipboard"></i> كشف حساب</a>
+        {{else}}
+            <button class="btn btn-outline-secondary btn-sm" type="button" disabled><i class="ti-clipboard"></i> كشف حساب</button>
+        {{/if}}
+    </div>
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        refreshGrid();
+    });
+
+    function getFilters() {
+        var branchDropdown = document.getElementById('BranchFilter').ej2_instances[0];
+        var supplierDropdown = document.getElementById('SupplierFilter').ej2_instances[0];
+
+        return {
+            branchId: branchDropdown.value || '',
+            senderId: supplierDropdown.value || ''
+        };
+    }
+
+    function refreshGrid() {
+        var filters = getFilters();
+        var grid = document.getElementById('SupplierGrid').ej2_instances[0];
+
+        grid.dataSource = new ej.data.DataManager({
+            url: '/AccountManagement/UrlDatasourceSupplierBalances?branchId=' + filters.branchId + '&senderId=' + filters.senderId,
+            adaptor: new ej.data.UrlAdaptor()
+        });
+        grid.refresh();
+    }
+
+    function resetFilters() {
+        var branchDropdown = document.getElementById('BranchFilter').ej2_instances[0];
+        var supplierDropdown = document.getElementById('SupplierFilter').ej2_instances[0];
+
+        branchDropdown.value = null;
+        supplierDropdown.value = null;
+
+        refreshGrid();
+    }
+
+    function exportExcel() {
+        var grid = document.getElementById('SupplierGrid').ej2_instances[0];
+        grid.excelExport();
+    }
+
+    function openShipments(button) {
+        var senderId = button.getAttribute('data-sender-id');
+        var senderName = button.getAttribute('data-sender-name') || '';
+        var modalTitle = document.getElementById('shipmentsModalLabel');
+        modalTitle.textContent = 'شحنات ' + senderName;
+
+        var grid = document.getElementById('ShipmentsGrid').ej2_instances[0];
+        grid.dataSource = new ej.data.DataManager({
+            url: '/AccountManagement/UrlDatasourceSupplierShipments?senderId=' + senderId,
+            adaptor: new ej.data.UrlAdaptor()
+        });
+        grid.refresh();
+        var modalElement = document.getElementById('shipmentsModal');
+        var modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+        modal.show();
+    }
+</script>
