@@ -1427,7 +1427,7 @@ namespace AccountingSystem.Controllers
                         supplier.SenderName,
                         supplier.ShipmentsNumber,
                         ShipmentPrice = shipmentBalance,
-                        supplier.CompanyBranchID,
+                        CompanyBranchID = (int?)supplier.CompanyBranchID,
                         BranchName = branch?.BranchName,
                         AccountId = account?.Id,
                         AccountCode = account?.Code,
@@ -1438,41 +1438,6 @@ namespace AccountingSystem.Controllers
                     };
                 })
                 .ToList();
-
-            var mappingOnlyEntries = mappings
-                .Where(m => !senderIdSet.Contains(m.CustomerId))
-                .Select(m =>
-                {
-                    if (!int.TryParse(m.AccountId, out var accountId) || !accounts.TryGetValue(accountId, out var account))
-                    {
-                        return null;
-                    }
-
-                    if (branchId.HasValue && account.BranchId != branchId)
-                    {
-                        return null;
-                    }
-
-                    return new
-                    {
-                        SenderId = int.TryParse(m.CustomerId, out var sender) ? sender : 0,
-                        SenderName = account.NameAr,
-                        ShipmentsNumber = 0,
-                        ShipmentPrice = 0m,
-                        CompanyBranchID = account.BranchId,
-                        BranchName = account.Branch != null ? account.Branch.NameAr : null,
-                        AccountId = account.Id,
-                        AccountCode = account.Code,
-                        AccountName = account.NameAr,
-                        AccountBalance = account.CurrentBalance,
-                        BalanceDifference = account.CurrentBalance,
-                        HasShipments = false
-                    };
-                })
-                .Where(entry => entry != null)
-                .ToList();
-
-            data.AddRange(mappingOnlyEntries!);
 
             var accountSuppliersQuery = _context.Suppliers
                 .Include(s => s.Account)!.ThenInclude(a => a.Branch)

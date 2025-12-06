@@ -74,15 +74,24 @@
                         <!-- جدول بنود القيد -->
                         <div class="card border-secondary mb-3">
                         <div class="card-header bg-light">
-                                <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                                     <h6 class="mb-0">بنود القيد</h6>
-                                    <button type="button" class="btn btn-sm btn-success" onclick="addJournalLine()">
-                                        <i class="fas fa-plus me-1"></i>
-                                        إضافة بند
-                                    </button>
+                                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                                        <div class="text-muted small">قم بإدخال كود الحساب، المدين، الدائن، مركز التكلفة (اختياري)، والبيان في ملف Excel بامتداد ‎.xlsx.</div>
+                                        <input type="file" class="form-control form-control-sm" id="excelFileInput" accept=".xlsx" />
+                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="importLinesFromExcel()">
+                                            <i class="fas fa-file-excel me-1"></i>
+                                            استيراد من Excel
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-success" onclick="addJournalLine()">
+                                            <i class="fas fa-plus me-1"></i>
+                                            إضافة بند
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             <div class="card-body">
+                                <div id="importErrors" class="alert alert-warning d-none"></div>
                                 <div class="table-responsive">
                                     <table class="table table-bordered" id="journalLinesTable">
                                         <thead class="table-dark">
@@ -183,7 +192,7 @@
     <script>
         let lineIndex = 0;
 
-        function addJournalLine() {
+        function addJournalLine(lineData = null) {
             const template = document.getElementById('journalLineTemplate');
             const tbody = document.getElementById('journalLinesBody');
 
@@ -208,12 +217,35 @@
 
             tbody.appendChild(row);
 
-            $(row).find('.account-select').select2({ width: '100%' });
-            $(row).find('.cost-center-select').select2({
+            const accountSelect = $(row).find('.account-select');
+            const costCenterSelect = $(row).find('.cost-center-select');
+
+            accountSelect.select2({ width: '100%' });
+            costCenterSelect.select2({
                 width: '100%',
                 allowClear: true,
                 placeholder: 'بدون'
             });
+
+            if (lineData) {
+                accountSelect.val(lineData.accountId?.toString() ?? '').trigger('change');
+                costCenterSelect.val(lineData.costCenterId?.toString() ?? '').trigger('change');
+
+                const descriptionInput = row.querySelector('input[name$=".Description"]');
+                if (descriptionInput) {
+                    descriptionInput.value = lineData.description || '-';
+                }
+
+                const debitInput = row.querySelector('input[name$=".DebitAmount"]');
+                if (debitInput) {
+                    debitInput.value = lineData.debitAmount ?? 0;
+                }
+
+                const creditInput = row.querySelector('input[name$=".CreditAmount"]');
+                if (creditInput) {
+                    creditInput.value = lineData.creditAmount ?? 0;
+                }
+            }
 
             lineIndex++;
             calculateTotals();
@@ -248,6 +280,97 @@
             } else {
                 balanceAlert.classList.add('d-none');
                 saveButton.disabled = false;
+            }
+        }
+
+        function clearImportErrors() {
+            const importErrors = document.getElementById('importErrors');
+            importErrors?.classList.add('d-none');
+            if (importErrors) {
+                importErrors.innerHTML = '';
+            }
+        }
+
+        function showImportErrors(errors) {
+            const importErrors = document.getElementById('importErrors');
+            if (!importErrors) {
+                return;
+            }
+
+            if (!errors || errors.length === 0) {
+                importErrors.classList.add('d-none');
+                importErrors.innerHTML = '';
+                return;
+            }
+
+            importErrors.classList.remove('d-none');
+            importErrors.innerHTML = `<ul class="mb-0">${errors.map(e => `<li>${e}</li>`).join('')}</ul>`;
+        }
+
+        async function importLinesFromExcel() {
+            const fileInput = document.getElementById('excelFileInput');
+            const file = fileInput?.files?.[0];
+
+            clearImportErrors();
+
+            if (!file) {
+                showImportErrors(['يرجى اختيار ملف Excel أولاً.']);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+            if (tokenInput) {
+                formData.append('__RequestVerificationToken', tokenInput.value);
+            }
+
+            const importButton = document.querySelector('button[onclick="importLinesFromExcel()"]');
+            if (importButton) {
+                importButton.disabled = true;
+                importButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>جاري الاستيراد...';
+            }
+
+            try {
+                const response = await fetch('@Url.Action("ImportLinesFromExcel", "JournalEntries")', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    showImportErrors(result.errors || [result.message || 'تعذر استيراد الملف.']);
+                    return;
+                }
+
+                const tbody = document.getElementById('journalLinesBody');
+                if (!tbody) {
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                lineIndex = 0;
+
+                (result.lines || []).forEach(line => addJournalLine({
+                    accountId: line.accountId,
+                    costCenterId: line.costCenterId,
+                    description: line.description,
+                    debitAmount: line.debitAmount,
+                    creditAmount: line.creditAmount
+                }));
+
+                calculateTotals();
+                showImportErrors(result.errors);
+            } catch (error) {
+                console.error('Import error', error);
+                showImportErrors(['حدث خطأ أثناء معالجة الملف.']);
+            } finally {
+                if (importButton) {
+                    importButton.disabled = false;
+                    importButton.innerHTML = '<i class="fas fa-file-excel me-1"></i>استيراد من Excel';
+                }
             }
         }
 
