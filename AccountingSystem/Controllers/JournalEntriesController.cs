@@ -726,6 +726,12 @@ namespace AccountingSystem.Controllers
             return decimal.TryParse(trimmed, NumberStyles.Number, CultureInfo.CurrentCulture, out value);
         }
 
+        private static decimal ParseDecimalCell(IXLCell cell)
+        {
+            var cellValue = cell.GetValue<string>();
+            return TryParseDecimal(cellValue, out var parsed) ? parsed : 0m;
+        }
+
         private static bool TryParseInteger(string? input, out int value)
         {
             if (string.IsNullOrWhiteSpace(input))
@@ -1489,6 +1495,170 @@ namespace AccountingSystem.Controllers
 
             await PopulateDropdowns(viewModel);
             return View(viewModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "journal.create")]
+        public async Task<IActionResult> ImportLinesFromExcel(IFormFile? file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return Json(new { success = false, message = "يرجى اختيار ملف Excel صالح." });
+            }
+
+            if (!string.Equals(Path.GetExtension(file.FileName), ".xlsx", StringComparison.OrdinalIgnoreCase))
+            {
+                return Json(new { success = false, message = "يجب أن يكون الملف بامتداد .xlsx" });
+            }
+
+            using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            stream.Position = 0;
+
+            using var workbook = new XLWorkbook(stream);
+            var worksheet = workbook.Worksheets.FirstOrDefault();
+
+            if (worksheet == null)
+            {
+                return Json(new { success = false, message = "تعذر قراءة ورقة العمل من الملف." });
+            }
+
+            var range = worksheet.RangeUsed();
+            if (range == null)
+            {
+                return Json(new { success = false, message = "الملف لا يحتوي على بيانات." });
+            }
+
+            var headerRow = range.FirstRowUsed();
+            var headers = headerRow.CellsUsed()
+                .ToDictionary(c => c.GetValue<string>().Trim().ToLowerInvariant(), c => c.Address.ColumnNumber);
+
+            int? TryGetColumnIndex(params string[] names)
+            {
+                foreach (var name in names)
+                {
+                    if (headers.TryGetValue(name.ToLowerInvariant(), out var index))
+                    {
+                        return index;
+                    }
+                }
+
+                return null;
+            }
+
+            var accountCodeColumn = TryGetColumnIndex("accountcode", "account code", "code", "كود الحساب", "رمز الحساب");
+            var descriptionColumn = TryGetColumnIndex("description", "desc", "البيان", "الوصف");
+            var debitColumn = TryGetColumnIndex("debit", "مدين");
+            var creditColumn = TryGetColumnIndex("credit", "دائن");
+            var costCenterColumn = TryGetColumnIndex("costcenter", "cost center", "كود مركز التكلفة", "مركز التكلفة");
+
+            if (accountCodeColumn == null || debitColumn == null || creditColumn == null)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = "يجب أن يحتوي الملف على أعمدة كود الحساب والمدين والدائن على الأقل."
+                });
+            }
+
+            var accounts = await _context.Accounts
+                .AsNoTracking()
+                .Select(a => new { a.Id, a.Code, a.NameAr })
+                .ToDictionaryAsync(a => a.Code, StringComparer.OrdinalIgnoreCase);
+
+            var costCenters = await _context.CostCenters
+                .AsNoTracking()
+                .Select(c => new { c.Id, c.Code, c.NameAr })
+                .ToDictionaryAsync(c => c.Code, StringComparer.OrdinalIgnoreCase);
+
+            var errors = new List<string>();
+            var lines = new List<JournalEntryLineViewModel>();
+
+            foreach (var excelRow in range.RowsUsed().Skip(1))
+            {
+                var usedCells = excelRow.CellsUsed().ToList();
+                if (!usedCells.Any() || usedCells.All(c => string.IsNullOrWhiteSpace(c.GetValue<string>())))
+                {
+                    continue;
+                }
+
+                var rowNumber = excelRow.RowNumber();
+                var accountCode = excelRow.Cell(accountCodeColumn.Value).GetValue<string>().Trim();
+
+                if (string.IsNullOrEmpty(accountCode))
+                {
+                    errors.Add($"السطر {rowNumber}: كود الحساب مطلوب.");
+                    continue;
+                }
+
+                if (!accounts.TryGetValue(accountCode, out var account))
+                {
+                    errors.Add($"السطر {rowNumber}: كود الحساب \"{accountCode}\" غير موجود.");
+                    continue;
+                }
+
+                var debitValue = ParseDecimalCell(excelRow.Cell(debitColumn.Value));
+                var creditValue = ParseDecimalCell(excelRow.Cell(creditColumn.Value));
+
+                if (debitValue == 0 && creditValue == 0)
+                {
+                    errors.Add($"السطر {rowNumber}: يجب إدخال قيمة في عمود المدين أو الدائن.");
+                    continue;
+                }
+
+                int? costCenterId = null;
+                string? costCenterName = null;
+
+                if (costCenterColumn.HasValue)
+                {
+                    var costCenterCode = excelRow.Cell(costCenterColumn.Value).GetValue<string>().Trim();
+                    if (!string.IsNullOrWhiteSpace(costCenterCode))
+                    {
+                        if (costCenters.TryGetValue(costCenterCode, out var costCenter))
+                        {
+                            costCenterId = costCenter.Id;
+                            costCenterName = costCenter.NameAr;
+                        }
+                        else
+                        {
+                            errors.Add($"السطر {rowNumber}: مركز التكلفة \"{costCenterCode}\" غير موجود.");
+                            continue;
+                        }
+                    }
+                }
+
+                lines.Add(new JournalEntryLineViewModel
+                {
+                    AccountId = account.Id,
+                    AccountCode = account.Code,
+                    AccountName = account.NameAr,
+                    Description = descriptionColumn.HasValue
+                        ? excelRow.Cell(descriptionColumn.Value).GetValue<string>().Trim()
+                        : "-",
+                    DebitAmount = debitValue,
+                    CreditAmount = creditValue,
+                    CostCenterId = costCenterId,
+                    CostCenterName = costCenterName
+                });
+            }
+
+            if (lines.Count == 0)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = errors.Count > 0 ? string.Join("\n", errors) : "لم يتم العثور على بنود صالحة في الملف.",
+                    errors
+                });
+            }
+
+            return Json(new
+            {
+                success = true,
+                lines,
+                errors
+            });
         }
 
         [HttpPost]
