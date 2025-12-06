@@ -1439,6 +1439,67 @@ namespace AccountingSystem.Controllers
                 })
                 .ToList();
 
+            var mappingsWithoutShipments = mappings
+                .Where(m => !senderIds.Contains(m.CustomerId))
+                .ToList();
+
+            if (branchId.HasValue)
+            {
+                mappingsWithoutShipments = mappingsWithoutShipments
+                    .Where(m => int.TryParse(m.AccountId, out var parsedId)
+                        && accounts.TryGetValue(parsedId, out var account)
+                        && account.BranchId == branchId.Value)
+                    .ToList();
+            }
+
+            if (mappingsWithoutShipments.Any())
+            {
+                foreach (var mapping in mappingsWithoutShipments)
+                {
+                    Account? account = null;
+
+                    if (int.TryParse(mapping.AccountId, out var accountId) && accounts.TryGetValue(accountId, out var acc))
+                    {
+                        account = acc;
+                    }
+
+                    CompanyBranch? branch = null;
+
+                    if (account != null && branchIds.Contains(account.BranchId))
+                    {
+                        branches.TryGetValue(account.BranchId, out branch);
+                    }
+                    else if (account != null && !branches.ContainsKey(account.BranchId) && (!branchId.HasValue || branchId.Value == account.BranchId))
+                    {
+                        var fetchedBranch = await _roadContext.CompanyBranches.FirstOrDefaultAsync(b => b.Id == account.BranchId);
+
+                        if (fetchedBranch != null)
+                        {
+                            branches[account.BranchId] = fetchedBranch;
+                            branch = fetchedBranch;
+                        }
+                    }
+
+                    var accountBalance = account?.CurrentBalance ?? 0m;
+
+                    data.Add(new
+                    {
+                        SenderId = mapping.CustomerId,
+                        SenderName = account?.NameAr ?? account?.NameEn ?? mapping.CustomerId,
+                        ShipmentsNumber = 0,
+                        ShipmentPrice = 0m,
+                        CompanyBranchID = account?.BranchId,
+                        BranchName = branch?.BranchName,
+                        AccountId = account?.Id,
+                        AccountCode = account?.Code,
+                        AccountName = account?.NameAr,
+                        AccountBalance = accountBalance,
+                        BalanceDifference = accountBalance,
+                        HasShipments = false
+                    });
+                }
+            }
+
             var accountSuppliersQuery = _context.Suppliers
                 .Include(s => s.Account)!.ThenInclude(a => a.Branch)
                 .AsQueryable();
