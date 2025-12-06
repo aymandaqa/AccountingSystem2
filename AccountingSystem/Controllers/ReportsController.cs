@@ -13,6 +13,7 @@ using QuestPDF.Helpers;
 using AccountingSystem.Services;
 using Syncfusion.EJ2.Base;
 using System;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Globalization;
 using System.Text.Json;
@@ -1374,13 +1375,16 @@ namespace AccountingSystem.Controllers
 
             var suppliers = await suppliersQuery.ToListAsync();
 
-            var senderIds = suppliers.Select(s => s.SenderId.ToString()).ToList();
+            var mappingQuery = _context.CusomerMappingAccounts.AsQueryable();
 
-            var mappings = senderIds.Any()
-                ? await _context.CusomerMappingAccounts
-                    .Where(m => senderIds.Contains(m.CustomerId))
-                    .ToListAsync()
-                : new List<CusomerMappingAccount>();
+            if (selectedBusinessSenderId.HasValue)
+            {
+                mappingQuery = mappingQuery.Where(m => m.CustomerId == selectedBusinessSenderId.Value.ToString());
+            }
+
+            var mappings = await mappingQuery.ToListAsync();
+
+            var senderIds = suppliers.Select(s => s.SenderId.ToString()).ToList();
 
             var accountIds = mappings
                 .Select(m => int.TryParse(m.AccountId, out var parsedId) ? parsedId : (int?)null)
@@ -1398,6 +1402,8 @@ namespace AccountingSystem.Controllers
             var branches = branchIds.Any()
                 ? await _roadContext.CompanyBranches.Where(b => branchIds.Contains(b.Id)).ToDictionaryAsync(b => b.Id)
                 : new Dictionary<int, CompanyBranch>();
+
+            var senderIdSet = new HashSet<string>(senderIds);
 
             var data = suppliers
                 .Select(supplier =>
