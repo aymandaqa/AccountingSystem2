@@ -1456,6 +1456,11 @@ namespace AccountingSystem.Controllers
             {
                 foreach (var mapping in mappingsWithoutShipments)
                 {
+                    if (!int.TryParse(mapping.CustomerId, out var mappedSenderId))
+                    {
+                        continue;
+                    }
+
                     Account? account = null;
 
                     if (int.TryParse(mapping.AccountId, out var accountId) && accounts.TryGetValue(accountId, out var acc))
@@ -1465,17 +1470,19 @@ namespace AccountingSystem.Controllers
 
                     CompanyBranch? branch = null;
 
-                    if (account != null && branchIds.Contains(account.BranchId))
+                    if (account?.BranchId.HasValue == true && branchIds.Contains(account.BranchId.Value))
                     {
-                        branches.TryGetValue(account.BranchId, out branch);
+                        branches.TryGetValue(account.BranchId.Value, out branch);
                     }
-                    else if (account != null && !branches.ContainsKey(account.BranchId) && (!branchId.HasValue || branchId.Value == account.BranchId))
+                    else if (account?.BranchId.HasValue == true
+                        && !branches.ContainsKey(account.BranchId.Value)
+                        && (!branchId.HasValue || branchId.Value == account.BranchId.Value))
                     {
-                        var fetchedBranch = await _roadContext.CompanyBranches.FirstOrDefaultAsync(b => b.Id == account.BranchId);
+                        var fetchedBranch = await _roadContext.CompanyBranches.FirstOrDefaultAsync(b => b.Id == account.BranchId.Value);
 
                         if (fetchedBranch != null)
                         {
-                            branches[account.BranchId] = fetchedBranch;
+                            branches[account.BranchId.Value] = fetchedBranch;
                             branch = fetchedBranch;
                         }
                     }
@@ -1484,7 +1491,7 @@ namespace AccountingSystem.Controllers
 
                     data.Add(new
                     {
-                        SenderId = mapping.CustomerId,
+                        SenderId = mappedSenderId,
                         SenderName = account?.NameAr ?? account?.NameEn ?? mapping.CustomerId,
                         ShipmentsNumber = 0,
                         ShipmentPrice = 0m,
