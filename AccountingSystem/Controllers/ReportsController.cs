@@ -1416,8 +1416,9 @@ namespace AccountingSystem.Controllers
                 : new Dictionary<int, Account>();
 
             var branchIdSet = suppliers
-                .Where(s => s.CompanyBranchID.HasValue)
-                .Select(s => s.CompanyBranchID!.Value)
+                .Select(s => (int?)s.CompanyBranchID)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
                 .ToHashSet();
 
             foreach (var account in accounts.Values)
@@ -1448,13 +1449,13 @@ namespace AccountingSystem.Controllers
 
                     var accountBalance = account?.CurrentBalance ?? 0m;
 
-                    return new
+                    return new SupplierBalanceRow
                     {
-                        supplier.SenderId,
-                        supplier.SenderName,
-                        supplier.ShipmentsNumber,
+                        SenderId = supplier.SenderId,
+                        SenderName = supplier.SenderName,
+                        ShipmentsNumber = supplier.ShipmentsNumber,
                         ShipmentPrice = shipmentBalance,
-                        CompanyBranchID = (int?)supplier.CompanyBranchID,
+                        CompanyBranchID = supplier.CompanyBranchID,
                         BranchName = branch?.BranchName,
                         AccountId = account?.Id,
                         AccountCode = account?.Code,
@@ -1517,7 +1518,7 @@ namespace AccountingSystem.Controllers
 
                     var accountBalance = account?.CurrentBalance ?? 0m;
 
-                    data.Add(new
+                    data.Add(new SupplierBalanceRow
                     {
                         SenderId = mappedSenderId,
                         SenderName = account?.NameAr ?? account?.NameEn ?? mapping.CustomerId,
@@ -7074,6 +7075,33 @@ namespace AccountingSystem.Controllers
             };
 
             return info;
+        }
+
+        private class SupplierBalanceRow
+        {
+            public int SenderId { get; set; }
+
+            public string? SenderName { get; set; }
+
+            public int ShipmentsNumber { get; set; }
+
+            public decimal ShipmentPrice { get; set; }
+
+            public int? CompanyBranchID { get; set; }
+
+            public string? BranchName { get; set; }
+
+            public int? AccountId { get; set; }
+
+            public string? AccountCode { get; set; }
+
+            public string? AccountName { get; set; }
+
+            public decimal AccountBalance { get; set; }
+
+            public decimal BalanceDifference { get; set; }
+
+            public bool HasShipments { get; set; }
         }
 
         private static UserDailyTransactionDocumentInfo BuildBusinessPaymentDocument(BusinessPaymentHeaderInfo header, Dictionary<int, string> userNames)
