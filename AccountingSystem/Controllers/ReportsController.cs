@@ -1421,7 +1421,7 @@ namespace AccountingSystem.Controllers
                         supplier.SenderName,
                         supplier.ShipmentsNumber,
                         ShipmentPrice = shipmentBalance,
-                        supplier.CompanyBranchID,
+                        CompanyBranchID = (int?)supplier.CompanyBranchID,
                         BranchName = branch?.BranchName,
                         AccountId = account?.Id,
                         AccountCode = account?.Code,
