@@ -1321,17 +1321,45 @@ namespace AccountingSystem.Controllers
                 ? await _roadContext.CompanyBranches.Where(t => branchIds.Contains(t.Id)).ToListAsync()
                 : await _roadContext.CompanyBranches.ToListAsync();
 
-            ViewBag.Suppliers = await _roadContext.BusinessStatementBulk
-                .Select(b => new { b.SenderId, b.SenderName })
+            var businessSuppliers = await _roadContext.BusinessStatementBulk
+                .Select(b => new { Value = $"BSB-{b.SenderId}", Name = b.SenderName })
                 .Distinct()
                 .ToListAsync();
+
+            var accountSuppliers = await _context.Suppliers
+                .Select(s => new { Value = $"ACC-{s.Id}", Name = s.NameAr ?? s.NameEn ?? string.Empty })
+                .ToListAsync();
+
+            ViewBag.Suppliers = businessSuppliers
+                .Concat(accountSuppliers)
+                .GroupBy(s => s.Value)
+                .Select(g => g.First())
+                .OrderBy(s => s.Name)
+                .ToList();
 
             return View();
         }
 
         [Authorize(Policy = "reports.view")]
-        public async Task<IActionResult> UrlDatasourceSupplierBalances([FromBody] DataManagerRequest dm, int? branchId, int? senderId)
+        public async Task<IActionResult> UrlDatasourceSupplierBalances([FromBody] DataManagerRequest dm, int? branchId, string? supplierKey)
         {
+            int? selectedBusinessSenderId = null;
+            int? selectedAccountSupplierId = null;
+
+            if (!string.IsNullOrWhiteSpace(supplierKey))
+            {
+                if (supplierKey.StartsWith("BSB-", StringComparison.OrdinalIgnoreCase)
+                    && int.TryParse(supplierKey[4..], out var businessSupplierId))
+                {
+                    selectedBusinessSenderId = businessSupplierId;
+                }
+                else if (supplierKey.StartsWith("ACC-", StringComparison.OrdinalIgnoreCase)
+                    && int.TryParse(supplierKey[4..], out var accountSupplierId))
+                {
+                    selectedAccountSupplierId = accountSupplierId;
+                }
+            }
+
             var suppliersQuery = _roadContext.BusinessStatementBulk.AsQueryable();
 
             if (branchId.HasValue)
@@ -1339,9 +1367,9 @@ namespace AccountingSystem.Controllers
                 suppliersQuery = suppliersQuery.Where(t => t.CompanyBranchID == branchId.Value);
             }
 
-            if (senderId.HasValue)
+            if (selectedBusinessSenderId.HasValue)
             {
-                suppliersQuery = suppliersQuery.Where(t => t.SenderId == senderId.Value);
+                suppliersQuery = suppliersQuery.Where(t => t.SenderId == selectedBusinessSenderId.Value);
             }
 
             var suppliers = await suppliersQuery.ToListAsync();
@@ -1399,35 +1427,72 @@ namespace AccountingSystem.Controllers
                         AccountCode = account?.Code,
                         AccountName = account?.NameAr,
                         AccountBalance = accountBalance,
-                        BalanceDifference = accountBalance - shipmentBalance
+                        BalanceDifference = accountBalance - shipmentBalance,
+                        HasShipments = true
                     };
                 })
+                .ToList();
+
+            var accountSuppliersQuery = _context.Suppliers
+                .Include(s => s.Account)!.ThenInclude(a => a.Branch)
                 .AsQueryable();
+
+            if (branchId.HasValue)
+            {
+                accountSuppliersQuery = accountSuppliersQuery.Where(s => s.Account != null && s.Account.BranchId == branchId.Value);
+            }
+
+            if (selectedAccountSupplierId.HasValue)
+            {
+                accountSuppliersQuery = accountSuppliersQuery.Where(s => s.Id == selectedAccountSupplierId.Value);
+            }
+
+            var accountSuppliers = await accountSuppliersQuery
+                .Select(s => new
+                {
+                    SenderId = s.Id,
+                    SenderName = s.NameAr ?? s.NameEn ?? string.Empty,
+                    ShipmentsNumber = 0,
+                    ShipmentPrice = 0m,
+                    CompanyBranchID = s.Account != null ? s.Account.BranchId : (int?)null,
+                    BranchName = s.Account != null ? s.Account.Branch != null ? s.Account.Branch.NameAr : null : null,
+                    AccountId = s.AccountId,
+                    AccountCode = s.Account != null ? s.Account.Code : null,
+                    AccountName = s.Account != null ? s.Account.NameAr : null,
+                    AccountBalance = s.Account != null ? s.Account.CurrentBalance : 0m,
+                    BalanceDifference = s.Account != null ? s.Account.CurrentBalance : 0m,
+                    HasShipments = false
+                })
+                .ToListAsync();
+
+            data.AddRange(accountSuppliers);
+
+            var queryableData = data.AsQueryable();
 
             DataOperations operation = new DataOperations();
             if (dm.Search != null && dm.Search.Count > 0)
             {
-                data = operation.PerformSearching(data, dm.Search);  //Search
+                queryableData = operation.PerformSearching(queryableData, dm.Search);  //Search
             }
             if (dm.Sorted != null && dm.Sorted.Count > 0) //Sorting
             {
-                data = operation.PerformSorting(data, dm.Sorted);
+                queryableData = operation.PerformSorting(queryableData, dm.Sorted);
             }
             if (dm.Where != null && dm.Where.Count > 0) //Filtering
             {
-                data = operation.PerformFiltering(data, dm.Where, dm.Where[0].Operator);
+                queryableData = operation.PerformFiltering(queryableData, dm.Where, dm.Where[0].Operator);
             }
-            int count = data.Count();
+            int count = queryableData.Count();
             if (dm.Skip != 0)
             {
-                data = operation.PerformSkip(data, dm.Skip);   //Paging
+                queryableData = operation.PerformSkip(queryableData, dm.Skip);   //Paging
             }
             if (dm.Take != 0)
             {
-                data = operation.PerformTake(data, dm.Take);
+                queryableData = operation.PerformTake(queryableData, dm.Take);
             }
 
-            return dm.RequiresCounts ? Json(new { result = data, count }) : Json(data);
+            return dm.RequiresCounts ? Json(new { result = queryableData, count }) : Json(queryableData);
         }
 
         [Authorize(Policy = "reports.view")]

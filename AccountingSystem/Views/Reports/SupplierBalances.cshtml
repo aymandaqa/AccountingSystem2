@@ -21,7 +21,7 @@
                                 <label class="form-label">المورد</label>
                                 <ejs-dropdownlist id="SupplierFilter" name="SupplierFilter" dataSource="@ViewBag.Suppliers" placeholder="اختيار المورد" change="refreshGrid"
                                                   allowFiltering="true" filterType="Contains" popupHeight="300px">
-                                    <e-dropdownlist-fields text="SenderName" value="SenderId"></e-dropdownlist-fields>
+                                    <e-dropdownlist-fields text="Name" value="Value"></e-dropdownlist-fields>
                                 </ejs-dropdownlist>
                             </div>
                             <div class="col-md-6 text-start text-md-end">
@@ -68,9 +68,12 @@
 
 <script id="actionsTemplate" type="text/x-template">
     <div class="btn-group" role="group">
+        ${if (HasShipments)}
         <button class="btn btn-outline-primary btn-sm btn-open-shipments" type="button" data-sender-id="${SenderId}" data-sender-name="${SenderName}"><i class="ti-truck"></i> عرض الشحنات</button>
-             <a class="btn btn-outline-success btn-sm" target="_blank" href="/Reports/AccountStatement?accountId=${AccountId}&lockAccount=true"><i class="ti-clipboard"></i> كشف حساب</a>
-
+        ${/if}
+        ${if (AccountId)}
+        <a class="btn btn-outline-success btn-sm" target="_blank" href="/Reports/AccountStatement?accountId=${AccountId}&lockAccount=true"><i class="ti-clipboard"></i> كشف حساب</a>
+        ${/if}
     </div>
 </script>
 
@@ -96,7 +99,7 @@
 
         return {
             branchId: branchDropdown.value || '',
-            senderId: supplierDropdown.value || ''
+            supplierKey: supplierDropdown.value || ''
         };
     }
 
@@ -105,7 +108,7 @@
         var grid = document.getElementById('SupplierGrid').ej2_instances[0];
 
         grid.dataSource = new ej.data.DataManager({
-            url: '/Reports/UrlDatasourceSupplierBalances?branchId=' + filters.branchId + '&senderId=' + filters.senderId,
+            url: '/Reports/UrlDatasourceSupplierBalances?branchId=' + filters.branchId + '&supplierKey=' + filters.supplierKey,
             adaptor: new ej.data.UrlAdaptor()
         });
         grid.refresh();
