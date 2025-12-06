@@ -1327,12 +1327,35 @@ namespace AccountingSystem.Controllers
                 .Distinct()
                 .ToListAsync();
 
-            var accountSuppliers = await _context.Suppliers
-                .Select(s => new { Value = $"ACC-{s.Id}", Name = s.NameAr ?? s.NameEn ?? string.Empty })
-                .ToListAsync();
+            var mappingAccounts = await _context.CusomerMappingAccounts.ToListAsync();
+
+            var mappingAccountIds = mappingAccounts
+                .Select(m => int.TryParse(m.AccountId, out var parsedId) ? parsedId : (int?)null)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .Distinct()
+                .ToList();
+
+            var mappingAccountsLookup = mappingAccountIds.Any()
+                ? await _context.Accounts.Where(a => mappingAccountIds.Contains(a.Id)).ToDictionaryAsync(a => a.Id)
+                : new Dictionary<int, Account>();
+
+            var mappingSuppliers = mappingAccounts
+                .Select(m =>
+                {
+                    var supplierName = m.CustomerId;
+
+                    if (int.TryParse(m.AccountId, out var accId) && mappingAccountsLookup.TryGetValue(accId, out var account))
+                    {
+                        supplierName = account.NameAr ?? account.NameEn ?? m.CustomerId;
+                    }
+
+                    return new { Value = m.CustomerId, Name = supplierName };
+                })
+                .ToList();
 
             ViewBag.Suppliers = businessSuppliers
-                .Concat(accountSuppliers)
+                .Concat(mappingSuppliers)
                 .GroupBy(s => s.Value)
                 .Select(g => g.First())
                 .OrderBy(s => s.Name)
@@ -1344,20 +1367,15 @@ namespace AccountingSystem.Controllers
         [Authorize(Policy = "reports.view")]
         public async Task<IActionResult> UrlDatasourceSupplierBalances([FromBody] DataManagerRequest dm, int? branchId, string? supplierKey)
         {
-            int? selectedBusinessSenderId = null;
-            int? selectedAccountSupplierId = null;
+            int? selectedSenderId = null;
 
             if (!string.IsNullOrWhiteSpace(supplierKey))
             {
-                if (supplierKey.StartsWith("BSB-", StringComparison.OrdinalIgnoreCase)
-                    && int.TryParse(supplierKey[4..], out var businessSupplierId))
+                if (int.TryParse(supplierKey.StartsWith("BSB-", StringComparison.OrdinalIgnoreCase)
+                    ? supplierKey[4..]
+                    : supplierKey, out var parsedSenderId))
                 {
-                    selectedBusinessSenderId = businessSupplierId;
-                }
-                else if (supplierKey.StartsWith("ACC-", StringComparison.OrdinalIgnoreCase)
-                    && int.TryParse(supplierKey[4..], out var accountSupplierId))
-                {
-                    selectedAccountSupplierId = accountSupplierId;
+                    selectedSenderId = parsedSenderId;
                 }
             }
 
@@ -1368,18 +1386,18 @@ namespace AccountingSystem.Controllers
                 suppliersQuery = suppliersQuery.Where(t => t.CompanyBranchID == branchId.Value);
             }
 
-            if (selectedBusinessSenderId.HasValue)
+            if (selectedSenderId.HasValue)
             {
-                suppliersQuery = suppliersQuery.Where(t => t.SenderId == selectedBusinessSenderId.Value);
+                suppliersQuery = suppliersQuery.Where(t => t.SenderId == selectedSenderId.Value);
             }
 
             var suppliers = await suppliersQuery.ToListAsync();
 
             var mappingQuery = _context.CusomerMappingAccounts.AsQueryable();
 
-            if (selectedBusinessSenderId.HasValue)
+            if (selectedSenderId.HasValue)
             {
-                mappingQuery = mappingQuery.Where(m => m.CustomerId == selectedBusinessSenderId.Value.ToString());
+                mappingQuery = mappingQuery.Where(m => m.CustomerId == selectedSenderId.Value.ToString());
             }
 
             var mappings = await mappingQuery.ToListAsync();
@@ -1397,13 +1415,22 @@ namespace AccountingSystem.Controllers
                 ? await _context.Accounts.Include(a => a.Branch).Where(a => accountIds.Contains(a.Id)).ToDictionaryAsync(a => a.Id)
                 : new Dictionary<int, Account>();
 
-            var branchIds = suppliers.Select(s => s.CompanyBranchID).Distinct().ToList();
+            var branchIdSet = suppliers
+                .Where(s => s.CompanyBranchID.HasValue)
+                .Select(s => s.CompanyBranchID!.Value)
+                .ToHashSet();
 
-            var branches = branchIds.Any()
-                ? await _roadContext.CompanyBranches.Where(b => branchIds.Contains(b.Id)).ToDictionaryAsync(b => b.Id)
+            foreach (var account in accounts.Values)
+            {
+                if (account.BranchId.HasValue)
+                {
+                    branchIdSet.Add(account.BranchId.Value);
+                }
+            }
+
+            var branches = branchIdSet.Any()
+                ? await _roadContext.CompanyBranches.Where(b => branchIdSet.Contains(b.Id)).ToDictionaryAsync(b => b.Id)
                 : new Dictionary<int, CompanyBranch>();
-
-            var senderIdSet = new HashSet<string>(senderIds);
 
             var data = suppliers
                 .Select(supplier =>
@@ -1470,7 +1497,7 @@ namespace AccountingSystem.Controllers
 
                     CompanyBranch? branch = null;
 
-                    if (account?.BranchId.HasValue == true && branchIds.Contains(account.BranchId.Value))
+                    if (account?.BranchId.HasValue == true && branchIdSet.Contains(account.BranchId.Value))
                     {
                         branches.TryGetValue(account.BranchId.Value, out branch);
                     }
@@ -1483,6 +1510,7 @@ namespace AccountingSystem.Controllers
                         if (fetchedBranch != null)
                         {
                             branches[account.BranchId.Value] = fetchedBranch;
+                            branchIdSet.Add(account.BranchId.Value);
                             branch = fetchedBranch;
                         }
                     }
@@ -1506,40 +1534,6 @@ namespace AccountingSystem.Controllers
                     });
                 }
             }
-
-            var accountSuppliersQuery = _context.Suppliers
-                .Include(s => s.Account)!.ThenInclude(a => a.Branch)
-                .AsQueryable();
-
-            if (branchId.HasValue)
-            {
-                accountSuppliersQuery = accountSuppliersQuery.Where(s => s.Account != null && s.Account.BranchId == branchId.Value);
-            }
-
-            if (selectedAccountSupplierId.HasValue)
-            {
-                accountSuppliersQuery = accountSuppliersQuery.Where(s => s.Id == selectedAccountSupplierId.Value);
-            }
-
-            var accountSuppliers = await accountSuppliersQuery
-                .Select(s => new
-                {
-                    SenderId = s.Id,
-                    SenderName = s.NameAr ?? s.NameEn ?? string.Empty,
-                    ShipmentsNumber = 0,
-                    ShipmentPrice = 0m,
-                    CompanyBranchID = s.Account != null ? s.Account.BranchId : (int?)null,
-                    BranchName = s.Account != null ? s.Account.Branch != null ? s.Account.Branch.NameAr : null : null,
-                    AccountId = s.AccountId,
-                    AccountCode = s.Account != null ? s.Account.Code : null,
-                    AccountName = s.Account != null ? s.Account.NameAr : null,
-                    AccountBalance = s.Account != null ? s.Account.CurrentBalance : 0m,
-                    BalanceDifference = s.Account != null ? s.Account.CurrentBalance : 0m,
-                    HasShipments = false
-                })
-                .ToListAsync();
-
-            data.AddRange(accountSuppliers);
 
             var queryableData = data.AsQueryable();
 
